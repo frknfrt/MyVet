@@ -1,0 +1,51 @@
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.name {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 19px;
+}
+.subline {
+  color: var(--color-text-muted);
+  font-size: 12.5px;
+  margin-top: 2px;
+}
+.qtyValue {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 24px;
+}
+.sectionLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-brand-500);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin: 16px 0 8px;
+}
+.movementRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.movementRow:last-child {
+  border-bottom: none;
+}
+.emptyNote {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  padding: 4px 0;
+}
+.adjustForm {
+  display: grid;
+  grid-template-columns: 1fr 0.7fr auto;
+  gap: 8px;
+  align-items: end;
+  margin-top: 10px;
+}

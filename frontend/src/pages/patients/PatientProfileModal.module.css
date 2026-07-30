@@ -1,0 +1,56 @@
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.name {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 22px;
+}
+.subline {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  margin-top: 2px;
+}
+.section {
+  margin-top: 18px;
+}
+.sectionLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-brand-500);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 10px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 20px;
+}
+.item {
+  font-size: 13px;
+}
+.itemLabel {
+  color: var(--color-text-muted);
+  font-size: 11.5px;
+  margin-bottom: 2px;
+}
+.itemValue {
+  font-weight: 500;
+  color: var(--color-text-ink);
+}
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+.loading {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}

@@ -1,0 +1,132 @@
+.page {
+  min-height: 100vh;
+  background: var(--color-cream, #fbfaf8);
+}
+
+.hero {
+  background: radial-gradient(ellipse 900px 700px at 15% -10%, rgba(224, 172, 92, 0.28), transparent 55%),
+    radial-gradient(ellipse 700px 700px at 90% 100%, rgba(124, 77, 188, 0.35), transparent 60%),
+    linear-gradient(160deg, var(--color-ink-900) 0%, var(--color-ink-soft) 55%, #2e1b42 100%);
+  padding: 4rem 2rem 5rem;
+  text-align: center;
+  color: #fff;
+}
+.brandMark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  margin-bottom: 2.2rem;
+}
+.glyph {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--color-gold-400), var(--color-gold-600));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.glyph svg {
+  width: 18px;
+  height: 18px;
+}
+.clinicName {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 34px;
+  margin-bottom: 10px;
+}
+.clinicAddress {
+  color: #c6bcd6;
+  font-size: 14.5px;
+}
+
+.content {
+  max-width: 920px;
+  margin: -3rem auto 0;
+  padding: 0 1.5rem 4rem;
+  position: relative;
+}
+
+.card {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: var(--shadow-lg);
+  padding: 2rem;
+  margin-bottom: 24px;
+}
+.sectionTitle {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 20px;
+  margin-bottom: 16px;
+}
+
+.servicesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+.serviceItem {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 14px;
+}
+.serviceName {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+.serviceMeta {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 14px;
+}
+
+.successBox {
+  text-align: center;
+  padding: 2rem 1rem;
+}
+.successTitle {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--color-success-700);
+  margin-bottom: 8px;
+}
+.successCopy {
+  color: var(--color-text-muted);
+  font-size: 13.5px;
+}
+
+.errorBanner {
+  background: var(--color-danger-100);
+  color: var(--color-danger-700);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 14px;
+}
+
+.submitRow {
+  margin-top: 6px;
+}
+.submitBtn {
+  width: 100%;
+  justify-content: center;
+  height: 46px;
+}
+
+.footer {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  padding-bottom: 2rem;
+}

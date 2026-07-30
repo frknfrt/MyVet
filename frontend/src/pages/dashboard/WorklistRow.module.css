@@ -1,0 +1,99 @@
+.row {
+  display: grid;
+  grid-template-columns: 2.4fr 1.2fr 1.1fr 0.7fr 0.9fr 2fr 1.3fr;
+  gap: 10px;
+  padding: 13px 20px;
+  align-items: center;
+  border-top: 1px solid var(--color-border);
+  font-size: 13px;
+  transition: background 0.12s;
+  animation: fadeInUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.row:hover {
+  background: #fbfafd;
+}
+
+.patientCell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+.name {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.owner {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+.muted {
+  color: var(--color-text-muted);
+  font-size: 12.5px;
+}
+.miniAvatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #f0eeea;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  border: 2px solid #fff;
+}
+.assignedStack {
+  display: flex;
+}
+.assignedStack .miniAvatar {
+  margin-left: -8px;
+}
+.assignedStack .miniAvatar:first-child {
+  margin-left: 0;
+}
+
+.directive {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 5px;
+  margin-left: 6px;
+}
+.cpr {
+  background: var(--color-success-100);
+  color: var(--color-success-700);
+}
+.dnr {
+  background: var(--color-danger-100);
+  color: var(--color-danger-700);
+}
+.flagIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-danger-100);
+  margin-left: 5px;
+}
+.flagIcon svg {
+  width: 8px;
+  height: 8px;
+  stroke: var(--color-danger-700);
+}

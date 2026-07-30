@@ -1,0 +1,91 @@
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.ownerName {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 19px;
+}
+.subline {
+  color: var(--color-text-muted);
+  font-size: 12.5px;
+  margin-top: 2px;
+}
+.totalsRow {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 16px;
+}
+.totalItem {
+  font-size: 12px;
+}
+.totalLabel {
+  color: var(--color-text-muted);
+  margin-bottom: 2px;
+}
+.totalValue {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.sectionLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-brand-500);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin: 16px 0 8px;
+}
+.lineRow {
+  display: grid;
+  grid-template-columns: 2fr 0.6fr 0.8fr 0.8fr 1fr;
+  gap: 8px;
+  padding: 7px 0;
+  font-size: 12.5px;
+  border-bottom: 1px solid var(--color-border);
+  align-items: center;
+}
+.lineRow:last-child {
+  border-bottom: none;
+}
+.paymentRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.paymentRow:last-child {
+  border-bottom: none;
+}
+.emptyNote {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  padding: 6px 0;
+}
+
+.addLineForm {
+  display: grid;
+  grid-template-columns: 2fr 0.7fr 0.9fr auto;
+  gap: 8px;
+  align-items: end;
+  margin-top: 10px;
+}
+.paymentForm {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  align-items: end;
+  margin-top: 10px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}

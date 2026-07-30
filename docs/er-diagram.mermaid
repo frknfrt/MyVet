@@ -1,0 +1,413 @@
+erDiagram
+
+    %% ================= TENANT / ORGANIZASYON =================
+    TENANT ||--o{ BRANCH : "sahiptir"
+    TENANT ||--o{ SUBSCRIPTION : "plana sahiptir"
+    TENANT {
+        uuid id PK
+        string name
+        string tax_number
+        string kvkk_data_controller_ref
+        string status "ACTIVE|SUSPENDED|TRIAL"
+        timestamp created_at
+    }
+
+    BRANCH ||--o{ STAFF_USER : "personel_barindirir"
+    BRANCH ||--o{ ROOM : "oda_kafes_barindirir"
+    BRANCH ||--o{ APPOINTMENT : "randevu_yapar"
+    BRANCH ||--o{ INVENTORY_ITEM : "stok_tutar"
+    BRANCH {
+        uuid id PK
+        uuid tenant_id FK
+        string name
+        string address
+        string city
+        string tarbil_branch_code
+        string timezone
+    }
+
+    SUBSCRIPTION {
+        uuid id PK
+        uuid tenant_id FK
+        string plan_code
+        date started_at
+        date renews_at
+        string billing_status
+    }
+
+    %% ================= KULLANICI / ROL =================
+    STAFF_USER ||--o{ ENCOUNTER : "muayene_yapar"
+    STAFF_USER ||--o{ APPOINTMENT : "atanir"
+    STAFF_USER ||--o{ AUDIT_LOG : "islem_yapar"
+    STAFF_USER {
+        uuid id PK
+        uuid branch_id FK
+        string full_name
+        string email
+        string phone
+        string password_hash
+        string role "VET|TECHNICIAN|RECEPTIONIST|ADMIN|OWNER_ACCOUNT"
+        string license_number "veteriner_diploma_no"
+        boolean two_factor_enabled
+        timestamp created_at
+    }
+
+    AUDIT_LOG {
+        uuid id PK
+        uuid tenant_id FK
+        uuid actor_user_id FK
+        string entity_type
+        uuid entity_id
+        string action
+        jsonb diff
+        timestamp created_at
+    }
+
+    %% ================= SAHIP / HAYVAN =================
+    OWNER ||--o{ PATIENT : "sahiplenir"
+    OWNER ||--o{ CONSENT_RECORD : "onay_verir"
+    OWNER ||--o{ INVOICE : "faturalanir"
+    OWNER ||--o{ CHAT_MESSAGE : "mesajlasir"
+    OWNER {
+        uuid id PK
+        uuid tenant_id FK
+        string full_name
+        string phone "unique_per_tenant"
+        string email
+        string national_id_masked
+        string address
+        boolean marketing_consent
+        timestamp created_at
+    }
+
+    CONSENT_RECORD {
+        uuid id PK
+        uuid owner_id FK
+        string consent_type "KVKK_ACIK_RIZA|PAZARLAMA|VERI_AKTARIMI"
+        boolean granted
+        string ip_address
+        timestamp granted_at
+        timestamp revoked_at
+    }
+
+    SPECIES ||--o{ BREED : "irk_barindirir"
+    SPECIES {
+        uuid id PK
+        string name "Kedi|Kopek|Sigir|Kanatli|Egzotik..."
+    }
+    BREED {
+        uuid id PK
+        uuid species_id FK
+        string name
+    }
+
+    PATIENT ||--o{ ENCOUNTER : "muayene_gecirir"
+    PATIENT ||--o{ VACCINATION_RECORD : "asi_olur"
+    PATIENT ||--o{ APPOINTMENT : "randevusu_olur"
+    PATIENT ||--o{ PRESCRIPTION : "recete_alir"
+    PATIENT ||--o{ LAB_RESULT : "tahlil_olur"
+    PATIENT ||--o{ IMAGING_RECORD : "goruntuleme_olur"
+    PATIENT ||--o{ BOARDING_STAY : "yatis_yapar"
+    PATIENT ||--o{ TARBIL_SYNC_LOG : "bildirilir"
+    PATIENT {
+        uuid id PK
+        uuid owner_id FK
+        uuid species_id FK
+        uuid breed_id FK
+        string name
+        string sex "M|F|UNKNOWN"
+        boolean neutered
+        date birth_date
+        string microchip_no
+        string tarbil_animal_id "buyukbas_kucukbas_kimlik_no"
+        decimal weight_kg
+        string photo_url
+        string status "ACTIVE|DECEASED|TRANSFERRED"
+        timestamp created_at
+    }
+
+    %% ================= RANDEVU =================
+    APPOINTMENT }o--|| SERVICE_TYPE : "hizmet_tipindendir"
+    APPOINTMENT ||--o| ENCOUNTER : "muayeneye_donusur"
+    APPOINTMENT {
+        uuid id PK
+        uuid tenant_id FK
+        uuid branch_id FK
+        uuid patient_id FK
+        uuid owner_id FK
+        uuid assigned_staff_id FK
+        uuid service_type_id FK
+        timestamp scheduled_start
+        timestamp scheduled_end
+        string status "REQUESTED|CONFIRMED|CHECKED_IN|IN_PROGRESS|COMPLETED|NO_SHOW|CANCELLED"
+        decimal no_show_risk_score "AI_hesaplar"
+        string source "PET_APP|PHONE|WALK_IN|WIDGET"
+        string notes
+        timestamp created_at
+    }
+
+    SERVICE_TYPE {
+        uuid id PK
+        uuid tenant_id FK
+        string name "Genel_Muayene|Asi|Ameliyat|Kontrol"
+        int default_duration_min
+        decimal default_price
+    }
+
+    %% ================= MUAYENE / SOAP =================
+    ENCOUNTER ||--o{ PRESCRIPTION : "receteye_baglanir"
+    ENCOUNTER ||--o{ LAB_RESULT : "tahlile_baglanir"
+    ENCOUNTER ||--o{ IMAGING_RECORD : "goruntuye_baglanir"
+    ENCOUNTER ||--o| INVOICE : "faturaya_donusur"
+    ENCOUNTER ||--o| AI_JOB : "ai_scribe_uretir"
+    ENCOUNTER {
+        uuid id PK
+        uuid patient_id FK
+        uuid staff_user_id FK
+        uuid appointment_id FK
+        timestamp encounter_date
+        text subjective "S"
+        text objective "O"
+        text assessment "A"
+        text plan "P"
+        decimal weight_kg
+        decimal temperature_c
+        int heart_rate
+        int respiratory_rate
+        string template_used "tur_bazli_sablon"
+        string status "DRAFT|FINALIZED|AMENDED"
+        boolean ai_generated
+        timestamp finalized_at
+    }
+
+    %% ================= ASI =================
+    VACCINATION_RECORD {
+        uuid id PK
+        uuid patient_id FK
+        uuid encounter_id FK
+        string vaccine_name
+        string lot_number
+        date administered_date
+        date next_due_date
+        uuid administered_by_staff_id FK
+        boolean reminder_sent
+    }
+
+    %% ================= RECETE / ILAC =================
+    PRESCRIPTION ||--o{ PRESCRIPTION_ITEM : "kalem_icerir"
+    PRESCRIPTION {
+        uuid id PK
+        uuid patient_id FK
+        uuid encounter_id FK
+        uuid prescribing_staff_id FK
+        date issued_date
+        string status "ACTIVE|FULFILLED|CANCELLED"
+        boolean controlled_substance
+        string pharmacy_integration_ref
+    }
+    PRESCRIPTION_ITEM }o--|| DRUG_CATALOG : "ilactan_referans_alir"
+    PRESCRIPTION_ITEM {
+        uuid id PK
+        uuid prescription_id FK
+        uuid drug_id FK
+        string dosage
+        string frequency
+        int duration_days
+        string route "oral|topical|injectable"
+    }
+    DRUG_CATALOG {
+        uuid id PK
+        string name
+        string active_ingredient
+        boolean is_controlled
+        jsonb interaction_flags "AI_uyari_kaynagi"
+    }
+
+    %% ================= LAB / GORUNTULEME =================
+    LAB_RESULT {
+        uuid id PK
+        uuid patient_id FK
+        uuid encounter_id FK
+        string test_type
+        string external_analyzer_ref "HL7_kaynak"
+        jsonb result_values
+        string status "PENDING|COMPLETED|ABNORMAL_FLAGGED"
+        timestamp result_date
+    }
+
+    IMAGING_RECORD ||--o| AI_JOB : "ai_on_analiz_ister"
+    IMAGING_RECORD {
+        uuid id PK
+        uuid patient_id FK
+        uuid encounter_id FK
+        string modality "XRAY|ULTRASOUND|DICOM"
+        string file_url "object_storage"
+        string radiologist_notes
+        string ai_flag_summary
+        timestamp captured_at
+    }
+
+    %% ================= YATIS =================
+    ROOM ||--o{ BOARDING_STAY : "barindirir"
+    ROOM {
+        uuid id PK
+        uuid branch_id FK
+        string room_code
+        string type "CAGE|KENNEL|ICU|SURGERY"
+        string status "AVAILABLE|OCCUPIED|CLEANING"
+    }
+    BOARDING_STAY ||--o{ TASK_BOARD_ITEM : "gorev_icerir"
+    BOARDING_STAY {
+        uuid id PK
+        uuid patient_id FK
+        uuid room_id FK
+        timestamp check_in
+        timestamp check_out
+        string status "ADMITTED|DISCHARGED"
+    }
+    TASK_BOARD_ITEM {
+        uuid id PK
+        uuid boarding_stay_id FK
+        uuid assigned_staff_id FK
+        string task_type "MEDICATION|VITALS|FEEDING|WALK"
+        timestamp due_at
+        string status "PENDING|DONE|SKIPPED"
+    }
+
+    %% ================= FATURALAMA =================
+    INVOICE ||--o{ INVOICE_LINE : "kalem_icerir"
+    INVOICE ||--o{ PAYMENT : "odeme_alir"
+    INVOICE {
+        uuid id PK
+        uuid tenant_id FK
+        uuid branch_id FK
+        uuid owner_id FK
+        uuid encounter_id FK
+        string e_invoice_ref "GIB_UUID"
+        decimal total_amount
+        decimal tax_amount
+        string status "DRAFT|ISSUED|PARTIALLY_PAID|PAID|VOID"
+        timestamp issued_at
+    }
+    INVOICE_LINE }o--|| SERVICE_TYPE : "hizmetten_referans_alir"
+    INVOICE_LINE }o--o| INVENTORY_ITEM : "urunden_referans_alir"
+    INVOICE_LINE {
+        uuid id PK
+        uuid invoice_id FK
+        string description
+        int quantity
+        decimal unit_price
+        decimal line_total
+        string source "AUTO_CHARGE_CAPTURE|MANUAL"
+    }
+    PAYMENT {
+        uuid id PK
+        uuid invoice_id FK
+        string method "CARD|CASH|TEXT_TO_PAY|INSTALLMENT"
+        decimal amount
+        string psp_ref "iyzico_paytr_ref"
+        timestamp paid_at
+    }
+
+    %% ================= STOK =================
+    SUPPLIER ||--o{ PURCHASE_ORDER : "siparis_alir"
+    SUPPLIER {
+        uuid id PK
+        uuid tenant_id FK
+        string name
+        string contact_info
+    }
+    INVENTORY_ITEM ||--o{ STOCK_MOVEMENT : "hareket_gorur"
+    INVENTORY_ITEM {
+        uuid id PK
+        uuid branch_id FK
+        string sku_barcode
+        string name
+        string category
+        int quantity_on_hand
+        int reorder_threshold
+        date expiry_date
+        string lot_number
+        decimal unit_cost
+    }
+    STOCK_MOVEMENT {
+        uuid id PK
+        uuid inventory_item_id FK
+        string movement_type "IN|OUT|ADJUSTMENT"
+        int quantity
+        string reference_type "ENCOUNTER|PURCHASE_ORDER|MANUAL"
+        uuid reference_id
+        timestamp created_at
+    }
+    PURCHASE_ORDER ||--o{ INVENTORY_ITEM : "urun_siparis_eder"
+    PURCHASE_ORDER {
+        uuid id PK
+        uuid supplier_id FK
+        uuid branch_id FK
+        string status "DRAFT|SENT|RECEIVED"
+        decimal total_cost
+        timestamp ordered_at
+    }
+
+    %% ================= BILDIRIM / ILETISIM =================
+    NOTIFICATION {
+        uuid id PK
+        uuid tenant_id FK
+        uuid owner_id FK
+        string channel "SMS|WHATSAPP|PUSH|EMAIL"
+        string template_code
+        string status "QUEUED|SENT|FAILED|READ"
+        timestamp sent_at
+    }
+    CHAT_MESSAGE {
+        uuid id PK
+        uuid tenant_id FK
+        uuid owner_id FK
+        uuid staff_user_id FK
+        string sender_type "OWNER|CLINIC|AI_BOT"
+        text body
+        string ai_triage_urgency "LOW|MEDIUM|HIGH|EMERGENCY"
+        timestamp sent_at
+    }
+
+    %% ================= AI ISLERI =================
+    AI_JOB {
+        uuid id PK
+        uuid tenant_id FK
+        string job_type "SOAP_TRANSCRIBE|DIAGNOSIS_SUPPORT|IMAGING_ANALYSIS|NO_SHOW_PREDICTION|INVENTORY_FORECAST"
+        string related_entity_type
+        uuid related_entity_id
+        string status "QUEUED|PROCESSING|COMPLETED|FAILED|NEEDS_REVIEW"
+        jsonb input_ref
+        jsonb output_payload
+        boolean reviewed_by_staff
+        uuid reviewed_by_staff_id FK
+        timestamp created_at
+        timestamp completed_at
+    }
+
+    %% ================= KASA (Faz 1 Modul 5 eklentisi, kullanici onayiyla) =================
+    %% requirements.md 4.7 "Kasa yonetimi" -- basit acilis/kapanis kaydi,
+    %% mutabakat/fark hesabi yok (kullanici tercihi: "daha basit tut").
+    CASH_REGISTER_SESSION {
+        uuid id PK
+        uuid branch_id FK
+        uuid opened_by_staff_id FK
+        decimal opening_balance
+        timestamp opened_at
+        uuid closed_by_staff_id FK
+        decimal closing_balance
+        timestamp closed_at
+        string status "OPEN|CLOSED"
+        string notes
+    }
+
+    %% ================= TARBIL / MEVZUAT =================
+    TARBIL_SYNC_LOG {
+        uuid id PK
+        uuid patient_id FK
+        string sync_type "VACCINATION|IDENTIFICATION|TREATMENT"
+        string status "PENDING|SYNCED|FAILED"
+        jsonb payload
+        timestamp attempted_at
+    }

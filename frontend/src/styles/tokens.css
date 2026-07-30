@@ -1,0 +1,66 @@
+/**
+ * MyVet Design Tokens
+ * Bu dosya, tasarım sistemi dokümanındaki (vetos-tasarim-sistemi.md) v1.3
+ * kararlarının kod karşılığıdır. Renk/tipografi/boşluk değişikliği HER ZAMAN
+ * önce burada yapılır — bileşenler hiçbir zaman ham hex değeri içermez.
+ */
+
+:root {
+  /* ---- Marka renkleri (mor + altın imza) ---- */
+  --color-ink-900: #180f24;
+  --color-ink-soft: #241531;
+  --color-brand-700: #4a2a78;
+  --color-brand-500: #7c4dbc;
+  --color-brand-400: #9868d8;
+  --color-brand-100: #f0e7f7;
+
+  --color-gold-600: #c2872e;
+  --color-gold-400: #e0ac5c;
+  --color-gold-100: #f7ecd6;
+
+  /* ---- Nötr skala ---- */
+  --color-cream: #fbfaf8;
+  --color-paper: #ffffff;
+  --color-text-ink: #1b1229;
+  --color-text-muted: #6e6579;
+  --color-border: #e9e5ef;
+  --color-border-strong: #b6b2a4;
+
+  /* ---- Semantik renkler (marka paletinden bilerek ayrık) ---- */
+  --color-success-700: #146245;
+  --color-success-100: #ddefe6;
+  --color-warning-700: #a65022;
+  --color-warning-100: #f1e0d2;
+  --color-danger-700: #932e27;
+  --color-danger-100: #f5dedb;
+
+  /* AI göstergesi: markadan boşalan mavi, sadece AI için */
+  --color-ai-600: #2554c7;
+  --color-ai-100: #e3ebfb;
+
+  /* ---- Tipografi ---- */
+  --font-heading: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+
+  /* ---- Boşluk (4px temel birim) ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  /* ---- Köşe / gölge ---- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-full: 999px;
+
+  --shadow-sm: 0 1px 2px rgba(24, 15, 36, 0.06);
+  --shadow-md: 0 8px 18px -6px rgba(74, 42, 120, 0.45);
+  --shadow-lg: 0 20px 44px -18px rgba(24, 15, 36, 0.18);
+
+  /* ---- Sidebar genişliği (layout bileşenlerinde kullanılır) ---- */
+  --sidebar-width: 220px;
+}

@@ -1,0 +1,87 @@
+.btn {
+  height: 38px;
+  padding: 0 16px;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.18s, background 0.15s,
+    border-color 0.15s;
+}
+
+.btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.primary {
+  background: linear-gradient(135deg, var(--color-brand-400), var(--color-brand-700));
+  color: #fff;
+  box-shadow: var(--shadow-md);
+}
+.primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 22px -6px rgba(74, 42, 120, 0.52);
+}
+.primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.32), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.5s;
+}
+.primary:hover::before {
+  left: 130%;
+}
+
+.secondary {
+  background: #f5f3ee;
+  border: 1.5px solid var(--color-border-strong);
+  color: var(--color-text-ink);
+}
+.secondary:hover {
+  background: #efebe3;
+}
+
+.tertiary {
+  background: transparent;
+  color: var(--color-brand-500);
+  padding: 0;
+  height: auto;
+}
+.tertiary:hover {
+  text-decoration: underline;
+}
+
+.danger {
+  background: var(--color-danger-700);
+  color: #fff;
+}
+
+.ai {
+  background: var(--color-ai-100);
+  color: var(--color-ai-600);
+  border: 1.5px solid var(--color-ai-600);
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+  transform: scale(0);
+  animation: rippleAnim 0.6s ease-out;
+}

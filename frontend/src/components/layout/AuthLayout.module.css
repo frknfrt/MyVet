@@ -1,0 +1,91 @@
+.shell {
+  display: grid;
+  grid-template-columns: 1fr 1.05fr;
+  min-height: 100vh;
+}
+
+.brandPanel {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(ellipse 900px 700px at 15% -10%, rgba(224, 172, 92, 0.28), transparent 55%),
+    radial-gradient(ellipse 700px 700px at 90% 100%, rgba(124, 77, 188, 0.35), transparent 60%),
+    linear-gradient(160deg, var(--color-ink-900) 0%, var(--color-ink-soft) 55%, #2e1b42 100%);
+  padding: 4rem 4.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.brandMark {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 2.4rem;
+}
+.glyph {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--color-gold-400), var(--color-gold-600));
+  box-shadow: 0 6px 18px -4px rgba(194, 135, 46, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.glyph svg {
+  width: 18px;
+  height: 18px;
+}
+.word {
+  color: #fff;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 17px;
+}
+
+.headline {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 38px;
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+  color: #fff;
+  max-width: 440px;
+}
+.headline em {
+  font-style: normal;
+  font-weight: 800;
+  background: linear-gradient(100deg, var(--color-gold-400), #f2cb8f 60%, var(--color-gold-400));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.subcopy {
+  margin-top: 20px;
+  color: #c6bcd6;
+  font-size: 14.5px;
+  line-height: 1.7;
+  max-width: 380px;
+}
+
+.formPanel {
+  background: var(--color-paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  overflow-y: auto;
+}
+.formCard {
+  width: 100%;
+  max-width: 400px;
+}
+
+@media (max-width: 880px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+  .brandPanel {
+    display: none;
+  }
+}

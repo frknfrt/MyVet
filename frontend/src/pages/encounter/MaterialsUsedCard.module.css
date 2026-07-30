@@ -1,0 +1,22 @@
+.row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.row:last-of-type {
+  border-bottom: none;
+}
+.emptyNote {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  padding: 4px 0 10px;
+}
+.form {
+  display: grid;
+  grid-template-columns: 1fr 0.6fr auto;
+  gap: 8px;
+  align-items: end;
+  margin-top: 10px;
+}

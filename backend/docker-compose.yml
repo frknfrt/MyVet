@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: myvet
+      POSTGRES_USER: myvet
+      POSTGRES_PASSWORD: myvet
+    ports:
+      # Host'ta 5432 baska bir Postgres servisiyle cakisabiliyor (orn. yerel
+      # Windows Postgres kurulumu) -- host tarafinda 5433 kullaniyoruz.
+      - "5433:5432"
+    volumes:
+      - myvet-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  myvet-postgres-data:

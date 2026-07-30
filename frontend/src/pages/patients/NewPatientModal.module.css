@@ -1,0 +1,42 @@
+.title {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 20px;
+  margin-bottom: 2px;
+}
+.lede {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+.sectionLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-brand-500);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin: 18px 0 10px;
+}
+.sectionLabel:first-of-type {
+  margin-top: 0;
+}
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 12px;
+}
+.errorBanner {
+  background: var(--color-danger-100);
+  color: var(--color-danger-700);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 14px;
+}
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}

@@ -1,0 +1,72 @@
+.wrap {
+  position: relative;
+}
+
+.trigger {
+  height: 38px;
+  padding: 0 14px 0 16px;
+  border-radius: 9px;
+  border: none;
+  background: linear-gradient(135deg, var(--color-brand-400), var(--color-brand-700));
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  box-shadow: var(--shadow-md);
+  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.trigger:hover {
+  transform: translateY(-1px);
+}
+.trigger svg {
+  width: 14px;
+  height: 14px;
+}
+
+.chevron {
+  display: flex;
+  transition: transform 0.18s;
+  margin-left: 2px;
+}
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #fff;
+  border: 1.5px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  padding: 6px;
+  width: 190px;
+  z-index: 10;
+  animation: fadeInUp 0.18s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--color-text-ink);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.menuItem:hover {
+  background: #f5f3ee;
+}
+.menuItem svg {
+  width: 15px;
+  height: 15px;
+  stroke: var(--color-brand-500);
+  flex-shrink: 0;
+}
