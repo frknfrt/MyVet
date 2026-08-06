@@ -43,7 +43,8 @@ public class ScheduleAppointmentUseCase {
         appointmentRepository.save(appointment);
 
         eventPublisher.publish(new AppointmentScheduledEvent(
-            appointment.getId(), appointment.getPatientId(), appointment.getAssignedStaffId()
+            appointment.getId(), appointment.getTenantId(), appointment.getPatientId(), appointment.getOwnerId(),
+            appointment.getAssignedStaffId(), appointment.getScheduledStart()
         ));
         return appointment.getId();
     }

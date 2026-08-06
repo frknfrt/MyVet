@@ -1,60 +1,45 @@
-import { Badge } from '../../components/ui/Badge';
-import { WorklistPatient } from '../../data/worklist';
+import { AppointmentItem } from '../../api/appointmentApi';
+import { AppointmentStatusBadge } from '../appointments/appointmentStatus';
+import { formatTime } from '../appointments/weekUtils';
+import { colorFor, initialsOf } from './avatarColor';
 import styles from './WorklistRow.module.css';
 
-const CHECK_ICON = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round">
-    <path d="M4 12l6 6L20 6" />
-  </svg>
-);
+const SOURCE_LABELS: Record<AppointmentItem['source'], string> = {
+  PET_APP: 'Sahip Uygulaması',
+  PHONE: 'Telefon',
+  WALK_IN: 'Kapıdan Geldi',
+  WIDGET: 'Web Sitesi',
+};
 
 interface WorklistRowProps {
-  patient: WorklistPatient;
+  appointment: AppointmentItem;
   delayMs: number;
+  onClick: () => void;
 }
 
-export function WorklistRow({ patient, delayMs }: WorklistRowProps) {
+export function WorklistRow({ appointment, delayMs, onClick }: WorklistRowProps) {
+  const initials = initialsOf(appointment.patientName);
+
   return (
-    <div className={styles.row} style={{ animationDelay: `${delayMs}ms` }}>
+    <div className={styles.row} style={{ animationDelay: `${delayMs}ms` }} onClick={onClick}>
       <div className={styles.patientCell}>
-        <div className={styles.avatar} style={{ background: patient.color }}>
-          {patient.initials}
+        <div className={styles.avatar} style={{ background: colorFor(appointment.patientId) }}>
+          {initials}
         </div>
         <div>
           <div className={styles.name}>
-            {patient.name} <span className={styles.muted}>· {patient.species}</span>
-            {patient.directive === 'cpr' && <span className={`${styles.directive} ${styles.cpr}`}>CPR</span>}
-            {patient.directive === 'dnr' && <span className={`${styles.directive} ${styles.dnr}`}>DNR</span>}
-            {patient.flag && (
-              <span className={styles.flagIcon} title={patient.flag}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
-                  <path d="M12 8v4M12 16h.01" />
-                </svg>
-              </span>
-            )}
+            {appointment.patientName}
+            {appointment.patientSpeciesName && <span className={styles.muted}> · {appointment.patientSpeciesName}</span>}
           </div>
-          <div className={styles.owner}>{patient.owner}</div>
+          <div className={styles.owner}>{appointment.ownerName}</div>
         </div>
       </div>
-      <div className={styles.muted}>{patient.time}</div>
-      <div className={styles.muted}>{patient.location}</div>
-      <div className={styles.miniAvatar}>{patient.vetInitials}</div>
-      <div className={styles.assignedStack}>
-        {patient.assignedInitials.length ? (
-          patient.assignedInitials.map((a, i) => (
-            <div key={i} className={styles.miniAvatar}>
-              {a}
-            </div>
-          ))
-        ) : (
-          <span className={styles.muted}>—</span>
-        )}
-      </div>
-      <div className={styles.muted}>{patient.reason}</div>
+      <div className={styles.muted}>{formatTime(appointment.scheduledStart)}</div>
+      <div className={styles.muted}>{appointment.staffName ?? 'Atanmadı'}</div>
+      <div className={styles.muted}>{appointment.serviceName ?? '—'}</div>
+      <div className={styles.muted}>{SOURCE_LABELS[appointment.source]}</div>
       <div>
-        <Badge tone={patient.badgeTone} icon={patient.badgeTone === 'success' ? CHECK_ICON : undefined}>
-          {patient.badgeLabel}
-        </Badge>
+        <AppointmentStatusBadge status={appointment.status} />
       </div>
     </div>
   );

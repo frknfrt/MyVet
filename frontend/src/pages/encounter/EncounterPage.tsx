@@ -1,26 +1,49 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { aiApi } from '../../api/aiApi';
+import { ApiError } from '../../api/client';
 import { encounterApi, EncounterDetail } from '../../api/encounterApi';
+import { patientApi, PatientProfile } from '../../api/patientApi';
 import { AppShell } from '../../components/layout/AppShell';
+import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { FieldWrap, Input, Textarea } from '../../components/ui/Field';
-import { EncounterStatusBadge } from './encounterStatus';
 import { MaterialsUsedCard } from './MaterialsUsedCard';
+import { PatientHeaderBar } from './PatientHeaderBar';
 import styles from './EncounterPage.module.css';
 
 type VitalsForm = { weightKg: string; temperatureC: string; heartRate: string; respiratoryRate: string };
 type SoapForm = { subjective: string; objective: string; assessment: string; plan: string };
 
+function errorMessageOf(err: unknown): string {
+  return err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Beklenmeyen bir hata oluştu';
+}
+
+function getSpeechRecognitionCtor(): (new () => any) | null {
+  const w = window as any;
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
+}
+
 export function EncounterPage() {
   const { encounterId } = useParams<{ encounterId: string }>();
   const navigate = useNavigate();
   const [encounter, setEncounter] = useState<EncounterDetail | null>(null);
+  const [profile, setProfile] = useState<PatientProfile | null>(null);
   const [soap, setSoap] = useState<SoapForm>({ subjective: '', objective: '', assessment: '', plan: '' });
   const [vitals, setVitals] = useState<VitalsForm>({ weightKg: '', temperatureC: '', heartRate: '', respiratoryRate: '' });
   const [savingSoap, setSavingSoap] = useState(false);
   const [savingVitals, setSavingVitals] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
+
+  const [transcript, setTranscript] = useState('');
+  const [recording, setRecording] = useState(false);
+  const [speechSupported] = useState(() => getSpeechRecognitionCtor() !== null);
+  const [generatingDraft, setGeneratingDraft] = useState(false);
+  const [draftError, setDraftError] = useState<string | null>(null);
+  const [draft, setDraft] = useState<{ subjective: string; objective: string; assessment: string; plan: string; modelConnected: boolean } | null>(null);
+  const [soapAiGenerated, setSoapAiGenerated] = useState(false);
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     if (!encounterId) return;
@@ -38,8 +61,16 @@ export function EncounterPage() {
         heartRate: e.heartRate?.toString() ?? '',
         respiratoryRate: e.respiratoryRate?.toString() ?? '',
       });
+      setSoapAiGenerated(e.aiGenerated);
+      patientApi.getProfile(e.patientId).then(setProfile);
     });
   }, [encounterId]);
+
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.stop?.();
+    };
+  }, []);
 
   const isReadOnly = encounter?.status === 'FINALIZED' || encounter?.status === 'AMENDED';
 
@@ -48,11 +79,61 @@ export function EncounterPage() {
     setTimeout(() => setSavedMessage(null), 2000);
   }
 
+  function toggleRecording() {
+    if (recording) {
+      recognitionRef.current?.stop?.();
+      setRecording(false);
+      return;
+    }
+    const Ctor = getSpeechRecognitionCtor();
+    if (!Ctor) return;
+    const recognition = new Ctor();
+    recognition.lang = 'tr-TR';
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.onresult = (event: any) => {
+      let addition = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          addition += event.results[i][0].transcript + ' ';
+        }
+      }
+      if (addition.trim()) {
+        setTranscript((prev) => (prev ? prev.trim() + ' ' + addition.trim() : addition.trim()));
+      }
+    };
+    recognition.onerror = () => setRecording(false);
+    recognition.onend = () => setRecording(false);
+    recognitionRef.current = recognition;
+    recognition.start();
+    setRecording(true);
+  }
+
+  async function handleGenerateDraft() {
+    if (generatingDraft || !transcript.trim()) return;
+    setGeneratingDraft(true);
+    setDraftError(null);
+    try {
+      const result = await aiApi.generateSoapDraft(transcript.trim());
+      setDraft(result);
+    } catch (err) {
+      setDraftError(errorMessageOf(err));
+    } finally {
+      setGeneratingDraft(false);
+    }
+  }
+
+  function applyDraft() {
+    if (!draft) return;
+    setSoap({ subjective: draft.subjective, objective: draft.objective, assessment: draft.assessment, plan: draft.plan });
+    setSoapAiGenerated(true);
+  }
+
   async function handleSaveSoap() {
     if (!encounterId) return;
     setSavingSoap(true);
     try {
-      await encounterApi.updateSoap(encounterId, soap);
+      await encounterApi.updateSoap(encounterId, { ...soap, aiGenerated: soapAiGenerated });
       flashSaved('SOAP kaydedildi');
     } finally {
       setSavingSoap(false);
@@ -82,7 +163,7 @@ export function EncounterPage() {
     }
     setFinalizing(true);
     try {
-      await encounterApi.updateSoap(encounterId, soap);
+      await encounterApi.updateSoap(encounterId, { ...soap, aiGenerated: soapAiGenerated });
       await encounterApi.finalize(encounterId);
       const updated = await encounterApi.get(encounterId);
       setEncounter(updated);
@@ -91,7 +172,7 @@ export function EncounterPage() {
     }
   }
 
-  if (!encounter) {
+  if (!encounter || !profile) {
     return (
       <AppShell>
         <div>Yükleniyor...</div>
@@ -101,20 +182,7 @@ export function EncounterPage() {
 
   return (
     <AppShell>
-      <div className={styles.topbar}>
-        <div>
-          <h1 className={styles.title}>{encounter.patientName} — SOAP Muayenesi</h1>
-          <div className={styles.sub}>
-            {encounter.staffName} · {new Date(encounter.encounterDate).toLocaleString('tr-TR')}
-          </div>
-        </div>
-        <div className={styles.headerActions}>
-          <EncounterStatusBadge status={encounter.status} />
-          <Button variant="secondary" onClick={() => navigate('/hastalar')}>
-            Hastalara Dön
-          </Button>
-        </div>
-      </div>
+      <PatientHeaderBar profile={profile} encounter={encounter} onBack={() => navigate('/hastalar')} />
 
       <div className={styles.layout}>
         <div>
@@ -167,7 +235,10 @@ export function EncounterPage() {
           </div>
 
           <div className={styles.card}>
-            <div className={styles.cardTitle}>SOAP Notu</div>
+            <div className={styles.cardTitleRow}>
+              <div className={styles.cardTitle}>SOAP Notu</div>
+              {soapAiGenerated && <Badge tone="ai">AI Destekli</Badge>}
+            </div>
             <div className={styles.soapGrid}>
               <FieldWrap label="Subjective (S)">
                 <Textarea
@@ -222,13 +293,58 @@ export function EncounterPage() {
           <div className={styles.aiCard}>
             <div className={styles.aiTitle}>✦ AI Scribe</div>
             <p className={styles.aiCopy}>
-              Muayene sesini dinleyip SOAP alanlarını otomatik dolduran AI Scribe, Faz 2'de gerçek model
-              entegrasyonuna bağlanacak. Üretilen her taslak her zaman hekim onayına sunulur, otomatik
-              uygulanmaz.
+              Muayeneyi sesli dikte edin veya not yazın; AI Scribe SOAP alanları için taslak oluşturur.
+              Üretilen her taslak hekim onayına sunulur, alanlara siz onaylamadan uygulanmaz.
             </p>
-            <Button variant="ai" disabled>
-              Sesle SOAP Oluştur (Faz 2)
-            </Button>
+
+            {!speechSupported && (
+              <div className={styles.aiWarning}>
+                Tarayıcınız sesli dikteyi desteklemiyor (Chrome/Edge önerilir). Metni elle yazabilirsiniz.
+              </div>
+            )}
+
+            <FieldWrap label="Transkript / Not">
+              <Textarea
+                rows={5}
+                value={transcript}
+                onChange={(e) => setTranscript(e.target.value)}
+                placeholder="Muayene sırasında konuşulanlar veya kısa notlar..."
+                disabled={isReadOnly}
+              />
+            </FieldWrap>
+
+            {!isReadOnly && (
+              <div className={styles.aiActions}>
+                {speechSupported && (
+                  <Button variant="secondary" onClick={toggleRecording}>
+                    {recording ? '⏹ Dikteyi Durdur' : '🎙 Sesle Dikte Et'}
+                  </Button>
+                )}
+                <Button variant="ai" onClick={handleGenerateDraft} disabled={generatingDraft || !transcript.trim()}>
+                  {generatingDraft ? 'Oluşturuluyor...' : 'SOAP Taslağı Oluştur'}
+                </Button>
+              </div>
+            )}
+
+            {draftError && <div className={styles.aiError}>{draftError}</div>}
+
+            {draft && (
+              <div className={styles.draftBox}>
+                {!draft.modelConnected && (
+                  <div className={styles.aiWarning}>
+                    Gerçek AI modeli henüz bağlı değil — bu taslak, yazdığınız metnin Subjective alanına
+                    aktarılmasından ibaret. Diğer alanları elle doldurun.
+                  </div>
+                )}
+                <div className={styles.draftLabel}>Taslak önizleme</div>
+                <div className={styles.draftPreview}>{draft.subjective || '—'}</div>
+                {!isReadOnly && (
+                  <Button variant="ai" onClick={applyDraft}>
+                    Alanlara Uygula
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

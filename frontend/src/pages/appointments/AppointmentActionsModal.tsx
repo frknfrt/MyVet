@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AppointmentItem, appointmentApi, StaffItem } from '../../api/appointmentApi';
+import { ApiError } from '../../api/client';
+import { encounterApi } from '../../api/encounterApi';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Field';
@@ -14,12 +17,19 @@ interface AppointmentActionsModalProps {
   onChanged: () => void;
 }
 
+function errorMessageOf(err: unknown): string {
+  return err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Beklenmeyen bir hata oluştu';
+}
+
 export function AppointmentActionsModal({ appointment, onClose, onChanged }: AppointmentActionsModalProps) {
+  const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [staff, setStaff] = useState<StaffItem[]>([]);
   const [selectedStaffId, setSelectedStaffId] = useState('');
 
   useEffect(() => {
+    setError(null);
     if (!appointment || appointment.assignedStaffId) return;
     appointmentApi.listStaff().then((list) => {
       setStaff(list);
@@ -32,10 +42,13 @@ export function AppointmentActionsModal({ appointment, onClose, onChanged }: App
   async function run(action: (id: string) => Promise<void>) {
     if (!appointment) return;
     setBusy(true);
+    setError(null);
     try {
       await action(appointment.id);
       onChanged();
       onClose();
+    } catch (err) {
+      setError(errorMessageOf(err));
     } finally {
       setBusy(false);
     }
@@ -44,11 +57,36 @@ export function AppointmentActionsModal({ appointment, onClose, onChanged }: App
   async function handleAssignAndConfirm() {
     if (!appointment || !selectedStaffId) return;
     setBusy(true);
+    setError(null);
     try {
       await appointmentApi.assignStaff(appointment.id, selectedStaffId);
       await appointmentApi.confirm(appointment.id);
       onChanged();
       onClose();
+    } catch (err) {
+      setError(errorMessageOf(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Var olan muayeneyi bulur, yoksa yenisini acar -- her tiklamada duplicate olusturmaz. */
+  async function goToSoap(startAppointment: boolean) {
+    if (!appointment) return;
+    setBusy(true);
+    setError(null);
+    try {
+      if (startAppointment) {
+        await appointmentApi.start(appointment.id);
+      }
+      const encounter = await encounterApi.findByAppointment(appointment.id);
+      const encounterId = encounter
+        ? encounter.id
+        : await encounterApi.start({ patientId: appointment.patientId, appointmentId: appointment.id });
+      onChanged();
+      navigate(`/muayene/${encounterId}`);
+    } catch (err) {
+      setError(errorMessageOf(err));
     } finally {
       setBusy(false);
     }
@@ -66,6 +104,8 @@ export function AppointmentActionsModal({ appointment, onClose, onChanged }: App
       </div>
       <AppointmentStatusBadge status={status} />
       {appointment.source === 'WIDGET' && <Badge tone="ai">Web Sitesi Talebi</Badge>}
+
+      {error && <div className={styles.errorBanner}>{error}</div>}
 
       {needsTriage ? (
         <div className={styles.actions}>
@@ -96,13 +136,18 @@ export function AppointmentActionsModal({ appointment, onClose, onChanged }: App
             </Button>
           )}
           {status === 'CHECKED_IN' && (
-            <Button variant="primary" disabled={busy} onClick={() => run(appointmentApi.start)}>
-              Muayeneyi başlat
+            <Button variant="primary" disabled={busy} onClick={() => goToSoap(true)}>
+              Muayeneyi Başlat (SOAP'a Git)
             </Button>
           )}
           {status === 'IN_PROGRESS' && (
-            <Button variant="primary" disabled={busy} onClick={() => run(appointmentApi.complete)}>
-              Tamamla
+            <Button variant="primary" disabled={busy} onClick={() => goToSoap(false)}>
+              SOAP'a Git
+            </Button>
+          )}
+          {status === 'IN_PROGRESS' && (
+            <Button variant="secondary" disabled={busy} onClick={() => run(appointmentApi.complete)}>
+              Randevuyu Tamamla
             </Button>
           )}
           {(status === 'CONFIRMED' || status === 'CHECKED_IN') && (

@@ -10,4 +10,5 @@ public interface InvoiceRepository {
     List<Invoice> findByTenantId(UUID tenantId);
     List<Invoice> findByOwnerId(UUID ownerId);
     List<Invoice> findByOwnerIdAndStatusIn(UUID ownerId, List<InvoiceStatus> statuses);
+    Optional<Invoice> findByBoardingStayId(UUID boardingStayId);
 }

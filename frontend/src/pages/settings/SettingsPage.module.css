@@ -1,6 +1,15 @@
 .topbar {
   margin-bottom: 1.4rem;
 }
+.errorBanner {
+  background: var(--color-danger-100);
+  color: var(--color-danger-700);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 14px;
+}
 .title {
   font-size: 21px;
   font-weight: 700;
@@ -111,4 +120,74 @@
   padding: 3rem 1rem;
   color: var(--color-text-muted);
   font-size: 13px;
+}
+
+.catalogGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  max-width: 760px;
+}
+.catalogCard {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 18px 20px;
+}
+.catalogCardTitle {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+.catalogList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 12px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.catalogListItem {
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.catalogListItem:hover {
+  background: var(--color-neutral-100, #f5f3ee);
+}
+.catalogListItemActive {
+  background: var(--color-brand-100);
+  color: var(--color-brand-500);
+  font-weight: 600;
+}
+.catalogEmpty {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  padding: 8px 4px;
+}
+.catalogAddForm {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+.serviceRow {
+  grid-template-columns: 2fr 1fr 1fr;
+}
+.serviceAddForm {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 0 12px;
+  align-items: end;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-top: 16px;
+  max-width: 720px;
 }

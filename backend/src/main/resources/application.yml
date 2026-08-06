@@ -19,6 +19,11 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+  servlet:
+    multipart:
+      max-file-size: 15MB
+      max-request-size: 15MB
+
 jwt:
   # Prod'da JWT_SECRET env degiskeniyle mutlaka override edilmeli.
   secret: ${JWT_SECRET:myvet-local-dev-secret-key-change-me-32bytes-min}

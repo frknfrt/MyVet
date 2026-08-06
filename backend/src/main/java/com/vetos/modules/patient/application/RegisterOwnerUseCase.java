@@ -21,6 +21,12 @@ public class RegisterOwnerUseCase {
             command.tenantId(), command.fullName(), command.phone(), command.email(), command.address()
         );
         owner.setMarketingConsent(command.marketingConsent());
+        owner.updateDetails(
+            command.middleName(), command.secondaryPhone(), command.city(), command.district(),
+            command.occupation(), command.referralSource(), command.clientDiscount(), command.criticalAlert(),
+            command.notes(), command.smsConsent(), command.whatsappConsent(), command.notificationConsent(),
+            command.protocolNumber()
+        );
         return ownerRepository.save(owner).getId();
     }
 }

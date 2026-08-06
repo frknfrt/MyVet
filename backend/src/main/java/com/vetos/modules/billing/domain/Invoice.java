@@ -32,6 +32,9 @@ public class Invoice {
     @Column(name = "encounter_id")
     private UUID encounterId;
 
+    @Column(name = "boarding_stay_id")
+    private UUID boardingStayId;
+
     @Column(name = "e_invoice_ref")
     private String eInvoiceRef;
 
@@ -60,8 +63,22 @@ public class Invoice {
         return invoice;
     }
 
+    public static Invoice createDraftForBoardingStay(UUID tenantId, UUID branchId, UUID ownerId, UUID boardingStayId) {
+        Invoice invoice = createDraft(tenantId, branchId, ownerId, null);
+        invoice.boardingStayId = boardingStayId;
+        return invoice;
+    }
+
     public void recalculateTotal(BigDecimal newTotal) {
         this.totalAmount = newTotal;
+    }
+
+    public void recalculateTax(BigDecimal newTax) {
+        this.taxAmount = newTax;
+    }
+
+    public void applyEInvoiceReference(String eInvoiceRef) {
+        this.eInvoiceRef = eInvoiceRef;
     }
 
     public void issue() {

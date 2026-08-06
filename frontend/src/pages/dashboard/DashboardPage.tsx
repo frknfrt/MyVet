@@ -1,31 +1,82 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AppShell } from '../../components/layout/AppShell';
 import { Button } from '../../components/ui/Button';
-import { MOCK_PATIENTS, PatientStatus, STATUS_TABS } from '../../data/worklist';
-import { WorklistRow } from './WorklistRow';
-import { QuickAddMenu } from './QuickAddMenu';
+import { appointmentApi, AppointmentItem, AppointmentStatus } from '../../api/appointmentApi';
+import { useAuth } from '../../auth/AuthContext';
+import { isoDate } from '../appointments/weekUtils';
 import { BusinessSummaryView } from './BusinessSummaryView';
+import { QuickAddMenu } from './QuickAddMenu';
+import { WorklistRow } from './WorklistRow';
 import styles from './DashboardPage.module.css';
 
 type ViewMode = 'operational' | 'summary';
+type Tab = 'all' | Extract<AppointmentStatus, 'REQUESTED' | 'CHECKED_IN' | 'IN_PROGRESS' | 'COMPLETED'>;
+
+const TABS: { key: Tab; label: string }[] = [
+  { key: 'all', label: 'Bugün Tümü' },
+  { key: 'REQUESTED', label: 'Onay Bekleyen' },
+  { key: 'CHECKED_IN', label: 'Bekleme Salonu' },
+  { key: 'IN_PROGRESS', label: 'Muayenede' },
+  { key: 'COMPLETED', label: 'Tamamlanan' },
+];
+
+const NO_SHOW_RISK_THRESHOLD = 0.3;
 
 export function DashboardPage() {
+  const { session } = useAuth();
+  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<ViewMode>('operational');
-  const [activeTab, setActiveTab] = useState<PatientStatus>('active');
+  const [activeTab, setActiveTab] = useState<Tab>('all');
   const [onlyMine, setOnlyMine] = useState(false);
+  const [query, setQuery] = useState('');
+  const [appointments, setAppointments] = useState<AppointmentItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const pool = useMemo(
-    () => (onlyMine ? MOCK_PATIENTS.filter((p) => p.mine) : MOCK_PATIENTS),
-    [onlyMine]
-  );
-  const rows = useMemo(() => pool.filter((p) => p.status === activeTab), [pool, activeTab]);
+  const todayIso = isoDate(new Date());
+
+  function load() {
+    setLoading(true);
+    appointmentApi
+      .weeklyCalendar(todayIso)
+      .then((list) => setAppointments(list.filter((a) => a.scheduledStart.slice(0, 10) === todayIso)))
+      .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const pool = useMemo(() => {
+    let list = appointments;
+    if (onlyMine && session) {
+      list = list.filter((a) => a.assignedStaffId === session.staffUserId);
+    }
+    if (query.trim()) {
+      const q = query.trim().toLowerCase();
+      list = list.filter((a) => a.patientName.toLowerCase().includes(q) || a.ownerName.toLowerCase().includes(q));
+    }
+    return list;
+  }, [appointments, onlyMine, query, session]);
+
+  const rows = useMemo(() => {
+    const filtered = activeTab === 'all' ? pool : pool.filter((a) => a.status === activeTab);
+    return filtered.slice().sort((a, b) => a.scheduledStart.localeCompare(b.scheduledStart));
+  }, [pool, activeTab]);
+
+  const requestedCount = pool.filter((a) => a.status === 'REQUESTED').length;
+  const checkedInCount = pool.filter((a) => a.status === 'CHECKED_IN').length;
+  const highRiskCount = pool.filter((a) => (a.noShowRiskScore ?? 0) >= NO_SHOW_RISK_THRESHOLD).length;
 
   return (
     <AppShell>
       <div className={styles.topbar}>
         <div>
           <h1 className={styles.title}>{viewMode === 'operational' ? 'Hasta kuyruğu' : 'İşletme paneli'}</h1>
-          <div className={styles.sub}>27 Temmuz 2026 · Merkez Şube</div>
+          <div className={styles.sub}>
+            {new Date().toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' })} · Merkez Şube
+          </div>
         </div>
 
         <div className={styles.modeTabs}>
@@ -45,7 +96,13 @@ export function DashboardPage() {
 
         {viewMode === 'operational' && (
           <div className={styles.actions}>
-            <input className={styles.search} type="text" placeholder="Hasta veya sahip ara" />
+            <input
+              className={styles.search}
+              type="text"
+              placeholder="Hasta veya sahip ara"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
             <Button variant={onlyMine ? 'primary' : 'secondary'} onClick={() => setOnlyMine((v) => !v)}>
               Bana atanan
             </Button>
@@ -61,25 +118,25 @@ export function DashboardPage() {
           <div className={styles.kpiStrip}>
             <div className={styles.kpiCard}>
               <div className={styles.kpiLabel}>Bugünkü randevu</div>
-              <div className={styles.kpiValue}>18</div>
+              <div className={styles.kpiValue}>{pool.length}</div>
+            </div>
+            <div className={styles.kpiCard}>
+              <div className={styles.kpiLabel}>Onay bekleyen</div>
+              <div className={styles.kpiValue}>{requestedCount}</div>
             </div>
             <div className={styles.kpiCard}>
               <div className={styles.kpiLabel}>Bekleme salonu</div>
-              <div className={styles.kpiValue}>3</div>
-            </div>
-            <div className={styles.kpiCard}>
-              <div className={styles.kpiLabel}>Yatan hasta</div>
-              <div className={styles.kpiValue}>4</div>
+              <div className={styles.kpiValue}>{checkedInCount}</div>
             </div>
             <div className={styles.kpiCard}>
               <div className={styles.kpiLabel}>No-show riski yüksek</div>
-              <div className={`${styles.kpiValue} ${styles.warn}`}>2</div>
+              <div className={`${styles.kpiValue} ${styles.warn}`}>{highRiskCount}</div>
             </div>
           </div>
 
           <div className={styles.tabs}>
-            {STATUS_TABS.map((tab) => {
-              const count = pool.filter((p) => p.status === tab.key).length;
+            {TABS.map((tab) => {
+              const count = tab.key === 'all' ? pool.length : pool.filter((a) => a.status === tab.key).length;
               const isActive = tab.key === activeTab;
               return (
                 <div
@@ -96,21 +153,25 @@ export function DashboardPage() {
           <div className={styles.tableCard}>
             <div className={styles.tableHead}>
               <div>Hasta</div>
-              <div>Giriş</div>
-              <div>Konum</div>
+              <div>Saat</div>
               <div>Hekim</div>
-              <div>Atanan</div>
-              <div>Geliş sebebi</div>
+              <div>Hizmet</div>
+              <div>Kaynak</div>
               <div>Durum</div>
             </div>
-            {rows.length === 0 ? (
-              <div className={styles.empty}>Bu durumda hasta bulunmuyor</div>
+            {loading ? (
+              <div className={styles.empty}>Yükleniyor...</div>
+            ) : rows.length === 0 ? (
+              <div className={styles.empty}>Bu durumda randevu bulunmuyor</div>
             ) : (
-              rows.map((p, i) => <WorklistRow key={p.id} patient={p} delayMs={i * 40} />)
+              rows.map((a, i) => (
+                <WorklistRow key={a.id} appointment={a} delayMs={i * 40} onClick={() => navigate(`/hastalar/${a.patientId}`)} />
+              ))
             )}
           </div>
         </>
       )}
+
     </AppShell>
   );
 }

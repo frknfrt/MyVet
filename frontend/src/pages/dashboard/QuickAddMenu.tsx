@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styles from './QuickAddMenu.module.css';
 
 interface QuickAddOption {
@@ -30,19 +31,6 @@ const ICON_PATIENT = (
     <path d="M2.5 20v-1a6.5 6.5 0 0 1 13 0v1" />
   </svg>
 );
-const ICON_SALE = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-    <path d="M3 6h18M16 10a4 4 0 0 1-8 0" />
-  </svg>
-);
-const ICON_PAYMENT = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="5" width="20" height="14" rx="2" />
-    <path d="M2 10h20" />
-  </svg>
-);
-
 /**
  * Tasarım sistemi kuralı korunuyor: sayfada tek bir primary buton.
  * Kolayvet'teki 5-6 ayrı "Hızlı X" butonu yerine, tek buton + açılır menü.
@@ -50,6 +38,7 @@ const ICON_PAYMENT = (
 export function QuickAddMenu() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -59,11 +48,12 @@ export function QuickAddMenu() {
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, []);
 
+  // NOT: "Yeni satış" (retail POS) ve "Tahsilat al" (bağımsız tahsilat) Faz 2
+  // kapsamında (@docs/requirements.md 4.14) -- henüz backend'i yok, bu yüzden
+  // menüden çıkarıldı. Eklendiklerinde buraya geri eklenecekler.
   const options: QuickAddOption[] = [
-    { label: 'Yeni randevu', icon: ICON_APPT, onSelect: () => console.log('Yeni randevu') },
-    { label: 'Yeni hasta', icon: ICON_PATIENT, onSelect: () => console.log('Yeni hasta') },
-    { label: 'Yeni satış', icon: ICON_SALE, onSelect: () => console.log('Yeni satış') },
-    { label: 'Tahsilat al', icon: ICON_PAYMENT, onSelect: () => console.log('Tahsilat al') },
+    { label: 'Yeni randevu', icon: ICON_APPT, onSelect: () => navigate('/randevu') },
+    { label: 'Yeni hasta', icon: ICON_PATIENT, onSelect: () => navigate('/hastalar') },
   ];
 
   return (

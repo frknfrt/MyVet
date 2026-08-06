@@ -5,6 +5,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -24,8 +25,14 @@ public class Owner {
     @Column(name = "full_name", nullable = false)
     private String fullName;
 
+    @Column(name = "middle_name")
+    private String middleName;
+
     @Column(nullable = false)
     private String phone;
+
+    @Column(name = "secondary_phone")
+    private String secondaryPhone;
 
     private String email;
 
@@ -34,8 +41,37 @@ public class Owner {
 
     private String address;
 
+    private String city;
+
+    private String district;
+
+    private String occupation;
+
+    @Column(name = "referral_source")
+    private String referralSource;
+
+    @Column(name = "client_discount", nullable = false)
+    private BigDecimal clientDiscount;
+
+    @Column(name = "critical_alert")
+    private String criticalAlert;
+
+    private String notes;
+
     @Column(name = "marketing_consent", nullable = false)
     private boolean marketingConsent;
+
+    @Column(name = "sms_consent", nullable = false)
+    private boolean smsConsent;
+
+    @Column(name = "whatsapp_consent", nullable = false)
+    private boolean whatsappConsent;
+
+    @Column(name = "notification_consent", nullable = false)
+    private boolean notificationConsent;
+
+    @Column(name = "protocol_number")
+    private String protocolNumber;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -48,6 +84,10 @@ public class Owner {
         owner.email = email;
         owner.address = address;
         owner.marketingConsent = false;
+        owner.clientDiscount = BigDecimal.ZERO;
+        owner.smsConsent = true;
+        owner.whatsappConsent = true;
+        owner.notificationConsent = true;
         owner.createdAt = Instant.now();
         return owner;
     }
@@ -56,6 +96,26 @@ public class Owner {
         this.phone = phone;
         this.email = email;
         this.address = address;
+    }
+
+    public void updateDetails(
+        String middleName, String secondaryPhone, String city, String district, String occupation,
+        String referralSource, BigDecimal clientDiscount, String criticalAlert, String notes,
+        boolean smsConsent, boolean whatsappConsent, boolean notificationConsent, String protocolNumber
+    ) {
+        this.middleName = middleName;
+        this.secondaryPhone = secondaryPhone;
+        this.city = city;
+        this.district = district;
+        this.occupation = occupation;
+        this.referralSource = referralSource;
+        this.clientDiscount = clientDiscount != null ? clientDiscount : BigDecimal.ZERO;
+        this.criticalAlert = criticalAlert;
+        this.notes = notes;
+        this.smsConsent = smsConsent;
+        this.whatsappConsent = whatsappConsent;
+        this.notificationConsent = notificationConsent;
+        this.protocolNumber = protocolNumber;
     }
 
     public void setMarketingConsent(boolean marketingConsent) {

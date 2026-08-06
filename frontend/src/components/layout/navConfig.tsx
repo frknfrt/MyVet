@@ -52,6 +52,18 @@ export const NAV_ITEMS: NavItemConfig[] = [
     ),
   },
   {
+    key: 'asi-takvimi',
+    label: 'Aşı Takvimi',
+    path: '/asi-takvimi',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 2l4 4-9.5 9.5-5 1 1-5L18 2z" />
+        <path d="M14.5 5.5l4 4" />
+        <path d="M3 21l3.5-3.5" />
+      </svg>
+    ),
+  },
+  {
     key: 'laboratuvar',
     label: 'Laboratuvar',
     path: '/laboratuvar',
@@ -74,12 +86,13 @@ export const NAV_ITEMS: NavItemConfig[] = [
     ),
   },
   {
-    key: 'iletisim',
-    label: 'İletişim',
-    path: '/iletisim',
+    key: 'konaklama',
+    label: 'Konaklama',
+    path: '/konaklama',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        <path d="M3 10.5L12 3l9 7.5" />
+        <path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5" />
       </svg>
     ),
   },
@@ -101,6 +114,17 @@ export const NAV_ITEMS: NavItemConfig[] = [
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="6" width="20" height="12" rx="2" />
         <circle cx="12" cy="12" r="2.5" />
+      </svg>
+    ),
+  },
+  {
+    key: 'raporlar',
+    label: 'Raporlar',
+    path: '/raporlar',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 3v18h18" />
+        <path d="M7 15l4-5 3 3 5-7" />
       </svg>
     ),
   },

@@ -14,6 +14,7 @@ public record InvoiceDetail(
     UUID ownerId,
     String ownerName,
     UUID encounterId,
+    String eInvoiceRef,
     BigDecimal totalAmount,
     BigDecimal taxAmount,
     BigDecimal paidAmount,
@@ -22,6 +23,10 @@ public record InvoiceDetail(
     List<Line> lines,
     List<PaymentRecord> payments
 ) {
-    public record Line(UUID id, String description, int quantity, BigDecimal unitPrice, BigDecimal lineTotal, InvoiceLineSource source) {}
+    public record Line(
+        UUID id, String description, int quantity, BigDecimal unitPrice,
+        BigDecimal discountAmount, BigDecimal vatRate, BigDecimal vatAmount,
+        BigDecimal lineTotal, InvoiceLineSource source
+    ) {}
     public record PaymentRecord(UUID id, PaymentMethod method, BigDecimal amount, Instant paidAt) {}
 }

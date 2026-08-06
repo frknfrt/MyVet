@@ -19,6 +19,12 @@ public class UpdateOwnerUseCase {
         Owner owner = ownerRepository.findById(command.ownerId())
             .orElseThrow(() -> new OwnerNotFoundException(command.ownerId()));
         owner.updateContactInfo(command.phone(), command.email(), command.address());
+        owner.updateDetails(
+            command.middleName(), command.secondaryPhone(), command.city(), command.district(),
+            command.occupation(), command.referralSource(), command.clientDiscount(), command.criticalAlert(),
+            command.notes(), command.smsConsent(), command.whatsappConsent(), command.notificationConsent(),
+            command.protocolNumber()
+        );
         ownerRepository.save(owner);
     }
 }

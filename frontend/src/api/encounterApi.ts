@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient, ApiError } from './client';
 
 export type EncounterStatus = 'DRAFT' | 'FINALIZED' | 'AMENDED';
 
@@ -35,6 +35,7 @@ export interface UpdateSoapPayload {
   objective: string;
   assessment: string;
   plan: string;
+  aiGenerated?: boolean;
 }
 
 export interface UpdateVitalsPayload {
@@ -54,6 +55,14 @@ export const encounterApi = {
   start: (payload: StartEncounterPayload) => apiClient.postForId('/api/v1/encounters', payload),
   get: (id: string) => apiClient.get<EncounterDetail>(`/api/v1/encounters/${id}`),
   listByPatient: (patientId: string) => apiClient.get<EncounterDetail[]>(`/api/v1/encounters?patientId=${patientId}`),
+  findByAppointment: async (appointmentId: string): Promise<EncounterDetail | null> => {
+    try {
+      return await apiClient.get<EncounterDetail>(`/api/v1/encounters/by-appointment/${appointmentId}`);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) return null;
+      throw err;
+    }
+  },
   updateSoap: (id: string, payload: UpdateSoapPayload) => apiClient.put<void>(`/api/v1/encounters/${id}/soap`, payload),
   updateVitals: (id: string, payload: UpdateVitalsPayload) => apiClient.put<void>(`/api/v1/encounters/${id}/vitals`, payload),
   finalize: (id: string) => apiClient.post<void>(`/api/v1/encounters/${id}/finalize`),

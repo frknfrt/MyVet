@@ -1,0 +1,142 @@
+.backLink {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  margin-bottom: 14px;
+}
+.backLink:hover {
+  color: var(--color-brand-500);
+}
+
+.card {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 28px 32px;
+  max-width: 1120px;
+}
+.title {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 22px;
+}
+.lede {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  margin-top: 4px;
+  margin-bottom: 20px;
+}
+.inlineLink {
+  color: var(--color-brand-500);
+  font-weight: 600;
+}
+.sectionLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-brand-500);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin: 20px 0 10px;
+}
+.sectionLabel:first-of-type {
+  margin-top: 0;
+}
+.row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 20px;
+}
+.row3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0 20px;
+}
+.row4 {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr 1fr;
+  gap: 0 20px;
+}
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text-ink);
+  margin: 10px 0;
+  cursor: pointer;
+}
+.errorBanner {
+  background: var(--color-danger-100);
+  color: var(--color-danger-700);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 14px;
+}
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--color-border);
+}
+
+.ownerPicker {
+  position: relative;
+}
+.ownerDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 10;
+}
+.ownerOption {
+  display: flex;
+  justify-content: space-between;
+  padding: 9px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.ownerOption:hover {
+  background: var(--color-neutral-100, #f5f3ee);
+}
+.ownerOptionName {
+  font-weight: 600;
+}
+.ownerOptionPhone {
+  color: var(--color-text-muted);
+}
+.selectedOwner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--color-neutral-100, #f5f3ee);
+  border: 1.5px solid var(--color-border);
+  border-radius: 9px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.changeOwnerBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-brand-500);
+  cursor: pointer;
+}

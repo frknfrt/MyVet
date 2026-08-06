@@ -53,6 +53,33 @@ public class Patient {
     @Column(name = "photo_url")
     private String photoUrl;
 
+    private String color;
+
+    private String temperament;
+
+    @Column(name = "distinguishing_marks")
+    private String distinguishingMarks;
+
+    @Column(name = "is_aggressive", nullable = false)
+    private boolean aggressive;
+
+    @Column(name = "blood_type")
+    private String bloodType;
+
+    @Column(name = "food_brand")
+    private String foodBrand;
+
+    @Column(name = "critical_alert")
+    private String criticalAlert;
+
+    private String notes;
+
+    @Column(name = "protocol_number")
+    private String protocolNumber;
+
+    @Column(name = "rabies_tag")
+    private String rabiesTag;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PatientStatus status;
@@ -80,6 +107,23 @@ public class Patient {
         this.sex = sex;
         this.birthDate = birthDate;
         this.neutered = neutered;
+    }
+
+    public void updateDetails(
+        String color, String temperament, String distinguishingMarks, boolean aggressive,
+        String bloodType, String foodBrand, String criticalAlert, String notes,
+        String protocolNumber, String rabiesTag
+    ) {
+        this.color = color;
+        this.temperament = temperament;
+        this.distinguishingMarks = distinguishingMarks;
+        this.aggressive = aggressive;
+        this.bloodType = bloodType;
+        this.foodBrand = foodBrand;
+        this.criticalAlert = criticalAlert;
+        this.notes = notes;
+        this.protocolNumber = protocolNumber;
+        this.rabiesTag = rabiesTag;
     }
 
     public void updateMicrochip(String microchipNumber) {

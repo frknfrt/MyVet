@@ -39,6 +39,15 @@ public class InvoiceLine {
     @Column(name = "inventory_item_id")
     private UUID inventoryItemId;
 
+    @Column(name = "discount_amount", nullable = false)
+    private BigDecimal discountAmount;
+
+    @Column(name = "vat_rate", nullable = false)
+    private BigDecimal vatRate;
+
+    @Column(name = "vat_amount", nullable = false)
+    private BigDecimal vatAmount;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private InvoiceLineSource source;
@@ -47,12 +56,26 @@ public class InvoiceLine {
         UUID invoiceId, String description, int quantity, BigDecimal unitPrice,
         UUID serviceTypeId, UUID inventoryItemId, InvoiceLineSource source
     ) {
+        return create(invoiceId, description, quantity, unitPrice, BigDecimal.ZERO, BigDecimal.ZERO, serviceTypeId, inventoryItemId, source);
+    }
+
+    public static InvoiceLine create(
+        UUID invoiceId, String description, int quantity, BigDecimal unitPrice,
+        BigDecimal discountAmount, BigDecimal vatRate,
+        UUID serviceTypeId, UUID inventoryItemId, InvoiceLineSource source
+    ) {
         InvoiceLine line = new InvoiceLine();
         line.invoiceId = invoiceId;
         line.description = description;
         line.quantity = quantity;
         line.unitPrice = unitPrice;
-        line.lineTotal = unitPrice.multiply(BigDecimal.valueOf(quantity));
+        line.discountAmount = discountAmount == null ? BigDecimal.ZERO : discountAmount;
+        line.vatRate = vatRate == null ? BigDecimal.ZERO : vatRate;
+
+        BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(quantity)).subtract(line.discountAmount);
+        line.vatAmount = subtotal.multiply(line.vatRate).divide(BigDecimal.valueOf(100));
+        line.lineTotal = subtotal.add(line.vatAmount);
+
         line.serviceTypeId = serviceTypeId;
         line.inventoryItemId = inventoryItemId;
         line.source = source;

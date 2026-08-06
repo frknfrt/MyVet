@@ -23,4 +23,7 @@ class VaccinationRecordRepositoryAdapter implements VaccinationRecordRepository 
 
     @Override
     public List<VaccinationRecord> findByPatientId(UUID patientId) { return jpaRepository.findByPatientId(patientId); }
+
+    @Override
+    public List<VaccinationRecord> findByTenantId(UUID tenantId) { return jpaRepository.findByTenantId(tenantId); }
 }

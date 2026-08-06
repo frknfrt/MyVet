@@ -23,6 +23,15 @@ interface AppointmentJpaRepository extends JpaRepository<Appointment, UUID> {
     );
 
     @Query(
+        "SELECT a FROM Appointment a WHERE a.tenantId = :tenantId " +
+            "AND a.scheduledStart >= :rangeStart AND a.scheduledStart < :rangeEnd " +
+            "ORDER BY a.scheduledStart ASC"
+    )
+    List<Appointment> findByTenantIdAndDateRange(
+        @Param("tenantId") UUID tenantId, @Param("rangeStart") Instant rangeStart, @Param("rangeEnd") Instant rangeEnd
+    );
+
+    @Query(
         "SELECT COUNT(a) > 0 FROM Appointment a WHERE a.assignedStaffId = :staffId " +
             "AND a.status IN ('CONFIRMED', 'CHECKED_IN', 'IN_PROGRESS') " +
             "AND (:excludeId IS NULL OR a.id <> :excludeId) " +

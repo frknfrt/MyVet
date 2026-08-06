@@ -37,6 +37,52 @@
   box-shadow: 0 0 0 4px rgba(124, 77, 188, 0.12);
 }
 
+.filterBar {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin-bottom: 1.4rem;
+  flex-wrap: wrap;
+}
+.filterField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 200px;
+  min-width: 180px;
+}
+.filterLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-ink);
+}
+.filterInput {
+  height: 40px;
+  border-radius: 9px;
+  border: 1.5px solid var(--color-border);
+  background: #fff;
+  padding: 0 12px;
+  font-size: 13px;
+  font-family: var(--font-body);
+  color: var(--color-text-ink);
+}
+.filterInput:focus {
+  outline: none;
+  border-color: var(--color-brand-500);
+  box-shadow: 0 0 0 4px rgba(124, 77, 188, 0.12);
+}
+select.filterInput {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23716b60' stroke-width='1.5' fill='none' fill-rule='evenodd'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 30px;
+}
+
 .tableCard {
   background: #fff;
   border: 1px solid var(--color-border);
@@ -70,6 +116,13 @@
 }
 .patientName {
   font-weight: 600;
+}
+.ownerLink {
+  width: fit-content;
+}
+.ownerLink:hover {
+  color: var(--color-brand-500);
+  text-decoration: underline;
 }
 .muted {
   color: var(--color-text-muted);

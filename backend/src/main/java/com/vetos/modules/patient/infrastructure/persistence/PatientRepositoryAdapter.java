@@ -5,6 +5,7 @@ import com.vetos.modules.patient.domain.PatientRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,5 +28,10 @@ class PatientRepositoryAdapter implements PatientRepository {
     @Override
     public List<Patient> searchByNameOrOwner(UUID tenantId, String query) {
         return jpaRepository.searchByNameOrOwner(tenantId, query);
+    }
+
+    @Override
+    public List<Patient> findByTenantIdAndCreatedAtRange(UUID tenantId, Instant rangeStart, Instant rangeEnd) {
+        return jpaRepository.findByTenantIdAndCreatedAtRange(tenantId, rangeStart, rangeEnd);
     }
 }

@@ -8,4 +8,5 @@ public interface EncounterRepository {
     Encounter save(Encounter encounter);
     Optional<Encounter> findById(UUID id);
     List<Encounter> findByPatientId(UUID patientId);
+    Optional<Encounter> findByAppointmentId(UUID appointmentId);
 }

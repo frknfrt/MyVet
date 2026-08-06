@@ -26,14 +26,23 @@ public class PatientsController {
     private final SearchPatientsUseCase searchPatientsUseCase;
     private final MarkPatientDeceasedUseCase markPatientDeceasedUseCase;
     private final UpdatePatientIdentificationUseCase updatePatientIdentificationUseCase;
+    private final GetPatientGrowthSummaryUseCase getPatientGrowthSummaryUseCase;
 
     @PostMapping
     @PreAuthorize("hasAnyRole('VET', 'RECEPTIONIST', 'ADMIN')")
     public ResponseEntity<PatientResponse> register(@RequestBody @Valid RegisterPatientRequest request) {
         UUID id = registerPatientUseCase.execute(new RegisterPatientCommand(
-            request.ownerId(), request.speciesId(), request.breedId(), request.name(), request.sex(), request.birthDate()
+            request.ownerId(), request.speciesId(), request.breedId(), request.name(), request.sex(), request.birthDate(),
+            request.color(), request.temperament(), request.distinguishingMarks(), request.aggressive(),
+            request.bloodType(), request.foodBrand(), request.criticalAlert(), request.notes(),
+            request.protocolNumber(), request.rabiesTag()
         ));
         return ResponseEntity.status(201).body(new PatientResponse(id, request.name()));
+    }
+
+    @GetMapping("/growth-summary")
+    public PatientGrowthSummaryResponse growthSummary() {
+        return PatientGrowthSummaryResponse.from(getPatientGrowthSummaryUseCase.execute(TenantContext.current()));
     }
 
     @GetMapping("/{id}")
@@ -52,7 +61,10 @@ public class PatientsController {
     @PreAuthorize("hasAnyRole('VET', 'RECEPTIONIST', 'ADMIN')")
     public void update(@PathVariable UUID id, @RequestBody @Valid UpdatePatientRequest request) {
         updatePatientUseCase.execute(new UpdatePatientCommand(
-            id, request.name(), request.breedId(), request.sex(), request.birthDate(), request.neutered()
+            id, request.name(), request.breedId(), request.sex(), request.birthDate(), request.neutered(),
+            request.color(), request.temperament(), request.distinguishingMarks(), request.aggressive(),
+            request.bloodType(), request.foodBrand(), request.criticalAlert(), request.notes(),
+            request.protocolNumber(), request.rabiesTag()
         ));
     }
 

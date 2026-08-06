@@ -34,7 +34,10 @@ public class GetPatientProfileUseCase {
         return new PatientProfile(
             patient.getId(), patient.getName(), speciesName, breedName, patient.getSex(), patient.isNeutered(),
             patient.getBirthDate(), patient.getMicrochipNumber(), patient.getTarbilAnimalId(), patient.getWeightKg(),
-            patient.getPhotoUrl(), patient.getStatus(), owner.getId(), owner.getFullName(), owner.getPhone()
+            patient.getPhotoUrl(), patient.getColor(), patient.getTemperament(), patient.getDistinguishingMarks(),
+            patient.isAggressive(), patient.getBloodType(), patient.getFoodBrand(), patient.getCriticalAlert(),
+            patient.getNotes(), patient.getProtocolNumber(), patient.getRabiesTag(), patient.getStatus(),
+            owner.getId(), owner.getFullName(), owner.getPhone()
         );
     }
 }

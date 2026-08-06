@@ -13,6 +13,7 @@ public record InvoiceResponse(
     UUID ownerId,
     String ownerName,
     UUID encounterId,
+    String eInvoiceRef,
     BigDecimal totalAmount,
     BigDecimal taxAmount,
     BigDecimal paidAmount,
@@ -23,7 +24,7 @@ public record InvoiceResponse(
 ) {
     public static InvoiceResponse from(InvoiceDetail d) {
         return new InvoiceResponse(
-            d.id(), d.ownerId(), d.ownerName(), d.encounterId(), d.totalAmount(), d.taxAmount(),
+            d.id(), d.ownerId(), d.ownerName(), d.encounterId(), d.eInvoiceRef(), d.totalAmount(), d.taxAmount(),
             d.paidAmount(), d.status(), d.issuedAt(), d.lines(), d.payments()
         );
     }

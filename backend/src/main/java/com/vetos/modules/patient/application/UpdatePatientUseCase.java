@@ -20,6 +20,11 @@ public class UpdatePatientUseCase {
             .orElseThrow(() -> new PatientNotFoundException(command.patientId()));
 
         patient.updateProfile(command.name(), command.breedId(), command.sex(), command.birthDate(), command.neutered());
+        patient.updateDetails(
+            command.color(), command.temperament(), command.distinguishingMarks(), command.aggressive(),
+            command.bloodType(), command.foodBrand(), command.criticalAlert(), command.notes(),
+            command.protocolNumber(), command.rabiesTag()
+        );
         patientRepository.save(patient);
     }
 }

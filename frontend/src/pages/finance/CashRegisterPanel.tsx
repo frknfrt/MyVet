@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { billingApi, CashRegisterSession } from '../../api/billingApi';
+import { ApiError } from '../../api/client';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { FieldWrap, Input } from '../../components/ui/Field';
@@ -11,6 +12,7 @@ export function CashRegisterPanel() {
   const [openingBalance, setOpeningBalance] = useState('');
   const [closingBalance, setClosingBalance] = useState('');
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   function reload() {
     billingApi.getCurrentCashRegister().then(setCurrent);
@@ -25,10 +27,13 @@ export function CashRegisterPanel() {
     e.preventDefault();
     if (busy) return;
     setBusy(true);
+    setError(null);
     try {
       await billingApi.openCashRegister({ openingBalance: Number(openingBalance) });
       setOpeningBalance('');
       reload();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Kasa açılamadı, tekrar deneyin');
     } finally {
       setBusy(false);
     }
@@ -38,10 +43,13 @@ export function CashRegisterPanel() {
     e.preventDefault();
     if (busy || !current) return;
     setBusy(true);
+    setError(null);
     try {
       await billingApi.closeCashRegister(current.id, { closingBalance: Number(closingBalance) });
       setClosingBalance('');
       reload();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Kasa kapatılamadı, tekrar deneyin');
     } finally {
       setBusy(false);
     }
@@ -53,6 +61,7 @@ export function CashRegisterPanel() {
 
   return (
     <div>
+      {error && <div className={styles.errorBanner}>{error}</div>}
       <div className={styles.cashCard}>
         <div className={styles.cashStatusLine}>
           {current ? <Badge tone="success">Kasa Açık</Badge> : <Badge tone="neutral">Kasa Kapalı</Badge>}

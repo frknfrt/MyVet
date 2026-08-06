@@ -28,6 +28,7 @@ export interface AppointmentItem {
   id: string;
   patientId: string;
   patientName: string;
+  patientSpeciesName: string | null;
   ownerId: string;
   ownerName: string;
   assignedStaffId: string | null;
@@ -53,11 +54,27 @@ export interface ScheduleAppointmentPayload {
   notes?: string;
 }
 
+export interface CreateServiceTypePayload {
+  name: string;
+  defaultDurationMin: number;
+  defaultPrice: number;
+}
+
+export interface AppointmentActivitySummary {
+  currentMonthCount: number;
+  previousMonthCount: number;
+  currentMonthNoShowRate: number;
+  previousMonthNoShowRate: number;
+}
+
 export const appointmentApi = {
   listServiceTypes: () => apiClient.get<ServiceTypeItem[]>('/api/v1/service-types'),
+  createServiceType: (payload: CreateServiceTypePayload) =>
+    apiClient.post<ServiceTypeItem>('/api/v1/service-types', payload),
   listStaff: () => apiClient.get<StaffItem[]>('/api/v1/staff-users'),
   weeklyCalendar: (weekStart: string) =>
     apiClient.get<AppointmentItem[]>(`/api/v1/appointments?weekStart=${weekStart}`),
+  activitySummary: () => apiClient.get<AppointmentActivitySummary>('/api/v1/appointments/activity-summary'),
   schedule: (payload: ScheduleAppointmentPayload) => apiClient.postForId('/api/v1/appointments', payload),
   confirm: (id: string) => apiClient.post<void>(`/api/v1/appointments/${id}/confirm`),
   checkIn: (id: string) => apiClient.post<void>(`/api/v1/appointments/${id}/check-in`),

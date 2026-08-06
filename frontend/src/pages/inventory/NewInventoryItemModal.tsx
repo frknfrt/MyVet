@@ -1,4 +1,5 @@
 import { FormEvent, useState } from 'react';
+import { ApiError } from '../../api/client';
 import { inventoryApi } from '../../api/inventoryApi';
 import { Button } from '../../components/ui/Button';
 import { FieldWrap, Input } from '../../components/ui/Field';
@@ -17,7 +18,9 @@ export function NewInventoryItemModal({ open, onClose, onCreated }: NewInventory
   const [initialQuantity, setInitialQuantity] = useState('0');
   const [reorderThreshold, setReorderThreshold] = useState('5');
   const [unitCost, setUnitCost] = useState('');
+  const [expiryDate, setExpiryDate] = useState('');
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   function reset() {
     setName('');
@@ -25,6 +28,8 @@ export function NewInventoryItemModal({ open, onClose, onCreated }: NewInventory
     setInitialQuantity('0');
     setReorderThreshold('5');
     setUnitCost('');
+    setExpiryDate('');
+    setError(null);
     onClose();
   }
 
@@ -32,6 +37,7 @@ export function NewInventoryItemModal({ open, onClose, onCreated }: NewInventory
     e.preventDefault();
     if (busy) return;
     setBusy(true);
+    setError(null);
     try {
       await inventoryApi.create({
         name,
@@ -39,9 +45,12 @@ export function NewInventoryItemModal({ open, onClose, onCreated }: NewInventory
         initialQuantity: Number(initialQuantity),
         reorderThreshold: Number(reorderThreshold),
         unitCost: unitCost ? Number(unitCost) : undefined,
+        expiryDate: expiryDate || undefined,
       });
       onCreated();
       reset();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Kayıt oluşturulamadı, tekrar deneyin');
     } finally {
       setBusy(false);
     }
@@ -51,6 +60,7 @@ export function NewInventoryItemModal({ open, onClose, onCreated }: NewInventory
     <Modal open={open} onClose={reset} width={420}>
       <form onSubmit={handleSubmit}>
         <h2 className={styles.modalTitle}>Yeni stok kalemi</h2>
+        {error && <div className={styles.errorBanner}>{error}</div>}
         <FieldWrap label="Ürün adı">
           <Input value={name} onChange={(e) => setName(e.target.value)} required />
         </FieldWrap>
@@ -65,9 +75,14 @@ export function NewInventoryItemModal({ open, onClose, onCreated }: NewInventory
             <Input type="number" min={0} value={reorderThreshold} onChange={(e) => setReorderThreshold(e.target.value)} required />
           </FieldWrap>
         </div>
-        <FieldWrap label="Birim maliyet (opsiyonel)">
-          <Input type="number" step="0.01" value={unitCost} onChange={(e) => setUnitCost(e.target.value)} />
-        </FieldWrap>
+        <div className={styles.modalRow}>
+          <FieldWrap label="Birim maliyet (opsiyonel)">
+            <Input type="number" step="0.01" value={unitCost} onChange={(e) => setUnitCost(e.target.value)} />
+          </FieldWrap>
+          <FieldWrap label="Son kullanma tarihi (opsiyonel)">
+            <Input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
+          </FieldWrap>
+        </div>
         <div className={styles.modalActions}>
           <Button type="button" variant="secondary" onClick={reset}>
             Vazgeç

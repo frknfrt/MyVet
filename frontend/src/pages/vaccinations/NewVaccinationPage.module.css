@@ -1,0 +1,160 @@
+.backLink {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  margin-bottom: 14px;
+}
+.backLink:hover {
+  color: var(--color-brand-500);
+}
+
+.card {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 28px 32px;
+  max-width: 720px;
+}
+.title {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 20px;
+  margin-bottom: 20px;
+}
+
+.errorBanner {
+  background: var(--color-danger-100);
+  color: var(--color-danger-700);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 14px;
+}
+.successBanner {
+  background: var(--color-success-100, #e3f5e9);
+  color: var(--color-success-700, #1a7a42);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 14px;
+}
+
+.row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 20px;
+}
+
+.ownerPicker {
+  position: relative;
+}
+.ownerDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 10;
+}
+.ownerOption {
+  display: flex;
+  justify-content: space-between;
+  padding: 9px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.ownerOption:hover {
+  background: var(--color-neutral-100, #f5f3ee);
+}
+.ownerOptionName {
+  font-weight: 600;
+}
+.ownerOptionPhone {
+  color: var(--color-text-muted);
+}
+.selectedChip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--color-neutral-100, #f5f3ee);
+  border: 1.5px solid var(--color-border);
+  border-radius: 9px;
+  padding: 0 12px;
+  height: 40px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.changeBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-brand-500);
+  cursor: pointer;
+}
+
+.shortcutRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 6px;
+}
+.shortcutBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-brand-500);
+  cursor: pointer;
+}
+.shortcutBtn:hover {
+  text-decoration: underline;
+}
+
+.radioRow {
+  display: flex;
+  gap: 24px;
+  margin: 16px 0;
+}
+.radioOption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-ink);
+  cursor: pointer;
+}
+
+.notesToggle {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-brand-500);
+  cursor: pointer;
+  margin: 6px 0 4px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid var(--color-border);
+}

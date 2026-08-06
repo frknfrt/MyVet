@@ -1,27 +1,3 @@
-.topbar {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 1.4rem;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-.title {
-  font-size: 21px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-.sub {
-  font-size: 12.5px;
-  color: var(--color-text-muted);
-  margin-top: 2px;
-}
-.headerActions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
 .layout {
   display: grid;
   grid-template-columns: 2.2fr 1fr;
@@ -41,6 +17,15 @@
   font-weight: 700;
   margin-bottom: 14px;
   color: var(--color-text-ink);
+}
+.cardTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.cardTitleRow .cardTitle {
+  margin-bottom: 0;
 }
 
 .vitalsGrid {
@@ -91,4 +76,54 @@
   color: var(--color-success-700);
   align-self: center;
   margin-right: auto;
+}
+
+.aiWarning {
+  background: rgba(37, 84, 199, 0.1);
+  color: var(--color-ai-600);
+  font-size: 11.5px;
+  line-height: 1.5;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+}
+.aiError {
+  background: var(--color-danger-100);
+  color: var(--color-danger-700);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  margin-top: 10px;
+}
+.aiActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+.draftBox {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(37, 84, 199, 0.2);
+}
+.draftLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--color-ai-600);
+  margin-bottom: 6px;
+}
+.draftPreview {
+  background: #fff;
+  border: 1px solid rgba(37, 84, 199, 0.2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  color: var(--color-text-ink);
+  white-space: pre-wrap;
+  margin-bottom: 10px;
+  max-height: 220px;
+  overflow-y: auto;
 }

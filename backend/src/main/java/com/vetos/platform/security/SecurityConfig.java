@@ -57,6 +57,12 @@ public class SecurityConfig {
         configuration.setAllowedOriginPatterns(List.of("http://localhost:*"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
+        // 201 Created yanitlarinda olusturulan kaynagin id'sini tasiyan Location
+        // header'i, acikca expose edilmedikce tarayicida fetch()/JS'e HIC
+        // gorunmez (CORS-safelisted response header degil) -- postForId (Yeni
+        // Randevu, Muayene Baslat, Yeni Stok Kalemi, Kasa Ac, widget randevu
+        // talebi) bu yuzden tarayicida sessizce basarisiz oluyordu.
+        configuration.setExposedHeaders(List.of("Location"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

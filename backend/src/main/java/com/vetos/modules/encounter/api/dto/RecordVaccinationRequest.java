@@ -1,5 +1,6 @@
 package com.vetos.modules.encounter.api.dto;
 
+import com.vetos.modules.encounter.domain.VaccinationStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
@@ -12,5 +13,7 @@ public record RecordVaccinationRequest(
     @NotBlank String vaccineName,
     String lotNumber,
     @NotNull LocalDate administeredDate,
-    LocalDate nextDueDate
+    LocalDate nextDueDate,
+    @NotNull VaccinationStatus status,
+    String notes
 ) {}

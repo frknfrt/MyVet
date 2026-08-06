@@ -11,5 +11,15 @@ public record UpdatePatientRequest(
     UUID breedId,
     Sex sex,
     LocalDate birthDate,
-    boolean neutered
+    boolean neutered,
+    String color,
+    String temperament,
+    String distinguishingMarks,
+    boolean aggressive,
+    String bloodType,
+    String foodBrand,
+    String criticalAlert,
+    String notes,
+    String protocolNumber,
+    String rabiesTag
 ) {}

@@ -35,7 +35,11 @@ public class GetInvoiceUseCase {
         var owner = ownerLookupPort.findSummaryById(invoice.getOwnerId());
 
         var lines = invoiceLineRepository.findByInvoiceId(invoice.getId()).stream()
-            .map(l -> new InvoiceDetail.Line(l.getId(), l.getDescription(), l.getQuantity(), l.getUnitPrice(), l.getLineTotal(), l.getSource()))
+            .map(l -> new InvoiceDetail.Line(
+                l.getId(), l.getDescription(), l.getQuantity(), l.getUnitPrice(),
+                l.getDiscountAmount(), l.getVatRate(), l.getVatAmount(),
+                l.getLineTotal(), l.getSource()
+            ))
             .toList();
 
         var payments = paymentRepository.findByInvoiceId(invoice.getId());
@@ -45,7 +49,7 @@ public class GetInvoiceUseCase {
         BigDecimal paidAmount = payments.stream().map(Payment::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
 
         return new InvoiceDetail(
-            invoice.getId(), invoice.getOwnerId(), owner.fullName(), invoice.getEncounterId(),
+            invoice.getId(), invoice.getOwnerId(), owner.fullName(), invoice.getEncounterId(), invoice.getEInvoiceRef(),
             invoice.getTotalAmount(), invoice.getTaxAmount(), paidAmount, invoice.getStatus(), invoice.getIssuedAt(),
             lines, paymentRecords
         );

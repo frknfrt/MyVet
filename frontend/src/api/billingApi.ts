@@ -19,6 +19,9 @@ export interface InvoiceLine {
   description: string;
   quantity: number;
   unitPrice: number;
+  discountAmount: number;
+  vatRate: number;
+  vatAmount: number;
   lineTotal: number;
   source: InvoiceLineSource;
 }
@@ -32,6 +35,7 @@ export interface InvoicePayment {
 
 export interface InvoiceDetail extends InvoiceSummary {
   encounterId: string | null;
+  eInvoiceRef: string | null;
   taxAmount: number;
   paidAmount: number;
   lines: InvoiceLine[];
@@ -43,6 +47,24 @@ export interface OwnerBalance {
   ownerName: string;
   ownerPhone: string;
   outstandingBalance: number;
+}
+
+export interface MonthlyRevenue {
+  month: string;
+  revenue: number;
+}
+
+export interface BranchRevenue {
+  branchId: string;
+  branchName: string;
+  revenue: number;
+}
+
+export interface RevenueSummary {
+  monthlyTrend: MonthlyRevenue[];
+  branchBreakdown: BranchRevenue[];
+  currentMonthRevenue: number;
+  previousMonthRevenue: number;
 }
 
 export interface CashRegisterSession {
@@ -61,12 +83,22 @@ export interface CashRegisterSession {
 export const billingApi = {
   listInvoices: () => apiClient.get<InvoiceSummary[]>('/api/v1/invoices'),
   getInvoice: (id: string) => apiClient.get<InvoiceDetail>(`/api/v1/invoices/${id}`),
-  addLine: (id: string, payload: { description: string; quantity: number; unitPrice: number }) =>
-    apiClient.post<void>(`/api/v1/invoices/${id}/lines`, payload),
+  addLine: (
+    id: string,
+    payload: {
+      description: string;
+      quantity: number;
+      unitPrice: number;
+      discountAmount?: number;
+      vatRate?: number;
+      serviceTypeId?: string;
+    }
+  ) => apiClient.post<void>(`/api/v1/invoices/${id}/lines`, payload),
   issueInvoice: (id: string) => apiClient.post<void>(`/api/v1/invoices/${id}/issue`),
   voidInvoice: (id: string) => apiClient.post<void>(`/api/v1/invoices/${id}/void`),
   recordPayment: (id: string, payload: { method: PaymentMethod; amount: number; pspRef?: string }) =>
     apiClient.post<void>(`/api/v1/invoices/${id}/payments`, payload),
+  revenueSummary: () => apiClient.get<RevenueSummary>('/api/v1/invoices/revenue-summary'),
   listOwnerBalances: () => apiClient.get<OwnerBalance[]>('/api/v1/owner-balances'),
   getCurrentCashRegister: () => apiClient.get<CashRegisterSession | null>('/api/v1/cash-register/current'),
   openCashRegister: (payload: { openingBalance: number; notes?: string }) =>

@@ -40,9 +40,20 @@
   letter-spacing: 0.03em;
   margin: 16px 0 8px;
 }
+.lineHeaderRow {
+  display: grid;
+  grid-template-columns: 2fr 0.5fr 0.8fr 0.8fr 1fr 0.9fr 0.8fr;
+  gap: 8px;
+  padding: 0 0 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
 .lineRow {
   display: grid;
-  grid-template-columns: 2fr 0.6fr 0.8fr 0.8fr 1fr;
+  grid-template-columns: 2fr 0.5fr 0.8fr 0.8fr 1fr 0.9fr 0.8fr;
   gap: 8px;
   padding: 7px 0;
   font-size: 12.5px;
@@ -70,7 +81,7 @@
 
 .addLineForm {
   display: grid;
-  grid-template-columns: 2fr 0.7fr 0.9fr auto;
+  grid-template-columns: 1.4fr 1.6fr 0.6fr 0.8fr 0.7fr 0.6fr auto;
   gap: 8px;
   align-items: end;
   margin-top: 10px;

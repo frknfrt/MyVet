@@ -1,11 +1,12 @@
 .row {
   display: grid;
-  grid-template-columns: 2.4fr 1.2fr 1.1fr 0.7fr 0.9fr 2fr 1.3fr;
+  grid-template-columns: 2.4fr 0.9fr 1.3fr 1.6fr 1.2fr 1.3fr;
   gap: 10px;
   padding: 13px 20px;
   align-items: center;
   border-top: 1px solid var(--color-border);
   font-size: 13px;
+  cursor: pointer;
   transition: background 0.12s;
   animation: fadeInUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }

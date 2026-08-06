@@ -1,0 +1,227 @@
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.4rem;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.title {
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.sub {
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+.topbarActions {
+  display: flex;
+  gap: 10px;
+}
+
+.kpiRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 1.4rem;
+}
+.kpiCard {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.kpiIcon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.kpiIconActive {
+  background: rgba(124, 77, 188, 0.12);
+  color: var(--color-brand-500);
+}
+.kpiIconIn {
+  background: var(--color-success-100);
+  color: var(--color-success-700);
+}
+.kpiIconOut {
+  background: var(--color-ai-100, #e6f0ff);
+  color: var(--color-ai-600, #2563eb);
+}
+.kpiIconEmpty {
+  background: var(--color-neutral-100, #f5f3ee);
+  color: var(--color-text-muted);
+}
+.kpiValue {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 20px;
+  line-height: 1.1;
+}
+.kpiLabel {
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.errorBanner {
+  background: var(--color-danger-100);
+  color: var(--color-danger-700);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 14px;
+}
+
+.empty {
+  text-align: center;
+  padding: 3.4rem 1rem;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+.emptyBig {
+  text-align: center;
+  padding: 3.6rem 1rem;
+  color: var(--color-text-muted);
+  font-size: 13.5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+}
+.emptyIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--color-brand-500);
+  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+.emptySub {
+  color: var(--color-text-muted);
+  font-size: 12.5px;
+  margin-bottom: 10px;
+}
+
+.groupSection {
+  margin-bottom: 1.8rem;
+}
+.groupTitle {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--color-text-ink);
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1.5px solid var(--color-border);
+}
+
+.roomGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 14px;
+}
+.roomCard {
+  background: #fff;
+  border: 1.5px solid var(--color-border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.roomCardOccupied {
+  border-color: var(--color-brand-400);
+  background: linear-gradient(180deg, rgba(124, 77, 188, 0.05), #fff 40%);
+}
+.roomCardEmpty {
+  border-style: dashed;
+}
+.roomCardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.roomName {
+  font-weight: 700;
+  font-size: 14px;
+}
+.roomCapacity {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+.stayPatient {
+  font-weight: 600;
+  font-size: 13.5px;
+}
+.stayOwner {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+.stayDates {
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+.roomCardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.actionBtn {
+  border: 1.5px solid var(--color-border);
+  background: #fff;
+  border-radius: 7px;
+  padding: 5px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-ink);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.actionBtn:hover {
+  background: var(--color-neutral-100, #f5f3ee);
+}
+.actionBtnDanger {
+  color: var(--color-danger-700);
+  border-color: var(--color-danger-100);
+}
+.actionBtnDanger:hover {
+  background: var(--color-danger-100);
+}
+
+.emptyRoomLink {
+  background: none;
+  border: none;
+  padding: 8px 0 2px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-brand-500);
+  cursor: pointer;
+  text-align: left;
+}
+.emptyRoomLink:hover {
+  text-decoration: underline;
+}

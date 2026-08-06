@@ -19,6 +19,9 @@ public class UpdateEncounterSoapUseCase {
         Encounter encounter = encounterRepository.findById(command.encounterId())
             .orElseThrow(() -> new EncounterNotFoundException(command.encounterId()));
         encounter.updateSoap(command.subjective(), command.objective(), command.assessment(), command.plan());
+        if (command.aiGenerated()) {
+            encounter.markAiGenerated();
+        }
         encounterRepository.save(encounter);
     }
 }

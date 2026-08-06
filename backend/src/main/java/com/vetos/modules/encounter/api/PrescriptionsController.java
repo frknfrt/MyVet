@@ -4,6 +4,7 @@ import com.vetos.modules.encounter.api.dto.IssuePrescriptionRequest;
 import com.vetos.modules.encounter.api.dto.PrescriptionResponse;
 import com.vetos.modules.encounter.application.GetPrescriptionUseCase;
 import com.vetos.modules.encounter.application.IssuePrescriptionUseCase;
+import com.vetos.modules.encounter.application.ListPrescriptionsByPatientUseCase;
 import com.vetos.modules.encounter.application.dto.IssuePrescriptionCommand;
 import com.vetos.modules.encounter.application.dto.PrescriptionItemInput;
 import com.vetos.platform.security.AuthenticatedStaffUser;
@@ -14,6 +15,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -24,6 +26,7 @@ public class PrescriptionsController {
 
     private final IssuePrescriptionUseCase issuePrescriptionUseCase;
     private final GetPrescriptionUseCase getPrescriptionUseCase;
+    private final ListPrescriptionsByPatientUseCase listPrescriptionsByPatientUseCase;
 
     @PostMapping
     public ResponseEntity<Void> issue(
@@ -42,5 +45,10 @@ public class PrescriptionsController {
     @GetMapping("/{id}")
     public PrescriptionResponse get(@PathVariable UUID id) {
         return PrescriptionResponse.from(getPrescriptionUseCase.execute(id));
+    }
+
+    @GetMapping
+    public List<PrescriptionResponse> listByPatient(@RequestParam UUID patientId) {
+        return listPrescriptionsByPatientUseCase.execute(patientId).stream().map(PrescriptionResponse::from).toList();
     }
 }

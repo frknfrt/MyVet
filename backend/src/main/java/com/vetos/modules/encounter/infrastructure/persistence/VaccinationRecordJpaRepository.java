@@ -8,4 +8,5 @@ import java.util.UUID;
 
 interface VaccinationRecordJpaRepository extends JpaRepository<VaccinationRecord, UUID> {
     List<VaccinationRecord> findByPatientId(UUID patientId);
+    List<VaccinationRecord> findByTenantId(UUID tenantId);
 }

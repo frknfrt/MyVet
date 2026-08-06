@@ -8,4 +8,5 @@ public interface VaccinationRecordRepository {
     VaccinationRecord save(VaccinationRecord record);
     Optional<VaccinationRecord> findById(UUID id);
     List<VaccinationRecord> findByPatientId(UUID patientId);
+    List<VaccinationRecord> findByTenantId(UUID tenantId);
 }

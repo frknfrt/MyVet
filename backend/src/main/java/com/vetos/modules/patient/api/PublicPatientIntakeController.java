@@ -37,7 +37,8 @@ public class PublicPatientIntakeController {
     @PostMapping("/owners")
     public ResponseEntity<OwnerResponse> registerOwner(@RequestBody @Valid PublicRegisterOwnerRequest request) {
         UUID id = registerOwnerUseCase.execute(new RegisterOwnerCommand(
-            request.tenantId(), request.fullName(), request.phone(), request.email(), null, false
+            request.tenantId(), request.fullName(), null, request.phone(), null, request.email(), null,
+            null, null, null, null, null, null, null, false, true, true, true, null
         ));
         return ResponseEntity.status(201).body(new OwnerResponse(id, request.fullName()));
     }
@@ -45,7 +46,8 @@ public class PublicPatientIntakeController {
     @PostMapping("/patients")
     public ResponseEntity<PatientResponse> registerPatient(@RequestBody @Valid PublicRegisterPatientRequest request) {
         UUID id = registerPatientUseCase.execute(new RegisterPatientCommand(
-            request.ownerId(), request.speciesId(), null, request.name(), null, null
+            request.ownerId(), request.speciesId(), null, request.name(), null, null,
+            null, null, null, false, null, null, null, null, null, null
         ));
         return ResponseEntity.status(201).body(new PatientResponse(id, request.name()));
     }

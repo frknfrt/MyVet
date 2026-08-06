@@ -33,6 +33,7 @@ public class EncountersController {
     private final FinalizeEncounterUseCase finalizeEncounterUseCase;
     private final GetEncounterUseCase getEncounterUseCase;
     private final ListEncountersByPatientUseCase listEncountersByPatientUseCase;
+    private final FindEncounterByAppointmentUseCase findEncounterByAppointmentUseCase;
     private final RecordInventoryUsageUseCase recordInventoryUsageUseCase;
     private final ListInventoryUsageUseCase listInventoryUsageUseCase;
 
@@ -57,10 +58,17 @@ public class EncountersController {
         return listEncountersByPatientUseCase.execute(patientId).stream().map(EncounterResponse::from).toList();
     }
 
+    @GetMapping("/by-appointment/{appointmentId}")
+    public ResponseEntity<EncounterResponse> getByAppointment(@PathVariable UUID appointmentId) {
+        return findEncounterByAppointmentUseCase.execute(appointmentId)
+            .map(detail -> ResponseEntity.ok(EncounterResponse.from(detail)))
+            .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @PutMapping("/{id}/soap")
     public void updateSoap(@PathVariable UUID id, @RequestBody UpdateSoapRequest request) {
         updateEncounterSoapUseCase.execute(new UpdateEncounterSoapCommand(
-            id, request.subjective(), request.objective(), request.assessment(), request.plan()
+            id, request.subjective(), request.objective(), request.assessment(), request.plan(), request.aiGenerated()
         ));
     }
 

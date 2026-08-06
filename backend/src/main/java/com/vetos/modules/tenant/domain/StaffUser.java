@@ -61,6 +61,10 @@ public class StaffUser {
         this.phone = phone;
     }
 
+    public void changePassword(String newPasswordHash) {
+        this.passwordHash = newPasswordHash;
+    }
+
     public void enableTwoFactor() {
         this.twoFactorEnabled = true;
     }

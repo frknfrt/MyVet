@@ -42,7 +42,7 @@ public class GetWeeklyCalendarUseCase {
             .map(ServiceType::getName).orElse(null);
 
         return new AppointmentCalendarItem(
-            appointment.getId(), patient.id(), patient.name(), owner.id(), owner.fullName(),
+            appointment.getId(), patient.id(), patient.name(), patient.speciesName(), owner.id(), owner.fullName(),
             appointment.getAssignedStaffId(), staff != null ? staff.fullName() : null,
             appointment.getServiceTypeId(), serviceName,
             appointment.getScheduledStart(), appointment.getScheduledEnd(), appointment.getStatus(),

@@ -11,6 +11,7 @@ public record AppointmentCalendarItem(
     UUID id,
     UUID patientId,
     String patientName,
+    String patientSpeciesName,
     UUID ownerId,
     String ownerName,
     UUID assignedStaffId,

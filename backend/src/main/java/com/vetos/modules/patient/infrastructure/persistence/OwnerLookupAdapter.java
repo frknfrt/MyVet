@@ -18,6 +18,6 @@ class OwnerLookupAdapter implements OwnerLookupPort {
     @Override
     public OwnerSummary findSummaryById(UUID ownerId) {
         Owner owner = jpaRepository.findById(ownerId).orElseThrow(() -> new OwnerNotFoundException(ownerId));
-        return new OwnerSummary(owner.getId(), owner.getFullName(), owner.getPhone());
+        return new OwnerSummary(owner.getId(), owner.getFullName(), owner.getPhone(), owner.getAddress(), owner.getNationalIdMasked());
     }
 }

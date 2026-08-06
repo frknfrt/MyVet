@@ -28,6 +28,11 @@ class AppointmentRepositoryAdapter implements AppointmentRepository {
     }
 
     @Override
+    public List<Appointment> findByTenantIdAndDateRange(UUID tenantId, Instant rangeStart, Instant rangeEnd) {
+        return jpaRepository.findByTenantIdAndDateRange(tenantId, rangeStart, rangeEnd);
+    }
+
+    @Override
     public List<Appointment> findByOwnerId(UUID ownerId) { return jpaRepository.findByOwnerId(ownerId); }
 
     @Override

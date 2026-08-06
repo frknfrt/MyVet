@@ -53,6 +53,17 @@ export function ItemDetailModal({ item, onClose, onChanged }: ItemDetailModalPro
             <div>
               <div className={styles.name}>{item.name}</div>
               <div className={styles.subline}>{item.category ?? 'Kategorisiz'}</div>
+              {item.expiryDate && (
+                <div className={styles.subline}>
+                  Son kullanma: {new Date(item.expiryDate).toLocaleDateString('tr-TR')}
+                  {new Date(item.expiryDate).getTime() < Date.now() && (
+                    <>
+                      {' '}
+                      <Badge tone="danger">Süresi Doldu</Badge>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
             <div>
               <div className={styles.qtyValue}>{item.quantityOnHand}</div>

@@ -24,16 +24,27 @@ public class OwnersController {
     private final RegisterOwnerUseCase registerOwnerUseCase;
     private final UpdateOwnerUseCase updateOwnerUseCase;
     private final GetOwnerProfileUseCase getOwnerProfileUseCase;
+    private final SearchOwnersUseCase searchOwnersUseCase;
     private final RecordConsentUseCase recordConsentUseCase;
     private final RevokeConsentUseCase revokeConsentUseCase;
     private final ListConsentsUseCase listConsentsUseCase;
+
+    @GetMapping
+    public List<OwnerSearchResultResponse> search(@RequestParam(defaultValue = "") String query) {
+        return searchOwnersUseCase.execute(TenantContext.current(), query).stream()
+            .map(OwnerSearchResultResponse::from)
+            .toList();
+    }
 
     @PostMapping
     @PreAuthorize("hasAnyRole('VET', 'RECEPTIONIST', 'ADMIN')")
     public ResponseEntity<OwnerResponse> register(@RequestBody @Valid RegisterOwnerRequest request) {
         UUID id = registerOwnerUseCase.execute(new RegisterOwnerCommand(
-            TenantContext.current(), request.fullName(), request.phone(), request.email(),
-            request.address(), request.marketingConsent()
+            TenantContext.current(), request.fullName(), request.middleName(), request.phone(),
+            request.secondaryPhone(), request.email(), request.address(), request.city(), request.district(),
+            request.occupation(), request.referralSource(), request.clientDiscount(), request.criticalAlert(),
+            request.notes(), request.marketingConsent(), request.smsConsent(), request.whatsappConsent(),
+            request.notificationConsent(), request.protocolNumber()
         ));
         return ResponseEntity.status(201).body(new OwnerResponse(id, request.fullName()));
     }
@@ -46,7 +57,12 @@ public class OwnersController {
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('VET', 'RECEPTIONIST', 'ADMIN')")
     public void update(@PathVariable UUID id, @RequestBody @Valid UpdateOwnerRequest request) {
-        updateOwnerUseCase.execute(new UpdateOwnerCommand(id, request.phone(), request.email(), request.address()));
+        updateOwnerUseCase.execute(new UpdateOwnerCommand(
+            id, request.phone(), request.email(), request.address(), request.middleName(),
+            request.secondaryPhone(), request.city(), request.district(), request.occupation(),
+            request.referralSource(), request.clientDiscount(), request.criticalAlert(), request.notes(),
+            request.smsConsent(), request.whatsappConsent(), request.notificationConsent(), request.protocolNumber()
+        ));
     }
 
     @GetMapping("/{id}/consents")

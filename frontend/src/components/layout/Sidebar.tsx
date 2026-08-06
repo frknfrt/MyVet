@@ -1,5 +1,7 @@
-import { NavLink } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, NavLink } from 'react-router-dom';
 import { NAV_ITEMS } from './navConfig';
+import { ChangePasswordModal } from './ChangePasswordModal';
 import styles from './Sidebar.module.css';
 
 interface SidebarProps {
@@ -15,6 +17,21 @@ interface SidebarProps {
  * Bu bileşen tüm sayfalarda BİREBİR AYNI import edilir, kopyalanmaz.
  */
 export function Sidebar({ userName, userRole, userInitials, onLogout }: SidebarProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const footRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (footRef.current && !footRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [menuOpen]);
+
   return (
     <aside className={styles.sidebar}>
       <div className={styles.brandMark}>
@@ -39,13 +56,38 @@ export function Sidebar({ userName, userRole, userInitials, onLogout }: SidebarP
         ))}
       </nav>
 
-      <button type="button" className={styles.sidebarFoot} onClick={onLogout} title="Çıkış yap">
-        <div className={styles.avatar}>{userInitials}</div>
-        <div>
-          <div className={styles.who}>{userName}</div>
-          <div className={styles.role}>{userRole}</div>
-        </div>
-      </button>
+      <div className={styles.sidebarFootWrap} ref={footRef}>
+        {menuOpen && (
+          <div className={styles.footMenu}>
+            <Link to="/ayarlar" className={styles.footMenuItem} onClick={() => setMenuOpen(false)}>
+              Hesap Ayarları
+            </Link>
+            <button
+              type="button"
+              className={styles.footMenuItem}
+              onClick={() => {
+                setMenuOpen(false);
+                setPasswordModalOpen(true);
+              }}
+            >
+              Şifre Değiştir
+            </button>
+            <div className={styles.footMenuDivider} />
+            <button type="button" className={`${styles.footMenuItem} ${styles.footMenuItemDanger}`} onClick={onLogout}>
+              Çıkış Yap
+            </button>
+          </div>
+        )}
+        <button type="button" className={styles.sidebarFoot} onClick={() => setMenuOpen((v) => !v)}>
+          <div className={styles.avatar}>{userInitials}</div>
+          <div>
+            <div className={styles.who}>{userName}</div>
+            <div className={styles.role}>{userRole}</div>
+          </div>
+        </button>
+      </div>
+
+      <ChangePasswordModal open={passwordModalOpen} onClose={() => setPasswordModalOpen(false)} />
     </aside>
   );
 }

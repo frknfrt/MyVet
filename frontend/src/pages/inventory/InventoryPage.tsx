@@ -32,6 +32,15 @@ export function InventoryPage() {
     return items.filter((i) => i.name.toLowerCase().includes(q) || i.category?.toLowerCase().includes(q));
   }, [items, query]);
 
+  function expiryInfo(expiryDate: string | null) {
+    if (!expiryDate) return { label: '—', tone: null as 'warning' | 'danger' | null };
+    const days = Math.ceil((new Date(expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    const label = new Date(expiryDate).toLocaleDateString('tr-TR');
+    if (days < 0) return { label, tone: 'danger' as const };
+    if (days <= 30) return { label, tone: 'warning' as const };
+    return { label, tone: null };
+  }
+
   return (
     <AppShell>
       <div className={styles.topbar}>
@@ -53,6 +62,7 @@ export function InventoryPage() {
           <div>Kategori</div>
           <div>Miktar</div>
           <div>Kritik Eşik</div>
+          <div>Son Kullanma</div>
           <div>Durum</div>
         </div>
         {loading ? (
@@ -60,17 +70,23 @@ export function InventoryPage() {
         ) : filtered.length === 0 ? (
           <div className={styles.empty}>Stok kalemi bulunamadı</div>
         ) : (
-          filtered.map((item) => (
-            <div key={item.id} className={styles.row} onClick={() => setSelected(item)}>
-              <div>{item.name}</div>
-              <div className={styles.muted}>{item.category ?? '—'}</div>
-              <div>{item.quantityOnHand}</div>
-              <div className={styles.muted}>{item.reorderThreshold}</div>
-              <div>
-                {item.belowReorderThreshold ? <Badge tone="warning">Düşük Stok</Badge> : <Badge tone="success">Yeterli</Badge>}
+          filtered.map((item) => {
+            const expiry = expiryInfo(item.expiryDate);
+            return (
+              <div key={item.id} className={styles.row} onClick={() => setSelected(item)}>
+                <div>{item.name}</div>
+                <div className={styles.muted}>{item.category ?? '—'}</div>
+                <div>{item.quantityOnHand}</div>
+                <div className={styles.muted}>{item.reorderThreshold}</div>
+                <div>
+                  {expiry.tone ? <Badge tone={expiry.tone}>{expiry.label}</Badge> : <span className={styles.muted}>{expiry.label}</span>}
+                </div>
+                <div>
+                  {item.belowReorderThreshold ? <Badge tone="warning">Düşük Stok</Badge> : <Badge tone="success">Yeterli</Badge>}
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 

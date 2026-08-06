@@ -30,6 +30,11 @@ public class RegisterPatientUseCase {
         Patient patient = Patient.register(
             owner.getId(), command.speciesId(), command.breedId(), command.name(), command.sex(), command.birthDate()
         );
+        patient.updateDetails(
+            command.color(), command.temperament(), command.distinguishingMarks(), command.aggressive(),
+            command.bloodType(), command.foodBrand(), command.criticalAlert(), command.notes(),
+            command.protocolNumber(), command.rabiesTag()
+        );
         patientRepository.save(patient);
         eventPublisher.publish(new PatientRegisteredEvent(patient.getId(), owner.getId()));
         return patient.getId();

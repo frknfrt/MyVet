@@ -32,4 +32,9 @@ class InvoiceRepositoryAdapter implements InvoiceRepository {
     public List<Invoice> findByOwnerIdAndStatusIn(UUID ownerId, List<InvoiceStatus> statuses) {
         return jpaRepository.findByOwnerIdAndStatusIn(ownerId, statuses);
     }
+
+    @Override
+    public Optional<Invoice> findByBoardingStayId(UUID boardingStayId) {
+        return jpaRepository.findByBoardingStayId(boardingStayId);
+    }
 }

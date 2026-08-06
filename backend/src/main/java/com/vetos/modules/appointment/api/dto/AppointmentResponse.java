@@ -12,6 +12,7 @@ public record AppointmentResponse(
     UUID id,
     UUID patientId,
     String patientName,
+    String patientSpeciesName,
     UUID ownerId,
     String ownerName,
     UUID assignedStaffId,
@@ -27,7 +28,7 @@ public record AppointmentResponse(
 ) {
     public static AppointmentResponse from(AppointmentCalendarItem item) {
         return new AppointmentResponse(
-            item.id(), item.patientId(), item.patientName(), item.ownerId(), item.ownerName(),
+            item.id(), item.patientId(), item.patientName(), item.patientSpeciesName(), item.ownerId(), item.ownerName(),
             item.assignedStaffId(), item.staffName(), item.serviceTypeId(), item.serviceName(),
             item.scheduledStart(), item.scheduledEnd(), item.status(), item.noShowRiskScore(), item.source(), item.notes()
         );

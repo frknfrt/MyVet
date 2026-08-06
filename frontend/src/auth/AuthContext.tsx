@@ -1,5 +1,5 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
-import { setAuthToken } from '../api/client';
+import { setAuthToken, setUnauthorizedHandler } from '../api/client';
 import { authApi, LoginPayload, RegisterClinicPayload } from '../api/authApi';
 import { AuthSession, clearStoredSession, loadStoredSession, storeSession } from './session';
 
@@ -13,15 +13,25 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<AuthSession | null>(() => loadStoredSession());
+  const [session, setSession] = useState<AuthSession | null>(() => {
+    const initial = loadStoredSession();
+    setAuthToken(initial?.token ?? null);
+    return initial;
+  });
 
   useEffect(() => {
-    setAuthToken(session?.token ?? null);
-  }, [session]);
+    setUnauthorizedHandler(() => {
+      clearStoredSession();
+      setAuthToken(null);
+      setSession(null);
+    });
+    return () => setUnauthorizedHandler(null);
+  }, []);
 
   async function login(payload: LoginPayload) {
     const result = await authApi.login(payload);
     storeSession(result);
+    setAuthToken(result.token);
     setSession(result);
     return result;
   }
@@ -29,12 +39,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function registerClinic(payload: RegisterClinicPayload) {
     const result = await authApi.registerClinic(payload);
     storeSession(result);
+    setAuthToken(result.token);
     setSession(result);
     return result;
   }
 
   function logout() {
     clearStoredSession();
+    setAuthToken(null);
     setSession(null);
   }
 

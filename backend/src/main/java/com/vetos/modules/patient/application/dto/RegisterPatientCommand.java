@@ -11,5 +11,15 @@ public record RegisterPatientCommand(
     UUID breedId,
     String name,
     Sex sex,
-    LocalDate birthDate
+    LocalDate birthDate,
+    String color,
+    String temperament,
+    String distinguishingMarks,
+    boolean aggressive,
+    String bloodType,
+    String foodBrand,
+    String criticalAlert,
+    String notes,
+    String protocolNumber,
+    String rabiesTag
 ) {}

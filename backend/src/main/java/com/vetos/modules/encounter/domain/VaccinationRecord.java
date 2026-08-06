@@ -18,6 +18,9 @@ public class VaccinationRecord {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(name = "tenant_id", nullable = false)
+    private UUID tenantId;
+
     @Column(name = "patient_id", nullable = false)
     private UUID patientId;
 
@@ -39,14 +42,22 @@ public class VaccinationRecord {
     @Column(name = "administered_by_staff_id", nullable = false)
     private UUID administeredByStaffId;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private VaccinationStatus status;
+
+    private String notes;
+
     @Column(name = "reminder_sent", nullable = false)
     private boolean reminderSent;
 
     public static VaccinationRecord record(
-        UUID patientId, UUID encounterId, String vaccineName, String lotNumber,
-        LocalDate administeredDate, LocalDate nextDueDate, UUID administeredByStaffId
+        UUID tenantId, UUID patientId, UUID encounterId, String vaccineName, String lotNumber,
+        LocalDate administeredDate, LocalDate nextDueDate, UUID administeredByStaffId,
+        VaccinationStatus status, String notes
     ) {
         VaccinationRecord record = new VaccinationRecord();
+        record.tenantId = tenantId;
         record.patientId = patientId;
         record.encounterId = encounterId;
         record.vaccineName = vaccineName;
@@ -54,8 +65,19 @@ public class VaccinationRecord {
         record.administeredDate = administeredDate;
         record.nextDueDate = nextDueDate;
         record.administeredByStaffId = administeredByStaffId;
+        record.status = status;
+        record.notes = notes;
         record.reminderSent = false;
         return record;
+    }
+
+    public void markAdministered(LocalDate administeredDate) {
+        this.status = VaccinationStatus.ADMINISTERED;
+        this.administeredDate = administeredDate;
+    }
+
+    public void cancel() {
+        this.status = VaccinationStatus.CANCELLED;
     }
 
     public void markReminderSent() {

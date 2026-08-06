@@ -1,9 +1,11 @@
 package com.vetos.modules.appointment.api;
 
+import com.vetos.modules.appointment.api.dto.AppointmentActivitySummaryResponse;
 import com.vetos.modules.appointment.api.dto.AppointmentResponse;
 import com.vetos.modules.appointment.api.dto.AssignStaffRequest;
 import com.vetos.modules.appointment.api.dto.ScheduleAppointmentRequest;
 import com.vetos.modules.appointment.application.AssignStaffToAppointmentUseCase;
+import com.vetos.modules.appointment.application.GetAppointmentActivitySummaryUseCase;
 import com.vetos.modules.appointment.application.GetWeeklyCalendarUseCase;
 import com.vetos.modules.appointment.application.ScheduleAppointmentUseCase;
 import com.vetos.modules.appointment.application.UpdateAppointmentStatusUseCase;
@@ -32,6 +34,7 @@ public class AppointmentsController {
     private final GetWeeklyCalendarUseCase getWeeklyCalendarUseCase;
     private final UpdateAppointmentStatusUseCase updateAppointmentStatusUseCase;
     private final AssignStaffToAppointmentUseCase assignStaffToAppointmentUseCase;
+    private final GetAppointmentActivitySummaryUseCase getAppointmentActivitySummaryUseCase;
 
     @PostMapping
     public ResponseEntity<Void> schedule(
@@ -56,6 +59,11 @@ public class AppointmentsController {
         return getWeeklyCalendarUseCase.execute(principal.branchIds().get(0), rangeStart, rangeEnd).stream()
             .map(AppointmentResponse::from)
             .toList();
+    }
+
+    @GetMapping("/activity-summary")
+    public AppointmentActivitySummaryResponse activitySummary() {
+        return AppointmentActivitySummaryResponse.from(getAppointmentActivitySummaryUseCase.execute(TenantContext.current()));
     }
 
     @PutMapping("/{id}/assign-staff")
