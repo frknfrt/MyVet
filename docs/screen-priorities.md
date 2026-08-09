@@ -50,7 +50,7 @@ Tam liste (P0/P1/P2/P3, notlarla): `docs/screen-priorities.xlsx`
 - [ ] Physical Examination Form — *(sadece genel Vital Bulgular kartı var; yapılandırılmış fiziksel muayene formu yok, bulgular serbest metin Objective alanına giriyor)*
 - [ ] Diagnosis Selection (+ AI oneri) — *(Assessment serbest metin; tanı seçim UI'ı veya AI öneri endpoint'i yok)*
 - [ ] Treatment Plan (+ AI oneri) — *(Plan serbest metin; ayrı bir tedavi planı UI'ı veya AI öneri endpoint'i yok)*
-- [ ] Prescription Create (+ ilac etkilesim uyarisi) — *(backend tam hazır — POST /api/v1/prescriptions — ama frontend'de reçete oluşturma ekranı/çağrısı yok, sadece geçmiş reçeteleri listeleme var; ilaç etkileşim uyarısı `DrugCatalog.interactionFlags` alanıyla "Faz 2" olarak işaretli, kullanılmıyor)*
+- [x] Prescription Create — *(ilaç etkileşim uyarısı bilinçli olarak kapsam dışı bırakıldı — `DrugCatalog.interactionFlags` boş/hiç doldurulmamış, gerçek farmakolojik referans verisi olmadan uydurulmadı, bkz. implementation-plan.md)*
 - [x] Prescription History
 
 ### 6. Laboratuvar

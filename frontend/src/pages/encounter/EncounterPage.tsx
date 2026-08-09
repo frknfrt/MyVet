@@ -10,6 +10,7 @@ import { Button } from '../../components/ui/Button';
 import { FieldWrap, Input, Textarea } from '../../components/ui/Field';
 import { MaterialsUsedCard } from './MaterialsUsedCard';
 import { PatientHeaderBar } from './PatientHeaderBar';
+import { PrescriptionCard } from './PrescriptionCard';
 import styles from './EncounterPage.module.css';
 
 type VitalsForm = { weightKg: string; temperatureC: string; heartRate: string; respiratoryRate: string };
@@ -287,6 +288,8 @@ export function EncounterPage() {
           </div>
 
           <MaterialsUsedCard encounterId={encounter.id} readOnly={isReadOnly} />
+
+          <PrescriptionCard encounterId={encounter.id} patientId={encounter.patientId} readOnly={isReadOnly} />
         </div>
 
         <div>
