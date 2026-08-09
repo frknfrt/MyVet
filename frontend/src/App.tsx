@@ -23,6 +23,7 @@ import { ReportsPage } from './pages/reports/ReportsPage';
 import { SmsWhatsappPage } from './pages/sms-whatsapp/SmsWhatsappPage';
 import { SettingsPage } from './pages/settings/SettingsPage';
 import { ClinicSitePage } from './pages/public/ClinicSitePage';
+import { PlatformAdminApp } from './platformAdmin/PlatformAdminApp';
 
 export function App() {
   return (
@@ -190,6 +191,7 @@ export function App() {
         }
       />
       <Route path="/site/:branchId" element={<ClinicSitePage />} />
+      <Route path="/platform-admin/*" element={<PlatformAdminApp />} />
       <Route path="/" element={<Navigate to="/panel" replace />} />
     </Routes>
   );

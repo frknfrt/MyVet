@@ -168,6 +168,10 @@ void onEncounterFinalized(EncounterFinalizedEvent event) {
 - **Paket görünürlüğü:** `domain` ve `application` sınıfları `public`, `infrastructure` içindeki implementasyon sınıfları mümkün olduğunca **package-private** — dışarıdan sadece port arayüzü görünür, implementasyon detayı görünmez.
 - **Code review kuralı:** Bir modülün `api` (controller) katmanı, başka bir modülün `domain` paketini asla import etmemeli.
 
+### 6.1 Kenar durum: Platform Admin'in yazma erişimi (Faz 2)
+
+`LookupPort` deseni ("diğer modüller sadece okur") tek bir bilinçli istisnayla genişletildi: `modules/tenant/domain/TenantAdminPort.java`, `modules.platformadmin` modülünün herhangi bir kiracıyı görüntüleyip **değiştirebilmesi** için okuma yanında yazma metotları da içerir (abonelik/durum güncelleme). Bu, platform admin'in tanımı gereği (SaaS operatörü, tüm kiracıları yönetir) gerekli — normal bir iş modülü (örn. `billing`) için asla bu deseni kullanma, sadece `modules.platformadmin` bu tür bir port'a sahip olabilir. Yeni bir "admin tarafı" ihtiyaç doğarsa aynı isimlendirme deseni (`XxxAdminPort`) izlenir.
+
 ## 7. Sonraki Adım Önerisi
 
 Bu mimari iskeletini artık somut koda dökebiliriz — örneğin `patient` ve `encounter` modüllerini örnek olarak tam paket yapısıyla (entity, port, use-case, adapter, controller) yazıp bir başlangıç şablonu (boilerplate) çıkarabiliriz, ya da önce Spring Modulith testiyle bu sınırları doğrulayan bir iskelet proje (skeleton repo yapısı) kurabiliriz.

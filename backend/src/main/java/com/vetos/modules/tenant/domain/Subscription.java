@@ -43,4 +43,10 @@ public class Subscription {
         subscription.billingStatus = BillingStatus.TRIAL;
         return subscription;
     }
+
+    public void changePlan(String planCode, BillingStatus billingStatus, LocalDate renewsAt) {
+        this.planCode = planCode;
+        this.billingStatus = billingStatus;
+        this.renewsAt = renewsAt;
+    }
 }

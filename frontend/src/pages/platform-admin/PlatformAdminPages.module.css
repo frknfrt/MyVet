@@ -1,0 +1,133 @@
+.title {
+  font-family: var(--font-heading);
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 1.4rem;
+}
+.errorBanner {
+  background: var(--color-danger-100);
+  color: var(--color-danger-700);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 14px;
+}
+.searchRow {
+  margin-bottom: 1rem;
+  max-width: 360px;
+}
+.tableCard {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.tableHead,
+.row {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr 0.8fr 0.8fr 0.6fr;
+  gap: 10px;
+  padding: 13px 20px;
+  align-items: center;
+  font-size: 13px;
+}
+.tableHead {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: var(--color-cream);
+}
+.row {
+  border-top: 1px solid var(--color-border);
+  cursor: pointer;
+}
+.row:hover {
+  background: var(--color-cream);
+}
+.muted {
+  color: var(--color-text-muted);
+}
+.empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.backLink {
+  display: inline-block;
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: var(--color-brand-500);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  max-width: 820px;
+}
+.card {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+.cardTitle {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 15px;
+  margin-bottom: 14px;
+}
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-top: 1px solid var(--color-border);
+  font-size: 13px;
+}
+.infoRow:first-child {
+  border-top: none;
+}
+.infoLabel {
+  color: var(--color-text-muted);
+}
+
+.actionsRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+.rowActions {
+  display: flex;
+  gap: 8px;
+}
+.modalTitle {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 17px;
+  margin-bottom: 16px;
+}
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 12px;
+}
+
+.planRow {
+  grid-template-columns: 1fr 2fr 1fr 0.8fr 1.2fr;
+}

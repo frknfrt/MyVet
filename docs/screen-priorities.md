@@ -111,10 +111,10 @@ Tam liste (P0/P1/P2/P3, notlarla): `docs/screen-priorities.xlsx`
 - [ ] Billing — *(kapsam dışı bırakıldı; bkz. implementation-plan.md)*
 
 ### 13. Platform Admin Paneli (SaaS taraf)
-- [ ] Tenant / Klinik Listesi
-- [ ] Tenant Detay ve Kullanim
-- [ ] Plan ve Fiyatlandirma Yonetimi
-- [ ] Platform Faturalama
+- [x] Tenant / Klinik Listesi
+- [x] Tenant Detay ve Kullanim — *(ucuz kullanım metrikleri: şube/personel sayısı — hasta/randevu sayısı gibi cross-module metrikler kapsam dışı, bkz. implementation-plan.md)*
+- [x] Plan ve Fiyatlandirma Yonetimi
+- [x] Platform Faturalama — *(salt-okunur billingStatus dağılım özeti — gerçek ödeme tahsilatı yok, bkz. implementation-plan.md)*
 
 ### 14. Website ve Online Varlik
 - [x] Klinik Web Sitesi Olusturucu (otomatik tanitim sitesi)
