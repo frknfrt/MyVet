@@ -99,16 +99,16 @@ Tam liste (P0/P1/P2/P3, notlarla): `docs/screen-priorities.xlsx`
 - [ ] Drug Interaction Check
 
 ### 12. Yonetim ve Ayarlar
-- [ ] Clinic Settings
-- [ ] Branch Management
-- [ ] User Management
-- [ ] Role Permission
-- [ ] Doctor Profile
-- [ ] Employee Management
-- [ ] Working Hours
-- [ ] Integration Settings
-- [ ] Subscription
-- [ ] Billing
+- [ ] Clinic Settings — *(kapsam dışı bırakıldı; bkz. implementation-plan.md)*
+- [x] Branch Management
+- [x] User Management — *(bkz. implementation-plan.md, Kullanıcı Yönetimi ile birleştirildi)*
+- [x] Role Permission — *(salt-okunur görünüm)*
+- [x] Doctor Profile — *(bkz. implementation-plan.md, Kullanıcı Yönetimi ile birleştirildi)*
+- [x] Employee Management — *(bkz. implementation-plan.md, Kullanıcı Yönetimi ile birleştirildi)*
+- [x] Working Hours
+- [x] Integration Settings
+- [x] Subscription — *(salt-okunur görünüm)*
+- [ ] Billing — *(kapsam dışı bırakıldı; bkz. implementation-plan.md)*
 
 ### 13. Platform Admin Paneli (SaaS taraf)
 - [ ] Tenant / Klinik Listesi

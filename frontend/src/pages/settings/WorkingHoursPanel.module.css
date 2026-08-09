@@ -1,0 +1,107 @@
+.subTabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+.subTab {
+  padding: 8px 14px;
+  border-radius: var(--radius-full);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: var(--color-cream);
+  border: none;
+  cursor: pointer;
+}
+.subTabActive {
+  color: #fff;
+  background: var(--color-brand-500);
+}
+
+.pickerRow {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 1rem;
+  max-width: 360px;
+}
+.pickerRow > div {
+  flex: 1;
+}
+
+.dayCard {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: 20px;
+  max-width: 720px;
+}
+.dayRow {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 20px;
+  border-top: 1px solid var(--color-border);
+}
+.dayRow:first-child {
+  border-top: none;
+}
+.dayLabel {
+  font-weight: 600;
+  font-size: 13px;
+}
+.closedToggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+}
+.timeInputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shiftDayCard {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 14px 20px;
+  margin-bottom: 12px;
+  max-width: 720px;
+}
+.shiftDayHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.shiftBlockRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+}
+.shiftEmpty {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  padding: 4px 0;
+}
+.removeBtn {
+  background: none;
+  border: none;
+  color: var(--color-danger-700);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.actionsRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+  max-width: 720px;
+}

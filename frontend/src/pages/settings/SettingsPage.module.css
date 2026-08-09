@@ -27,6 +27,7 @@
   font-weight: 600;
   color: var(--color-text-muted);
   cursor: pointer;
+  text-decoration: none;
   border-bottom: 2px solid transparent;
   margin-bottom: -1.5px;
 }

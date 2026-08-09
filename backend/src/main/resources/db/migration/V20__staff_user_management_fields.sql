@@ -1,0 +1,3 @@
+ALTER TABLE staff_users ADD COLUMN specialty TEXT;
+ALTER TABLE staff_users ADD COLUMN bio TEXT;
+ALTER TABLE staff_users ADD COLUMN active BOOLEAN NOT NULL DEFAULT TRUE;

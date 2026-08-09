@@ -1,17 +1,40 @@
-import { useState } from 'react';
+import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
 import { AppShell } from '../../components/layout/AppShell';
+import { BranchManagementPanel } from './BranchManagementPanel';
 import { EfaturaPanel } from './EfaturaPanel';
 import { IntegrationsPanel } from './IntegrationsPanel';
 import { NotificationsPanel } from './NotificationsPanel';
+import { RolePermissionsPanel } from './RolePermissionsPanel';
 import { ServiceTypesPanel } from './ServiceTypesPanel';
 import { SpeciesBreedsPanel } from './SpeciesBreedsPanel';
+import { StaffManagementPanel } from './StaffManagementPanel';
+import { SubscriptionPanel } from './SubscriptionPanel';
+import { WorkingHoursPanel } from './WorkingHoursPanel';
 import styles from './SettingsPage.module.css';
 
-type Tab = 'integrations' | 'catalog' | 'services' | 'notifications' | 'efatura';
+interface SettingsTabConfig {
+  path: string;
+  label: string;
+}
+
+/**
+ * Ayarlar altındaki her yeni ekran SADECE bu listeye bir satır ekleyerek
+ * bağlanır — sekme çubuğu ve <Routes> burada tek kaynaktan türetilir.
+ */
+const SETTINGS_TABS: SettingsTabConfig[] = [
+  { path: 'kullanicilar', label: 'Kullanıcılar' },
+  { path: 'subeler', label: 'Şubeler' },
+  { path: 'calisma-saatleri', label: 'Çalışma Saatleri' },
+  { path: 'roller', label: 'Rol & Yetki' },
+  { path: 'abonelik', label: 'Abonelik' },
+  { path: 'entegrasyonlar', label: 'Entegrasyonlar' },
+  { path: 'tur-irk', label: 'Tür & Irk' },
+  { path: 'hizmetler', label: 'Hizmetler' },
+  { path: 'bildirimler', label: 'Bildirimler' },
+  { path: 'e-fatura', label: 'e-Fatura' },
+];
 
 export function SettingsPage() {
-  const [tab, setTab] = useState<Tab>('integrations');
-
   return (
     <AppShell>
       <div className={styles.topbar}>
@@ -19,28 +42,30 @@ export function SettingsPage() {
       </div>
 
       <div className={styles.tabs}>
-        <div className={`${styles.tab} ${tab === 'integrations' ? styles.tabActive : ''}`} onClick={() => setTab('integrations')}>
-          Entegrasyonlar
-        </div>
-        <div className={`${styles.tab} ${tab === 'catalog' ? styles.tabActive : ''}`} onClick={() => setTab('catalog')}>
-          Tür &amp; Irk
-        </div>
-        <div className={`${styles.tab} ${tab === 'services' ? styles.tabActive : ''}`} onClick={() => setTab('services')}>
-          Hizmetler
-        </div>
-        <div className={`${styles.tab} ${tab === 'notifications' ? styles.tabActive : ''}`} onClick={() => setTab('notifications')}>
-          Bildirimler
-        </div>
-        <div className={`${styles.tab} ${tab === 'efatura' ? styles.tabActive : ''}`} onClick={() => setTab('efatura')}>
-          e-Fatura
-        </div>
+        {SETTINGS_TABS.map((t) => (
+          <NavLink
+            key={t.path}
+            to={t.path}
+            className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ''}`}
+          >
+            {t.label}
+          </NavLink>
+        ))}
       </div>
 
-      {tab === 'integrations' && <IntegrationsPanel />}
-      {tab === 'catalog' && <SpeciesBreedsPanel />}
-      {tab === 'services' && <ServiceTypesPanel />}
-      {tab === 'notifications' && <NotificationsPanel />}
-      {tab === 'efatura' && <EfaturaPanel />}
+      <Routes>
+        <Route index element={<Navigate to="entegrasyonlar" replace />} />
+        <Route path="kullanicilar" element={<StaffManagementPanel />} />
+        <Route path="subeler" element={<BranchManagementPanel />} />
+        <Route path="calisma-saatleri" element={<WorkingHoursPanel />} />
+        <Route path="roller" element={<RolePermissionsPanel />} />
+        <Route path="abonelik" element={<SubscriptionPanel />} />
+        <Route path="entegrasyonlar" element={<IntegrationsPanel />} />
+        <Route path="tur-irk" element={<SpeciesBreedsPanel />} />
+        <Route path="hizmetler" element={<ServiceTypesPanel />} />
+        <Route path="bildirimler" element={<NotificationsPanel />} />
+        <Route path="e-fatura" element={<EfaturaPanel />} />
+      </Routes>
     </AppShell>
   );
 }

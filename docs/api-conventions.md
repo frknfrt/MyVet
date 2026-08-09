@@ -95,6 +95,8 @@ Her istekte JWT'den çözülen `tenantId`, `TenantContext` (ThreadLocal) üzerin
 
 Yetki kontrolü Spring Security `@PreAuthorize("hasRole('VET')")` ile controller metodu seviyesinde yapılır — use-case katmanında rol kontrolü YAPILMAZ (rol, bir HTTP/API kavramıdır, domain'in bilmesi gerekmez).
 
+**Kenar durum kararı (Faz 2, Yönetim ekranları turu):** Aynı kiracı içi bir dizin listesi (örn. `GET /staff-users`) birden fazla amaçla kullanılıyorsa (hem hafif bir "seçici" hem de bir yönetim ekranının tam listesi), tek endpoint zenginleştirilir ve mevcut erişim seviyesinde bırakılır — PII olmayan alanlar (ad, e-posta, rol, uzmanlık) için ayrı bir ADMIN-only endpoint AÇILMAZ. Yazma/aksiyon endpoint'leri (`POST`/`PUT`/`DELETE`) yine de ilgili role kısıtlanır.
+
 ## Versiyonlama
 
 `v1` şu an tek versiyon. Kırıcı bir değişiklik gerekirse `v2` eklenir, `v1` en az 6 ay paralel yaşar. Kırıcı olmayan değişiklik (yeni alan ekleme) versiyon gerektirmez.

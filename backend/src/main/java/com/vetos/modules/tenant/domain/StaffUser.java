@@ -39,8 +39,15 @@ public class StaffUser {
     @Column(name = "license_number")
     private String licenseNumber;
 
+    private String specialty;
+
+    private String bio;
+
     @Column(name = "two_factor_enabled", nullable = false)
     private boolean twoFactorEnabled;
+
+    @Column(nullable = false)
+    private boolean active;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -53,6 +60,7 @@ public class StaffUser {
         staffUser.passwordHash = passwordHash;
         staffUser.role = role;
         staffUser.twoFactorEnabled = false;
+        staffUser.active = true;
         staffUser.createdAt = Instant.now();
         return staffUser;
     }
@@ -61,11 +69,31 @@ public class StaffUser {
         this.phone = phone;
     }
 
+    public void updateProfile(String fullName, String phone, String licenseNumber, String specialty, String bio) {
+        this.fullName = fullName;
+        this.phone = phone;
+        this.licenseNumber = licenseNumber;
+        this.specialty = specialty;
+        this.bio = bio;
+    }
+
+    public void changeRole(StaffRole newRole) {
+        this.role = newRole;
+    }
+
     public void changePassword(String newPasswordHash) {
         this.passwordHash = newPasswordHash;
     }
 
     public void enableTwoFactor() {
         this.twoFactorEnabled = true;
+    }
+
+    public void deactivate() {
+        this.active = false;
+    }
+
+    public void activate() {
+        this.active = true;
     }
 }

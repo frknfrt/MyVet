@@ -33,6 +33,10 @@ public class LoginUseCase {
             throw new InvalidCredentialsException();
         }
 
+        if (!staffUser.isActive()) {
+            throw new InvalidCredentialsException();
+        }
+
         Branch branch = branchRepository.findById(staffUser.getBranchId())
             .orElseThrow(InvalidCredentialsException::new);
 

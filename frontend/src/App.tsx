@@ -182,7 +182,7 @@ export function App() {
         }
       />
       <Route
-        path="/ayarlar"
+        path="/ayarlar/*"
         element={
           <RequireAuth>
             <SettingsPage />
