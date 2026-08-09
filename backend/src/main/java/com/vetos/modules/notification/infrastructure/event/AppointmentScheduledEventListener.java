@@ -37,7 +37,7 @@ class AppointmentScheduledEventListener {
 
         queueNotificationUseCase.execute(
             event.tenantId(), event.ownerId(), event.patientId(), NotificationChannel.SMS,
-            NotificationType.APPOINTMENT_CONFIRMATION, owner.phone(), message, event.appointmentId()
+            NotificationType.APPOINTMENT_CONFIRMATION, owner.phone(), message, event.appointmentId(), null
         );
     }
 }

@@ -21,11 +21,14 @@ public class NotificationLog {
     @Column(name = "tenant_id", nullable = false)
     private UUID tenantId;
 
-    @Column(name = "owner_id", nullable = false)
+    @Column(name = "owner_id")
     private UUID ownerId;
 
     @Column(name = "patient_id")
     private UUID patientId;
+
+    @Column(name = "recipient_label")
+    private String recipientLabel;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -53,7 +56,7 @@ public class NotificationLog {
 
     public static NotificationLog queue(
         UUID tenantId, UUID ownerId, UUID patientId, NotificationChannel channel, NotificationType notificationType,
-        String recipientContact, String message, UUID relatedEntityId
+        String recipientContact, String message, UUID relatedEntityId, String recipientLabel
     ) {
         NotificationLog log = new NotificationLog();
         log.tenantId = tenantId;
@@ -64,6 +67,7 @@ public class NotificationLog {
         log.recipientContact = recipientContact;
         log.message = message;
         log.relatedEntityId = relatedEntityId;
+        log.recipientLabel = recipientLabel;
         log.status = NotificationStatus.PENDING;
         log.attemptedAt = Instant.now();
         return log;

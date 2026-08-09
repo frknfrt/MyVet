@@ -47,7 +47,7 @@ public class GetOwnerBalancesUseCase {
             .filter(entry -> entry.getValue().compareTo(BigDecimal.ZERO) > 0)
             .map(entry -> {
                 var owner = ownerLookupPort.findSummaryById(entry.getKey());
-                return new OwnerBalance(owner.id(), owner.fullName(), owner.phone(), entry.getValue());
+                return new OwnerBalance(owner.id(), owner.fullName(), owner.phone(), entry.getValue(), owner.smsConsent(), owner.whatsappConsent());
             })
             .sorted(Comparator.comparing(OwnerBalance::outstandingBalance).reversed())
             .toList();

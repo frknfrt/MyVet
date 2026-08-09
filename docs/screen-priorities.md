@@ -53,6 +53,17 @@ Tam liste (P0/P1/P2/P3, notlarla): `docs/screen-priorities.xlsx`
 - [ ] Prescription Create (+ ilac etkilesim uyarisi)
 - [ ] Prescription History
 
+### 6. Laboratuvar
+- [x] Lab Result List
+- [x] Yeni Tahlil İsteği
+- [x] Lab Result Detail (sonuç girişi, dosya eki)
+- [x] Kural Tabanlı Ön-Değerlendirme (AI)
+
+### 7. Görüntüleme
+- [x] Imaging Record List
+- [x] Yeni Görüntüleme Kaydı
+- [x] Imaging Record Detail (dosya yükleme/indirme)
+
 ### 8. Stok ve Envanter
 - [ ] Inventory Dashboard
 - [ ] Product List
@@ -73,6 +84,13 @@ Tam liste (P0/P1/P2/P3, notlarla): `docs/screen-priorities.xlsx`
 - [ ] TARBIL Senkron Ekrani
 - [ ] Kasa Yonetimi (gunluk acilis/kapanis, nakit mutabakati)
 - [ ] Borc Listesi / Cari Hesap Takibi
+- [x] Hekim Bazlı Performans Raporu
+- [x] Şube Karşılaştırma Raporu
+
+### 10. Yatış (Boarding)
+- [x] Konaklama Listesi / Oda Durumu
+- [x] Yeni Konaklama Kaydı
+- [x] Oda Yönetimi
 
 ### 11. AI Merkezi
 - [ ] Voice To SOAP

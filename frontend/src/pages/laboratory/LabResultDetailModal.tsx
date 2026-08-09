@@ -32,6 +32,7 @@ export function LabResultDetailModal({ resultId, onClose, onChanged }: LabResult
   const [items, setItems] = useState<LabResultItemInput[]>([]);
   const [busy, setBusy] = useState(false);
   const [evaluating, setEvaluating] = useState(false);
+  const [aiEvaluated, setAiEvaluated] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -40,6 +41,7 @@ export function LabResultDetailModal({ resultId, onClose, onChanged }: LabResult
     if (!resultId) return;
     labApi.get(resultId).then((d) => {
       setDetail(d);
+      setAiEvaluated(false);
       setResultSummary(d.resultSummary ?? '');
       setItems(
         d.items.length > 0
@@ -96,6 +98,7 @@ export function LabResultDetailModal({ resultId, onClose, onChanged }: LabResult
       const result = await labApi.evaluate(cleanItems);
       setItems(result.items);
       setResultSummary(result.draftSummary);
+      setAiEvaluated(true);
     } catch (err) {
       setError(errorMessageOf(err));
     } finally {
@@ -198,7 +201,10 @@ export function LabResultDetailModal({ resultId, onClose, onChanged }: LabResult
 
       {isPending ? (
         <form onSubmit={handleComplete}>
-          <div className={styles.sectionLabel}>Sonucu Tamamla</div>
+          <div className={styles.sectionLabel}>
+            Sonucu Tamamla
+            {aiEvaluated && <Badge tone="ai">AI Önerisi</Badge>}
+          </div>
           <FieldWrap label="Genel değerlendirme">
             <Textarea rows={2} value={resultSummary} onChange={(e) => setResultSummary(e.target.value)} required />
           </FieldWrap>
@@ -241,17 +247,17 @@ export function LabResultDetailModal({ resultId, onClose, onChanged }: LabResult
             <button type="button" className={styles.addItemBtn} onClick={addItem}>
               + Parametre ekle
             </button>
-            <button
+            <Button
               type="button"
-              className={styles.evaluateBtn}
+              variant="ai"
               onClick={handleEvaluate}
               disabled={evaluating || items.every((i) => !i.parameterName.trim() || !i.value.trim())}
             >
               {evaluating ? 'Değerlendiriliyor...' : '⚡ Otomatik Ön-Değerlendirme'}
-            </button>
+            </Button>
           </div>
           <div className={styles.evaluateHint}>
-            Referans aralığı dışındaki değerleri kural tabanlı olarak işaretler ve taslak bir özet oluşturur — kaydetmeden önce gözden geçirin.
+            Değerler kural tabanlı olarak işaretlenir ve taslak bir özet oluşturulur; sonuç hekim onayına sunulur, siz kaydetmeden uygulanmaz.
           </div>
 
           <div className={styles.actionsSplit}>

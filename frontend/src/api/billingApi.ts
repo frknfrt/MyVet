@@ -47,6 +47,8 @@ export interface OwnerBalance {
   ownerName: string;
   ownerPhone: string;
   outstandingBalance: number;
+  smsConsent: boolean;
+  whatsappConsent: boolean;
 }
 
 export interface MonthlyRevenue {

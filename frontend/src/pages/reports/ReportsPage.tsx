@@ -2,12 +2,19 @@ import { useEffect, useMemo, useState } from 'react';
 import { AppShell } from '../../components/layout/AppShell';
 import { ApiError } from '../../api/client';
 import { InvoiceStatus } from '../../api/billingApi';
-import { ProductSalesLine, reportingApi, ReportFilters, RevenueReportLine } from '../../api/reportingApi';
+import {
+  BranchComparisonLine,
+  ProductSalesLine,
+  reportingApi,
+  ReportFilters,
+  RevenueReportLine,
+  StaffPerformanceLine,
+} from '../../api/reportingApi';
 import { Button } from '../../components/ui/Button';
 import { InvoiceStatusBadge } from '../finance/invoiceStatus';
 import styles from './ReportsPage.module.css';
 
-type Tab = 'revenue' | 'products';
+type Tab = 'revenue' | 'products' | 'staff' | 'branches';
 
 function errorMessageOf(err: unknown): string {
   return err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Beklenmeyen bir hata oluştu';
@@ -43,6 +50,8 @@ export function ReportsPage() {
 
   const [revenueLines, setRevenueLines] = useState<RevenueReportLine[]>([]);
   const [productLines, setProductLines] = useState<ProductSalesLine[]>([]);
+  const [staffLines, setStaffLines] = useState<StaffPerformanceLine[]>([]);
+  const [branchLines, setBranchLines] = useState<BranchComparisonLine[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
@@ -55,11 +64,20 @@ export function ReportsPage() {
   function load() {
     setLoading(true);
     setError(null);
-    const request = tab === 'revenue' ? reportingApi.revenueReport(filters) : reportingApi.productSalesReport(filters);
+    const request =
+      tab === 'revenue'
+        ? reportingApi.revenueReport(filters)
+        : tab === 'products'
+        ? reportingApi.productSalesReport(filters)
+        : tab === 'staff'
+        ? reportingApi.staffPerformanceReport(filters)
+        : reportingApi.branchComparisonReport(filters);
     request
       .then((data) => {
         if (tab === 'revenue') setRevenueLines(data as RevenueReportLine[]);
-        else setProductLines(data as ProductSalesLine[]);
+        else if (tab === 'products') setProductLines(data as ProductSalesLine[]);
+        else if (tab === 'staff') setStaffLines(data as StaffPerformanceLine[]);
+        else setBranchLines(data as BranchComparisonLine[]);
       })
       .catch((err) => setError(errorMessageOf(err)))
       .finally(() => setLoading(false));
@@ -75,14 +93,28 @@ export function ReportsPage() {
     setDownloading(true);
     setError(null);
     try {
-      const url = tab === 'revenue' ? reportingApi.revenueExportUrl(filters) : reportingApi.productSalesExportUrl(filters);
+      const url =
+        tab === 'revenue'
+          ? reportingApi.revenueExportUrl(filters)
+          : tab === 'products'
+          ? reportingApi.productSalesExportUrl(filters)
+          : tab === 'staff'
+          ? reportingApi.staffPerformanceExportUrl(filters)
+          : reportingApi.branchComparisonExportUrl(filters);
       const res = await fetch(url, { headers: reportingApi.authHeader() });
       if (!res.ok) throw new Error('Rapor indirilemedi');
       const blob = await res.blob();
       const objectUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = objectUrl;
-      a.download = tab === 'revenue' ? 'ciro-raporu.csv' : 'urun-hizmet-satis-raporu.csv';
+      a.download =
+        tab === 'revenue'
+          ? 'ciro-raporu.csv'
+          : tab === 'products'
+          ? 'urun-hizmet-satis-raporu.csv'
+          : tab === 'staff'
+          ? 'hekim-performans-raporu.csv'
+          : 'sube-karsilastirma-raporu.csv';
       a.click();
       URL.revokeObjectURL(objectUrl);
     } catch (err) {
@@ -108,6 +140,26 @@ export function ReportsPage() {
       ),
     [productLines]
   );
+  const staffTotals = useMemo(
+    () =>
+      staffLines.reduce(
+        (acc, l) => ({ invoiceCount: acc.invoiceCount + l.invoiceCount, revenue: acc.revenue + l.totalRevenue }),
+        { invoiceCount: 0, revenue: 0 }
+      ),
+    [staffLines]
+  );
+  const branchTotals = useMemo(
+    () =>
+      branchLines.reduce(
+        (acc, l) => ({
+          invoiceCount: acc.invoiceCount + l.invoiceCount,
+          revenue: acc.revenue + l.totalRevenue,
+          paid: acc.paid + l.paidRevenue,
+        }),
+        { invoiceCount: 0, revenue: 0, paid: 0 }
+      ),
+    [branchLines]
+  );
 
   return (
     <AppShell>
@@ -125,6 +177,12 @@ export function ReportsPage() {
         <div className={`${styles.tab} ${tab === 'products' ? styles.tabActive : ''}`} onClick={() => setTab('products')}>
           Ürün / Hizmet Satış Raporu
         </div>
+        <div className={`${styles.tab} ${tab === 'staff' ? styles.tabActive : ''}`} onClick={() => setTab('staff')}>
+          Hekim Performansı
+        </div>
+        <div className={`${styles.tab} ${tab === 'branches' ? styles.tabActive : ''}`} onClick={() => setTab('branches')}>
+          Şube Karşılaştırma
+        </div>
       </div>
 
       <div className={styles.filterBar}>
@@ -136,7 +194,7 @@ export function ReportsPage() {
           <label className={styles.filterLabel}>Bitiş</label>
           <input type="date" className={styles.filterInput} value={to} onChange={(e) => setTo(e.target.value)} />
         </div>
-        {tab === 'revenue' && (
+        {tab !== 'products' && (
           <div className={styles.filterField}>
             <label className={styles.filterLabel}>Durum</label>
             <select
@@ -202,7 +260,7 @@ export function ReportsPage() {
             </>
           )}
         </div>
-      ) : (
+      ) : tab === 'products' ? (
         <div className={styles.tableCard}>
           <div className={styles.productHead}>
             <div>Ürün / Hizmet</div>
@@ -226,6 +284,68 @@ export function ReportsPage() {
                 <div>Toplam ({productLines.length} kalem)</div>
                 <div>{productTotals.quantity}</div>
                 <div>{formatCurrency(productTotals.revenue)}</div>
+              </div>
+            </>
+          )}
+        </div>
+      ) : tab === 'staff' ? (
+        <div className={styles.tableCard}>
+          <div className={styles.staffHead}>
+            <div>Hekim</div>
+            <div>Fatura Sayısı</div>
+            <div>Toplam Ciro</div>
+            <div>Ort. Fatura Tutarı</div>
+          </div>
+          {loading ? (
+            <div className={styles.empty}>Yükleniyor...</div>
+          ) : staffLines.length === 0 ? (
+            <div className={styles.empty}>Seçilen aralıkta hekime atanmış fatura bulunmuyor</div>
+          ) : (
+            <>
+              {staffLines.map((l) => (
+                <div key={l.staffUserId} className={styles.staffRow}>
+                  <div>{l.staffName}</div>
+                  <div>{l.invoiceCount}</div>
+                  <div>{formatCurrency(l.totalRevenue)}</div>
+                  <div className={styles.muted}>{formatCurrency(l.avgInvoiceAmount)}</div>
+                </div>
+              ))}
+              <div className={styles.totalsRowStaff}>
+                <div>Toplam ({staffLines.length} hekim)</div>
+                <div>{staffTotals.invoiceCount}</div>
+                <div>{formatCurrency(staffTotals.revenue)}</div>
+                <div />
+              </div>
+            </>
+          )}
+        </div>
+      ) : (
+        <div className={styles.tableCard}>
+          <div className={styles.branchHead}>
+            <div>Şube</div>
+            <div>Fatura Sayısı</div>
+            <div>Toplam Ciro</div>
+            <div>Tahsil Edilen</div>
+          </div>
+          {loading ? (
+            <div className={styles.empty}>Yükleniyor...</div>
+          ) : branchLines.length === 0 ? (
+            <div className={styles.empty}>Tenant için tanımlı şube bulunmuyor</div>
+          ) : (
+            <>
+              {branchLines.map((l) => (
+                <div key={l.branchId} className={styles.branchRow}>
+                  <div>{l.branchName}</div>
+                  <div>{l.invoiceCount}</div>
+                  <div>{formatCurrency(l.totalRevenue)}</div>
+                  <div className={styles.muted}>{formatCurrency(l.paidRevenue)}</div>
+                </div>
+              ))}
+              <div className={styles.totalsRowBranches}>
+                <div>Toplam ({branchLines.length} şube)</div>
+                <div>{branchTotals.invoiceCount}</div>
+                <div>{formatCurrency(branchTotals.revenue)}</div>
+                <div>{formatCurrency(branchTotals.paid)}</div>
               </div>
             </>
           )}

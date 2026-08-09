@@ -1,4 +1,4 @@
-import { InputHTMLAttributes, LabelHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
+import { forwardRef, InputHTMLAttributes, LabelHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
 import styles from './Field.module.css';
 
 interface FieldWrapProps {
@@ -23,9 +23,10 @@ export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
   return <select className={styles.input} {...props} />;
 }
 
-export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea className={styles.textarea} {...props} />;
-}
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>((props, ref) => {
+  return <textarea ref={ref} className={styles.textarea} {...props} />;
+});
+Textarea.displayName = 'Textarea';
 
 export function Label(props: LabelHTMLAttributes<HTMLLabelElement>) {
   return <label className={styles.label} {...props} />;

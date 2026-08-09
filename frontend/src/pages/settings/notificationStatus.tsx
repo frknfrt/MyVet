@@ -10,6 +10,7 @@ const STATUS_CONFIG: Record<NotificationLogStatus, { label: string; tone: BadgeT
 const TYPE_LABELS: Record<NotificationType, string> = {
   APPOINTMENT_CONFIRMATION: 'Randevu Onayı',
   APPOINTMENT_REMINDER: 'Randevu Hatırlatma',
+  CAMPAIGN_MESSAGE: 'Kampanya Mesajı',
 };
 
 const CHANNEL_LABELS: Record<NotificationChannel, string> = {

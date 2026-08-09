@@ -1,0 +1,49 @@
+.actionsRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+.tableHead,
+.tableRow {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 2.2fr 1.4fr;
+  gap: 10px;
+  padding: 13px 20px;
+  align-items: center;
+}
+.tableHead {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: #fbfaf8;
+}
+.tableRow {
+  border-top: 1px solid var(--color-border);
+  font-size: 13px;
+}
+.bodyPreview {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rowActions {
+  display: flex;
+  gap: 8px;
+}
+.modalTitle {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 17px;
+  margin-bottom: 16px;
+}
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}

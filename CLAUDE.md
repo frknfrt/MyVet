@@ -4,7 +4,7 @@
 Türkiye pazarına özel, AI destekli veteriner klinik yönetim SaaS'ı. Spring Boot (backend) + React/TypeScript (frontend). Detaylar: @docs/requirements.md
 
 ## Mimari (ZORUNLU KURAL)
-Modüler monolit + hexagonal mimari. Her modül (`patient`, `appointment`, `encounter`, `billing`, `inventory`, `ai`, `notification`, `integration/tarbil`) kendi `domain/`, `application/`, `infrastructure/`, `api/` paketine sahip.
+Modüler monolit + hexagonal mimari. Her modül (`tenant`, `patient`, `appointment`, `encounter`, `billing`, `inventory`, `lab`, `imaging`, `boarding`, `ai`, `notification`, `integration/tarbil`, `integration/efatura`) kendi `domain/`, `application/`, `infrastructure/`, `api/` paketine sahip.
 
 **Bir modül başka bir modülün `domain` sınıfına (entity/repository) DOĞRUDAN erişemez.** Sadece:
 - Diğer modülün `application` katmanındaki port arayüzü üzerinden, veya

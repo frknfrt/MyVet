@@ -156,7 +156,6 @@ erDiagram
 
     %% ================= MUAYENE / SOAP =================
     ENCOUNTER ||--o{ PRESCRIPTION : "receteye_baglanir"
-    ENCOUNTER ||--o{ LAB_RESULT : "tahlile_baglanir"
     ENCOUNTER ||--o{ IMAGING_RECORD : "goruntuye_baglanir"
     ENCOUNTER ||--o| INVOICE : "faturaya_donusur"
     ENCOUNTER ||--o| AI_JOB : "ai_scribe_uretir"
@@ -224,17 +223,31 @@ erDiagram
     }
 
     %% ================= LAB / GORUNTULEME =================
+    LAB_RESULT ||--o{ LAB_RESULT_ITEM : "parametre_icerir"
     LAB_RESULT {
         uuid id PK
+        uuid tenant_id FK
         uuid patient_id FK
-        uuid encounter_id FK
-        string test_type
-        string external_analyzer_ref "HL7_kaynak"
-        jsonb result_values
-        string status "PENDING|COMPLETED|ABNORMAL_FLAGGED"
-        timestamp result_date
+        uuid ordering_staff_id FK
+        string test_name
+        string status "PENDING|COMPLETED|CANCELLED"
+        timestamp requested_at
+        timestamp resulted_at
+        string result_summary
+        string notes
+    }
+    LAB_RESULT_ITEM {
+        uuid id PK
+        uuid lab_result_id FK
+        string parameter_name
+        string value
+        string unit
+        string reference_range
+        string flag "NORMAL|LOW|HIGH|ABNORMAL"
     }
 
+    %% NOT: IMAGING_RECORD ve BOARDING_STAY blocklari gercek semaya gore
+    %% dogrulanmadi (bilinen takip gorevi - bu guncellemenin kapsami disinda).
     IMAGING_RECORD ||--o| AI_JOB : "ai_on_analiz_ister"
     IMAGING_RECORD {
         uuid id PK

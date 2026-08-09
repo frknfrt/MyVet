@@ -35,6 +35,9 @@ public class Invoice {
     @Column(name = "boarding_stay_id")
     private UUID boardingStayId;
 
+    @Column(name = "staff_user_id")
+    private UUID staffUserId;
+
     @Column(name = "e_invoice_ref")
     private String eInvoiceRef;
 
@@ -51,12 +54,13 @@ public class Invoice {
     @Column(name = "issued_at")
     private Instant issuedAt;
 
-    public static Invoice createDraft(UUID tenantId, UUID branchId, UUID ownerId, UUID encounterId) {
+    public static Invoice createDraft(UUID tenantId, UUID branchId, UUID ownerId, UUID encounterId, UUID staffUserId) {
         Invoice invoice = new Invoice();
         invoice.tenantId = tenantId;
         invoice.branchId = branchId;
         invoice.ownerId = ownerId;
         invoice.encounterId = encounterId;
+        invoice.staffUserId = staffUserId;
         invoice.totalAmount = BigDecimal.ZERO;
         invoice.taxAmount = BigDecimal.ZERO;
         invoice.status = InvoiceStatus.DRAFT;
@@ -64,7 +68,7 @@ public class Invoice {
     }
 
     public static Invoice createDraftForBoardingStay(UUID tenantId, UUID branchId, UUID ownerId, UUID boardingStayId) {
-        Invoice invoice = createDraft(tenantId, branchId, ownerId, null);
+        Invoice invoice = createDraft(tenantId, branchId, ownerId, null, null);
         invoice.boardingStayId = boardingStayId;
         return invoice;
     }

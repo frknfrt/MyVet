@@ -55,7 +55,7 @@ public class SendAppointmentRemindersUseCase {
 
             queueNotificationUseCase.execute(
                 tenantId, candidate.ownerId(), candidate.patientId(), NotificationChannel.SMS,
-                NotificationType.APPOINTMENT_REMINDER, owner.phone(), message, candidate.appointmentId()
+                NotificationType.APPOINTMENT_REMINDER, owner.phone(), message, candidate.appointmentId(), null
             );
             queued++;
         }

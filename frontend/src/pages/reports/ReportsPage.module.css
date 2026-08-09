@@ -113,8 +113,20 @@
   padding: 13px 20px;
   align-items: center;
 }
+.staffHead,
+.staffRow,
+.branchHead,
+.branchRow {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 10px;
+  padding: 13px 20px;
+  align-items: center;
+}
 .revenueHead,
-.productHead {
+.productHead,
+.staffHead,
+.branchHead {
   font-size: 11px;
   font-weight: 600;
   color: var(--color-text-muted);
@@ -123,7 +135,9 @@
   background: #fbfaf8;
 }
 .revenueRow,
-.productRow {
+.productRow,
+.staffRow,
+.branchRow {
   border-top: 1px solid var(--color-border);
   font-size: 13px;
 }
@@ -145,6 +159,18 @@
 .totalsRowProducts {
   display: grid;
   grid-template-columns: 2.4fr 1fr 1fr;
+  gap: 10px;
+  padding: 13px 20px;
+  align-items: center;
+  border-top: 1.5px solid var(--color-border);
+  font-size: 13px;
+  font-weight: 700;
+  background: #fbfaf8;
+}
+.totalsRowStaff,
+.totalsRowBranches {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
   gap: 10px;
   padding: 13px 20px;
   align-items: center;

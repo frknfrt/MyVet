@@ -66,6 +66,9 @@
 }
 
 .sectionLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 12px;
   font-weight: 700;
   color: var(--color-brand-500);
@@ -123,25 +126,6 @@
   align-items: center;
   justify-content: space-between;
   margin: 4px 0 4px;
-}
-.evaluateBtn {
-  background: var(--color-brand-100);
-  border: 1.5px solid var(--color-brand-400);
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--color-brand-700);
-  cursor: pointer;
-  transition: background 0.12s;
-}
-.evaluateBtn:hover:not(:disabled) {
-  background: var(--color-brand-400);
-  color: #fff;
-}
-.evaluateBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 .evaluateHint {
   font-size: 11px;

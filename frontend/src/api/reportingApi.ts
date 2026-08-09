@@ -17,6 +17,22 @@ export interface ProductSalesLine {
   totalRevenue: number;
 }
 
+export interface StaffPerformanceLine {
+  staffUserId: string;
+  staffName: string;
+  invoiceCount: number;
+  totalRevenue: number;
+  avgInvoiceAmount: number;
+}
+
+export interface BranchComparisonLine {
+  branchId: string;
+  branchName: string;
+  invoiceCount: number;
+  totalRevenue: number;
+  paidRevenue: number;
+}
+
 export interface ReportFilters {
   from?: string;
   to?: string;
@@ -42,5 +58,13 @@ export const reportingApi = {
   revenueExportUrl: (filters: ReportFilters) => `${API_BASE_URL}/api/v1/invoices/reports/revenue/export${buildQuery(filters)}`,
   productSalesExportUrl: (filters: ReportFilters) =>
     `${API_BASE_URL}/api/v1/invoices/reports/product-sales/export${buildQuery(filters)}`,
+  staffPerformanceReport: (filters: ReportFilters) =>
+    apiClient.get<StaffPerformanceLine[]>(`/api/v1/invoices/reports/staff-performance${buildQuery(filters)}`),
+  staffPerformanceExportUrl: (filters: ReportFilters) =>
+    `${API_BASE_URL}/api/v1/invoices/reports/staff-performance/export${buildQuery(filters)}`,
+  branchComparisonReport: (filters: ReportFilters) =>
+    apiClient.get<BranchComparisonLine[]>(`/api/v1/invoices/reports/branch-comparison${buildQuery(filters)}`),
+  branchComparisonExportUrl: (filters: ReportFilters) =>
+    `${API_BASE_URL}/api/v1/invoices/reports/branch-comparison/export${buildQuery(filters)}`,
   authHeader: () => apiClient.authHeader(),
 };

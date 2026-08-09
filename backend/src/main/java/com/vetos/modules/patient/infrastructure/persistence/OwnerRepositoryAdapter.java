@@ -5,6 +5,7 @@ import com.vetos.modules.patient.domain.OwnerRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -24,5 +25,10 @@ class OwnerRepositoryAdapter implements OwnerRepository {
     @Override
     public List<Owner> searchByTenantAndQuery(UUID tenantId, String query) {
         return jpaRepository.searchByTenantAndQuery(tenantId, query);
+    }
+
+    @Override
+    public List<Owner> findByTenantIdWithFilters(UUID tenantId, String nameContains, Instant registeredFrom, Instant registeredTo) {
+        return jpaRepository.findByTenantIdWithFilters(tenantId, nameContains, registeredFrom, registeredTo);
     }
 }

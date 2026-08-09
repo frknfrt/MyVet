@@ -4,8 +4,10 @@ import com.vetos.modules.billing.api.dto.*;
 import com.vetos.modules.billing.application.*;
 import com.vetos.modules.billing.application.dto.AddInvoiceLineCommand;
 import com.vetos.modules.billing.application.dto.RecordPaymentCommand;
+import com.vetos.modules.billing.application.dto.BranchComparisonLine;
 import com.vetos.modules.billing.application.dto.ProductSalesLine;
 import com.vetos.modules.billing.application.dto.RevenueReportLine;
+import com.vetos.modules.billing.application.dto.StaffPerformanceLine;
 import com.vetos.modules.billing.domain.InvoiceStatus;
 import com.vetos.platform.tenancy.TenantContext;
 import com.vetos.platform.web.CsvWriter;
@@ -41,6 +43,8 @@ public class InvoicesController {
     private final GetRevenueSummaryUseCase getRevenueSummaryUseCase;
     private final GetRevenueReportUseCase getRevenueReportUseCase;
     private final GetProductSalesReportUseCase getProductSalesReportUseCase;
+    private final GetStaffPerformanceReportUseCase getStaffPerformanceReportUseCase;
+    private final GetBranchComparisonReportUseCase getBranchComparisonReportUseCase;
     private final AddInvoiceLineUseCase addInvoiceLineUseCase;
     private final IssueInvoiceUseCase issueInvoiceUseCase;
     private final VoidInvoiceUseCase voidInvoiceUseCase;
@@ -136,6 +140,80 @@ public class InvoicesController {
         );
         return ResponseEntity.ok()
             .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=urun-hizmet-satis-raporu.csv")
+            .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+            .body(csv);
+    }
+
+    @GetMapping("/reports/staff-performance")
+    public List<StaffPerformanceLineResponse> staffPerformanceReport(
+        @RequestParam(required = false) LocalDate from,
+        @RequestParam(required = false) LocalDate to,
+        @RequestParam(required = false) UUID branchId,
+        @RequestParam(required = false) InvoiceStatus status
+    ) {
+        Instant[] range = resolveRange(from, to);
+        return getStaffPerformanceReportUseCase.execute(TenantContext.current(), range[0], range[1], branchId, status).stream()
+            .map(StaffPerformanceLineResponse::from)
+            .toList();
+    }
+
+    @GetMapping(value = "/reports/staff-performance/export", produces = "text/csv")
+    public ResponseEntity<String> exportStaffPerformanceReport(
+        @RequestParam(required = false) LocalDate from,
+        @RequestParam(required = false) LocalDate to,
+        @RequestParam(required = false) UUID branchId,
+        @RequestParam(required = false) InvoiceStatus status
+    ) {
+        Instant[] range = resolveRange(from, to);
+        List<StaffPerformanceLine> lines = getStaffPerformanceReportUseCase.execute(TenantContext.current(), range[0], range[1], branchId, status);
+        String csv = CsvWriter.toCsv(
+            List.of("Hekim", "Fatura Sayısı", "Toplam Ciro", "Ort. Fatura Tutarı"),
+            lines,
+            List.of(
+                StaffPerformanceLine::staffName,
+                l -> String.valueOf(l.invoiceCount()),
+                l -> l.totalRevenue().toPlainString(),
+                l -> l.avgInvoiceAmount().toPlainString()
+            )
+        );
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=hekim-performans-raporu.csv")
+            .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+            .body(csv);
+    }
+
+    @GetMapping("/reports/branch-comparison")
+    public List<BranchComparisonLineResponse> branchComparisonReport(
+        @RequestParam(required = false) LocalDate from,
+        @RequestParam(required = false) LocalDate to,
+        @RequestParam(required = false) InvoiceStatus status
+    ) {
+        Instant[] range = resolveRange(from, to);
+        return getBranchComparisonReportUseCase.execute(TenantContext.current(), range[0], range[1], status).stream()
+            .map(BranchComparisonLineResponse::from)
+            .toList();
+    }
+
+    @GetMapping(value = "/reports/branch-comparison/export", produces = "text/csv")
+    public ResponseEntity<String> exportBranchComparisonReport(
+        @RequestParam(required = false) LocalDate from,
+        @RequestParam(required = false) LocalDate to,
+        @RequestParam(required = false) InvoiceStatus status
+    ) {
+        Instant[] range = resolveRange(from, to);
+        List<BranchComparisonLine> lines = getBranchComparisonReportUseCase.execute(TenantContext.current(), range[0], range[1], status);
+        String csv = CsvWriter.toCsv(
+            List.of("Şube", "Fatura Sayısı", "Toplam Ciro", "Tahsil Edilen"),
+            lines,
+            List.of(
+                BranchComparisonLine::branchName,
+                l -> String.valueOf(l.invoiceCount()),
+                l -> l.totalRevenue().toPlainString(),
+                l -> l.paidRevenue().toPlainString()
+            )
+        );
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=sube-karsilastirma-raporu.csv")
             .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
             .body(csv);
     }

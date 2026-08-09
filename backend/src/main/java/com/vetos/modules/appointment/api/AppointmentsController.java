@@ -1,17 +1,20 @@
 package com.vetos.modules.appointment.api;
 
 import com.vetos.modules.appointment.api.dto.AppointmentActivitySummaryResponse;
+import com.vetos.modules.appointment.api.dto.AppointmentCampaignCandidateResponse;
 import com.vetos.modules.appointment.api.dto.AppointmentResponse;
 import com.vetos.modules.appointment.api.dto.AssignStaffRequest;
 import com.vetos.modules.appointment.api.dto.ScheduleAppointmentRequest;
 import com.vetos.modules.appointment.application.AssignStaffToAppointmentUseCase;
 import com.vetos.modules.appointment.application.GetAppointmentActivitySummaryUseCase;
 import com.vetos.modules.appointment.application.GetWeeklyCalendarUseCase;
+import com.vetos.modules.appointment.application.ListAppointmentCampaignCandidatesUseCase;
 import com.vetos.modules.appointment.application.ScheduleAppointmentUseCase;
 import com.vetos.modules.appointment.application.UpdateAppointmentStatusUseCase;
 import com.vetos.modules.appointment.application.UpdateAppointmentStatusUseCase.Action;
 import com.vetos.modules.appointment.application.dto.ScheduleAppointmentCommand;
 import com.vetos.modules.appointment.domain.AppointmentSource;
+import com.vetos.modules.appointment.domain.AppointmentStatus;
 import com.vetos.platform.security.AuthenticatedStaffUser;
 import com.vetos.platform.tenancy.TenantContext;
 import jakarta.validation.Valid;
@@ -35,6 +38,7 @@ public class AppointmentsController {
     private final UpdateAppointmentStatusUseCase updateAppointmentStatusUseCase;
     private final AssignStaffToAppointmentUseCase assignStaffToAppointmentUseCase;
     private final GetAppointmentActivitySummaryUseCase getAppointmentActivitySummaryUseCase;
+    private final ListAppointmentCampaignCandidatesUseCase listAppointmentCampaignCandidatesUseCase;
 
     @PostMapping
     public ResponseEntity<Void> schedule(
@@ -64,6 +68,17 @@ public class AppointmentsController {
     @GetMapping("/activity-summary")
     public AppointmentActivitySummaryResponse activitySummary() {
         return AppointmentActivitySummaryResponse.from(getAppointmentActivitySummaryUseCase.execute(TenantContext.current()));
+    }
+
+    @GetMapping("/campaign-candidates")
+    public List<AppointmentCampaignCandidateResponse> campaignCandidates(
+        @RequestParam LocalDate from, @RequestParam LocalDate to, @RequestParam(required = false) AppointmentStatus status
+    ) {
+        var rangeStart = from.atStartOfDay(ZoneOffset.UTC).toInstant();
+        var rangeEnd = to.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+        return listAppointmentCampaignCandidatesUseCase.execute(TenantContext.current(), rangeStart, rangeEnd, status).stream()
+            .map(AppointmentCampaignCandidateResponse::from)
+            .toList();
     }
 
     @PutMapping("/{id}/assign-staff")

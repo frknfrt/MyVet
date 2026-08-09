@@ -20,6 +20,7 @@ import { KonaklamaPage } from './pages/boarding/KonaklamaPage';
 import { NewBoardingStayPage } from './pages/boarding/NewBoardingStayPage';
 import { InventoryPage } from './pages/inventory/InventoryPage';
 import { ReportsPage } from './pages/reports/ReportsPage';
+import { SmsWhatsappPage } from './pages/sms-whatsapp/SmsWhatsappPage';
 import { SettingsPage } from './pages/settings/SettingsPage';
 import { ClinicSitePage } from './pages/public/ClinicSitePage';
 
@@ -169,6 +170,14 @@ export function App() {
         element={
           <RequireAuth>
             <ReportsPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/sms-whatsapp"
+        element={
+          <RequireAuth>
+            <SmsWhatsappPage />
           </RequireAuth>
         }
       />

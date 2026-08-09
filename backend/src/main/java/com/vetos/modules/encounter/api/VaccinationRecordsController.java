@@ -2,8 +2,10 @@ package com.vetos.modules.encounter.api;
 
 import com.vetos.modules.encounter.api.dto.MarkVaccinationAdministeredRequest;
 import com.vetos.modules.encounter.api.dto.RecordVaccinationRequest;
+import com.vetos.modules.encounter.api.dto.VaccinationCampaignCandidateResponse;
 import com.vetos.modules.encounter.api.dto.VaccinationScheduleItemResponse;
 import com.vetos.modules.encounter.application.CancelVaccinationUseCase;
+import com.vetos.modules.encounter.application.ListVaccinationCampaignCandidatesUseCase;
 import com.vetos.modules.encounter.application.ListVaccinationsByPatientUseCase;
 import com.vetos.modules.encounter.application.ListVaccinationsUseCase;
 import com.vetos.modules.encounter.application.MarkVaccinationAdministeredUseCase;
@@ -18,6 +20,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,6 +34,7 @@ public class VaccinationRecordsController {
     private final ListVaccinationsUseCase listVaccinationsUseCase;
     private final MarkVaccinationAdministeredUseCase markVaccinationAdministeredUseCase;
     private final CancelVaccinationUseCase cancelVaccinationUseCase;
+    private final ListVaccinationCampaignCandidatesUseCase listVaccinationCampaignCandidatesUseCase;
 
     @PostMapping
     @PreAuthorize("hasAnyRole('VET', 'TECHNICIAN', 'ADMIN')")
@@ -51,6 +55,15 @@ public class VaccinationRecordsController {
             ? listVaccinationsByPatientUseCase.execute(patientId)
             : listVaccinationsUseCase.execute(TenantContext.current());
         return items.stream().map(VaccinationScheduleItemResponse::from).toList();
+    }
+
+    @GetMapping("/campaign-candidates")
+    public List<VaccinationCampaignCandidateResponse> campaignCandidates(
+        @RequestParam(required = false) LocalDate dueFrom, @RequestParam(required = false) LocalDate dueTo
+    ) {
+        return listVaccinationCampaignCandidatesUseCase.execute(TenantContext.current(), dueFrom, dueTo).stream()
+            .map(VaccinationCampaignCandidateResponse::from)
+            .toList();
     }
 
     @PostMapping("/{id}/administer")

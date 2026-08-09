@@ -1,5 +1,6 @@
 package com.vetos.modules.tenant.domain;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -8,4 +9,5 @@ import java.util.UUID;
  */
 public interface BranchLookupPort {
     BranchSummary findSummaryById(UUID branchId);
+    List<BranchSummary> findAllByTenantId(UUID tenantId);
 }

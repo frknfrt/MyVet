@@ -6,6 +6,7 @@ import com.vetos.modules.tenant.domain.exception.BranchNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.UUID;
 
 @Component
@@ -19,5 +20,12 @@ class BranchLookupAdapter implements BranchLookupPort {
         var branch = jpaRepository.findById(branchId)
             .orElseThrow(() -> new BranchNotFoundException(branchId));
         return new BranchSummary(branch.getId(), branch.getName());
+    }
+
+    @Override
+    public List<BranchSummary> findAllByTenantId(UUID tenantId) {
+        return jpaRepository.findByTenantId(tenantId).stream()
+            .map(branch -> new BranchSummary(branch.getId(), branch.getName()))
+            .toList();
     }
 }

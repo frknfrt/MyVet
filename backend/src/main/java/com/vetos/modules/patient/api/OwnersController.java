@@ -13,6 +13,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,11 +31,26 @@ public class OwnersController {
     private final RecordConsentUseCase recordConsentUseCase;
     private final RevokeConsentUseCase revokeConsentUseCase;
     private final ListConsentsUseCase listConsentsUseCase;
+    private final ListOwnerCampaignCandidatesUseCase listOwnerCampaignCandidatesUseCase;
 
     @GetMapping
     public List<OwnerSearchResultResponse> search(@RequestParam(defaultValue = "") String query) {
         return searchOwnersUseCase.execute(TenantContext.current(), query).stream()
             .map(OwnerSearchResultResponse::from)
+            .toList();
+    }
+
+    @GetMapping("/campaign-candidates")
+    @PreAuthorize("hasAnyRole('VET', 'RECEPTIONIST', 'ADMIN')")
+    public List<OwnerCampaignCandidateResponse> campaignCandidates(
+        @RequestParam(required = false) String name,
+        @RequestParam(required = false) LocalDate registeredFrom,
+        @RequestParam(required = false) LocalDate registeredTo
+    ) {
+        Instant from = registeredFrom != null ? registeredFrom.atStartOfDay(ZoneOffset.UTC).toInstant() : null;
+        Instant to = registeredTo != null ? registeredTo.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant() : null;
+        return listOwnerCampaignCandidatesUseCase.execute(TenantContext.current(), name, from, to).stream()
+            .map(OwnerCampaignCandidateResponse::from)
             .toList();
     }
 

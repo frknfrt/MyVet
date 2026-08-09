@@ -5,8 +5,11 @@ import com.vetos.modules.billing.application.dto.OwnerBalance;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-public record OwnerBalanceResponse(UUID ownerId, String ownerName, String ownerPhone, BigDecimal outstandingBalance) {
+public record OwnerBalanceResponse(
+    UUID ownerId, String ownerName, String ownerPhone, BigDecimal outstandingBalance,
+    boolean smsConsent, boolean whatsappConsent
+) {
     public static OwnerBalanceResponse from(OwnerBalance b) {
-        return new OwnerBalanceResponse(b.ownerId(), b.ownerName(), b.ownerPhone(), b.outstandingBalance());
+        return new OwnerBalanceResponse(b.ownerId(), b.ownerName(), b.ownerPhone(), b.outstandingBalance(), b.smsConsent(), b.whatsappConsent());
     }
 }

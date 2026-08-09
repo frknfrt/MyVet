@@ -22,10 +22,10 @@ public class QueueNotificationUseCase {
     @Transactional
     public UUID execute(
         UUID tenantId, UUID ownerId, UUID patientId, NotificationChannel channel, NotificationType notificationType,
-        String recipientContact, String message, UUID relatedEntityId
+        String recipientContact, String message, UUID relatedEntityId, String recipientLabel
     ) {
         NotificationLog log = notificationLogRepository.save(
-            NotificationLog.queue(tenantId, ownerId, patientId, channel, notificationType, recipientContact, message, relatedEntityId)
+            NotificationLog.queue(tenantId, ownerId, patientId, channel, notificationType, recipientContact, message, relatedEntityId, recipientLabel)
         );
         UUID logId = log.getId();
 

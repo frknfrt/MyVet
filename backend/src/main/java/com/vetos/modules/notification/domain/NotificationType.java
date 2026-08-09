@@ -1,3 +1,3 @@
 package com.vetos.modules.notification.domain;
 
-public enum NotificationType { APPOINTMENT_CONFIRMATION, APPOINTMENT_REMINDER }
+public enum NotificationType { APPOINTMENT_CONFIRMATION, APPOINTMENT_REMINDER, CAMPAIGN_MESSAGE }

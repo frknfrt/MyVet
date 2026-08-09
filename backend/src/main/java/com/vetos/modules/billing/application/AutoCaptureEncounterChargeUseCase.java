@@ -38,7 +38,7 @@ public class AutoCaptureEncounterChargeUseCase {
         var staff = staffUserLookupPort.findSummaryById(staffUserId);
 
         Invoice invoice = invoiceRepository.save(
-            Invoice.createDraft(TenantContext.current(), staff.branchId(), patient.ownerId(), encounterId)
+            Invoice.createDraft(TenantContext.current(), staff.branchId(), patient.ownerId(), encounterId, staffUserId)
         );
         invoiceLineRepository.save(InvoiceLine.create(
             invoice.getId(), "Muayene ucreti (tutari guncelleyin)", 1, BigDecimal.ZERO,
