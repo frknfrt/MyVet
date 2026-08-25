@@ -62,3 +62,17 @@
   align-items: center;
   margin-top: 10px;
 }
+.interactionWarning {
+  background: var(--color-warning-100);
+  color: var(--color-warning-700);
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  margin-top: 4px;
+  margin-bottom: 10px;
+}
+.interactionWarning ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}

@@ -26,6 +26,7 @@ export function NewOwnerPage() {
   const [referralSource, setReferralSource] = useState('');
   const [clientDiscount, setClientDiscount] = useState('0');
   const [protocolNumber, setProtocolNumber] = useState('');
+  const [kvkkConsent, setKvkkConsent] = useState(false);
   const [smsConsent, setSmsConsent] = useState(true);
   const [whatsappConsent, setWhatsappConsent] = useState(true);
   const [notificationConsent, setNotificationConsent] = useState(true);
@@ -61,6 +62,12 @@ export function NewOwnerPage() {
         notificationConsent,
         protocolNumber: protocolNumber || undefined,
       });
+      try {
+        await patientApi.recordConsent(owner.id, 'KVKK_ACIK_RIZA');
+      } catch {
+        // Sahip zaten olusturuldu -- KVKK kaydi basarisiz olsa da geri alinmaz,
+        // resepsiyon KVKK sekmesinden manuel olarak ekleyebilir.
+      }
       navigate(`/musteriler/${owner.id}`);
     } catch (err) {
       setError(errorMessageOf(err));
@@ -131,6 +138,16 @@ export function NewOwnerPage() {
               <Input type="number" min={0} max={100} value={clientDiscount} onChange={(e) => setClientDiscount(e.target.value)} />
             </FieldWrap>
           </div>
+          <div className={styles.kvkkBox}>
+            <label>
+              <input type="checkbox" checked={kvkkConsent} onChange={(e) => setKvkkConsent(e.target.checked)} required />
+              <span>
+                <strong>KVKK Aydınlatma Metni'ni okudum, açık rızam vardır.</strong> Kişisel verilerin işlenmesine
+                ilişkin bu onay, müşteri kaydı için zorunludur ve tarih/IP ile birlikte kayıt altına alınır.
+              </span>
+            </label>
+          </div>
+
           <div className={styles.consentRow}>
             <label className={styles.checkboxRow}>
               <input type="checkbox" checked={smsConsent} onChange={(e) => setSmsConsent(e.target.checked)} />

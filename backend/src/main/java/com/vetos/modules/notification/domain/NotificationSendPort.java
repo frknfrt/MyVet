@@ -9,4 +9,14 @@ package com.vetos.modules.notification.domain;
  */
 public interface NotificationSendPort {
     NotificationSendOutcome send(NotificationSendRequest request);
+
+    /**
+     * En az bir kanal gercek bir saglayiciya bagliysa true -- Ayarlar >
+     * SMS/WhatsApp ekranindaki "Bagli / Mock modu" rozetinde kullanilir
+     * (bkz. GetNotificationStatusSummaryUseCase). Varsayilan false: hicbir
+     * gercek saglayici bagli degilken (Mock adapter) rozet "Mock modu" gosterir.
+     */
+    default boolean isConfigured() {
+        return false;
+    }
 }

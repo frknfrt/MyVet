@@ -163,6 +163,17 @@ export interface PatientGrowthSummary {
   newPatientsLastMonth: number;
 }
 
+export type ConsentType = 'KVKK_ACIK_RIZA' | 'PAZARLAMA' | 'VERI_AKTARIMI';
+
+export interface ConsentRecordItem {
+  id: string;
+  consentType: ConsentType;
+  granted: boolean;
+  ipAddress: string | null;
+  grantedAt: string;
+  revokedAt: string | null;
+}
+
 export const patientApi = {
   listSpecies: () => apiClient.get<SpeciesItem[]>('/api/v1/species'),
   growthSummary: () => apiClient.get<PatientGrowthSummary>('/api/v1/patients/growth-summary'),
@@ -185,4 +196,9 @@ export const patientApi = {
   registerOwner: (payload: RegisterOwnerPayload) => apiClient.post<{ id: string }>('/api/v1/owners', payload),
   updateOwner: (ownerId: string, payload: UpdateOwnerPayload) =>
     apiClient.put<void>(`/api/v1/owners/${ownerId}`, payload),
+  listConsents: (ownerId: string) => apiClient.get<ConsentRecordItem[]>(`/api/v1/owners/${ownerId}/consents`),
+  recordConsent: (ownerId: string, consentType: ConsentType) =>
+    apiClient.post<void>(`/api/v1/owners/${ownerId}/consents`, { consentType }),
+  revokeConsent: (ownerId: string, consentId: string) =>
+    apiClient.post<void>(`/api/v1/owners/${ownerId}/consents/${consentId}/revoke`),
 };

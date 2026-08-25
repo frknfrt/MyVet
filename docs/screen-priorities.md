@@ -32,7 +32,7 @@ Tam liste (P0/P1/P2/P3, notlarla): `docs/screen-priorities.xlsx`
 - [ ] Owner List — *(bağımsız gezilebilir sahip listesi ekranı yok; sahip arama sadece diğer formlarda otomatik-tamamlama olarak kullanılıyor)*
 - [x] Owner Profile
 - [x] Owner Pets
-- [ ] KVKK Riza Yonetimi — *(backend'de tam bir onay kaydı sistemi var — ConsentRecord/ConsentType + kayıt/iptal endpoint'leri — ama frontend'de bağlı bir UI yok, sadece genel SMS/WhatsApp checkbox'ları var)*
+- [x] KVKK Riza Yonetimi — *(Yeni Sahip formunda zorunlu "KVKK Açık Rıza" checkbox'ı + kayıt anında otomatik ConsentRecord; OwnerDetailPage > KVKK sekmesinde 3 onay türü için ver/geri çek + geçmiş — bkz. implementation-plan.md)*
 
 ### 4. Randevu ve Takvim
 - [x] Calendar Main View
@@ -50,7 +50,7 @@ Tam liste (P0/P1/P2/P3, notlarla): `docs/screen-priorities.xlsx`
 - [ ] Physical Examination Form — *(sadece genel Vital Bulgular kartı var; yapılandırılmış fiziksel muayene formu yok, bulgular serbest metin Objective alanına giriyor)*
 - [ ] Diagnosis Selection (+ AI oneri) — *(Assessment serbest metin; tanı seçim UI'ı veya AI öneri endpoint'i yok)*
 - [ ] Treatment Plan (+ AI oneri) — *(Plan serbest metin; ayrı bir tedavi planı UI'ı veya AI öneri endpoint'i yok)*
-- [x] Prescription Create — *(ilaç etkileşim uyarısı bilinçli olarak kapsam dışı bırakıldı — `DrugCatalog.interactionFlags` boş/hiç doldurulmamış, gerçek farmakolojik referans verisi olmadan uydurulmadı, bkz. implementation-plan.md)*
+- [x] Prescription Create — *(ilaç etkileşim uyarısı: kural tabanlı çapraz kontrol eklendi, bkz. implementation-plan.md — etkileşim verisi gerçek bir farmakolojik referans kaynağından uydurulmadı, Ayarlar > İlaç Kataloğu'nda klinik/hekim tarafından girilir)*
 - [x] Prescription History
 
 ### 6. Laboratuvar
@@ -69,7 +69,7 @@ Tam liste (P0/P1/P2/P3, notlarla): `docs/screen-priorities.xlsx`
 - [x] Product List
 - [x] Product Detail
 - [x] Add Product
-- [ ] Medicine Management — *(stok kalemlerinde sadece serbest metin "kategori" alanı var; backend'de kullanılmayan bir `DrugCatalog`/`DrugsController` mevcut ama frontend'den hiç erişilmiyor)*
+- [ ] Medicine Management — *(stok kalemlerinde hâlâ sadece serbest metin "kategori" alanı var, stokla entegre değil; ancak `DrugCatalog`/`DrugsController` artık kullanılıyor — Ayarlar > İlaç Kataloğu ekranından ilaç CRUD + etkileşim işaretleme yapılıyor, bkz. Prescription Create notu)*
 - [ ] Vaccine Management — *(ayrı bir aşı-stok kataloğu yok, genel envanter kategorisine giriyor — aşı takvimi/kayıtları farklı bir konsept olarak zaten var, bkz. Vaccination History)*
 - [x] Stock Movement
 

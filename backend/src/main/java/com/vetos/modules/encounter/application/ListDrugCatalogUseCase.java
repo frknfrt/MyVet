@@ -17,7 +17,7 @@ public class ListDrugCatalogUseCase {
     @Transactional(readOnly = true)
     public List<DrugSummary> execute() {
         return drugCatalogRepository.findAll().stream()
-            .map(d -> new DrugSummary(d.getId(), d.getName(), d.getActiveIngredient(), d.isControlled()))
+            .map(d -> new DrugSummary(d.getId(), d.getName(), d.getActiveIngredient(), d.isControlled(), d.getInteractingDrugIds()))
             .toList();
     }
 }

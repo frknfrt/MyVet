@@ -3,6 +3,7 @@ package com.vetos.modules.notification.application;
 import com.vetos.modules.notification.application.dto.NotificationStatusSummary;
 import com.vetos.modules.notification.domain.NotificationLog;
 import com.vetos.modules.notification.domain.NotificationLogRepository;
+import com.vetos.modules.notification.domain.NotificationSendPort;
 import com.vetos.modules.notification.domain.NotificationStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,7 @@ import java.util.UUID;
 public class GetNotificationStatusSummaryUseCase {
 
     private final NotificationLogRepository notificationLogRepository;
+    private final NotificationSendPort notificationSendPort;
 
     @Transactional(readOnly = true)
     public NotificationStatusSummary execute(UUID tenantId) {
@@ -31,8 +33,6 @@ public class GetNotificationStatusSummaryUseCase {
             .max(Instant::compareTo)
             .orElse(null);
 
-        // Gercek bir SMS/WhatsApp saglayici hesabi/API anahtari bu ortamda
-        // mevcut degil -- MockNotificationAdapter aktif oldugu surece false.
-        return new NotificationStatusSummary(pending, sent, failed, lastSentAt, false);
+        return new NotificationStatusSummary(pending, sent, failed, lastSentAt, notificationSendPort.isConfigured());
     }
 }

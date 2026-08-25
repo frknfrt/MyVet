@@ -19,7 +19,8 @@ public class ListConsentsUseCase {
     public List<ConsentRecordSummary> execute(UUID ownerId) {
         return consentRecordRepository.findByOwnerId(ownerId).stream()
             .map(record -> new ConsentRecordSummary(
-                record.getId(), record.getConsentType(), record.isGranted(), record.getGrantedAt(), record.getRevokedAt()
+                record.getId(), record.getConsentType(), record.isGranted(), record.getIpAddress(),
+                record.getGrantedAt(), record.getRevokedAt()
             ))
             .toList();
     }

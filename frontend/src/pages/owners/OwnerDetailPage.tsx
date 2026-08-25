@@ -10,10 +10,11 @@ import { colorFor, initialsOf } from '../dashboard/avatarColor';
 import { InvoiceDetailModal } from '../finance/InvoiceDetailModal';
 import { InvoiceStatusBadge } from '../finance/invoiceStatus';
 import { PatientStatusBadge } from '../patients/statusBadge';
+import { ConsentTab } from './ConsentTab';
 import { OwnerEditModal } from './OwnerEditModal';
 import styles from './OwnerDetailPage.module.css';
 
-type Tab = 'hastalar' | 'finans';
+type Tab = 'hastalar' | 'finans' | 'kvkk';
 
 function ConsentBadge({ label, granted }: { label: string; granted: boolean }) {
   return <Badge tone={granted ? 'success' : 'neutral'}>{label}</Badge>;
@@ -150,6 +151,9 @@ export function OwnerDetailPage() {
         <div className={`${styles.tab} ${tab === 'finans' ? styles.tabActive : ''}`} onClick={() => setTab('finans')}>
           Finans
         </div>
+        <div className={`${styles.tab} ${tab === 'kvkk' ? styles.tabActive : ''}`} onClick={() => setTab('kvkk')}>
+          KVKK
+        </div>
       </div>
 
       {tab === 'hastalar' && (
@@ -212,6 +216,8 @@ export function OwnerDetailPage() {
           )}
         </div>
       )}
+
+      {tab === 'kvkk' && <ConsentTab ownerId={ownerId} />}
 
       <InvoiceDetailModal invoiceId={selectedInvoiceId} onClose={() => setSelectedInvoiceId(null)} onChanged={load} />
       <OwnerEditModal

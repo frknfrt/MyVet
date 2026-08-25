@@ -9,6 +9,7 @@ public record ConsentRecordSummary(
     UUID id,
     ConsentType consentType,
     boolean granted,
+    String ipAddress,
     Instant grantedAt,
     Instant revokedAt
 ) {}

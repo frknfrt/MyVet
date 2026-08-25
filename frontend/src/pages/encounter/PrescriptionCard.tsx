@@ -1,6 +1,13 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { ApiError } from '../../api/client';
-import { clinicalApi, DrugRoute, DrugSummary, Prescription, PrescriptionItemPayload } from '../../api/clinicalApi';
+import {
+  clinicalApi,
+  DrugInteractionWarning,
+  DrugRoute,
+  DrugSummary,
+  Prescription,
+  PrescriptionItemPayload,
+} from '../../api/clinicalApi';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { FieldWrap, Input, Select } from '../../components/ui/Field';
@@ -40,6 +47,7 @@ export function PrescriptionCard({ encounterId, patientId, readOnly }: Prescript
   const [items, setItems] = useState<PrescriptionItemPayload[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [interactionWarnings, setInteractionWarnings] = useState<DrugInteractionWarning[]>([]);
 
   function reload() {
     clinicalApi
@@ -52,6 +60,21 @@ export function PrescriptionCard({ encounterId, patientId, readOnly }: Prescript
     reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [encounterId, patientId]);
+
+  useEffect(() => {
+    const drugIds = [...new Set(items.map((it) => it.drugId).filter(Boolean))];
+    if (drugIds.length < 2) {
+      setInteractionWarnings([]);
+      return;
+    }
+    let cancelled = false;
+    clinicalApi.checkDrugInteractions(drugIds).then((warnings) => {
+      if (!cancelled) setInteractionWarnings(warnings);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [items]);
 
   function drugName(id: string) {
     return drugs.find((d) => d.id === id)?.name ?? id;
@@ -184,6 +207,20 @@ export function PrescriptionCard({ encounterId, patientId, readOnly }: Prescript
               )}
             </div>
           ))}
+
+          {interactionWarnings.length > 0 && (
+            <div className={styles.interactionWarning}>
+              <Badge tone="warning">Olası Etkileşim</Badge>
+              <ul>
+                {interactionWarnings.map((w, i) => (
+                  <li key={i}>
+                    {w.drugAName} + {w.drugBName} — klinik kayıtlarına göre birlikte reçete edilmemesi önerilir,
+                    devam etmeden önce gözden geçirin.
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <div className={styles.formActions}>
             <Button type="button" variant="tertiary" onClick={addItemRow}>

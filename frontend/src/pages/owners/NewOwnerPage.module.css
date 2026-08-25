@@ -66,6 +66,27 @@
   cursor: pointer;
   white-space: nowrap;
 }
+.kvkkBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--color-warning-100);
+  border: 1px solid var(--color-warning-700);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin: 14px 0 4px;
+}
+.kvkkBox label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--color-text-ink);
+  cursor: pointer;
+}
+.kvkkBox input {
+  margin-top: 2px;
+}
 .errorBanner {
   background: var(--color-danger-100);
   color: var(--color-danger-700);

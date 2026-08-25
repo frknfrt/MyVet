@@ -16,12 +16,14 @@ export function SettingsTab() {
         <div>
           <div className={styles.name}>SMS / WhatsApp Sağlayıcı Durumu</div>
           <div className={styles.desc}>
-            Gerçek bir sağlayıcı hesabı (Twilio/Netgsm/WhatsApp Business API) bağlandığında burada gösterilecek.
+            {status?.connected
+              ? 'WhatsApp, Twilio Sandbox üzerinden gerçek gönderim yapıyor. SMS tarafı henüz sağlayıcıya bağlı değil, simüle ediliyor.'
+              : 'Twilio kimlik bilgileri tanımlı değil — hem SMS hem WhatsApp gönderimleri şu an simüle ediliyor.'}
           </div>
         </div>
         {status ? (
           status.connected ? (
-            <Badge tone="success">Bağlı</Badge>
+            <Badge tone="success">WhatsApp: Twilio (gerçek)</Badge>
           ) : (
             <Badge tone="warning">Mock modu — sağlayıcı bağlı değil</Badge>
           )

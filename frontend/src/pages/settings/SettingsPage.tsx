@@ -1,11 +1,12 @@
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
 import { AppShell } from '../../components/layout/AppShell';
 import { BranchManagementPanel } from './BranchManagementPanel';
+import { DrugCatalogPanel } from './DrugCatalogPanel';
 import { EfaturaPanel } from './EfaturaPanel';
 import { IntegrationsPanel } from './IntegrationsPanel';
-import { NotificationsPanel } from './NotificationsPanel';
 import { RolePermissionsPanel } from './RolePermissionsPanel';
 import { ServiceTypesPanel } from './ServiceTypesPanel';
+import { SmsWhatsappPanel } from './SmsWhatsappPanel';
 import { SpeciesBreedsPanel } from './SpeciesBreedsPanel';
 import { StaffManagementPanel } from './StaffManagementPanel';
 import { SubscriptionPanel } from './SubscriptionPanel';
@@ -30,7 +31,8 @@ const SETTINGS_TABS: SettingsTabConfig[] = [
   { path: 'entegrasyonlar', label: 'Entegrasyonlar' },
   { path: 'tur-irk', label: 'Tür & Irk' },
   { path: 'hizmetler', label: 'Hizmetler' },
-  { path: 'bildirimler', label: 'Bildirimler' },
+  { path: 'ilac-katalogu', label: 'İlaç Kataloğu' },
+  { path: 'sms-whatsapp', label: 'SMS / WhatsApp' },
   { path: 'e-fatura', label: 'e-Fatura' },
 ];
 
@@ -63,7 +65,8 @@ export function SettingsPage() {
         <Route path="entegrasyonlar" element={<IntegrationsPanel />} />
         <Route path="tur-irk" element={<SpeciesBreedsPanel />} />
         <Route path="hizmetler" element={<ServiceTypesPanel />} />
-        <Route path="bildirimler" element={<NotificationsPanel />} />
+        <Route path="ilac-katalogu" element={<DrugCatalogPanel />} />
+        <Route path="sms-whatsapp" element={<SmsWhatsappPanel />} />
         <Route path="e-fatura" element={<EfaturaPanel />} />
       </Routes>
     </AppShell>

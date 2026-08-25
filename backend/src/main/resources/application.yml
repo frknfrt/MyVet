@@ -29,6 +29,15 @@ jwt:
   secret: ${JWT_SECRET:myvet-local-dev-secret-key-change-me-32bytes-min}
   expiration-minutes: ${JWT_EXPIRATION_MINUTES:480}
 
+notification:
+  twilio:
+    # WhatsApp Sandbox icin: TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN bos
+    # birakilirsa gonderim simule edilir (bkz. TwilioNotificationAdapter).
+    # SMS bu turda kapsam disi -- her zaman simule edilir.
+    account-sid: ${TWILIO_ACCOUNT_SID:}
+    auth-token: ${TWILIO_AUTH_TOKEN:}
+    whatsapp-from: ${TWILIO_WHATSAPP_FROM:whatsapp:+14155238886}
+
 platform-admin:
   # Uygulama ilk ayaga kalktiginda platform_admin_users bosken bu bilgilerle
   # tek bir hesap olusturulur. Prod'da PLATFORM_ADMIN_EMAIL/PASSWORD env
