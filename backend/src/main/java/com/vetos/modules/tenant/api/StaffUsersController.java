@@ -3,6 +3,7 @@ package com.vetos.modules.tenant.api;
 import com.vetos.modules.tenant.api.dto.ChangePasswordRequest;
 import com.vetos.modules.tenant.api.dto.CreateStaffUserRequest;
 import com.vetos.modules.tenant.api.dto.SetStaffShiftRequest;
+import com.vetos.modules.tenant.api.dto.StaffDirectoryResponse;
 import com.vetos.modules.tenant.api.dto.StaffShiftResponse;
 import com.vetos.modules.tenant.api.dto.StaffUserResponse;
 import com.vetos.modules.tenant.api.dto.UpdateStaffUserRequest;
@@ -45,9 +46,23 @@ public class StaffUsersController {
     private final SetStaffShiftTemplateUseCase setStaffShiftTemplateUseCase;
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public List<StaffUserResponse> list(@AuthenticationPrincipal AuthenticatedStaffUser principal) {
         return listStaffUsersUseCase.execute(principal.branchIds().get(0)).stream()
             .map(StaffUserResponse::from)
+            .toList();
+    }
+
+    /**
+     * PII icermeyen hafif personel dizini -- randevu atama/hekim filtresi gibi
+     * tum rollerin ihtiyac duydugu cross-module secim listeleri icin. Tam
+     * detay (email/telefon/lisans/uzmanlik/bio) sadece yukaridaki ADMIN-only
+     * list() ucnoktasinda.
+     */
+    @GetMapping("/directory")
+    public List<StaffDirectoryResponse> directory(@AuthenticationPrincipal AuthenticatedStaffUser principal) {
+        return listStaffUsersUseCase.execute(principal.branchIds().get(0)).stream()
+            .map(StaffDirectoryResponse::from)
             .toList();
     }
 
