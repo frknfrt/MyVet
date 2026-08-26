@@ -1,4 +1,4 @@
-# MyVet — Tasarım Sistemi ve Stil Rehberi v1.0
+# Vetly — Tasarım Sistemi ve Stil Rehberi v1.0
 
 > Bu doküman, React uygulamasında (component library ne olursa olsun — Tailwind config, styled-components tema dosyası veya CSS değişkenleri) doğrudan kod karşılığı üretilecek şekilde tasarlandı. Her bölüm, ilgili token/değişken adlarıyla birlikte verildi.
 

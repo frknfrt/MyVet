@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
+import vetlyIcon from '../../assets/vetly-icon.png';
 import { NAV_ITEMS } from './navConfig';
 import { ChangePasswordModal } from './ChangePasswordModal';
 import styles from './Sidebar.module.css';
@@ -35,12 +36,8 @@ export function Sidebar({ userName, userRole, userInitials, onLogout }: SidebarP
   return (
     <aside className={styles.sidebar}>
       <div className={styles.brandMark}>
-        <div className={styles.glyph}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="#180F24" strokeWidth={2.2} strokeLinecap="round">
-            <path d="M12 3v6M12 15v6M4.2 7.5l5.2 3M14.6 13.5l5.2 3M4.2 16.5l5.2-3M14.6 10.5l5.2-3" />
-          </svg>
-        </div>
-        <span className={styles.word}>MyVet</span>
+        <img className={styles.glyph} src={vetlyIcon} alt="" />
+        <span className={styles.word}>Vetly</span>
       </div>
 
       <nav>

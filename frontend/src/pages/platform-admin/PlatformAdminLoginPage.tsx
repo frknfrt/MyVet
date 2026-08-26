@@ -31,10 +31,10 @@ export function PlatformAdminLoginPage() {
   }
 
   return (
-    <AuthLayout headline={<>Platform Admin</>} subcopy="MyVet SaaS platformunun yönetim paneli.">
+    <AuthLayout headline={<>Platform Admin</>} subcopy="Vetly SaaS platformunun yönetim paneli.">
       <form className={styles.formCard} onSubmit={handleSubmit}>
         <h1 className={styles.cardTitle}>Platform Admin Girişi</h1>
-        <p className={styles.lede}>Bu panel sadece MyVet platform yöneticileri içindir</p>
+        <p className={styles.lede}>Bu panel sadece Vetly platform yöneticileri içindir</p>
 
         {error && <div className={styles.errorBanner}>{error}</div>}
 

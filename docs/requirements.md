@@ -1,4 +1,4 @@
-# MyVet — Yapay Zeka Destekli Veteriner Klinik Yönetim Platformu
+# Vetly — Yapay Zeka Destekli Veteriner Klinik Yönetim Platformu
 ## Gereksinim ve Tasarım Dokümanı (v0.1 — Taslak)
 
 > Bu doküman, Kolayvet/BulutVet gibi yerel oyuncuların operasyonel derinliğini, Shepherd'ın workflow-first UX'ini, Digitail'in AI-native yapısını ve global pazardaki diğer PIMS (Practice Information Management System) ürünlerinin öne çıkan özelliklerini tek çatı altında toplayan, Spring Boot + React ile geliştirilecek bir SaaS ürünü için başlangıç noktasıdır. Birlikte iteratif olarak genişleteceğiz.

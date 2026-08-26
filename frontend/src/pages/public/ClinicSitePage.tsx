@@ -198,7 +198,7 @@ export function ClinicSitePage() {
           )}
         </div>
 
-        <div className={styles.footer}>MyVet altyapısıyla oluşturulmuştur</div>
+        <div className={styles.footer}>Vetly altyapısıyla oluşturulmuştur</div>
       </div>
     </div>
   );

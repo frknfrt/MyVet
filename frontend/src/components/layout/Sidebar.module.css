@@ -18,18 +18,10 @@
 }
 
 .glyph {
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
-  background: linear-gradient(135deg, var(--color-gold-400), var(--color-gold-600));
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  height: 28px;
+  width: auto;
+  display: block;
   flex-shrink: 0;
-}
-.glyph svg {
-  width: 14px;
-  height: 14px;
 }
 
 .word {

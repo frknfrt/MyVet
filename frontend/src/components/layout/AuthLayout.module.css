@@ -19,28 +19,20 @@
 .brandMark {
   display: flex;
   align-items: center;
-  gap: 11px;
-  margin-bottom: 2.4rem;
+  gap: 16px;
+  margin-bottom: 2.8rem;
 }
 .glyph {
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
-  background: linear-gradient(135deg, var(--color-gold-400), var(--color-gold-600));
-  box-shadow: 0 6px 18px -4px rgba(194, 135, 46, 0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.glyph svg {
-  width: 18px;
-  height: 18px;
+  height: 68px;
+  width: auto;
+  display: block;
+  filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.35));
 }
 .word {
   color: #fff;
   font-family: var(--font-heading);
   font-weight: 700;
-  font-size: 17px;
+  font-size: 32px;
 }
 
 .headline {

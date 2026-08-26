@@ -22,7 +22,7 @@ export function PlatformAdminShell({ children }: { children: ReactNode }) {
     <div className={styles.shell}>
       <div className={styles.topbar}>
         <div className={styles.brand}>
-          MyVet <span className={styles.badge}>Platform Admin</span>
+          Vetly <span className={styles.badge}>Platform Admin</span>
         </div>
         <nav className={styles.nav}>
           {NAV_ITEMS.map((item) => (

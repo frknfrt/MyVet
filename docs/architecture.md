@@ -1,4 +1,4 @@
-# MyVet — Spring Boot Mimari Tasarımı (SOLID Odaklı)
+# Vetly — Spring Boot Mimari Tasarımı (SOLID Odaklı)
 
 ## 1. Genel Yaklaşım: Hexagonal Mimarili Modüler Monolit
 
