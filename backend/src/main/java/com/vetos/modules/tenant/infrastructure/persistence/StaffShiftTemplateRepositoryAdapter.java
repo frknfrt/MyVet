@@ -18,7 +18,10 @@ class StaffShiftTemplateRepositoryAdapter implements StaffShiftTemplateRepositor
     public List<StaffShiftTemplate> findByStaffUserId(UUID staffUserId) { return jpaRepository.findByStaffUserId(staffUserId); }
 
     @Override
-    public void deleteByStaffUserId(UUID staffUserId) { jpaRepository.deleteByStaffUserId(staffUserId); }
+    public void deleteByStaffUserId(UUID staffUserId) {
+        jpaRepository.deleteByStaffUserId(staffUserId);
+        jpaRepository.flush();
+    }
 
     @Override
     public List<StaffShiftTemplate> saveAll(List<StaffShiftTemplate> shifts) { return jpaRepository.saveAll(shifts); }

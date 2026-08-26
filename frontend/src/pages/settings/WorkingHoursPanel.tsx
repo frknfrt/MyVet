@@ -68,6 +68,7 @@ function BranchWorkingHoursSection() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     branchesApi
@@ -101,12 +102,14 @@ function BranchWorkingHoursSection() {
 
   function updateDay(day: DayOfWeek, patch: Partial<BranchDayState>) {
     setHours((prev) => ({ ...prev, [day]: { ...prev[day], ...patch } }));
+    setSaved(false);
   }
 
   async function handleSave() {
     if (!branchId) return;
     setSaving(true);
     setError(null);
+    setSaved(false);
     try {
       const days = DAYS.map((day) => ({
         dayOfWeek: day,
@@ -115,6 +118,17 @@ function BranchWorkingHoursSection() {
         closesAt: hours[day].closed ? null : hours[day].closesAt,
       }));
       await workingHoursApi.setBranchHours(branchId, days);
+      const fresh = await workingHoursApi.getBranchHours(branchId);
+      const next = defaultBranchHours();
+      fresh.forEach((entry) => {
+        next[entry.dayOfWeek] = {
+          closed: entry.closed,
+          opensAt: truncateTime(entry.opensAt) || '09:00',
+          closesAt: truncateTime(entry.closesAt) || '18:00',
+        };
+      });
+      setHours(next);
+      setSaved(true);
     } catch (err) {
       setError(errorMessageOf(err));
     } finally {
@@ -137,6 +151,7 @@ function BranchWorkingHoursSection() {
       </div>
 
       {error && <div className={settingsStyles.errorBanner}>{error}</div>}
+      {saved && !error && <div className={settingsStyles.successBanner}>Çalışma saatleri kaydedildi.</div>}
 
       {loading ? (
         <div className={settingsStyles.empty}>Yükleniyor...</div>
@@ -189,6 +204,7 @@ function StaffShiftsSection() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     staffUsersApi
@@ -218,6 +234,7 @@ function StaffShiftsSection() {
 
   function addBlock(day: DayOfWeek) {
     setShifts((prev) => ({ ...prev, [day]: [...prev[day], { startsAt: '09:00', endsAt: '17:00' }] }));
+    setSaved(false);
   }
 
   function updateBlock(day: DayOfWeek, index: number, patch: Partial<ShiftBlock>) {
@@ -225,21 +242,31 @@ function StaffShiftsSection() {
       ...prev,
       [day]: prev[day].map((block, i) => (i === index ? { ...block, ...patch } : block)),
     }));
+    setSaved(false);
   }
 
   function removeBlock(day: DayOfWeek, index: number) {
     setShifts((prev) => ({ ...prev, [day]: prev[day].filter((_, i) => i !== index) }));
+    setSaved(false);
   }
 
   async function handleSave() {
     if (!staffUserId) return;
     setSaving(true);
     setError(null);
+    setSaved(false);
     try {
       const entries = DAYS.flatMap((day) =>
         shifts[day].map((block) => ({ dayOfWeek: day, startsAt: block.startsAt, endsAt: block.endsAt }))
       );
       await workingHoursApi.setStaffShifts(staffUserId, entries);
+      const fresh = await workingHoursApi.getStaffShifts(staffUserId);
+      const next = defaultShifts();
+      fresh.forEach((entry) => {
+        next[entry.dayOfWeek] = [...next[entry.dayOfWeek], { startsAt: truncateTime(entry.startsAt), endsAt: truncateTime(entry.endsAt) }];
+      });
+      setShifts(next);
+      setSaved(true);
     } catch (err) {
       setError(errorMessageOf(err));
     } finally {
@@ -262,6 +289,7 @@ function StaffShiftsSection() {
       </div>
 
       {error && <div className={settingsStyles.errorBanner}>{error}</div>}
+      {saved && !error && <div className={settingsStyles.successBanner}>Vardiyalar kaydedildi.</div>}
 
       {loading ? (
         <div className={settingsStyles.empty}>Yükleniyor...</div>

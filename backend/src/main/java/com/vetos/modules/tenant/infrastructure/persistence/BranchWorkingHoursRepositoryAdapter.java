@@ -18,7 +18,10 @@ class BranchWorkingHoursRepositoryAdapter implements BranchWorkingHoursRepositor
     public List<BranchWorkingHours> findByBranchId(UUID branchId) { return jpaRepository.findByBranchId(branchId); }
 
     @Override
-    public void deleteByBranchId(UUID branchId) { jpaRepository.deleteByBranchId(branchId); }
+    public void deleteByBranchId(UUID branchId) {
+        jpaRepository.deleteByBranchId(branchId);
+        jpaRepository.flush();
+    }
 
     @Override
     public List<BranchWorkingHours> saveAll(List<BranchWorkingHours> entries) { return jpaRepository.saveAll(entries); }
