@@ -58,6 +58,7 @@ public class VaccinationRecordsController {
     }
 
     @GetMapping("/campaign-candidates")
+    @PreAuthorize("hasAnyRole('VET', 'RECEPTIONIST', 'ADMIN')")
     public List<VaccinationCampaignCandidateResponse> campaignCandidates(
         @RequestParam(required = false) LocalDate dueFrom, @RequestParam(required = false) LocalDate dueTo
     ) {

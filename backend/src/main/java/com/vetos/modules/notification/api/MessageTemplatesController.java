@@ -18,11 +18,16 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
-/** api-conventions.md rol matrisi: /message-templates/** -> sadece ADMIN. */
+/**
+ * api-conventions.md rol matrisi: /message-templates/** -> RECEPTIONIST + ADMIN
+ * (Faz 2 role-bazli yetkilendirme turu, kullanici onayiyla -- requirements.md'deki
+ * resepsiyonist tanimi "hatirlatma gonderimi" iceriyor, sablon yonetimi de bu
+ * iste dogal bir parca).
+ */
 @RestController
 @RequestMapping("/api/v1/message-templates")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('RECEPTIONIST', 'ADMIN')")
 public class MessageTemplatesController {
 
     private final ListMessageTemplatesUseCase listMessageTemplatesUseCase;

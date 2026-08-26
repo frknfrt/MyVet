@@ -92,10 +92,20 @@ Her istekte JWT'den çözülen `tenantId`, `TenantContext` (ThreadLocal) üzerin
 | `/inventory/**` (yazma) | ❌ | ✅ | ❌ | ✅ |
 | `/settings/**`, `/users/**` | ❌ | ❌ | ❌ | ✅ |
 | `/tarbil/**` (senkron tetikleme) | ❌ | ❌ | ❌ | ✅ |
+| `/encounters/**` (okuma: SOAP, malzeme listesi) | ✅ | ✅ | ❌ | ✅ |
+| `/message-templates/**`, `/notifications/**` (SMS/WhatsApp) | ❌ | ❌ | ✅ | ✅ |
+| `**/campaign-candidates` (SMS/WhatsApp kampanya adayı listeleri) | ✅ | ❌ | ✅ | ✅ |
 
 Yetki kontrolü Spring Security `@PreAuthorize("hasRole('VET')")` ile controller metodu seviyesinde yapılır — use-case katmanında rol kontrolü YAPILMAZ (rol, bir HTTP/API kavramıdır, domain'in bilmesi gerekmez).
 
 **Kenar durum kararı (Faz 2, Yönetim ekranları turu):** Aynı kiracı içi bir dizin listesi (örn. `GET /staff-users`) birden fazla amaçla kullanılıyorsa (hem hafif bir "seçici" hem de bir yönetim ekranının tam listesi), tek endpoint zenginleştirilir ve mevcut erişim seviyesinde bırakılır — PII olmayan alanlar (ad, e-posta, rol, uzmanlık) için ayrı bir ADMIN-only endpoint AÇILMAZ. Yazma/aksiyon endpoint'leri (`POST`/`PUT`/`DELETE`) yine de ilgili role kısıtlanır.
+
+**Karar (Faz 2, role-bazlı yetkilendirme denetimi turu, kullanıcı onayıyla):** Proje geneli bir rol/yetki denetiminde üç boşluk bulundu ve düzeltildi:
+1. `EncountersController`'ın **okuma** uçları (`GET /{id}`, `GET` liste, `GET /by-appointment/{id}`, `GET /{id}/materials`) artık TECHNICIAN'a da açık — tedavi görevi/aşı uygulaması için tedavi planını görmesi gerekiyor. Yazma uçları (SOAP/vital/fizik muayene güncelleme, finalize, malzeme kaydı) hâlâ sadece VET/ADMIN. Frontend: `EncounterPage.tsx`'teki `isReadOnly`, `session.role === 'TECHNICIAN'` durumunda da true oluyor (sayfa görünür ama tüm yazma aksiyonları gizli).
+2. `MessageTemplatesController` + `NotificationsController` (SMS/WhatsApp şablon/log/kampanya) ADMIN-only'den RECEPTIONIST+ADMIN'e açıldı — requirements.md'deki resepsiyonist tanımı "hatırlatma gönderimi" içeriyor, önceki kısıtlama kasıtsız bir eksiklikti.
+3. `AppointmentsController.GET /campaign-candidates` ve `VaccinationRecordsController.GET /campaign-candidates` hiç rol kısıtı taşımıyordu (TECHNICIAN dahil herkese açıktı) — `OwnersController`'daki eşdeğer uç (VET/RECEPTIONIST/ADMIN) ile tutarlı hale getirildi.
+
+Ayrıca frontend'de daha önce **hiç** rol bazlı görünürlük yoktu (`navConfig.tsx` her role aynı sidebar'ı gösteriyordu, `RequireAuth` sadece "giriş yapılmış mı" kontrolü yapıyordu). `NavItemConfig`/`RequireAuth` artık opsiyonel bir `roles` listesi taşıyor; Laboratuvar/Görüntüleme (VET/TECHNICIAN/ADMIN) ve Finans/Raporlar (RECEPTIONIST/ADMIN) hem sidebar'da hem route seviyesinde bu role göre filtreleniyor. `SettingsPage.tsx`'teki `SETTINGS_TABS` da aynı desenle `adminOnly: boolean`'dan `roles?: StaffRole[]`'e genelleştirildi (SMS/WhatsApp sekmesi artık ADMIN+RECEPTIONIST).
 
 ## Versiyonlama
 

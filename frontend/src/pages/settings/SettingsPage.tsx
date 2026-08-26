@@ -1,5 +1,6 @@
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
+import { StaffRole } from '../../auth/session';
 import { AppShell } from '../../components/layout/AppShell';
 import { AiCenterPanel } from './AiCenterPanel';
 import { BranchManagementPanel } from './BranchManagementPanel';
@@ -18,18 +19,19 @@ import styles from './SettingsPage.module.css';
 interface SettingsTabConfig {
   path: string;
   label: string;
-  adminOnly?: boolean;
+  /** Belirtilmezse tüm roller görür. Belirtilirse hem sekme çubuğunda hem URL erişiminde uygulanır. */
+  roles?: StaffRole[];
 }
 
 /**
  * Ayarlar altındaki her yeni ekran SADECE bu listeye bir satır ekleyerek
  * bağlanır — sekme çubuğu ve <Routes> burada tek kaynaktan türetilir.
- * adminOnly: true olan sekmeler sıradan rollere (VET/RECEPTIONIST/TECHNICIAN)
- * sekme çubuğunda gösterilmez; URL'ye direkt gidilirse de "yetkiniz yok"
- * mesajı görünür (backend zaten aynı endpoint'i ADMIN'e kilitliyor).
+ * roles kısıtlı olan sekmeler diğer rollere sekme çubuğunda gösterilmez;
+ * URL'ye direkt gidilirse de "yetkiniz yok" mesajı görünür (backend zaten
+ * aynı endpoint'i aynı role kilitliyor).
  */
 const SETTINGS_TABS: SettingsTabConfig[] = [
-  { path: 'kullanicilar', label: 'Kullanıcılar', adminOnly: true },
+  { path: 'kullanicilar', label: 'Kullanıcılar', roles: ['ADMIN'] },
   { path: 'subeler', label: 'Şubeler' },
   { path: 'calisma-saatleri', label: 'Çalışma Saatleri' },
   { path: 'roller', label: 'Rol & Yetki' },
@@ -39,14 +41,16 @@ const SETTINGS_TABS: SettingsTabConfig[] = [
   { path: 'hizmetler', label: 'Hizmetler' },
   { path: 'ilac-katalogu', label: 'İlaç Kataloğu' },
   { path: 'ai-merkezi', label: 'AI Merkezi' },
-  { path: 'sms-whatsapp', label: 'SMS / WhatsApp' },
+  { path: 'sms-whatsapp', label: 'SMS / WhatsApp', roles: ['ADMIN', 'RECEPTIONIST'] },
   { path: 'e-fatura', label: 'e-Fatura' },
 ];
 
 export function SettingsPage() {
   const { session } = useAuth();
   const isAdmin = session?.role === 'ADMIN';
-  const visibleTabs = SETTINGS_TABS.filter((t) => !t.adminOnly || isAdmin);
+  const hasAccess = (t: SettingsTabConfig) => !t.roles || (session && t.roles.includes(session.role));
+  const visibleTabs = SETTINGS_TABS.filter(hasAccess);
+  const canViewSmsWhatsapp = hasAccess({ path: 'sms-whatsapp', label: '', roles: ['ADMIN', 'RECEPTIONIST'] });
 
   return (
     <AppShell>
@@ -81,7 +85,10 @@ export function SettingsPage() {
         <Route path="hizmetler" element={<ServiceTypesPanel />} />
         <Route path="ilac-katalogu" element={<DrugCatalogPanel />} />
         <Route path="ai-merkezi" element={<AiCenterPanel />} />
-        <Route path="sms-whatsapp" element={<SmsWhatsappPanel />} />
+        <Route
+          path="sms-whatsapp"
+          element={canViewSmsWhatsapp ? <SmsWhatsappPanel /> : <div className={styles.errorBanner}>Bu bölümü görüntüleme yetkiniz yok</div>}
+        />
         <Route path="e-fatura" element={<EfaturaPanel />} />
       </Routes>
     </AppShell>

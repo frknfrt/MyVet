@@ -131,7 +131,7 @@ export function App() {
       <Route
         path="/laboratuvar"
         element={
-          <RequireAuth>
+          <RequireAuth roles={['VET', 'TECHNICIAN', 'ADMIN']}>
             <LaboratoryPage />
           </RequireAuth>
         }
@@ -139,7 +139,7 @@ export function App() {
       <Route
         path="/goruntuleme"
         element={
-          <RequireAuth>
+          <RequireAuth roles={['VET', 'TECHNICIAN', 'ADMIN']}>
             <ImagingPage />
           </RequireAuth>
         }
@@ -147,7 +147,7 @@ export function App() {
       <Route
         path="/finans"
         element={
-          <RequireAuth>
+          <RequireAuth roles={['RECEPTIONIST', 'ADMIN']}>
             <FinancePage />
           </RequireAuth>
         }
@@ -179,7 +179,7 @@ export function App() {
       <Route
         path="/raporlar"
         element={
-          <RequireAuth>
+          <RequireAuth roles={['RECEPTIONIST', 'ADMIN']}>
             <ReportsPage />
           </RequireAuth>
         }

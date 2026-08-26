@@ -25,11 +25,15 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
-/** api-conventions.md rol matrisi: /notifications/** -> sadece ADMIN. */
+/**
+ * api-conventions.md rol matrisi: /notifications/** -> RECEPTIONIST + ADMIN
+ * (Faz 2 role-bazli yetkilendirme turu, kullanici onayiyla -- bkz.
+ * MessageTemplatesController).
+ */
 @RestController
 @RequestMapping("/api/v1/notifications")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('RECEPTIONIST', 'ADMIN')")
 public class NotificationsController {
 
     private final GetNotificationStatusSummaryUseCase getNotificationStatusSummaryUseCase;

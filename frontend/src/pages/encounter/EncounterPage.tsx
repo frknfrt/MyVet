@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { aiApi } from '../../api/aiApi';
 import { ApiError } from '../../api/client';
+import { useAuth } from '../../auth/AuthContext';
 import { encounterApi, EncounterDetail } from '../../api/encounterApi';
 import { patientApi, PatientProfile } from '../../api/patientApi';
 import { AppShell } from '../../components/layout/AppShell';
@@ -29,6 +30,7 @@ function getSpeechRecognitionCtor(): (new () => any) | null {
 export function EncounterPage() {
   const { encounterId } = useParams<{ encounterId: string }>();
   const navigate = useNavigate();
+  const { session } = useAuth();
   const [encounter, setEncounter] = useState<EncounterDetail | null>(null);
   const [profile, setProfile] = useState<PatientProfile | null>(null);
   const [soap, setSoap] = useState<SoapForm>({ subjective: '', objective: '', assessment: '', plan: '' });
@@ -74,7 +76,8 @@ export function EncounterPage() {
     };
   }, []);
 
-  const isReadOnly = encounter?.status === 'FINALIZED' || encounter?.status === 'AMENDED';
+  const isReadOnly =
+    encounter?.status === 'FINALIZED' || encounter?.status === 'AMENDED' || session?.role === 'TECHNICIAN';
 
   function flashSaved(message: string) {
     setSavedMessage(message);

@@ -1,10 +1,13 @@
 import { ReactNode } from 'react';
+import { StaffRole } from '../../auth/session';
 
 export interface NavItemConfig {
   key: string;
   label: string;
   path: string;
   icon: ReactNode;
+  /** Belirtilmezse tüm roller görür. Backend'deki gerçek erişim seviyesiyle eşleşmeli. */
+  roles?: StaffRole[];
 }
 
 /**
@@ -13,6 +16,10 @@ export interface NavItemConfig {
  * her sayfada ayrı ayrı güncelleme yapmaya gerek KALMAZ.
  * Bu dosya, mockup aşamasında yaşadığımız "sidebar senkron kayması"
  * hatasının kalıcı çözümüdür.
+ *
+ * roles: backend'deki controller yetkilendirmesiyle (api-conventions.md rol
+ * matrisi) tutarlı tutulmalı -- bir rolün hiç erişemediği bir modülü sidebar'da
+ * göstermek, tıklayınca 403 almaktan başka bir işe yaramaz.
  */
 export const NAV_ITEMS: NavItemConfig[] = [
   {
@@ -67,6 +74,7 @@ export const NAV_ITEMS: NavItemConfig[] = [
     key: 'laboratuvar',
     label: 'Laboratuvar',
     path: '/laboratuvar',
+    roles: ['VET', 'TECHNICIAN', 'ADMIN'],
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
         <path d="M9 2v6.5L4 21h16l-5-12.5V2M9 2h6" />
@@ -77,6 +85,7 @@ export const NAV_ITEMS: NavItemConfig[] = [
     key: 'goruntuleme',
     label: 'Görüntüleme',
     path: '/goruntuleme',
+    roles: ['VET', 'TECHNICIAN', 'ADMIN'],
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -110,6 +119,7 @@ export const NAV_ITEMS: NavItemConfig[] = [
     key: 'finans',
     label: 'Finans',
     path: '/finans',
+    roles: ['RECEPTIONIST', 'ADMIN'],
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="6" width="20" height="12" rx="2" />
@@ -121,6 +131,7 @@ export const NAV_ITEMS: NavItemConfig[] = [
     key: 'raporlar',
     label: 'Raporlar',
     path: '/raporlar',
+    roles: ['RECEPTIONIST', 'ADMIN'],
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 3v18h18" />

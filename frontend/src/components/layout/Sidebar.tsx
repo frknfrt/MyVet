@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import vetlyIcon from '../../assets/vetly-icon.png';
+import { useAuth } from '../../auth/AuthContext';
 import { NAV_ITEMS } from './navConfig';
 import { ChangePasswordModal } from './ChangePasswordModal';
 import styles from './Sidebar.module.css';
@@ -18,9 +19,11 @@ interface SidebarProps {
  * Bu bileşen tüm sayfalarda BİREBİR AYNI import edilir, kopyalanmaz.
  */
 export function Sidebar({ userName, userRole, userInitials, onLogout }: SidebarProps) {
+  const { session } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const footRef = useRef<HTMLDivElement>(null);
+  const visibleNavItems = NAV_ITEMS.filter((item) => !item.roles || (session && item.roles.includes(session.role)));
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -41,7 +44,7 @@ export function Sidebar({ userName, userRole, userInitials, onLogout }: SidebarP
       </div>
 
       <nav>
-        {NAV_ITEMS.map((item) => (
+        {visibleNavItems.map((item) => (
           <NavLink
             key={item.key}
             to={item.path}

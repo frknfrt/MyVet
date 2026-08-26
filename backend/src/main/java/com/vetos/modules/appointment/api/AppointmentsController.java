@@ -20,6 +20,7 @@ import com.vetos.platform.tenancy.TenantContext;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -71,6 +72,7 @@ public class AppointmentsController {
     }
 
     @GetMapping("/campaign-candidates")
+    @PreAuthorize("hasAnyRole('VET', 'RECEPTIONIST', 'ADMIN')")
     public List<AppointmentCampaignCandidateResponse> campaignCandidates(
         @RequestParam LocalDate from, @RequestParam LocalDate to, @RequestParam(required = false) AppointmentStatus status
     ) {
