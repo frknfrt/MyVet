@@ -5,6 +5,7 @@ import com.vetos.modules.encounter.application.*;
 import com.vetos.modules.encounter.application.dto.RecordVitalsCommand;
 import com.vetos.modules.encounter.application.dto.StartEncounterCommand;
 import com.vetos.modules.encounter.application.dto.UpdateEncounterSoapCommand;
+import com.vetos.modules.encounter.application.dto.UpdatePhysicalExamCommand;
 import com.vetos.platform.security.AuthenticatedStaffUser;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,7 @@ public class EncountersController {
     private final StartEncounterUseCase startEncounterUseCase;
     private final UpdateEncounterSoapUseCase updateEncounterSoapUseCase;
     private final RecordVitalsUseCase recordVitalsUseCase;
+    private final UpdatePhysicalExamUseCase updatePhysicalExamUseCase;
     private final FinalizeEncounterUseCase finalizeEncounterUseCase;
     private final GetEncounterUseCase getEncounterUseCase;
     private final ListEncountersByPatientUseCase listEncountersByPatientUseCase;
@@ -77,6 +79,11 @@ public class EncountersController {
         recordVitalsUseCase.execute(new RecordVitalsCommand(
             id, request.weightKg(), request.temperatureC(), request.heartRate(), request.respiratoryRate()
         ));
+    }
+
+    @PutMapping("/{id}/physical-exam")
+    public void updatePhysicalExam(@PathVariable UUID id, @RequestBody UpdatePhysicalExamRequest request) {
+        updatePhysicalExamUseCase.execute(new UpdatePhysicalExamCommand(id, request.findings()));
     }
 
     @PostMapping("/{id}/finalize")

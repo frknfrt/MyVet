@@ -252,3 +252,42 @@
 .prescriptionItems li {
   margin-bottom: 3px;
 }
+
+.summaryHead {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-ink);
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+.summaryBody {
+  padding: 18px 20px;
+}
+.vitalsSummaryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px 20px;
+}
+.chartWrap {
+  margin-top: 20px;
+}
+
+.timelineCard {
+  margin-top: 16px;
+}
+.timelineRow {
+  grid-template-columns: 0.8fr 0.8fr 2.4fr 1fr;
+}
+.timelineRowStatic {
+  cursor: default;
+}
+.timelineRowStatic:hover {
+  background: none;
+}
+.timelineType {
+  font-weight: 600;
+  color: var(--color-text-muted);
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}

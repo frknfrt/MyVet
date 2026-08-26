@@ -35,7 +35,8 @@ public class GetEncounterUseCase {
             encounter.getId(), encounter.getPatientId(), patient.name(), encounter.getStaffUserId(), staff.fullName(),
             encounter.getAppointmentId(), encounter.getEncounterDate(), encounter.getSubjective(), encounter.getObjective(),
             encounter.getAssessment(), encounter.getPlan(), encounter.getWeightKg(), encounter.getTemperatureC(),
-            encounter.getHeartRate(), encounter.getRespiratoryRate(), encounter.getTemplateUsed(), encounter.getStatus(),
+            encounter.getHeartRate(), encounter.getRespiratoryRate(), encounter.getTemplateUsed(),
+            encounter.getPhysicalExamFindings(), encounter.getStatus(),
             encounter.isAiGenerated(), encounter.getFinalizedAt()
         );
     }

@@ -23,8 +23,8 @@ Tam liste (P0/P1/P2/P3, notlarla): `docs/screen-priorities.xlsx`
 - [x] Pet Search
 - [x] New Patient Create
 - [x] Patient Profile
-- [ ] Patient Health Summary — *(profil kartında vital/kimlik bilgileri var ama ayrı bir "sağlık özeti" — aktif problemler, vital trend — yok)*
-- [ ] Patient Timeline / Clinical Timeline — *(Muayene/Aşı/Reçete/Lab/Görüntüleme ayrı sekmeler halinde kronolojik listeleniyor; tek birleşik zaman çizelgesi yok)*
+- [x] Patient Health Summary — *(Hasta detayına yeni "Genel Bakış" sekmesi — varsayılan/ilk sekme — eklendi: son muayenenin vital özeti (kilo/ateş/nabız/solunum) + kilo trendi grafiği (mevcut bağımsız `LineChart` bileşeniyle, ≥2 veri noktası varsa). Aktif problem listesi (kronik hastalık etiketleri) bilinçli olarak kapsam dışı bırakıldı — mevcut veri modelinde karşılığı yok, kullanıcı onayıyla ertelendi.)*
+- [x] Patient Timeline / Clinical Timeline — *(Aynı "Genel Bakış" sekmesinde, mevcut 5 sekmenin (Muayene/Aşı/Reçete/Lab/Görüntüleme) yerine geçmeden ek olarak: tüm kayıt türleri tek tarihe göre sıralı listede, tür etiketi + özet + durum badge'iyle. Sayfada zaten yüklü olan veriler birleştirildiği için backend değişikliği gerekmedi (frontend-only).)*
 - [x] Medical History
 - [x] Vaccination History
 
@@ -47,7 +47,7 @@ Tam liste (P0/P1/P2/P3, notlarla): `docs/screen-priorities.xlsx`
 - [x] SOAP Note Screen (S/O/A/P)
 - [ ] Voice Recording AI — *(tarayıcı yerleşik Web Speech API ile gerçek sesli dikte çalışıyor; özel/barındırılan bir ses-AI servisi değil)*
 - [ ] AI SOAP Generator — *(uçtan uca bağlı ama backend adaptörü stub — gerçek model henüz bağlı değil, transkripti Subjective alanına kopyalıyor; UI bunu açıkça uyarıyor)*
-- [ ] Physical Examination Form — *(sadece genel Vital Bulgular kartı var; yapılandırılmış fiziksel muayene formu yok, bulgular serbest metin Objective alanına giriyor)*
+- [x] Physical Examination Form — *(SOAP sayfasına Vital Bulgular ile SOAP Notu arasında "Fiziksel Muayene" kartı eklendi: 10 sabit vücut sistemi — Genel Görünüm, Deri/Kürk, Göz-Kulak-Ağız, Kardiyovasküler, Solunum, Gastrointestinal, Ürogenital, Kas-İskelet, Nörolojik, Lenf Nodları — her biri Muayene Edilmedi/Normal/Anormal durumu + Anormal seçilince açılan not alanı taşır. `Encounter.physicalExamFindings` jsonb kolonunda tutulur, Objective serbest metin alanına dokunulmadı, ikisi birbirini tamamlıyor.)*
 - [ ] Diagnosis Selection (+ AI oneri) — *(Assessment serbest metin; tanı seçim UI'ı veya AI öneri endpoint'i yok)*
 - [ ] Treatment Plan (+ AI oneri) — *(Plan serbest metin; ayrı bir tedavi planı UI'ı veya AI öneri endpoint'i yok)*
 - [x] Prescription Create — *(ilaç etkileşim uyarısı: kural tabanlı çapraz kontrol eklendi, bkz. implementation-plan.md — etkileşim verisi gerçek bir farmakolojik referans kaynağından uydurulmadı, Ayarlar > İlaç Kataloğu'nda klinik/hekim tarafından girilir)*

@@ -5,9 +5,13 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -59,6 +63,10 @@ public class Encounter {
     @Column(name = "template_used")
     private String templateUsed;
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "physical_exam_findings", columnDefinition = "jsonb", nullable = false)
+    private List<PhysicalExamFinding> physicalExamFindings = new ArrayList<>();
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private EncounterStatus status;
@@ -93,6 +101,10 @@ public class Encounter {
         this.temperatureC = temperatureC;
         this.heartRate = heartRate;
         this.respiratoryRate = respiratoryRate;
+    }
+
+    public void updatePhysicalExam(List<PhysicalExamFinding> findings) {
+        this.physicalExamFindings = findings;
     }
 
     public void markAiGenerated() {

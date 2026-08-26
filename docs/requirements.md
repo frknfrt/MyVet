@@ -57,6 +57,8 @@
 - SOAP tabanlı elektronik muayene kaydı (Subjective/Objective/Assessment/Plan), şablonlanabilir muayene formları (tür/branşa göre: küçükbaş, büyükbaş, egzotik, kedi-köpek).
 - Zaman çizelgesi görünümü: tüm geçmiş muayene, aşı, tahlil, görüntüleme, reçete tek ekranda (Digitail'in "connected records" yaklaşımı).
 - Ameliyat/anestezi kayıtları, öncesi-sonrası checklist.
+- **Ölüm/ötenazi (PTS) kaydı:** Hasta kaydına ölüm/ötenazi durumu ve tarihi işlenir; bu hastalar için aşı/kontrol hatırlatmaları otomatik durur, kremasyon/defin tercih notu tutulabilir.
+- **Cerrahi/anestezi rıza formu:** Ameliyat/anestezi öncesi hayvan sahibinden alınan, ayrı ve imzalı (dijital) informed-consent belgesi — KVKK açık rıza kaydından bağımsız, işlem bazlı tıbbi/hukuki risk onayı. İlgili muayene/ameliyat kaydına bağlanır, PDF olarak saklanır.
 
 ### 4.3 Aşı & Koruyucu Sağlık Takibi
 - Türe özel aşı protokolleri, otomatik hatırlatma (sahibe + hekime), sertifika/aşı karnesi PDF üretimi.
@@ -142,11 +144,17 @@
 
 **Mimari not:** AI özellikleri, tek bir sağlayıcıya (örn. yalnızca OpenAI) bağımlı olmayacak şekilde bir **"AI Gateway" soyutlama katmanı** üzerinden çağrılmalı (model sağlayıcısı değiştirilebilir, maliyet/performansa göre yönlendirme yapılabilir). Klinik/tanı önerileri her zaman **"hekim onayı gerektirir"** ilkesiyle sunulmalı — nihai karar hekimde kalmalı (sorumluluk ve mevzuat açısından kritik).
 
+**AI Karar Denetim İzi (zorunlu, özellikle Tanı Desteği için):** Her AI önerisi (öneri metni, kullanılan model/versiyon, zaman damgası) ile hekimin nihai kararı (aynen kabul / düzenleyerek kabul / reddetti) ayrı ayrı ve değiştirilemez şekilde loglanır — `AIJob` varlığına bağlı bir karar kaydı olarak. Bu, hem sorumluluk ayrımını (AI'nin önerdiği ile hekimin fiilen uyguladığının ayrıştırılması) hem de düzenleyici denetimi mümkün kılmak için gereklidir.
+
+**AI Doğruluk Geri Bildirimi:** Hekim, aldığı AI önerisini "isabetliydi / isabetli değildi" şeklinde işaretleyebilir; bu geri bildirim, model/prompt kalitesini zaman içinde ölçmenin ve iyileştirmenin tek somut yoludur.
+
 ---
 
 ## 6. Fonksiyonel Olmayan Gereksinimler
 
-- **KVKK Uyumu:** Açık rıza yönetimi, veri saklama/silme politikaları, veri işleme envanteri, sahip verisinin klinik değişiminde taşınabilirliği.
+- **KVKK Uyumu:** Açık rıza yönetimi, veri saklama/silme politikaları, veri işleme envanteri.
+  - **İlgili kişi hakları arayüzü:** Sahibin "verilerimi sil" / "verilerime eriş" taleplerini klinik personelinin işleyebileceği somut bir talep-takip ekranı (talep oluşturma, durum, son işlem tarihi, kanıt kaydı) — sadece rıza kaydı değil, KVKK'nın ilgili kişi haklarını fiilen karşılayan bir süreç.
+  - **Veri taşınabilirliği:** Sahip ve hasta verisinin standart bir formatta (örn. JSON/CSV) dışa aktarılabildiği, gerçekten çalışan bir export mekanizması — klinik değişiminde veya KVKK talebinde kullanılır.
 - **Veri Güvenliği:** Şifreleme (at-rest & in-transit), rol bazlı erişim, 2FA (özellikle klinik sahibi/admin için).
 - **Performans:** Randevu/hasta arama < 300ms, AI SOAP üretimi < 5-10 sn (asenkron, arka planda).
 - **Ölçeklenebilirlik:** Çok kiracılı (multi-tenant) mimari, tek klinikten zincir kliniklere kadar ölçekleme.
@@ -197,10 +205,10 @@
 Randevu, hasta/sahip yönetimi, SOAP kaydı, temel faturalama, **kasa yönetimi, borç listesi/cari hesap**, aşı takibi, basit stok, SMS bildirim, TARBİL entegrasyonu (Türkiye'de olmazsa olmaz), **klinik web sitesi + online randevu widget'ı** (rakip analiziyle MVP'ye yükseltildi).
 
 **Faz 2 — Farklılaşma:**
-Pet Owner mobil app, AI Scribe (sesli SOAP), online ödeme, whiteboard/task board, e-Fatura tam entegrasyonu, WhatsApp entegrasyonu, gelişmiş çok boyutlu raporlama, barkodlu satış, çıktı şablonları.
+Pet Owner mobil app, AI Scribe (sesli SOAP), online ödeme, whiteboard/task board, e-Fatura tam entegrasyonu, WhatsApp entegrasyonu, gelişmiş çok boyutlu raporlama, barkodlu satış, çıktı şablonları, **ölüm/ötenazi (PTS) kaydı**, **cerrahi/anestezi rıza formu**, **KVKK ilgili kişi hakları arayüzü** (veri silme/erişim talebi + veri taşınabilirliği), **AI karar denetim izi altyapısının temeli** (AI Scribe'ın ilk gerçek model entegrasyonuyla birlikte kurulmaya başlanır).
 
 **Faz 3 — İleri AI & Ölçek:**
-AI tanı desteği, AI görüntü ön-analizi, telemedicine, no-show tahmini, çok şubeli konsolide raporlama, sigorta claim desteği, **Vet-zon tarzı B2B tedarikçi pazaryeri**, depo yönetimi.
+AI tanı desteği, AI görüntü ön-analizi, telemedicine, no-show tahmini, çok şubeli konsolide raporlama, sigorta claim desteği, **Vet-zon tarzı B2B tedarikçi pazaryeri**, depo yönetimi. *(Ön koşul: AI tanı desteği, Faz 2'de kurulan AI karar denetim izi ve AI doğruluk geri bildirimi mekanizması olmadan devreye alınamaz — bkz. §5.)*
 
 ---
 

@@ -2,6 +2,26 @@ import { apiClient, ApiError } from './client';
 
 export type EncounterStatus = 'DRAFT' | 'FINALIZED' | 'AMENDED';
 
+export type ExamBodySystem =
+  | 'GENERAL_APPEARANCE'
+  | 'SKIN_COAT'
+  | 'EYES_EARS_MOUTH'
+  | 'CARDIOVASCULAR'
+  | 'RESPIRATORY'
+  | 'GASTROINTESTINAL'
+  | 'UROGENITAL'
+  | 'MUSCULOSKELETAL'
+  | 'NEUROLOGICAL'
+  | 'LYMPH_NODES';
+
+export type ExamFindingStatus = 'NOT_EXAMINED' | 'NORMAL' | 'ABNORMAL';
+
+export interface PhysicalExamFinding {
+  system: ExamBodySystem;
+  status: ExamFindingStatus;
+  note: string | null;
+}
+
 export interface EncounterDetail {
   id: string;
   patientId: string;
@@ -19,6 +39,7 @@ export interface EncounterDetail {
   heartRate: number | null;
   respiratoryRate: number | null;
   templateUsed: string | null;
+  physicalExamFindings: PhysicalExamFinding[];
   status: EncounterStatus;
   aiGenerated: boolean;
   finalizedAt: string | null;
@@ -65,6 +86,8 @@ export const encounterApi = {
   },
   updateSoap: (id: string, payload: UpdateSoapPayload) => apiClient.put<void>(`/api/v1/encounters/${id}/soap`, payload),
   updateVitals: (id: string, payload: UpdateVitalsPayload) => apiClient.put<void>(`/api/v1/encounters/${id}/vitals`, payload),
+  updatePhysicalExam: (id: string, findings: PhysicalExamFinding[]) =>
+    apiClient.put<void>(`/api/v1/encounters/${id}/physical-exam`, { findings }),
   finalize: (id: string) => apiClient.post<void>(`/api/v1/encounters/${id}/finalize`),
   addMaterial: (id: string, payload: { inventoryItemId: string; quantity: number }) =>
     apiClient.post<void>(`/api/v1/encounters/${id}/materials`, payload),

@@ -10,6 +10,7 @@ import { Button } from '../../components/ui/Button';
 import { FieldWrap, Input, Textarea } from '../../components/ui/Field';
 import { MaterialsUsedCard } from './MaterialsUsedCard';
 import { PatientHeaderBar } from './PatientHeaderBar';
+import { PhysicalExamCard } from './PhysicalExamCard';
 import { PrescriptionCard } from './PrescriptionCard';
 import styles from './EncounterPage.module.css';
 
@@ -234,6 +235,8 @@ export function EncounterPage() {
               </div>
             )}
           </div>
+
+          <PhysicalExamCard encounterId={encounter.id} initialFindings={encounter.physicalExamFindings} readOnly={isReadOnly} />
 
           <div className={styles.card}>
             <div className={styles.cardTitleRow}>

@@ -10,6 +10,7 @@ import { vaccinationApi, VaccinationScheduleItem } from '../../api/vaccinationAp
 import { patientApi, PatientProfile } from '../../api/patientApi';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
+import { LineChart } from '../../components/ui/LineChart';
 import { colorFor, initialsOf } from '../dashboard/avatarColor';
 import { ageLabelFrom, formatDate } from '../encounter/ageUtils';
 import { EncounterStatusBadge } from '../encounter/encounterStatus';
@@ -19,10 +20,19 @@ import { LabResultDetailModal } from '../laboratory/LabResultDetailModal';
 import { LabResultStatusBadge } from '../laboratory/labResultStatus';
 import { VaccinationStatusBadge } from '../vaccinations/vaccinationStatus';
 import { PatientEditModal } from './PatientEditModal';
+import { buildPatientTimeline, buildWeightTrend, shortDateLabel, TimelineEntry } from './patientTimeline';
 import { PatientStatusBadge } from './statusBadge';
 import styles from './PatientDetailPage.module.css';
 
-type Tab = 'muayeneler' | 'asilar' | 'receteler' | 'lab' | 'goruntuleme';
+type Tab = 'genel-bakis' | 'muayeneler' | 'asilar' | 'receteler' | 'lab' | 'goruntuleme';
+
+const TIMELINE_TYPE_LABELS: Record<TimelineEntry['type'], string> = {
+  encounter: 'Muayene',
+  vaccination: 'Aşı',
+  prescription: 'Reçete',
+  lab: 'Lab',
+  imaging: 'Görüntüleme',
+};
 
 const SEX_LABELS: Record<string, string> = { MALE: 'Erkek', FEMALE: 'Dişi', UNKNOWN: 'Bilinmiyor' };
 
@@ -44,7 +54,7 @@ export function PatientDetailPage() {
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState<PatientProfile | null>(null);
-  const [tab, setTab] = useState<Tab>('muayeneler');
+  const [tab, setTab] = useState<Tab>('genel-bakis');
   const [encounters, setEncounters] = useState<EncounterDetail[]>([]);
   const [vaccinations, setVaccinations] = useState<VaccinationScheduleItem[] | null>(null);
   const [prescriptions, setPrescriptions] = useState<Prescription[] | null>(null);
@@ -122,6 +132,17 @@ export function PatientDetailPage() {
   }
 
   const age = ageLabelFrom(profile.birthDate);
+  const weightTrend = buildWeightTrend(encounters);
+  const latestVitalsEncounter = encounters.find(
+    (e) => e.weightKg != null || e.temperatureC != null || e.heartRate != null || e.respiratoryRate != null
+  );
+  const timeline = buildPatientTimeline(
+    encounters,
+    vaccinations ?? [],
+    prescriptions ?? [],
+    labResults ?? [],
+    imagingRecords ?? []
+  );
 
   return (
     <AppShell>
@@ -197,6 +218,9 @@ export function PatientDetailPage() {
       </div>
 
       <div className={styles.tabs}>
+        <div className={`${styles.tab} ${tab === 'genel-bakis' ? styles.tabActive : ''}`} onClick={() => setTab('genel-bakis')}>
+          Genel Bakış
+        </div>
         <div className={`${styles.tab} ${tab === 'muayeneler' ? styles.tabActive : ''}`} onClick={() => setTab('muayeneler')}>
           Muayene Geçmişi
         </div>
@@ -213,6 +237,97 @@ export function PatientDetailPage() {
           Görüntüleme
         </div>
       </div>
+
+      {tab === 'genel-bakis' && (
+        <>
+          <div className={styles.tableCard}>
+            <div className={styles.summaryHead}>Sağlık Özeti</div>
+            <div className={styles.summaryBody}>
+              {latestVitalsEncounter ? (
+                <div className={styles.vitalsSummaryGrid}>
+                  <InfoItem
+                    label="Son Kilo"
+                    value={latestVitalsEncounter.weightKg != null ? `${latestVitalsEncounter.weightKg} kg` : '—'}
+                  />
+                  <InfoItem
+                    label="Son Ateş"
+                    value={latestVitalsEncounter.temperatureC != null ? `${latestVitalsEncounter.temperatureC} °C` : '—'}
+                  />
+                  <InfoItem
+                    label="Son Nabız"
+                    value={latestVitalsEncounter.heartRate != null ? `${latestVitalsEncounter.heartRate} bpm` : '—'}
+                  />
+                  <InfoItem
+                    label="Son Solunum"
+                    value={latestVitalsEncounter.respiratoryRate != null ? `${latestVitalsEncounter.respiratoryRate} /dk` : '—'}
+                  />
+                </div>
+              ) : (
+                <div className={styles.empty}>Henüz vital bulgu kaydı yok</div>
+              )}
+              {weightTrend.length >= 2 ? (
+                <div className={styles.chartWrap}>
+                  <div className={styles.infoLabel}>Kilo Trendi</div>
+                  <LineChart
+                    labels={weightTrend.map((p) => shortDateLabel(p.date))}
+                    values={weightTrend.map((p) => p.weightKg)}
+                    height={140}
+                  />
+                </div>
+              ) : (
+                <div className={styles.chartWrap}>
+                  <div className={styles.infoLabel}>Kilo Trendi</div>
+                  <div className={styles.empty}>Trend için en az 2 muayenede kilo kaydı gerekiyor</div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className={`${styles.tableCard} ${styles.timelineCard}`}>
+            <div className={styles.summaryHead}>Zaman Çizelgesi</div>
+            {timeline.length === 0 ? (
+              <div className={styles.empty}>Henüz klinik kayıt yok</div>
+            ) : (
+              timeline.map((entry) => {
+                const clickable = entry.type === 'encounter' || entry.type === 'lab' || entry.type === 'imaging';
+                return (
+                  <div
+                    key={`${entry.type}-${entry.record.id}`}
+                    className={`${styles.row} ${styles.timelineRow} ${clickable ? '' : styles.timelineRowStatic}`}
+                    onClick={() => {
+                      if (entry.type === 'encounter') navigate(`/muayene/${entry.record.id}`);
+                      if (entry.type === 'lab') setSelectedLabResultId(entry.record.id);
+                      if (entry.type === 'imaging') setSelectedImagingRecordId(entry.record.id);
+                    }}
+                  >
+                    <div className={styles.muted}>{new Date(entry.date).toLocaleDateString('tr-TR')}</div>
+                    <div className={styles.timelineType}>{TIMELINE_TYPE_LABELS[entry.type]}</div>
+                    <div>
+                      {entry.type === 'encounter' && (entry.record.assessment || `Dr. ${entry.record.staffName}`)}
+                      {entry.type === 'vaccination' && entry.record.vaccineName}
+                      {entry.type === 'prescription' && `${entry.record.items.length} ilaç`}
+                      {entry.type === 'lab' && entry.record.testName}
+                      {entry.type === 'imaging' &&
+                        `${MODALITY_LABELS[entry.record.modality]}${entry.record.bodyRegion ? ` · ${entry.record.bodyRegion}` : ''}`}
+                    </div>
+                    <div>
+                      {entry.type === 'encounter' && <EncounterStatusBadge status={entry.record.status} />}
+                      {entry.type === 'vaccination' && <VaccinationStatusBadge status={entry.record.status} />}
+                      {entry.type === 'lab' && <LabResultStatusBadge status={entry.record.status} />}
+                      {entry.type === 'imaging' && <ImagingStatusBadge status={entry.record.status} />}
+                      {entry.type === 'prescription' && (
+                        <Badge tone={entry.record.status === 'ACTIVE' ? 'success' : entry.record.status === 'FULFILLED' ? 'neutral' : 'danger'}>
+                          {entry.record.status === 'ACTIVE' ? 'Aktif' : entry.record.status === 'FULFILLED' ? 'Kullanıldı' : 'İptal'}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </>
+      )}
 
       {tab === 'muayeneler' && (
         <div className={styles.tableCard}>
