@@ -34,6 +34,14 @@ jwt:
   secret: ${JWT_SECRET:myvet-local-dev-secret-key-change-me-32bytes-min}
   expiration-minutes: ${JWT_EXPIRATION_MINUTES:480}
 
+ai:
+  ollama:
+    # Lokal Ollama'ya baglanmak icin OLLAMA_BASE_URL=http://localhost:11434 set edin.
+    # Bos birakilirsa (varsayilan) SOAP uretimi mock/simule modda kalir
+    # (bkz. OllamaSoapGenerationAdapter).
+    base-url: ${OLLAMA_BASE_URL:}
+    model: ${OLLAMA_MODEL:llama3.1}
+
 notification:
   twilio:
     # WhatsApp Sandbox icin: TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN bos
