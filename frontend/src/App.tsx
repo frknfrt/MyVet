@@ -2,12 +2,14 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { RequireAuth } from './auth/RequireAuth';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterClinicPage } from './pages/auth/RegisterClinicPage';
+import { AcceptInvitePage } from './pages/auth/AcceptInvitePage';
 import { SetupWizardPage } from './pages/auth/SetupWizardPage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { PatientsPage } from './pages/patients/PatientsPage';
 import { PatientDetailPage } from './pages/patients/PatientDetailPage';
 import { NewPatientPage } from './pages/patients/NewPatientPage';
 import { OwnerDetailPage } from './pages/owners/OwnerDetailPage';
+import { OwnersListPage } from './pages/owners/OwnersListPage';
 import { NewOwnerPage } from './pages/owners/NewOwnerPage';
 import { AppointmentsPage } from './pages/appointments/AppointmentsPage';
 import { EncounterPage } from './pages/encounter/EncounterPage';
@@ -29,6 +31,7 @@ export function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/kayit" element={<RegisterClinicPage />} />
+      <Route path="/davet/:token" element={<AcceptInvitePage />} />
       <Route
         path="/kurulum"
         element={
@@ -66,6 +69,14 @@ export function App() {
         element={
           <RequireAuth>
             <PatientDetailPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/musteriler"
+        element={
+          <RequireAuth>
+            <OwnersListPage />
           </RequireAuth>
         }
       />

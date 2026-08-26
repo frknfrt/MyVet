@@ -9,6 +9,7 @@ import com.vetos.modules.billing.application.dto.ProductSalesLine;
 import com.vetos.modules.billing.application.dto.RevenueReportLine;
 import com.vetos.modules.billing.application.dto.StaffPerformanceLine;
 import com.vetos.modules.billing.domain.InvoiceStatus;
+import com.vetos.platform.security.AuthenticatedStaffUser;
 import com.vetos.platform.tenancy.TenantContext;
 import com.vetos.platform.web.CsvWriter;
 import jakarta.validation.Valid;
@@ -17,6 +18,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
@@ -45,6 +47,7 @@ public class InvoicesController {
     private final GetProductSalesReportUseCase getProductSalesReportUseCase;
     private final GetStaffPerformanceReportUseCase getStaffPerformanceReportUseCase;
     private final GetBranchComparisonReportUseCase getBranchComparisonReportUseCase;
+    private final CreateManualInvoiceUseCase createManualInvoiceUseCase;
     private final AddInvoiceLineUseCase addInvoiceLineUseCase;
     private final IssueInvoiceUseCase issueInvoiceUseCase;
     private final VoidInvoiceUseCase voidInvoiceUseCase;
@@ -225,6 +228,14 @@ public class InvoicesController {
             effectiveFrom.atStartOfDay(ZoneOffset.UTC).toInstant(),
             effectiveToExclusive.atStartOfDay(ZoneOffset.UTC).toInstant()
         };
+    }
+
+    @PostMapping
+    public ResponseEntity<Void> create(
+        @AuthenticationPrincipal AuthenticatedStaffUser principal, @RequestBody @Valid CreateInvoiceRequest request
+    ) {
+        UUID id = createManualInvoiceUseCase.execute(principal.branchIds().get(0), request.ownerId(), principal.staffUserId());
+        return ResponseEntity.created(java.net.URI.create("/api/v1/invoices/" + id)).build();
     }
 
     @PostMapping("/{id}/lines")

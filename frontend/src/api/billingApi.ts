@@ -85,6 +85,7 @@ export interface CashRegisterSession {
 export const billingApi = {
   listInvoices: () => apiClient.get<InvoiceSummary[]>('/api/v1/invoices'),
   getInvoice: (id: string) => apiClient.get<InvoiceDetail>(`/api/v1/invoices/${id}`),
+  createInvoice: (ownerId: string) => apiClient.postForId('/api/v1/invoices', { ownerId }),
   addLine: (
     id: string,
     payload: {

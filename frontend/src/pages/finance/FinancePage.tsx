@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { AppShell } from '../../components/layout/AppShell';
 import { billingApi, InvoiceSummary, OwnerBalance } from '../../api/billingApi';
+import { Button } from '../../components/ui/Button';
 import { CashRegisterPanel } from './CashRegisterPanel';
 import { InvoiceDetailModal } from './InvoiceDetailModal';
 import { InvoiceStatusBadge } from './invoiceStatus';
+import { NewInvoiceModal } from './NewInvoiceModal';
 import styles from './FinancePage.module.css';
 
 type Tab = 'invoices' | 'cash-register' | 'debtors';
@@ -14,6 +16,7 @@ export function FinancePage() {
   const [debtors, setDebtors] = useState<OwnerBalance[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+  const [newInvoiceOpen, setNewInvoiceOpen] = useState(false);
 
   function loadInvoices() {
     setLoading(true);
@@ -38,6 +41,11 @@ export function FinancePage() {
         <div>
           <h1 className={styles.title}>Finans</h1>
         </div>
+        {tab === 'invoices' && (
+          <Button variant="primary" onClick={() => setNewInvoiceOpen(true)}>
+            Yeni Fatura
+          </Button>
+        )}
       </div>
 
       <div className={styles.tabs}>
@@ -110,6 +118,16 @@ export function FinancePage() {
         invoiceId={selectedInvoiceId}
         onClose={() => setSelectedInvoiceId(null)}
         onChanged={loadInvoices}
+      />
+
+      <NewInvoiceModal
+        open={newInvoiceOpen}
+        onClose={() => setNewInvoiceOpen(false)}
+        onCreated={(invoiceId) => {
+          setNewInvoiceOpen(false);
+          loadInvoices();
+          setSelectedInvoiceId(invoiceId);
+        }}
       />
     </AppShell>
   );

@@ -6,6 +6,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -37,6 +39,31 @@ public class GlobalExceptionHandler {
             .toList();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
             .body(ErrorResponse.ofValidation("Girdi dogrulama hatasi", fieldErrors, request.getRequestURI()));
+    }
+
+    /**
+     * Spring Security 6.3+ ile @PreAuthorize reddi artik AccessDeniedException'in
+     * alt sinifi AuthorizationDeniedException firlatiyor -- bu handler olmadan
+     * genel Exception handler'a dusup 500 donuyordu (api-conventions.md'deki
+     * "403 = kimlik dogrulandi ama yetkisi yok" sozlesmesini bozan bir hataydi).
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+            .body(ErrorResponse.of("ACCESS_DENIED", "Bu islem icin yetkiniz yok", request.getRequestURI()));
+    }
+
+    /**
+     * Govde JSON olarak parse edilemedigi zaman (ör. gecersiz tarih formati,
+     * bozuk enum degeri) Jackson bir HttpMessageNotReadableException firlatir --
+     * bu handler olmadan genel Exception handler'a dusup 500 donuyordu; oysa
+     * bu istemci hatasi, api-conventions.md'deki "400 = validation hatasi"
+     * sozlesmesine gore 400 olmali.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleNotReadable(HttpMessageNotReadableException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .body(ErrorResponse.of("MALFORMED_REQUEST_BODY", "Istek govdesi okunamadi veya gecersiz bicimde", request.getRequestURI()));
     }
 
     @ExceptionHandler(Exception.class)

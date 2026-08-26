@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { AppShell } from '../../components/layout/AppShell';
 import { Button } from '../../components/ui/Button';
 import { patientApi, PatientSearchResult, SpeciesItem } from '../../api/patientApi';
@@ -69,6 +69,15 @@ export function PatientsPage() {
             Yeni Hasta
           </Button>
         </div>
+      </div>
+
+      <div className={styles.tabs}>
+        <NavLink to="/hastalar" className={`${styles.tab} ${styles.tabActive}`}>
+          Hastalar
+        </NavLink>
+        <NavLink to="/musteriler" className={styles.tab}>
+          Sahipler
+        </NavLink>
       </div>
 
       <div className={styles.filterBar}>

@@ -1,5 +1,6 @@
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
 import { AppShell } from '../../components/layout/AppShell';
+import { AiCenterPanel } from './AiCenterPanel';
 import { BranchManagementPanel } from './BranchManagementPanel';
 import { DrugCatalogPanel } from './DrugCatalogPanel';
 import { EfaturaPanel } from './EfaturaPanel';
@@ -32,6 +33,7 @@ const SETTINGS_TABS: SettingsTabConfig[] = [
   { path: 'tur-irk', label: 'Tür & Irk' },
   { path: 'hizmetler', label: 'Hizmetler' },
   { path: 'ilac-katalogu', label: 'İlaç Kataloğu' },
+  { path: 'ai-merkezi', label: 'AI Merkezi' },
   { path: 'sms-whatsapp', label: 'SMS / WhatsApp' },
   { path: 'e-fatura', label: 'e-Fatura' },
 ];
@@ -66,6 +68,7 @@ export function SettingsPage() {
         <Route path="tur-irk" element={<SpeciesBreedsPanel />} />
         <Route path="hizmetler" element={<ServiceTypesPanel />} />
         <Route path="ilac-katalogu" element={<DrugCatalogPanel />} />
+        <Route path="ai-merkezi" element={<AiCenterPanel />} />
         <Route path="sms-whatsapp" element={<SmsWhatsappPanel />} />
         <Route path="e-fatura" element={<EfaturaPanel />} />
       </Routes>

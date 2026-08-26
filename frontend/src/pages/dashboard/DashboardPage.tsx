@@ -23,12 +23,22 @@ const TABS: { key: Tab; label: string }[] = [
 
 const NO_SHOW_RISK_THRESHOLD = 0.3;
 
+/**
+ * ADMIN ve RECEPTIONIST disindaki roller /invoices/** uc noktalarina erisemez
+ * (api-conventions.md rol matrisi) -- BusinessSummaryView bu uc noktalara
+ * bagimli oldugu icin "Isletme ozeti" sekmesi sadece bu iki role gosterilir.
+ */
+function canSeeBusinessSummary(role: string | undefined): boolean {
+  return role === 'ADMIN' || role === 'RECEPTIONIST';
+}
+
 export function DashboardPage() {
   const { session } = useAuth();
   const navigate = useNavigate();
-  const [viewMode, setViewMode] = useState<ViewMode>('operational');
-  const [activeTab, setActiveTab] = useState<Tab>('all');
-  const [onlyMine, setOnlyMine] = useState(false);
+  const role = session?.role;
+  const [viewMode, setViewMode] = useState<ViewMode>(role === 'ADMIN' ? 'summary' : 'operational');
+  const [activeTab, setActiveTab] = useState<Tab>(role === 'TECHNICIAN' ? 'CHECKED_IN' : 'all');
+  const [onlyMine, setOnlyMine] = useState(role === 'VET');
   const [query, setQuery] = useState('');
   const [appointments, setAppointments] = useState<AppointmentItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,20 +89,22 @@ export function DashboardPage() {
           </div>
         </div>
 
-        <div className={styles.modeTabs}>
-          <div
-            className={`${styles.modeTab} ${viewMode === 'operational' ? styles.modeTabActive : ''}`}
-            onClick={() => setViewMode('operational')}
-          >
-            Operasyonel
+        {canSeeBusinessSummary(role) && (
+          <div className={styles.modeTabs}>
+            <div
+              className={`${styles.modeTab} ${viewMode === 'operational' ? styles.modeTabActive : ''}`}
+              onClick={() => setViewMode('operational')}
+            >
+              Operasyonel
+            </div>
+            <div
+              className={`${styles.modeTab} ${viewMode === 'summary' ? styles.modeTabActive : ''}`}
+              onClick={() => setViewMode('summary')}
+            >
+              İşletme özeti
+            </div>
           </div>
-          <div
-            className={`${styles.modeTab} ${viewMode === 'summary' ? styles.modeTabActive : ''}`}
-            onClick={() => setViewMode('summary')}
-          >
-            İşletme özeti
-          </div>
-        </div>
+        )}
 
         {viewMode === 'operational' && (
           <div className={styles.actions}>
@@ -111,7 +123,7 @@ export function DashboardPage() {
         )}
       </div>
 
-      {viewMode === 'summary' ? (
+      {viewMode === 'summary' && canSeeBusinessSummary(role) ? (
         <BusinessSummaryView />
       ) : (
         <>

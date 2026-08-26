@@ -3,8 +3,9 @@ import { useAuth } from '../../auth/AuthContext';
 import { StaffRole } from '../../auth/session';
 import { ApiError } from '../../api/client';
 import { BranchItem, branchesApi } from '../../api/branchesApi';
+import { InviteStaffMemberPayload, StaffInviteItem, staffInvitesApi } from '../../api/staffInvitesApi';
 import { CreateStaffUserPayload, StaffUserItem, UpdateStaffUserPayload, staffUsersApi } from '../../api/staffUsersApi';
-import { Badge } from '../../components/ui/Badge';
+import { Badge, BadgeTone } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { FieldWrap, Input, Select, Textarea } from '../../components/ui/Field';
 import { Modal } from '../../components/ui/Modal';
@@ -51,10 +52,35 @@ function emptyForm(defaultBranchId: string): StaffFormState {
   };
 }
 
+interface InviteFormState {
+  branchId: string;
+  fullName: string;
+  email: string;
+  role: StaffRole;
+}
+
+function emptyInviteForm(defaultBranchId: string): InviteFormState {
+  return { branchId: defaultBranchId, fullName: '', email: '', role: 'VET' };
+}
+
+const INVITE_STATUS_TONE: Record<StaffInviteItem['status'], BadgeTone> = {
+  PENDING: 'neutral',
+  ACCEPTED: 'success',
+  EXPIRED: 'warning',
+  REVOKED: 'danger',
+};
+const INVITE_STATUS_LABELS: Record<StaffInviteItem['status'], string> = {
+  PENDING: 'Bekliyor',
+  ACCEPTED: 'Kabul Edildi',
+  EXPIRED: 'Süresi Doldu',
+  REVOKED: 'İptal Edildi',
+};
+
 export function StaffManagementPanel() {
   const { session } = useAuth();
   const [staff, setStaff] = useState<StaffUserItem[]>([]);
   const [branches, setBranches] = useState<BranchItem[]>([]);
+  const [invites, setInvites] = useState<StaffInviteItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -62,12 +88,17 @@ export function StaffManagementPanel() {
   const [form, setForm] = useState<StaffFormState>(emptyForm(session?.branchId ?? ''));
   const [saving, setSaving] = useState(false);
 
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [inviteForm, setInviteForm] = useState<InviteFormState>(emptyInviteForm(session?.branchId ?? ''));
+  const [inviting, setInviting] = useState(false);
+
   function load() {
     setLoading(true);
-    Promise.all([staffUsersApi.list(), branchesApi.list()])
-      .then(([staffList, branchList]) => {
+    Promise.all([staffUsersApi.list(), branchesApi.list(), staffInvitesApi.list()])
+      .then(([staffList, branchList, inviteList]) => {
         setStaff(staffList);
         setBranches(branchList);
+        setInvites(inviteList);
       })
       .catch((err) => setError(errorMessageOf(err)))
       .finally(() => setLoading(false));
@@ -147,9 +178,49 @@ export function StaffManagementPanel() {
 
   const isSelf = editingId !== null && editingId === session?.staffUserId;
 
+  function openInvite() {
+    setInviteForm(emptyInviteForm(session?.branchId ?? ''));
+    setInviteModalOpen(true);
+  }
+
+  async function handleInviteSubmit(e: FormEvent) {
+    e.preventDefault();
+    setInviting(true);
+    setError(null);
+    try {
+      const payload: InviteStaffMemberPayload = {
+        branchId: inviteForm.branchId,
+        fullName: inviteForm.fullName,
+        email: inviteForm.email,
+        role: inviteForm.role,
+      };
+      await staffInvitesApi.invite(payload);
+      setInviteModalOpen(false);
+      load();
+    } catch (err) {
+      setError(errorMessageOf(err));
+    } finally {
+      setInviting(false);
+    }
+  }
+
+  async function handleRevokeInvite(id: string) {
+    try {
+      await staffInvitesApi.revoke(id);
+      load();
+    } catch (err) {
+      setError(errorMessageOf(err));
+    }
+  }
+
+  const pendingInvites = invites.filter((i) => i.status !== 'ACCEPTED');
+
   return (
     <div>
       <div className={styles.actionsRow}>
+        <Button variant="secondary" onClick={openInvite}>
+          Ekip Üyesi Davet Et
+        </Button>
         <Button variant="primary" onClick={openCreate}>
           + Yeni Kullanıcı
         </Button>
@@ -194,6 +265,99 @@ export function StaffManagementPanel() {
           ))
         )}
       </div>
+
+      {pendingInvites.length > 0 && (
+        <>
+          <div className={styles.sectionTitle}>Bekleyen Davetler</div>
+          <div className={settingsStyles.tableCard}>
+            <div className={styles.inviteHead}>
+              <div>Ad Soyad</div>
+              <div>E-posta</div>
+              <div>Rol</div>
+              <div>Davet Tarihi</div>
+              <div>Durum</div>
+              <div></div>
+            </div>
+            {pendingInvites.map((inv) => (
+              <div key={inv.id} className={styles.inviteRow}>
+                <div>{inv.fullName}</div>
+                <div className={settingsStyles.muted}>{inv.email}</div>
+                <div>{ROLE_LABELS[inv.role]}</div>
+                <div className={settingsStyles.muted}>{new Date(inv.createdAt).toLocaleDateString('tr-TR')}</div>
+                <div>
+                  <Badge tone={INVITE_STATUS_TONE[inv.status]}>{INVITE_STATUS_LABELS[inv.status]}</Badge>
+                </div>
+                <div>
+                  {inv.status === 'PENDING' && (
+                    <Button variant="danger" onClick={() => handleRevokeInvite(inv.id)}>
+                      İptal Et
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      <Modal open={inviteModalOpen} onClose={() => setInviteModalOpen(false)} width={480}>
+        <form onSubmit={handleInviteSubmit}>
+          <div className={styles.modalTitle}>Ekip Üyesi Davet Et</div>
+          <div className={styles.formGrid}>
+            <FieldWrap label="Ad Soyad">
+              <Input
+                value={inviteForm.fullName}
+                onChange={(e) => setInviteForm((f) => ({ ...f, fullName: e.target.value }))}
+                required
+              />
+            </FieldWrap>
+            <FieldWrap label="E-posta">
+              <Input
+                type="email"
+                value={inviteForm.email}
+                onChange={(e) => setInviteForm((f) => ({ ...f, email: e.target.value }))}
+                required
+              />
+            </FieldWrap>
+            <FieldWrap label="Şube">
+              <Select
+                value={inviteForm.branchId}
+                onChange={(e) => setInviteForm((f) => ({ ...f, branchId: e.target.value }))}
+                required
+              >
+                {branches.map((b) => (
+                  <option key={b.branchId} value={b.branchId}>
+                    {b.branchName}
+                  </option>
+                ))}
+              </Select>
+            </FieldWrap>
+            <FieldWrap label="Rol">
+              <Select
+                value={inviteForm.role}
+                onChange={(e) => setInviteForm((f) => ({ ...f, role: e.target.value as StaffRole }))}
+              >
+                {ASSIGNABLE_ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {ROLE_LABELS[r]}
+                  </option>
+                ))}
+              </Select>
+            </FieldWrap>
+          </div>
+          <div className={styles.selfHint}>
+            Davet e-postası şu an gerçek bir sağlayıcıya bağlı değil (mock) — kabul linki sunucu loglarına yazılır.
+          </div>
+          <div className={styles.modalActions}>
+            <Button type="button" variant="secondary" onClick={() => setInviteModalOpen(false)}>
+              Vazgeç
+            </Button>
+            <Button type="submit" variant="primary" disabled={inviting}>
+              {inviting ? 'Gönderiliyor...' : 'Davet Gönder'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} width={560}>
         <form onSubmit={handleSubmit}>

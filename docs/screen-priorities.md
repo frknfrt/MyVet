@@ -11,11 +11,11 @@ Tam liste (P0/P1/P2/P3, notlarla): `docs/screen-priorities.xlsx`
 - [x] Register Clinic
 - [ ] Forgot Password
 - [x] Clinic Setup Wizard
-- [ ] Invite Team Members — *(Kullanıcı Yönetimi admin'in doğrudan şifre belirleyerek hesap açmasını sağlıyor; e-posta davet linki akışı yok)*
+- [x] Invite Team Members — *(Ayarlar > Kullanıcılar'da "Ekip Üyesi Davet Et" — `StaffInvite` + `InviteEmailPort`/`MockInviteEmailAdapter`, TARBİL/e-Fatura ile aynı port/adapter deseni; kabul linki `/davet/:token`'da şifre belirleyip hesabı etkinleştiriyor. Gerçek bir e-posta sağlayıcısı yok, link sunucu loglarına yazılır — kullanıcı onayıyla mock bırakıldı.)*
 - [ ] Subscription Plan Selection — *(kayıtta otomatik 14 günlük deneme atanıyor; plan seçim ekranı yok, bkz. Ayarlar > Abonelik'in salt-okunur görünümü)*
 
 ### 1. Dashboard
-- [ ] Ana Panel (rol bazli render: Doktor/Resepsiyon/Yonetici) — *(Dashboard tüm roller için aynı görünümü render ediyor, rol bazlı dallanma yok)*
+- [x] Ana Panel (rol bazli render: Doktor/Resepsiyon/Yonetici) — *("İşletme özeti" sekmesi sadece ADMIN/RECEPTIONIST'e görünüyor (`/invoices/**` yetkisiyle uyumlu, önceden VET/TECHNICIAN'a boş/403 veri gösteriyordu); VET için "Bana atanan" varsayılan açık, TECHNICIAN için "Bekleme Salonu" sekmesi varsayılan.)*
 - [x] Gunluk Operasyon Panosu (Clinic Flow Board)
 
 ### 2. Hasta (Pet) Modulu
@@ -29,16 +29,16 @@ Tam liste (P0/P1/P2/P3, notlarla): `docs/screen-priorities.xlsx`
 - [x] Vaccination History
 
 ### 3. Owner / Musteri CRM
-- [ ] Owner List — *(bağımsız gezilebilir sahip listesi ekranı yok; sahip arama sadece diğer formlarda otomatik-tamamlama olarak kullanılıyor)*
+- [x] Owner List — *(`/musteriler` — `OwnersListPage`, "Hastalar & Sahipler" sayfasının yeni "Sahipler" sekmesi; mevcut `GET /api/v1/owners?query=` aynen kullanıldı, backend değişikliği gerekmedi)*
 - [x] Owner Profile
 - [x] Owner Pets
 - [x] KVKK Riza Yonetimi — *(Yeni Sahip formunda zorunlu "KVKK Açık Rıza" checkbox'ı + kayıt anında otomatik ConsentRecord; OwnerDetailPage > KVKK sekmesinde 3 onay türü için ver/geri çek + geçmiş — bkz. implementation-plan.md)*
 
 ### 4. Randevu ve Takvim
 - [x] Calendar Main View
-- [ ] Daily Calendar — *(takvim sadece haftalık grid; günlük görünüm/toggle yok)*
+- [x] Daily Calendar — *("Haftalık / Günlük / Hekim" sekmesi eklendi, aynı `weeklyCalendar` verisi client-side güne/hekime göre filtreleniyor)*
 - [x] Weekly Calendar
-- [ ] Doctor Schedule — *(hekim bazlı filtre/görünüm yok, tüm randevular kliniğe göre tek listede)*
+- [x] Doctor Schedule — *(Günlük moddaki grid gün sütunları yerine hekim sütunlarına dönüyor (VET rolündeki `staff-users`), üstte ayrıca tüm görünümleri filtreleyen "Hekim" seçici var)*
 - [x] Appointment Create
 - [x] Appointment Detail
 
@@ -69,14 +69,14 @@ Tam liste (P0/P1/P2/P3, notlarla): `docs/screen-priorities.xlsx`
 - [x] Product List
 - [x] Product Detail
 - [x] Add Product
-- [ ] Medicine Management — *(stok kalemlerinde hâlâ sadece serbest metin "kategori" alanı var, stokla entegre değil; ancak `DrugCatalog`/`DrugsController` artık kullanılıyor — Ayarlar > İlaç Kataloğu ekranından ilaç CRUD + etkileşim işaretleme yapılıyor, bkz. Prescription Create notu)*
+- [ ] Medicine Management — *(stok kalemlerinde hâlâ sadece serbest metin "kategori" alanı var, stokla entegre değil; `DrugCatalog`/`DrugsController` Ayarlar > İlaç Kataloğu sekmesinden ilaç CRUD + etkileşim işaretleme yapılıyor (kısa bir süre bağımsız üst-seviye sayfa denendi, kullanıcıyla diğer katalog ekranlarıyla — Tür/Irk, Hizmetler — tutarlılık için Ayarlar'a geri alındı). Stokla entegrasyon hâlâ kapsam dışı.)*
 - [ ] Vaccine Management — *(ayrı bir aşı-stok kataloğu yok, genel envanter kategorisine giriyor — aşı takvimi/kayıtları farklı bir konsept olarak zaten var, bkz. Vaccination History)*
 - [x] Stock Movement
 
 ### 9. Finans ve Muhasebe
 - [ ] Finance Dashboard — *(Finans sayfası Faturalar/Kasa/Borç Listesi sekmeli bir liste ekranı; ayrı markalı bir KPI dashboard'u yok — Raporlar sayfası ve Dashboard'daki İşletme Özeti buna en yakın)*
 - [x] Invoice List
-- [ ] Create Invoice — *(manuel "yeni fatura" oluşturma yok, `POST /api/v1/invoices` endpoint'i de yok; faturalar encounter tamamlanınca otomatik taslak olarak açılıyor, UI sadece mevcut taslağa kalem ekleyip kesiyor)*
+- [x] Create Invoice — *(Finans > Faturalar'da "Yeni Fatura" — `CreateManualInvoiceUseCase` + `POST /api/v1/invoices` (owner seçilip boş DRAFT açılıyor), ardından mevcut kalem ekleme/kesme akışı aynen kullanılıyor)*
 - [ ] Payment Screen — *(bağımsız bir ekran değil, fatura detay modalı içinde "Ödeme Al" bölümü olarak var)*
 - [x] Subscription Management (klinik SaaS aboneligi)
 - [ ] Payment Integration — *(gerçek ödeme sağlayıcı — iyzico/PayTR — entegrasyonu yok; tüm ödemeler CARD/CASH/TEXT_TO_PAY/INSTALLMENT olarak elle kaydediliyor)*
@@ -93,10 +93,10 @@ Tam liste (P0/P1/P2/P3, notlarla): `docs/screen-priorities.xlsx`
 - [x] Oda Yönetimi
 
 ### 11. AI Merkezi
-- [ ] Voice To SOAP
-- [ ] Diagnosis Assistant
-- [ ] Treatment Recommendation
-- [ ] Drug Interaction Check
+- [x] Voice To SOAP — *(Ayarlar > AI Merkezi'nde bağlantı — bir muayeneye yönlendiriyor, kendisi zaten var olan sesli dikte/taslak akışı)*
+- [ ] Diagnosis Assistant — *("Planlanıyor" olarak Ayarlar > AI Merkezi'nde listeleniyor; gerçek bir LLM entegrasyonu ve tıbbi referans kaynağı olmadan uydurma yapılmayacak, kullanıcı onayıyla bu turda ertelendi)*
+- [ ] Treatment Recommendation — *(Diagnosis Assistant ile aynı gerekçeyle ertelendi)*
+- [x] Drug Interaction Check — *(Ayarlar > AI Merkezi'nde bağlantı — İlaç Kataloğu'na yönlendiriyor; kural tabanlı olduğu için AI mavisi değil, uyarı tonuyla ayrıca işaretlendi)*
 
 ### 12. Yonetim ve Ayarlar
 - [ ] Clinic Settings — *(kapsam dışı bırakıldı; bkz. implementation-plan.md)*
