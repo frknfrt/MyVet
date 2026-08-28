@@ -7,6 +7,7 @@ import java.util.UUID;
 public interface PlanRepository {
     Plan save(Plan plan);
     Optional<Plan> findById(UUID id);
+    Optional<Plan> findByCode(String code);
     List<Plan> findAll();
     boolean existsByCode(String code);
     void deleteById(UUID id);

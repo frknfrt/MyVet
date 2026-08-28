@@ -22,6 +22,9 @@ class PlanRepositoryAdapter implements PlanRepository {
     public Optional<Plan> findById(UUID id) { return jpaRepository.findById(id); }
 
     @Override
+    public Optional<Plan> findByCode(String code) { return jpaRepository.findByCode(code); }
+
+    @Override
     public List<Plan> findAll() { return jpaRepository.findAll(); }
 
     @Override
