@@ -1,7 +1,7 @@
 # Platform Abonelik Faturalama Sistemi — Tasarım Dokümanı
 
 **Tarih:** 2026-08-28
-**Durum:** Onaylandı — implementasyon planı bekleniyor
+**Durum:** Implementasyon tamamlandı
 **İlgili modül:** `modules/platformadmin`, `modules/tenant` (Subscription)
 
 ## 1. Bağlam ve Amaç
