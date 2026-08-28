@@ -1,5 +1,6 @@
 package com.vetos.modules.tenant.infrastructure.persistence;
 
+import com.vetos.modules.tenant.domain.StaffRole;
 import com.vetos.modules.tenant.domain.StaffUser;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -12,4 +13,5 @@ interface StaffUserJpaRepository extends JpaRepository<StaffUser, UUID> {
     boolean existsByEmail(String email);
     List<StaffUser> findByBranchId(UUID branchId);
     long countByBranchIdIn(List<UUID> branchIds);
+    List<StaffUser> findByBranchIdInAndRole(List<UUID> branchIds, StaffRole role);
 }

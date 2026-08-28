@@ -49,4 +49,12 @@ public class Subscription {
         this.billingStatus = billingStatus;
         this.renewsAt = renewsAt;
     }
+
+    public void advanceRenewal(LocalDate newRenewsAt) {
+        this.renewsAt = newRenewsAt;
+    }
+
+    public void updateBillingStatus(BillingStatus billingStatus) {
+        this.billingStatus = billingStatus;
+    }
 }

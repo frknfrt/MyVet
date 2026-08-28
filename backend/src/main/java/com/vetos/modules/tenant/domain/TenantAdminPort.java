@@ -2,6 +2,7 @@ package com.vetos.modules.tenant.domain;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -18,4 +19,11 @@ public interface TenantAdminPort {
     void updateSubscription(UUID tenantId, String planCode, BillingStatus billingStatus, LocalDate renewsAt);
     void suspend(UUID tenantId);
     void activate(UUID tenantId);
+
+    /** planCode != TRIAL ve renewsAt <= date olan tum abonelikler -- platform faturalama scheduler'i icin. */
+    List<BillableSubscription> listSubscriptionsDueOnOrBefore(LocalDate date);
+    void advanceRenewal(UUID tenantId, LocalDate newRenewsAt);
+    void updateBillingStatus(UUID tenantId, BillingStatus billingStatus);
+    Optional<String> findBillingContactEmail(UUID tenantId);
+    Optional<String> findBillingContactPhone(UUID tenantId);
 }

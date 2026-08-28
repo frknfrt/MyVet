@@ -1,7 +1,10 @@
 package com.vetos.modules.tenant.infrastructure.persistence;
 
+import com.vetos.modules.tenant.domain.BillableSubscription;
 import com.vetos.modules.tenant.domain.BillingStatus;
 import com.vetos.modules.tenant.domain.Branch;
+import com.vetos.modules.tenant.domain.StaffRole;
+import com.vetos.modules.tenant.domain.StaffUser;
 import com.vetos.modules.tenant.domain.Subscription;
 import com.vetos.modules.tenant.domain.Tenant;
 import com.vetos.modules.tenant.domain.TenantAdminOverview;
@@ -13,6 +16,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Component
@@ -58,6 +62,49 @@ class TenantAdminPortAdapter implements TenantAdminPort {
             .orElseThrow(() -> new TenantNotFoundException(tenantId));
         tenant.activate();
         tenantJpaRepository.save(tenant);
+    }
+
+    @Override
+    public List<BillableSubscription> listSubscriptionsDueOnOrBefore(LocalDate date) {
+        return subscriptionJpaRepository.findAll().stream()
+            .filter(s -> !"TRIAL".equals(s.getPlanCode()))
+            .filter(s -> s.getRenewsAt() != null && !s.getRenewsAt().isAfter(date))
+            .map(s -> new BillableSubscription(s.getTenantId(), s.getPlanCode(), s.getRenewsAt()))
+            .toList();
+    }
+
+    @Override
+    public void advanceRenewal(UUID tenantId, LocalDate newRenewsAt) {
+        Subscription subscription = subscriptionJpaRepository.findByTenantId(tenantId)
+            .orElseThrow(() -> new SubscriptionNotFoundException(tenantId));
+        subscription.advanceRenewal(newRenewsAt);
+        subscriptionJpaRepository.save(subscription);
+    }
+
+    @Override
+    public void updateBillingStatus(UUID tenantId, BillingStatus billingStatus) {
+        Subscription subscription = subscriptionJpaRepository.findByTenantId(tenantId)
+            .orElseThrow(() -> new SubscriptionNotFoundException(tenantId));
+        subscription.updateBillingStatus(billingStatus);
+        subscriptionJpaRepository.save(subscription);
+    }
+
+    @Override
+    public Optional<String> findBillingContactEmail(UUID tenantId) {
+        return findBillingContact(tenantId).map(StaffUser::getEmail);
+    }
+
+    @Override
+    public Optional<String> findBillingContactPhone(UUID tenantId) {
+        return findBillingContact(tenantId).map(StaffUser::getPhone);
+    }
+
+    private Optional<StaffUser> findBillingContact(UUID tenantId) {
+        List<UUID> branchIds = branchJpaRepository.findByTenantId(tenantId).stream().map(Branch::getId).toList();
+        if (branchIds.isEmpty()) {
+            return Optional.empty();
+        }
+        return staffUserJpaRepository.findByBranchIdInAndRole(branchIds, StaffRole.ADMIN).stream().findFirst();
     }
 
     private TenantAdminOverview toOverview(Tenant tenant) {
