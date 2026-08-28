@@ -65,3 +65,10 @@ server:
 logging:
   level:
     com.vetos: debug
+
+platform-billing:
+  # Otomatik kart cekimi yok -- fatura e-posta/SMS bildirimlerinde gosterilen
+  # sabit odeme talimati. Gercek/coklu banka hesabi yonetimi kapsam disi.
+  payment-instructions: >
+    Odemenizi IBAN TR00 0000 0000 0000 0000 0000 00 (Vetly Yazilim A.S.) hesabina
+    yapip aciklama kismina klinik adinizi yazmaniz yeterlidir.
