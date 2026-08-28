@@ -34,8 +34,9 @@ export function PlatformBillingPage() {
     <div>
       <div className={styles.title}>Faturalama</div>
       <p className={billingStyles.note}>
-        Gerçek bir ödeme tahsilat entegrasyonu henüz yok — bu sayfa kiracıların mevcut faturalama durumlarının
-        salt-okunur bir özetidir.
+        Gerçek bir ödeme sağlayıcı entegrasyonu (otomatik kart çekimi) henüz yok — faturalar otomatik kesiliyor,
+        ödemeler kiracı tarafından yapılıp platform admin tarafından elle kaydediliyor. Aşağıdaki özet gerçek
+        fatura/ödeme kayıtlarına dayanıyor.
       </p>
 
       {error && <div className={styles.errorBanner}>{error}</div>}
