@@ -15,14 +15,16 @@ Gerçek bir ödeme sağlayıcı hesabı (iyzico/PayTR/Stripe vb.) henüz yok ve 
 **Bu turda yapılacak:**
 - Yeni `PlatformInvoice` / `PlatformPayment` veri modeli
 - Günlük çalışan bir scheduler: (a) süresi gelen abonelikler için otomatik fatura üretimi, (b) son ödeme tarihi geçmiş faturaları `OVERDUE` işaretleyip kiracının `billingStatus`'ünü `PAST_DUE`'ya çekme
+- **Fatura üretildiğinde ve gecikince kiracıya e-posta bildirimi** (bkz. §4.1) — gerçek sağlayıcı olmadığı için ödeme **otomatik kart çekimi ile değil**, kiracının (banka havalesi vb.) ödemesi ve platform admin'in elle kaydetmesiyle tamamlanır; bildirim bu manuel akışın kiracı tarafını tetikler
 - Platform admin'in bir faturayı elle "ödendi" işaretlemesi (yöntem/tutar/tarih/not) — bu işlem faturayı `PAID` yapar ve kiracının `billingStatus`'ünü `ACTIVE`'e döndürür
 - Tenant detay sayfasına yeni bir "Faturalar" kartı: geçmiş faturalar + ödeme kaydetme
 - `PlatformBillingPage`'in bu gerçek veriyi yansıtacak şekilde güncellenmesi
 
 **Kapsam dışı (bilinçli olarak):**
-- Gerçek ödeme sağlayıcı entegrasyonu (API çağrısı, webhook, kart saklama)
+- Gerçek ödeme sağlayıcı entegrasyonu (API çağrısı, webhook, kart saklama, **otomatik kart çekimi**) — bu olmadan otomatik tahsilat teknik olarak mümkün değil
 - Kısmi ödeme desteği — bir fatura ya tam ödenir ya ödenmez (klinik seviyesi `Invoice`'daki `PARTIALLY_PAID` deseni burada yok)
-- PDF fatura çıktısı / e-posta bildirimi
+- PDF fatura çıktısı
+- Dinamik/çoklu banka hesabı yönetimi — ödeme talimatı (banka bilgisi) e-postada sabit bir metin/config değeri olarak yer alır
 - Mevcut "Plan / Durum Değiştir" elle-düzenleme modalı — **kaldırılmıyor**, istisnai durumlar (kompliman hesap, manuel düzeltme) için kaçış kapısı olarak kalıyor
 
 ## 3. Veri Modeli
@@ -73,10 +75,20 @@ Yeni `PlatformBillingScheduler` (`modules/platformadmin/infrastructure/schedulin
 
 Trial abonelikler (`planCode == 'TRIAL'`) hiç faturalanmaz — sadece gerçek bir plana geçildiğinde devreye girer.
 
+### 4.1 Kiracı Bildirimi (e-posta)
+
+Otomatik kart çekimi olmadığı için kiracının fatura kesildiğini/geciktiğini bilmesi gerekiyor. Yeni bir port, TARBİL/davet e-postası ile birebir aynı desen:
+
+- `PlatformBillingEmailPort` (`modules/platformadmin/domain`): `sendInvoiceIssued(invoice, tenantName, recipientEmail)` ve `sendInvoiceOverdue(invoice, tenantName, recipientEmail)`.
+- `MockPlatformBillingEmailAdapter`: gerçek bir e-posta sağlayıcısı (SendGrid/SMTP) hesabı yok — `MockInviteEmailAdapter` ile aynı şekilde, gönderim sunucu loglarına yazılır.
+- **Alıcı e-postası:** `Tenant`'ta e-posta alanı yok — kiracının `ADMIN` rolündeki (kayıt sırasında oluşturulan) `StaffUser`'ının e-postası kullanılır. `TenantAdminPort`'a yeni bir salt-okuma metodu eklenir: `findBillingContactEmail(tenantId): Optional<String>`.
+- **Tetikleyiciler:** `generateDueInvoices()` her yeni fatura için `sendInvoiceIssued` çağırır (tutar, dönem, son ödeme tarihi, sabit banka/ödeme talimatı metni içerir); `flagOverdueInvoices()` her `OVERDUE` işaretlenen fatura için `sendInvoiceOverdue` çağırır. Alıcı e-postası bulunamazsa (örn. silinmiş kullanıcı) gönderim atlanır, işlem durmaz — sadece loglanır.
+- Ödeme talimatı metni (banka hesap bilgisi vb.) `application.yml`'de sabit bir config değeri (`platform-billing.payment-instructions`) olarak tutulur — dinamik/çoklu hesap yönetimi kapsam dışı.
+
 ## 5. Application Katmanı (Use Case'ler)
 
-- `GenerateDueInvoicesUseCase` — scheduler adım 1
-- `FlagOverdueInvoicesUseCase` — scheduler adım 2
+- `GenerateDueInvoicesUseCase` — scheduler adım 1, `PlatformBillingEmailPort.sendInvoiceIssued` çağrısını da içerir
+- `FlagOverdueInvoicesUseCase` — scheduler adım 2, `PlatformBillingEmailPort.sendInvoiceOverdue` çağrısını da içerir
 - `RecordPlatformPaymentUseCase(invoiceId, amount, method, paidAt, notes, recordedByAdminId)` — fatura zaten `PAID`/`VOID` ise hata, değilse `PlatformPayment` oluşturur + `PlatformInvoice.markPaid()` + `TenantAdminPort` üzerinden `billingStatus = ACTIVE`
 - `VoidPlatformInvoiceUseCase(invoiceId)` — admin'in yanlış üretilmiş bir faturayı iptal etmesi. Sadece `ISSUED`/`OVERDUE` durumundaki faturalar iptal edilebilir; `PAID` bir fatura void edilemez (önce ödeme kaydının geri alınması ayrı ve kapsam dışı bir konu)
 - `ListPlatformInvoicesForTenantUseCase(tenantId)` — tenant detay sayfası için
@@ -99,7 +111,7 @@ Yeni `PlatformInvoicesController` (`/api/v1/platform-admin/tenants/{tenantId}/in
 
 ## 8. Test Stratejisi
 
-TDD ile: `PlatformInvoice`/`PlatformPayment` domain metodları için birim testleri (durum geçişi kuralları — örn. `PAID` bir faturaya tekrar ödeme kaydedilemez), `RecordPlatformPaymentUseCase`/`GenerateDueInvoicesUseCase`/`FlagOverdueInvoicesUseCase` için Mockito ile port mock'lanan use-case testleri. Ardından gerçek Postgres'e karşı curl ile uçtan uca doğrulama (fatura üretimi → ödeme kaydı → `billingStatus` geçişi).
+TDD ile: `PlatformInvoice`/`PlatformPayment` domain metodları için birim testleri (durum geçişi kuralları — örn. `PAID` bir faturaya tekrar ödeme kaydedilemez), `RecordPlatformPaymentUseCase`/`GenerateDueInvoicesUseCase`/`FlagOverdueInvoicesUseCase` için Mockito ile port mock'lanan use-case testleri (`PlatformBillingEmailPort`'un doğru parametrelerle çağrıldığının doğrulanması dahil, alıcı e-postası bulunamama senaryosu — gönderim atlanır, akış durmaz — ayrıca test edilir). Ardından gerçek Postgres'e karşı curl ile uçtan uca doğrulama (fatura üretimi → ödeme kaydı → `billingStatus` geçişi).
 
 ## 9. Açık Sorular
 
