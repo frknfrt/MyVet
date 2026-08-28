@@ -1,5 +1,5 @@
 import { BadgeTone } from '../../components/ui/Badge';
-import { BillingStatus, TenantStatus } from '../../api/platformAdminApi';
+import { BillingStatus, PlatformInvoiceStatus, TenantStatus } from '../../api/platformAdminApi';
 
 export const TENANT_STATUS_LABELS: Record<TenantStatus, string> = {
   ACTIVE: 'Aktif',
@@ -25,6 +25,20 @@ export const BILLING_STATUS_TONES: Record<BillingStatus, BadgeTone> = {
   ACTIVE: 'success',
   PAST_DUE: 'warning',
   CANCELED: 'danger',
+};
+
+export const PLATFORM_INVOICE_STATUS_LABELS: Record<PlatformInvoiceStatus, string> = {
+  ISSUED: 'Kesildi',
+  PAID: 'Ödendi',
+  OVERDUE: 'Gecikti',
+  VOID: 'İptal',
+};
+
+export const PLATFORM_INVOICE_STATUS_TONES: Record<PlatformInvoiceStatus, BadgeTone> = {
+  ISSUED: 'neutral',
+  PAID: 'success',
+  OVERDUE: 'danger',
+  VOID: 'neutral',
 };
 
 export function formatDate(value: string | null): string {

@@ -44,6 +44,28 @@ export interface PlanPayload {
   active?: boolean;
 }
 
+export type PlatformInvoiceStatus = 'ISSUED' | 'PAID' | 'OVERDUE' | 'VOID';
+export type PlatformPaymentMethod = 'BANK_TRANSFER' | 'CARD' | 'OTHER';
+
+export interface PlatformInvoice {
+  id: string;
+  planCode: string;
+  amount: number;
+  periodStart: string;
+  periodEnd: string;
+  dueDate: string;
+  status: PlatformInvoiceStatus;
+  issuedAt: string;
+  paidAt: string | null;
+}
+
+export interface RecordPlatformPaymentPayload {
+  amount: number;
+  method: PlatformPaymentMethod;
+  paidAt: string;
+  notes?: string;
+}
+
 export const platformAdminApi = {
   login: (payload: PlatformAdminLoginPayload) =>
     platformAdminClient.post<PlatformAdminSession>('/api/v1/platform-admin/auth/login', payload),
@@ -59,4 +81,10 @@ export const platformAdminApi = {
   updatePlan: (id: string, payload: { name: string; monthlyPrice: number; active: boolean }) =>
     platformAdminClient.put<void>(`/api/v1/platform-admin/plans/${id}`, payload),
   deletePlan: (id: string) => platformAdminClient.delete<void>(`/api/v1/platform-admin/plans/${id}`),
+  listInvoices: (tenantId: string) =>
+    platformAdminClient.get<PlatformInvoice[]>(`/api/v1/platform-admin/tenants/${tenantId}/invoices`),
+  recordInvoicePayment: (tenantId: string, invoiceId: string, payload: RecordPlatformPaymentPayload) =>
+    platformAdminClient.post<void>(`/api/v1/platform-admin/tenants/${tenantId}/invoices/${invoiceId}/payments`, payload),
+  voidInvoice: (tenantId: string, invoiceId: string) =>
+    platformAdminClient.post<void>(`/api/v1/platform-admin/tenants/${tenantId}/invoices/${invoiceId}/void`),
 };
