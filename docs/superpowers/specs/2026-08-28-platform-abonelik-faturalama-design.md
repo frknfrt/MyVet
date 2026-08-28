@@ -17,6 +17,8 @@ Gerçek bir ödeme sağlayıcı hesabı (iyzico/PayTR/Stripe vb.) henüz yok ve 
 - Günlük çalışan bir scheduler: (a) süresi gelen abonelikler için otomatik fatura üretimi, (b) son ödeme tarihi geçmiş faturaları `OVERDUE` işaretleyip kiracının `billingStatus`'ünü `PAST_DUE`'ya çekme
 - **Fatura üretildiğinde ve gecikince kiracıya e-posta bildirimi** (bkz. §4.1) — gerçek sağlayıcı olmadığı için ödeme **otomatik kart çekimi ile değil**, kiracının (banka havalesi vb.) ödemesi ve platform admin'in elle kaydetmesiyle tamamlanır; bildirim bu manuel akışın kiracı tarafını tetikler
 - Platform admin'in bir faturayı elle "ödendi" işaretlemesi (yöntem/tutar/tarih/not) — bu işlem faturayı `PAID` yapar ve kiracının `billingStatus`'ünü `ACTIVE`'e döndürür
+- **Otomatik askıya alma** (§4.2): ödeme, gecikme bildiriminden sonra da belli bir süre (varsayılan 7 gün) yapılmazsa kiracı otomatik `SUSPENDED` olur; geç ödemede otomatik yeniden aktifleşir
+- **Login enforcement düzeltmesi:** `Tenant.status == SUSPENDED` artık girişi gerçekten engelliyor (şu an bu kontrol hiç yok — mevcut "Askıya Al" butonu bile kozmetik)
 - Tenant detay sayfasına yeni bir "Faturalar" kartı: geçmiş faturalar + ödeme kaydetme
 - `PlatformBillingPage`'in bu gerçek veriyi yansıtacak şekilde güncellenmesi
 
@@ -79,17 +81,26 @@ Trial abonelikler (`planCode == 'TRIAL'`) hiç faturalanmaz — sadece gerçek b
 
 Otomatik kart çekimi olmadığı için kiracının fatura kesildiğini/geciktiğini bilmesi gerekiyor. Yeni bir port, TARBİL/davet e-postası ile birebir aynı desen:
 
-- `PlatformBillingEmailPort` (`modules/platformadmin/domain`): `sendInvoiceIssued(invoice, tenantName, recipientEmail)` ve `sendInvoiceOverdue(invoice, tenantName, recipientEmail)`.
+- `PlatformBillingEmailPort` (`modules/platformadmin/domain`): `sendInvoiceIssued(invoice, tenantName, recipientEmail)`, `sendInvoiceOverdue(invoice, tenantName, recipientEmail)` ve `sendTenantSuspended(tenantName, recipientEmail)`.
 - `MockPlatformBillingEmailAdapter`: gerçek bir e-posta sağlayıcısı (SendGrid/SMTP) hesabı yok — `MockInviteEmailAdapter` ile aynı şekilde, gönderim sunucu loglarına yazılır.
 - **Alıcı e-postası:** `Tenant`'ta e-posta alanı yok — kiracının `ADMIN` rolündeki (kayıt sırasında oluşturulan) `StaffUser`'ının e-postası kullanılır. `TenantAdminPort`'a yeni bir salt-okuma metodu eklenir: `findBillingContactEmail(tenantId): Optional<String>`.
 - **Tetikleyiciler:** `generateDueInvoices()` her yeni fatura için `sendInvoiceIssued` çağırır (tutar, dönem, son ödeme tarihi, sabit banka/ödeme talimatı metni içerir); `flagOverdueInvoices()` her `OVERDUE` işaretlenen fatura için `sendInvoiceOverdue` çağırır. Alıcı e-postası bulunamazsa (örn. silinmiş kullanıcı) gönderim atlanır, işlem durmaz — sadece loglanır.
 - Ödeme talimatı metni (banka hesap bilgisi vb.) `application.yml`'de sabit bir config değeri (`platform-billing.payment-instructions`) olarak tutulur — dinamik/çoklu hesap yönetimi kapsam dışı.
 
+### 4.2 Otomatik Askıya Alma (yeni)
+
+`OVERDUE` işaretlenip ödenmeden `platform-billing.suspend-grace-days` (config, varsayılan **7 gün**) daha geçen faturalar için: `TenantAdminPort.suspend(tenantId)` çağrılır (bu metod zaten var — elle "Askıya Al" ile aynı yol) ve kiracıya `sendTenantSuspended` e-postası gider. Yani fatura kesiminden askıya almaya toplam süre ≈ 14 gün (7 gün ödeme + 7 gün ek gecikme). Bu, üçüncü bir scheduler adımı: `autoSuspendOverdueTenants()`.
+
+**Geri açılma:** `RecordPlatformPaymentUseCase`, faturayı `PAID` yapıp `billingStatus = ACTIVE` çekmenin yanı sıra, kiracı `SUSPENDED` durumdaysa `TenantAdminPort.activate()` da çağırır — geç ödeyen bir klinik, admin'in ayrıca "Aktif Et"e basmasını beklemeden anında erişimine kavuşur.
+
+**Önemli düzeltme (bu işin bir parçası):** Şu an `LoginUseCase`, `Tenant.status`'e hiç bakmıyor — yani mevcut elle "Askıya Al" butonu bile fonksiyonel olarak hiçbir şeyi engellemiyor (kozmetik). Bu turda düzeltiliyor: `LoginUseCase`, kimlik bilgileri doğrulandıktan sonra `Tenant.status == SUSPENDED` ise ayrı ve açık bir hata (`TenantSuspendedException` — "Kliniğinizin aboneliği askıya alınmış, ödeme sonrası otomatik olarak yeniden aktifleşir" gibi anlaşılır bir mesajla, genel "geçersiz kimlik bilgisi" hatasından ayrı) fırlatır.
+
 ## 5. Application Katmanı (Use Case'ler)
 
 - `GenerateDueInvoicesUseCase` — scheduler adım 1, `PlatformBillingEmailPort.sendInvoiceIssued` çağrısını da içerir
 - `FlagOverdueInvoicesUseCase` — scheduler adım 2, `PlatformBillingEmailPort.sendInvoiceOverdue` çağrısını da içerir
-- `RecordPlatformPaymentUseCase(invoiceId, amount, method, paidAt, notes, recordedByAdminId)` — fatura zaten `PAID`/`VOID` ise hata, değilse `PlatformPayment` oluşturur + `PlatformInvoice.markPaid()` + `TenantAdminPort` üzerinden `billingStatus = ACTIVE`
+- `AutoSuspendOverdueTenantsUseCase` — scheduler adım 3 (§4.2): grace süresi geçmiş ödenmemiş faturalar için `TenantAdminPort.suspend()` + `sendTenantSuspended`
+- `RecordPlatformPaymentUseCase(invoiceId, amount, method, paidAt, notes, recordedByAdminId)` — fatura zaten `PAID`/`VOID` ise hata, değilse `PlatformPayment` oluşturur + `PlatformInvoice.markPaid()` + `TenantAdminPort` üzerinden `billingStatus = ACTIVE` + (kiracı `SUSPENDED` ise) `TenantAdminPort.activate()`
 - `VoidPlatformInvoiceUseCase(invoiceId)` — admin'in yanlış üretilmiş bir faturayı iptal etmesi. Sadece `ISSUED`/`OVERDUE` durumundaki faturalar iptal edilebilir; `PAID` bir fatura void edilemez (önce ödeme kaydının geri alınması ayrı ve kapsam dışı bir konu)
 - `ListPlatformInvoicesForTenantUseCase(tenantId)` — tenant detay sayfası için
 
@@ -111,7 +122,7 @@ Yeni `PlatformInvoicesController` (`/api/v1/platform-admin/tenants/{tenantId}/in
 
 ## 8. Test Stratejisi
 
-TDD ile: `PlatformInvoice`/`PlatformPayment` domain metodları için birim testleri (durum geçişi kuralları — örn. `PAID` bir faturaya tekrar ödeme kaydedilemez), `RecordPlatformPaymentUseCase`/`GenerateDueInvoicesUseCase`/`FlagOverdueInvoicesUseCase` için Mockito ile port mock'lanan use-case testleri (`PlatformBillingEmailPort`'un doğru parametrelerle çağrıldığının doğrulanması dahil, alıcı e-postası bulunamama senaryosu — gönderim atlanır, akış durmaz — ayrıca test edilir). Ardından gerçek Postgres'e karşı curl ile uçtan uca doğrulama (fatura üretimi → ödeme kaydı → `billingStatus` geçişi).
+TDD ile: `PlatformInvoice`/`PlatformPayment` domain metodları için birim testleri (durum geçişi kuralları — örn. `PAID` bir faturaya tekrar ödeme kaydedilemez), `RecordPlatformPaymentUseCase`/`GenerateDueInvoicesUseCase`/`FlagOverdueInvoicesUseCase` için Mockito ile port mock'lanan use-case testleri (`PlatformBillingEmailPort`'un doğru parametrelerle çağrıldığının doğrulanması dahil, alıcı e-postası bulunamama senaryosu — gönderim atlanır, akış durmaz — ayrıca test edilir). `LoginUseCase` için yeni bir test: `SUSPENDED` tenant'ın personeli `TenantSuspendedException` alır, `ACTIVE`/`TRIAL` tenant'lar etkilenmez. Ardından gerçek Postgres'e karşı curl ile uçtan uca doğrulama (fatura üretimi → ödeme yapılmadan grace süresi geçmesi simülasyonu → otomatik askıya alma → login reddi → ödeme kaydı → otomatik yeniden aktifleşme → login başarılı).
 
 ## 9. Açık Sorular
 
