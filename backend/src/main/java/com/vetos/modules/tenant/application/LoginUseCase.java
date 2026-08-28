@@ -6,7 +6,11 @@ import com.vetos.modules.tenant.domain.Branch;
 import com.vetos.modules.tenant.domain.BranchRepository;
 import com.vetos.modules.tenant.domain.StaffUser;
 import com.vetos.modules.tenant.domain.StaffUserRepository;
+import com.vetos.modules.tenant.domain.Tenant;
+import com.vetos.modules.tenant.domain.TenantRepository;
+import com.vetos.modules.tenant.domain.TenantStatus;
 import com.vetos.modules.tenant.domain.exception.InvalidCredentialsException;
+import com.vetos.modules.tenant.domain.exception.TenantSuspendedForbiddenException;
 import com.vetos.platform.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,6 +25,7 @@ public class LoginUseCase {
 
     private final StaffUserRepository staffUserRepository;
     private final BranchRepository branchRepository;
+    private final TenantRepository tenantRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
 
@@ -39,6 +44,13 @@ public class LoginUseCase {
 
         Branch branch = branchRepository.findById(staffUser.getBranchId())
             .orElseThrow(InvalidCredentialsException::new);
+
+        Tenant tenant = tenantRepository.findById(branch.getTenantId())
+            .orElseThrow(InvalidCredentialsException::new);
+
+        if (tenant.getStatus() == TenantStatus.SUSPENDED) {
+            throw new TenantSuspendedForbiddenException();
+        }
 
         String token = jwtTokenProvider.generateToken(
             staffUser.getId(), branch.getTenantId(), List.of(branch.getId()), staffUser.getRole().name()
