@@ -76,14 +76,82 @@
 
 .sidebarFootWrap {
   margin-top: auto;
+  position: relative;
 }
 
 .sidebarFoot {
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 14px 4px 10px;
+  padding: 14px 4px 0;
   display: flex;
   align-items: center;
   gap: 10px;
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+.sidebarFoot:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.footMenu {
+  position: absolute;
+  z-index: 20;
+  bottom: calc(100% + 6px);
+  left: 4px;
+  right: 4px;
+  background: #241a33;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  box-shadow: 0 12px 28px -10px rgba(0, 0, 0, 0.5);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  animation: footMenuIn 0.15s ease both;
+}
+@keyframes footMenuIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.footMenuItem {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  text-decoration: none;
+  padding: 9px 10px;
+  border-radius: 7px;
+  color: #d9d0e6;
+  font-size: 12.5px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.footMenuItem:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+.footMenuItemDanger {
+  color: #f3a7a7;
+}
+.footMenuItemDanger:hover {
+  background: rgba(220, 80, 80, 0.15);
+  color: #ffb3b3;
 }
 
 .avatar {
@@ -107,23 +175,4 @@
 .role {
   font-size: 11px;
   color: #8a7fa3;
-}
-
-.logoutBtn {
-  width: 100%;
-  background: none;
-  border: none;
-  text-align: left;
-  padding: 9px 4px;
-  border-radius: 7px;
-  color: #f3a7a7;
-  font-size: 12.5px;
-  font-weight: 500;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background 0.12s, color 0.12s;
-}
-.logoutBtn:hover {
-  background: rgba(220, 80, 80, 0.15);
-  color: #ffb3b3;
 }

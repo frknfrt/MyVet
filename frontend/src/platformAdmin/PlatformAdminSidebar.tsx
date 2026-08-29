@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import vetlyIcon from '../assets/vetly-icon.png';
 import styles from './PlatformAdminSidebar.module.css';
@@ -51,12 +51,28 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 /**
- * AppShell/Sidebar (klinik paneli) ile AYNI görsel dil -- platform admin
- * kendi izole auth/UI yığınına sahip olduğu için (bkz. architecture.md
- * SS6.1) bileşen BİREBİR paylaşılmıyor, ama tasarım kasıtlı olarak birebir
- * eşleniyor: aynı sidebar iskeleti, aynı ikon/aktif durum stili.
+ * AppShell/Sidebar (klinik paneli) ile AYNI görsel dil VE etkileşim --
+ * platform admin kendi izole auth/UI yığınına sahip olduğu için (bkz.
+ * architecture.md SS6.1) bileşen BİREBİR paylaşılmıyor, ama alt kısımdaki
+ * "tıkla-aç" profil menüsü davranışı Sidebar.tsx ile birebir eşleniyor --
+ * sadece "Hesap Ayarları"/"Şifre Değiştir" yok (platform admin'de karşılığı
+ * yok), menüde tek öğe olarak "Çıkış Yap" kalıyor.
  */
 export function PlatformAdminSidebar({ userName, userInitials, onLogout }: PlatformAdminSidebarProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const footRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (footRef.current && !footRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [menuOpen]);
+
   return (
     <aside className={styles.sidebar}>
       <div className={styles.brandMark}>
@@ -78,16 +94,24 @@ export function PlatformAdminSidebar({ userName, userInitials, onLogout }: Platf
         ))}
       </nav>
 
-      <div className={styles.sidebarFootWrap}>
-        <div className={styles.sidebarFoot}>
+      <div className={styles.sidebarFootWrap} ref={footRef}>
+        {menuOpen && (
+          <div className={styles.footMenu}>
+            <button
+              type="button"
+              className={`${styles.footMenuItem} ${styles.footMenuItemDanger}`}
+              onClick={onLogout}
+            >
+              Çıkış Yap
+            </button>
+          </div>
+        )}
+        <button type="button" className={styles.sidebarFoot} onClick={() => setMenuOpen((v) => !v)}>
           <div className={styles.avatar}>{userInitials}</div>
           <div>
             <div className={styles.who}>{userName}</div>
             <div className={styles.role}>Platform Yöneticisi</div>
           </div>
-        </div>
-        <button type="button" className={styles.logoutBtn} onClick={onLogout}>
-          Çıkış Yap
         </button>
       </div>
     </aside>
