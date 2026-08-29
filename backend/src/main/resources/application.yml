@@ -72,3 +72,19 @@ platform-billing:
   payment-instructions: >
     Odemenizi IBAN TR00 0000 0000 0000 0000 0000 00 (Vetly Yazilim A.S.) hesabina
     yapip aciklama kismina klinik adinizi yazmaniz yeterlidir.
+
+payment-gateway:
+  iyzico:
+    # UYARI: bos birakilirsa checkout tamamen simule edilir ve
+    # /api/v1/public/payments/iyzico/callback GET ile "?token=SIMULATED-<herhangi-bir-fatura-id>"
+    # cagrilarak HERHANGI BIR FATURA BEDAVA ODENMIS ISARETLENEBILIR (bkz.
+    # IyzicoPaymentGatewayAdapter.isConfigured()) -- gelistirme/CI icin
+    # bilincli bir tasarim, ama prod'da IYZICO_API_KEY/IYZICO_SECRET_KEY
+    # mutlaka set edilmeli (JWT_SECRET/PLATFORM_ADMIN_PASSWORD ile ayni
+    # operasyonel gereklilik).
+    api-key: ${IYZICO_API_KEY:}
+    secret-key: ${IYZICO_SECRET_KEY:}
+    base-url: ${IYZICO_BASE_URL:https://sandbox-api.iyzipay.com}
+    # iyzico'nun callback POST'u bu adrese gelir -- prod'da backend'in
+    # disaridan erisilebilir gercek adresiyle override edilmeli.
+    callback-base-url: ${IYZICO_CALLBACK_BASE_URL:http://localhost:8080}
