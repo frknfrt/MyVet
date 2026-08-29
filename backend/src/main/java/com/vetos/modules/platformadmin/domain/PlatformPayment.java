@@ -32,7 +32,7 @@ public class PlatformPayment {
     @Column(name = "paid_at", nullable = false)
     private LocalDate paidAt;
 
-    @Column(name = "recorded_by_admin_id", nullable = false)
+    @Column(name = "recorded_by_admin_id")
     private UUID recordedByAdminId;
 
     @Column(columnDefinition = "text")

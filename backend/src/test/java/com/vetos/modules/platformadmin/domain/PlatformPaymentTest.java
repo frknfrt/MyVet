@@ -27,4 +27,17 @@ class PlatformPaymentTest {
         assertThat(payment.getRecordedByAdminId()).isEqualTo(adminId);
         assertThat(payment.getNotes()).isEqualTo("Havale ref: 12345");
     }
+
+    @Test
+    void should_allowNullRecordedByAdminId_when_gatewayInitiatedPayment() {
+        UUID invoiceId = UUID.randomUUID();
+        LocalDate paidAt = LocalDate.of(2026, 8, 30);
+
+        PlatformPayment payment = PlatformPayment.record(
+            invoiceId, new BigDecimal("500.00"), PlatformPaymentMethod.CARD_ONLINE, paidAt, null, "iyzico odeme referansi: pay_123"
+        );
+
+        assertThat(payment.getRecordedByAdminId()).isNull();
+        assertThat(payment.getMethod()).isEqualTo(PlatformPaymentMethod.CARD_ONLINE);
+    }
 }
