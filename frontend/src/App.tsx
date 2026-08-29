@@ -57,7 +57,7 @@ export function App() {
       <Route
         path="/hastalar/yeni"
         element={
-          <RequireAuth roles={['VET', 'RECEPTIONIST', 'ADMIN']}>
+          <RequireAuth>
             <NewPatientPage />
           </RequireAuth>
         }
@@ -81,7 +81,7 @@ export function App() {
       <Route
         path="/musteriler/yeni"
         element={
-          <RequireAuth roles={['VET', 'RECEPTIONIST', 'ADMIN']}>
+          <RequireAuth>
             <NewOwnerPage />
           </RequireAuth>
         }
@@ -105,7 +105,7 @@ export function App() {
       <Route
         path="/muayene/:encounterId"
         element={
-          <RequireAuth roles={['VET', 'TECHNICIAN', 'ADMIN']}>
+          <RequireAuth>
             <EncounterPage />
           </RequireAuth>
         }
@@ -121,7 +121,7 @@ export function App() {
       <Route
         path="/asi-takvimi/yeni"
         element={
-          <RequireAuth roles={['VET', 'TECHNICIAN', 'ADMIN']}>
+          <RequireAuth>
             <NewVaccinationPage />
           </RequireAuth>
         }
