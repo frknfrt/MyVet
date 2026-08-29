@@ -2,7 +2,6 @@ package com.vetos.modules.platformadmin.application;
 
 import com.vetos.modules.platformadmin.application.dto.RecordPlatformPaymentCommand;
 import com.vetos.modules.platformadmin.domain.*;
-import com.vetos.modules.platformadmin.domain.exception.PlatformInvoiceInvalidTransitionException;
 import com.vetos.modules.platformadmin.domain.exception.PlatformInvoiceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -75,15 +74,15 @@ class HandlePaymentCallbackUseCaseTest {
         LocalDate today = LocalDate.of(2026, 8, 30);
         PlatformInvoice invoice = PlatformInvoice.issue(tenantId, "PRO", new BigDecimal("500.00"), today, today.plusMonths(1), today);
         ReflectionTestUtils.setField(invoice, "id", UUID.randomUUID());
+        invoice.markPaid(); // Mark invoice as already paid (simulates duplicate callback scenario)
         when(paymentGatewayPort.retrieveCheckoutResult("tok-3"))
             .thenReturn(new CheckoutResult(true, invoice.getId().toString(), "pay_123"));
         when(platformInvoiceRepository.findById(invoice.getId())).thenReturn(Optional.of(invoice));
-        doThrow(new PlatformInvoiceInvalidTransitionException(PlatformInvoiceStatus.PAID, PlatformInvoiceStatus.PAID))
-            .when(recordPlatformPaymentUseCase).execute(any());
 
         boolean result = useCase.execute("tok-3", today);
 
         assertThat(result).isTrue();
+        verify(recordPlatformPaymentUseCase, never()).execute(any());
     }
 
     @Test
