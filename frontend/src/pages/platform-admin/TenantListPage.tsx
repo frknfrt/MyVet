@@ -31,6 +31,7 @@ export function TenantListPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<CreateTenantPayload>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   useEffect(() => {
     platformAdminApi
@@ -44,20 +45,20 @@ export function TenantListPage() {
 
   function openCreate() {
     setForm(EMPTY_FORM);
-    setError(null);
+    setCreateError(null);
     setModalOpen(true);
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
-    setError(null);
+    setCreateError(null);
     try {
       const created = await platformAdminApi.createTenant(form);
       setModalOpen(false);
       navigate(`/platform-admin/tenants/${created.tenantId}`);
     } catch (err) {
-      setError(errorMessageOf(err));
+      setCreateError(errorMessageOf(err));
     } finally {
       setSaving(false);
     }
@@ -115,6 +116,8 @@ export function TenantListPage() {
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} width={480}>
         <form onSubmit={handleSubmit}>
           <div className={styles.modalTitle}>Yeni Klinik Oluştur</div>
+
+          {createError && <div className={styles.errorBanner}>{createError}</div>}
 
           <FieldWrap label="Klinik adı">
             <Input
