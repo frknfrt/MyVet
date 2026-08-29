@@ -33,6 +33,8 @@ export interface CreateTenantPayload {
   tenantName: string;
   taxNumber: string;
   branchName: string;
+  address: string;
+  city: string;
   adminFullName: string;
   adminEmail: string;
   adminPassword: string;

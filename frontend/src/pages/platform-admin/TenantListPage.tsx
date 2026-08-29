@@ -17,6 +17,8 @@ const EMPTY_FORM: CreateTenantPayload = {
   tenantName: '',
   taxNumber: '',
   branchName: '',
+  address: '',
+  city: '',
   adminFullName: '',
   adminEmail: '',
   adminPassword: '',
@@ -134,6 +136,20 @@ export function TenantListPage() {
               placeholder="Merkez Şube"
               value={form.branchName}
               onChange={(e) => setForm((f) => ({ ...f, branchName: e.target.value }))}
+              required
+            />
+          </FieldWrap>
+          <FieldWrap label="Adres">
+            <Input
+              value={form.address}
+              onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+              required
+            />
+          </FieldWrap>
+          <FieldWrap label="Şehir">
+            <Input
+              value={form.city}
+              onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
               required
             />
           </FieldWrap>

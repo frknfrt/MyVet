@@ -108,7 +108,7 @@ class TenantAdminPortAdapter implements TenantAdminPort {
 
     @Override
     public UUID createTenant(
-        String tenantName, String taxNumber, String branchName,
+        String tenantName, String taxNumber, String branchName, String address, String city,
         String adminFullName, String adminEmail, String adminPassword
     ) {
         if (staffUserJpaRepository.existsByEmail(adminEmail)) {
@@ -116,7 +116,9 @@ class TenantAdminPortAdapter implements TenantAdminPort {
         }
 
         Tenant tenant = tenantJpaRepository.save(Tenant.register(tenantName, taxNumber));
-        Branch branch = branchJpaRepository.save(Branch.create(tenant.getId(), branchName));
+        Branch branch = Branch.create(tenant.getId(), branchName);
+        branch.updateDetails(address, city, branch.getTimezone(), null);
+        branch = branchJpaRepository.save(branch);
         subscriptionJpaRepository.save(Subscription.startTrial(tenant.getId()));
 
         String passwordHash = passwordEncoder.encode(adminPassword);

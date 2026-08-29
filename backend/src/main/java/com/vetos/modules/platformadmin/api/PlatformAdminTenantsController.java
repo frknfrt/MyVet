@@ -48,7 +48,7 @@ public class PlatformAdminTenantsController {
     @PostMapping
     public ResponseEntity<TenantAdminOverviewResponse> create(@RequestBody @Valid CreatePlatformTenantRequest request) {
         UUID tenantId = createPlatformTenantUseCase.execute(new CreatePlatformTenantCommand(
-            request.tenantName(), request.taxNumber(), request.branchName(),
+            request.tenantName(), request.taxNumber(), request.branchName(), request.address(), request.city(),
             request.adminFullName(), request.adminEmail(), request.adminPassword()
         ));
         var overview = getTenantAdminOverviewUseCase.execute(tenantId);

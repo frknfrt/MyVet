@@ -17,7 +17,7 @@ public class CreatePlatformTenantUseCase {
     @Transactional
     public UUID execute(CreatePlatformTenantCommand command) {
         return tenantAdminPort.createTenant(
-            command.tenantName(), command.taxNumber(), command.branchName(),
+            command.tenantName(), command.taxNumber(), command.branchName(), command.address(), command.city(),
             command.adminFullName(), command.adminEmail(), command.adminPassword()
         );
     }

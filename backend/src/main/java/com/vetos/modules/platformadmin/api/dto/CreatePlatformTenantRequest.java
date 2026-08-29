@@ -8,6 +8,8 @@ public record CreatePlatformTenantRequest(
     @NotBlank String tenantName,
     String taxNumber,
     @NotBlank String branchName,
+    @NotBlank String address,
+    @NotBlank String city,
     @NotBlank String adminFullName,
     @NotBlank @Email String adminEmail,
     @NotBlank @Size(min = 8) String adminPassword

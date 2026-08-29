@@ -29,13 +29,17 @@ public interface TenantAdminPort {
     Optional<String> findBillingContactPhone(UUID tenantId);
 
     /**
-     * Yeni bir kiraci + ilk sube + TRIAL abonelik + ADMIN rolunde ilk personeli
-     * tek islemde olusturur -- platform admin panelinden tetiklenir (self-servis
-     * kayit kaldirildi). AuthSession/JWT URETMEZ; platform admin baskasinin
-     * klinigini olusturuyor, kendi adina giris yapmiyor.
+     * Yeni bir kiraci + ilk sube (adres/sehir dahil, TAM doldurulmus) + TRIAL
+     * abonelik + ADMIN rolunde ilk personeli tek islemde olusturur -- platform
+     * admin panelinden tetiklenir (self-servis kayit kaldirildi). Adres/sehir
+     * bilgisinin olusturma aninda zorunlu olmasi, "/kurulum" sihirbazinin
+     * gereksiz hale gelmesini saglar (o sayfa bu yuzden kaldirildi) -- bir
+     * kiracinin subesi hicbir zaman eksik bilgiyle olusmaz. AuthSession/JWT
+     * URETMEZ; platform admin baskasinin klinigini olusturuyor, kendi adina
+     * giris yapmiyor.
      */
     UUID createTenant(
-        String tenantName, String taxNumber, String branchName,
+        String tenantName, String taxNumber, String branchName, String address, String city,
         String adminFullName, String adminEmail, String adminPassword
     );
 }
