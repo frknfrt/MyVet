@@ -1,7 +1,7 @@
 # Platform Admin Tenant Onboarding — Tasarım Dokümanı
 
 **Tarih:** 2026-08-29
-**Durum:** Onaylandı — implementasyon planı bekleniyor
+**Durum:** Implementasyon tamamlandı
 **İlgili modül:** `modules/tenant`, `modules/platformadmin`
 
 ## 1. Bağlam ve Amaç
