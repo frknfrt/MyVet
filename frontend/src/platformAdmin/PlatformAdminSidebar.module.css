@@ -1,0 +1,129 @@
+.sidebar {
+  background: var(--color-ink-900);
+  padding: 1.4rem 1rem;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: var(--sidebar-width);
+}
+
+.brandMark {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 0.5rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.glyph {
+  height: 28px;
+  width: auto;
+  display: block;
+  flex-shrink: 0;
+}
+
+.word {
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  font-family: var(--font-heading);
+}
+
+.badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--color-gold-600);
+  color: #180f24;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  color: #c6bcd6;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  margin-bottom: 2px;
+  transition: background 0.15s, color 0.15s;
+}
+.navItem svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.navItem:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+.active {
+  background: linear-gradient(135deg, var(--color-brand-500), var(--color-brand-700));
+  color: #fff;
+  box-shadow: 0 4px 14px -4px rgba(124, 77, 188, 0.5);
+}
+.active:hover {
+  background: linear-gradient(135deg, var(--color-brand-500), var(--color-brand-700));
+}
+
+.sidebarFootWrap {
+  margin-top: auto;
+}
+
+.sidebarFoot {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 14px 4px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-brand-400), var(--color-brand-700));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.who {
+  font-size: 12.5px;
+  color: #fff;
+  font-weight: 600;
+}
+.role {
+  font-size: 11px;
+  color: #8a7fa3;
+}
+
+.logoutBtn {
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 9px 4px;
+  border-radius: 7px;
+  color: #f3a7a7;
+  font-size: 12.5px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.logoutBtn:hover {
+  background: rgba(220, 80, 80, 0.15);
+  color: #ffb3b3;
+}

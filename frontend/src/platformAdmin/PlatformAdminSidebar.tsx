@@ -1,0 +1,95 @@
+import { ReactNode } from 'react';
+import { NavLink } from 'react-router-dom';
+import vetlyIcon from '../assets/vetly-icon.png';
+import styles from './PlatformAdminSidebar.module.css';
+
+interface PlatformAdminSidebarProps {
+  userName: string;
+  userInitials: string;
+  onLogout: () => void;
+}
+
+interface NavItem {
+  path: string;
+  label: string;
+  icon: ReactNode;
+}
+
+const NAV_ITEMS: NavItem[] = [
+  {
+    path: 'tenants',
+    label: 'Kiracılar',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16" />
+        <path d="M14 10h5a1 1 0 0 1 1 1v10" />
+        <path d="M9 8h.01M9 12h.01M9 16h.01" />
+      </svg>
+    ),
+  },
+  {
+    path: 'plans',
+    label: 'Planlar',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 2h6l1 4H8l1-4z" />
+        <path d="M6 6h12l1 15a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1L6 6z" />
+        <path d="M9 12h6M9 16h6" />
+      </svg>
+    ),
+  },
+  {
+    path: 'billing',
+    label: 'Faturalama',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="6" width="20" height="12" rx="2" />
+        <circle cx="12" cy="12" r="2.5" />
+      </svg>
+    ),
+  },
+];
+
+/**
+ * AppShell/Sidebar (klinik paneli) ile AYNI görsel dil -- platform admin
+ * kendi izole auth/UI yığınına sahip olduğu için (bkz. architecture.md
+ * SS6.1) bileşen BİREBİR paylaşılmıyor, ama tasarım kasıtlı olarak birebir
+ * eşleniyor: aynı sidebar iskeleti, aynı ikon/aktif durum stili.
+ */
+export function PlatformAdminSidebar({ userName, userInitials, onLogout }: PlatformAdminSidebarProps) {
+  return (
+    <aside className={styles.sidebar}>
+      <div className={styles.brandMark}>
+        <img className={styles.glyph} src={vetlyIcon} alt="" />
+        <span className={styles.word}>Vetly</span>
+        <span className={styles.badge}>Platform Admin</span>
+      </div>
+
+      <nav>
+        {NAV_ITEMS.map((item) => (
+          <NavLink
+            key={item.path}
+            to={item.path}
+            className={({ isActive }) => [styles.navItem, isActive && styles.active].filter(Boolean).join(' ')}
+          >
+            {item.icon}
+            {item.label}
+          </NavLink>
+        ))}
+      </nav>
+
+      <div className={styles.sidebarFootWrap}>
+        <div className={styles.sidebarFoot}>
+          <div className={styles.avatar}>{userInitials}</div>
+          <div>
+            <div className={styles.who}>{userName}</div>
+            <div className={styles.role}>Platform Yöneticisi</div>
+          </div>
+        </div>
+        <button type="button" className={styles.logoutBtn} onClick={onLogout}>
+          Çıkış Yap
+        </button>
+      </div>
+    </aside>
+  );
+}

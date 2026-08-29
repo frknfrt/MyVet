@@ -1,13 +1,17 @@
 import { ReactNode } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { usePlatformAdminAuth } from './PlatformAdminAuthContext';
+import { PlatformAdminSidebar } from './PlatformAdminSidebar';
 import styles from './PlatformAdminShell.module.css';
 
-const NAV_ITEMS = [
-  { path: 'tenants', label: 'Kiracılar' },
-  { path: 'plans', label: 'Planlar' },
-  { path: 'billing', label: 'Faturalama' },
-];
+function initialsOf(fullName: string) {
+  return fullName
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('');
+}
 
 export function PlatformAdminShell({ children }: { children: ReactNode }) {
   const { session, logout } = usePlatformAdminAuth();
@@ -19,30 +23,13 @@ export function PlatformAdminShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className={styles.shell}>
-      <div className={styles.topbar}>
-        <div className={styles.brand}>
-          Vetly <span className={styles.badge}>Platform Admin</span>
-        </div>
-        <nav className={styles.nav}>
-          {NAV_ITEMS.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) => `${styles.navLink} ${isActive ? styles.navLinkActive : ''}`}
-            >
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-        <div className={styles.userArea}>
-          <span className={styles.userName}>{session?.fullName}</span>
-          <button type="button" className={styles.logoutBtn} onClick={handleLogout}>
-            Çıkış Yap
-          </button>
-        </div>
-      </div>
-      <div className={styles.content}>{children}</div>
+    <div className={styles.app}>
+      <PlatformAdminSidebar
+        userName={session?.fullName ?? ''}
+        userInitials={session ? initialsOf(session.fullName) : ''}
+        onLogout={handleLogout}
+      />
+      <main className={styles.main}>{children}</main>
     </div>
   );
 }
