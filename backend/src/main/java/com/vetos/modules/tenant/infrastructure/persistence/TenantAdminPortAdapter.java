@@ -9,9 +9,13 @@ import com.vetos.modules.tenant.domain.Subscription;
 import com.vetos.modules.tenant.domain.Tenant;
 import com.vetos.modules.tenant.domain.TenantAdminOverview;
 import com.vetos.modules.tenant.domain.TenantAdminPort;
+import com.vetos.modules.tenant.domain.event.ClinicRegisteredEvent;
+import com.vetos.modules.tenant.domain.exception.EmailAlreadyRegisteredConflictException;
 import com.vetos.modules.tenant.domain.exception.SubscriptionNotFoundException;
 import com.vetos.modules.tenant.domain.exception.TenantNotFoundException;
+import com.vetos.platform.event.DomainEventPublisher;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -27,6 +31,8 @@ class TenantAdminPortAdapter implements TenantAdminPort {
     private final SubscriptionJpaRepository subscriptionJpaRepository;
     private final BranchJpaRepository branchJpaRepository;
     private final StaffUserJpaRepository staffUserJpaRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final DomainEventPublisher eventPublisher;
 
     @Override
     public List<TenantAdminOverview> listAll() {
@@ -98,6 +104,29 @@ class TenantAdminPortAdapter implements TenantAdminPort {
     @Override
     public Optional<String> findBillingContactPhone(UUID tenantId) {
         return findBillingContact(tenantId).map(StaffUser::getPhone);
+    }
+
+    @Override
+    public UUID createTenant(
+        String tenantName, String taxNumber, String branchName,
+        String adminFullName, String adminEmail, String adminPassword
+    ) {
+        if (staffUserJpaRepository.existsByEmail(adminEmail)) {
+            throw new EmailAlreadyRegisteredConflictException(adminEmail);
+        }
+
+        Tenant tenant = tenantJpaRepository.save(Tenant.register(tenantName, taxNumber));
+        Branch branch = branchJpaRepository.save(Branch.create(tenant.getId(), branchName));
+        subscriptionJpaRepository.save(Subscription.startTrial(tenant.getId()));
+
+        String passwordHash = passwordEncoder.encode(adminPassword);
+        StaffUser admin = staffUserJpaRepository.save(
+            StaffUser.register(branch.getId(), adminFullName, adminEmail, passwordHash, StaffRole.ADMIN)
+        );
+
+        eventPublisher.publish(new ClinicRegisteredEvent(tenant.getId(), branch.getId(), admin.getId()));
+
+        return tenant.getId();
     }
 
     private Optional<StaffUser> findBillingContact(UUID tenantId) {

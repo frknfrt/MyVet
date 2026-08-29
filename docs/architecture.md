@@ -172,6 +172,8 @@ void onEncounterFinalized(EncounterFinalizedEvent event) {
 
 `LookupPort` deseni ("diğer modüller sadece okur") tek bir bilinçli istisnayla genişletildi: `modules/tenant/domain/TenantAdminPort.java`, `modules.platformadmin` modülünün herhangi bir kiracıyı görüntüleyip **değiştirebilmesi** için okuma yanında yazma metotları da içerir (abonelik/durum güncelleme). Bu, platform admin'in tanımı gereği (SaaS operatörü, tüm kiracıları yönetir) gerekli — normal bir iş modülü (örn. `billing`) için asla bu deseni kullanma, sadece `modules.platformadmin` bu tür bir port'a sahip olabilir. Yeni bir "admin tarafı" ihtiyaç doğarsa aynı isimlendirme deseni (`XxxAdminPort`) izlenir.
 
+**Kiracı yaratma (2026-08):** Self-servis klinik kaydı (`/kayit`) kaldırıldı — yeni klinikler artık SADECE platform admin panelinden, `TenantAdminPort.createTenant(...)` üzerinden oluşturulur. Bu, port'un "değiştirebilme" yetkisinin doğal bir uzantısı: platform admin zaten bir kiracıyı askıya alabiliyor/planını değiştirebiliyorsa, kiracıyı ilk baştan yaratabilmesi de aynı sorumluluk alanına girer.
+
 ## 7. Sonraki Adım Önerisi
 
 Bu mimari iskeletini artık somut koda dökebiliriz — örneğin `patient` ve `encounter` modüllerini örnek olarak tam paket yapısıyla (entity, port, use-case, adapter, controller) yazıp bir başlangıç şablonu (boilerplate) çıkarabiliriz, ya da önce Spring Modulith testiyle bu sınırları doğrulayan bir iskelet proje (skeleton repo yapısı) kurabiliriz.
