@@ -91,7 +91,7 @@
 }
 .invoiceRow {
   display: grid;
-  grid-template-columns: 1.6fr 1fr 1fr 0.8fr;
+  grid-template-columns: 1.4fr 0.9fr 0.9fr 0.8fr 1fr;
   align-items: center;
   gap: 10px;
   padding: 10px 0;
@@ -108,4 +108,14 @@
 }
 .muted {
   color: var(--color-text-muted);
+}
+
+.paymentSuccessBanner {
+  background: var(--color-success-100);
+  color: var(--color-success-700);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  font-weight: 600;
 }

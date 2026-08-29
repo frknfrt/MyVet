@@ -46,6 +46,10 @@ function formatDate(value: string | null): string {
   return new Date(value).toLocaleDateString('tr-TR');
 }
 
+function isPayable(status: PlatformInvoiceStatus): boolean {
+  return status === 'ISSUED' || status === 'OVERDUE';
+}
+
 export function SubscriptionPanel() {
   const [subscription, setSubscription] = useState<SubscriptionOverview | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,13 +62,12 @@ export function SubscriptionPanel() {
 
   const [plans, setPlans] = useState<CatalogPlan[]>([]);
 
-  useEffect(() => {
-    subscriptionApi
-      .getCurrent()
-      .then(setSubscription)
-      .catch((err) => setError(errorMessageOf(err)))
-      .finally(() => setLoading(false));
+  const [checkoutLoadingId, setCheckoutLoadingId] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [paymentResult, setPaymentResult] = useState<'basarili' | 'hata' | null>(null);
 
+  function loadInvoices() {
+    setInvoicesLoading(true);
     subscriptionApi
       .getInvoices()
       .then((overview) => {
@@ -73,9 +76,40 @@ export function SubscriptionPanel() {
       })
       .catch((err) => setInvoicesError(errorMessageOf(err)))
       .finally(() => setInvoicesLoading(false));
+  }
+
+  useEffect(() => {
+    subscriptionApi
+      .getCurrent()
+      .then(setSubscription)
+      .catch((err) => setError(errorMessageOf(err)))
+      .finally(() => setLoading(false));
+
+    loadInvoices();
 
     subscriptionApi.getPlans().then(setPlans).catch(() => setPlans([]));
+
+    const params = new URLSearchParams(window.location.search);
+    const odeme = params.get('odeme');
+    if (odeme === 'basarili' || odeme === 'hata') {
+      setPaymentResult(odeme);
+      params.delete('odeme');
+      const newSearch = params.toString();
+      window.history.replaceState({}, '', window.location.pathname + (newSearch ? `?${newSearch}` : ''));
+    }
   }, []);
+
+  async function handlePay(invoiceId: string) {
+    setCheckoutLoadingId(invoiceId);
+    setCheckoutError(null);
+    try {
+      const session = await subscriptionApi.initiateCheckout(invoiceId);
+      window.location.href = session.checkoutFormUrl;
+    } catch (err) {
+      setCheckoutError(errorMessageOf(err));
+      setCheckoutLoadingId(null);
+    }
+  }
 
   if (loading) {
     return <div className={settingsStyles.empty}>Yükleniyor...</div>;
@@ -85,11 +119,18 @@ export function SubscriptionPanel() {
     return <div className={settingsStyles.errorBanner}>{error ?? 'Abonelik bilgisi bulunamadı'}</div>;
   }
 
-  const hasUnpaidInvoice = invoices.some((inv) => inv.status === 'ISSUED' || inv.status === 'OVERDUE');
+  const hasUnpaidInvoice = invoices.some((inv) => isPayable(inv.status));
   const currentPlan = plans.find((p) => p.code === subscription.planCode) ?? null;
 
   return (
     <>
+      {paymentResult === 'basarili' && (
+        <div className={styles.paymentSuccessBanner}>Ödemeniz alındı, teşekkürler.</div>
+      )}
+      {paymentResult === 'hata' && (
+        <div className={settingsStyles.errorBanner}>Ödeme tamamlanamadı, lütfen tekrar deneyin.</div>
+      )}
+
       <Card className={styles.card}>
         {currentPlan?.imageUrl && (
           <img src={currentPlan.imageUrl} alt="" className={styles.planImage} />
@@ -139,6 +180,7 @@ export function SubscriptionPanel() {
             {hasUnpaidInvoice && paymentInstructions && (
               <div className={styles.paymentInstructions}>{paymentInstructions}</div>
             )}
+            {checkoutError && <div className={settingsStyles.errorBanner}>{checkoutError}</div>}
 
             {invoices.length === 0 ? (
               <div className={settingsStyles.empty}>Henüz fatura kesilmedi</div>
@@ -149,6 +191,7 @@ export function SubscriptionPanel() {
                   <div>Tutar</div>
                   <div>Son Ödeme</div>
                   <div>Durum</div>
+                  <div></div>
                 </div>
                 {invoices.map((inv) => (
                   <div key={inv.id} className={styles.invoiceRow}>
@@ -159,6 +202,17 @@ export function SubscriptionPanel() {
                     <div className={styles.muted}>{formatDate(inv.dueDate)}</div>
                     <div>
                       <Badge tone={INVOICE_STATUS_TONES[inv.status]}>{INVOICE_STATUS_LABELS[inv.status]}</Badge>
+                    </div>
+                    <div>
+                      {isPayable(inv.status) && (
+                        <Button
+                          variant="secondary"
+                          onClick={() => handlePay(inv.id)}
+                          disabled={checkoutLoadingId === inv.id}
+                        >
+                          {checkoutLoadingId === inv.id ? 'Yönlendiriliyor...' : 'Öde'}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
