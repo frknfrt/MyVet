@@ -42,7 +42,17 @@ public class PlanController {
 
     @PutMapping("/{id}")
     public void update(@PathVariable UUID id, @RequestBody @Valid UpdatePlanRequest request) {
-        updatePlanUseCase.execute(new UpdatePlanCommand(id, request.name(), request.monthlyPrice(), request.active()));
+        updatePlanUseCase.execute(new UpdatePlanCommand(
+            id,
+            request.name(),
+            request.monthlyPrice(),
+            request.annualPrice(),
+            request.description(),
+            request.badge(),
+            request.imageUrl(),
+            request.features() == null ? List.of() : request.features(),
+            request.active()
+        ));
     }
 
     @DeleteMapping("/{id}")

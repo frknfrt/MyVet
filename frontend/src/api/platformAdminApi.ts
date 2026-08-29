@@ -45,14 +45,23 @@ export interface Plan {
   code: string;
   name: string;
   monthlyPrice: number;
+  annualPrice: number | null;
+  description: string | null;
+  badge: string | null;
+  imageUrl: string | null;
+  features: string[];
   active: boolean;
 }
 
-export interface PlanPayload {
-  code?: string;
+export interface UpdatePlanPayload {
   name: string;
   monthlyPrice: number;
-  active?: boolean;
+  annualPrice: number | null;
+  description: string | null;
+  badge: string | null;
+  imageUrl: string | null;
+  features: string[];
+  active: boolean;
 }
 
 export type PlatformInvoiceStatus = 'ISSUED' | 'PAID' | 'OVERDUE' | 'VOID';
@@ -91,7 +100,7 @@ export const platformAdminApi = {
   listPlans: () => platformAdminClient.get<Plan[]>('/api/v1/platform-admin/plans'),
   createPlan: (payload: { code: string; name: string; monthlyPrice: number }) =>
     platformAdminClient.post<void>('/api/v1/platform-admin/plans', payload),
-  updatePlan: (id: string, payload: { name: string; monthlyPrice: number; active: boolean }) =>
+  updatePlan: (id: string, payload: UpdatePlanPayload) =>
     platformAdminClient.put<void>(`/api/v1/platform-admin/plans/${id}`, payload),
   deletePlan: (id: string) => platformAdminClient.delete<void>(`/api/v1/platform-admin/plans/${id}`),
   listInvoices: (tenantId: string) =>

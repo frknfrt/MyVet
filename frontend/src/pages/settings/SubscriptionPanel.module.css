@@ -2,11 +2,53 @@
   max-width: 480px;
   padding: 24px;
 }
+.planImage {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  margin-bottom: 10px;
+}
 .planCode {
   font-family: var(--font-heading);
   font-weight: 700;
   font-size: 20px;
   margin-bottom: 6px;
+}
+.planBadge {
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-gold-600);
+  background: var(--color-gold-100);
+  border-radius: 999px;
+  padding: 3px 10px;
+  margin-bottom: 10px;
+}
+.planDescription {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin: 10px 0;
+  line-height: 1.5;
+}
+.planFeatureList {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+.planFeatureList li {
+  padding-left: 18px;
+  position: relative;
+}
+.planFeatureList li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--color-brand-500);
+  font-weight: 700;
 }
 .row {
   display: flex;

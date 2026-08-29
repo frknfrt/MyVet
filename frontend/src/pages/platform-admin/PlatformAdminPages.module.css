@@ -129,5 +129,16 @@
 }
 
 .planRow {
-  grid-template-columns: 1fr 2fr 1fr 0.8fr 1.2fr;
+  grid-template-columns: 1fr 2fr 1fr 1fr 0.8fr 1.2fr;
+}
+
+.featureRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.featureRow > input {
+  flex: 1;
 }

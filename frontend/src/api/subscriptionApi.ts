@@ -28,7 +28,21 @@ export interface TenantBillingOverview {
   invoices: PlatformInvoice[];
 }
 
+export interface CatalogPlan {
+  id: string;
+  code: string;
+  name: string;
+  monthlyPrice: number;
+  annualPrice: number | null;
+  description: string | null;
+  badge: string | null;
+  imageUrl: string | null;
+  features: string[];
+  active: boolean;
+}
+
 export const subscriptionApi = {
   getCurrent: () => apiClient.get<SubscriptionOverview>('/api/v1/subscriptions/current'),
   getInvoices: () => apiClient.get<TenantBillingOverview>('/api/v1/subscriptions/invoices'),
+  getPlans: () => apiClient.get<CatalogPlan[]>('/api/v1/subscriptions/plans'),
 };

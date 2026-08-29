@@ -19,7 +19,15 @@ public class UpdatePlanUseCase {
         Plan plan = planRepository.findById(command.planId())
             .orElseThrow(() -> new PlanNotFoundException(command.planId()));
 
-        plan.updateDetails(command.name(), command.monthlyPrice());
+        plan.updateDetails(
+            command.name(),
+            command.monthlyPrice(),
+            command.annualPrice(),
+            command.description(),
+            command.badge(),
+            command.imageUrl(),
+            command.features()
+        );
         if (command.active()) {
             plan.activate();
         } else {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ApiError } from '../../api/client';
 import {
-  BillingStatus, PlatformInvoice, PlatformInvoiceStatus, SubscriptionOverview, subscriptionApi,
+  BillingStatus, CatalogPlan, PlatformInvoice, PlatformInvoiceStatus, SubscriptionOverview, subscriptionApi,
 } from '../../api/subscriptionApi';
 import { Badge, BadgeTone } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
@@ -56,6 +56,8 @@ export function SubscriptionPanel() {
   const [invoicesLoading, setInvoicesLoading] = useState(true);
   const [invoicesError, setInvoicesError] = useState<string | null>(null);
 
+  const [plans, setPlans] = useState<CatalogPlan[]>([]);
+
   useEffect(() => {
     subscriptionApi
       .getCurrent()
@@ -71,6 +73,8 @@ export function SubscriptionPanel() {
       })
       .catch((err) => setInvoicesError(errorMessageOf(err)))
       .finally(() => setInvoicesLoading(false));
+
+    subscriptionApi.getPlans().then(setPlans).catch(() => setPlans([]));
   }, []);
 
   if (loading) {
@@ -82,12 +86,27 @@ export function SubscriptionPanel() {
   }
 
   const hasUnpaidInvoice = invoices.some((inv) => inv.status === 'ISSUED' || inv.status === 'OVERDUE');
+  const currentPlan = plans.find((p) => p.code === subscription.planCode) ?? null;
 
   return (
     <>
       <Card className={styles.card}>
-        <div className={styles.planCode}>{subscription.planCode}</div>
+        {currentPlan?.imageUrl && (
+          <img src={currentPlan.imageUrl} alt="" className={styles.planImage} />
+        )}
+        <div className={styles.planCode}>{currentPlan?.name ?? subscription.planCode}</div>
+        {currentPlan?.badge && <span className={styles.planBadge}>{currentPlan.badge}</span>}
         <Badge tone={STATUS_TONES[subscription.billingStatus]}>{STATUS_LABELS[subscription.billingStatus]}</Badge>
+
+        {currentPlan?.description && <p className={styles.planDescription}>{currentPlan.description}</p>}
+
+        {currentPlan && currentPlan.features.length > 0 && (
+          <ul className={styles.planFeatureList}>
+            {currentPlan.features.map((feature) => (
+              <li key={feature}>{feature}</li>
+            ))}
+          </ul>
+        )}
 
         <div className={styles.row}>
           <span className={styles.rowLabel}>Başlangıç Tarihi</span>

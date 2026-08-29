@@ -3,7 +3,7 @@ import { ApiError } from '../../api/client';
 import { Plan, platformAdminApi } from '../../api/platformAdminApi';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
-import { FieldWrap, Input } from '../../components/ui/Field';
+import { FieldWrap, Input, Textarea } from '../../components/ui/Field';
 import { Modal } from '../../components/ui/Modal';
 import styles from './PlatformAdminPages.module.css';
 
@@ -15,10 +15,25 @@ interface PlanFormState {
   code: string;
   name: string;
   monthlyPrice: string;
+  annualPrice: string;
+  description: string;
+  badge: string;
+  imageUrl: string;
+  features: string[];
   active: boolean;
 }
 
-const EMPTY_FORM: PlanFormState = { code: '', name: '', monthlyPrice: '', active: true };
+const EMPTY_FORM: PlanFormState = {
+  code: '',
+  name: '',
+  monthlyPrice: '',
+  annualPrice: '',
+  description: '',
+  badge: '',
+  imageUrl: '',
+  features: [],
+  active: true,
+};
 
 export function PlanManagementPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -48,8 +63,30 @@ export function PlanManagementPage() {
 
   function openEdit(plan: Plan) {
     setEditingId(plan.id);
-    setForm({ code: plan.code, name: plan.name, monthlyPrice: String(plan.monthlyPrice), active: plan.active });
+    setForm({
+      code: plan.code,
+      name: plan.name,
+      monthlyPrice: String(plan.monthlyPrice),
+      annualPrice: plan.annualPrice === null ? '' : String(plan.annualPrice),
+      description: plan.description ?? '',
+      badge: plan.badge ?? '',
+      imageUrl: plan.imageUrl ?? '',
+      features: plan.features,
+      active: plan.active,
+    });
     setModalOpen(true);
+  }
+
+  function updateFeature(index: number, value: string) {
+    setForm((f) => ({ ...f, features: f.features.map((feat, i) => (i === index ? value : feat)) }));
+  }
+
+  function addFeature() {
+    setForm((f) => ({ ...f, features: [...f.features, ''] }));
+  }
+
+  function removeFeature(index: number) {
+    setForm((f) => ({ ...f, features: f.features.filter((_, i) => i !== index) }));
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -59,7 +96,16 @@ export function PlanManagementPage() {
     try {
       const monthlyPrice = Number(form.monthlyPrice);
       if (editingId) {
-        await platformAdminApi.updatePlan(editingId, { name: form.name, monthlyPrice, active: form.active });
+        await platformAdminApi.updatePlan(editingId, {
+          name: form.name,
+          monthlyPrice,
+          annualPrice: form.annualPrice === '' ? null : Number(form.annualPrice),
+          description: form.description === '' ? null : form.description,
+          badge: form.badge === '' ? null : form.badge,
+          imageUrl: form.imageUrl === '' ? null : form.imageUrl,
+          features: form.features.map((f) => f.trim()).filter((f) => f.length > 0),
+          active: form.active,
+        });
       } else {
         await platformAdminApi.createPlan({ code: form.code, name: form.name, monthlyPrice });
       }
@@ -99,6 +145,7 @@ export function PlanManagementPage() {
           <div>Kod</div>
           <div>Ad</div>
           <div>Aylık Fiyat</div>
+          <div>Etiket</div>
           <div>Durum</div>
           <div></div>
         </div>
@@ -112,6 +159,7 @@ export function PlanManagementPage() {
               <div>{plan.code}</div>
               <div>{plan.name}</div>
               <div className={styles.muted}>{plan.monthlyPrice.toFixed(2)} ₺</div>
+              <div className={styles.muted}>{plan.badge || '—'}</div>
               <div>
                 <Badge tone={plan.active ? 'success' : 'neutral'}>{plan.active ? 'Aktif' : 'Pasif'}</Badge>
               </div>
@@ -154,16 +202,54 @@ export function PlanManagementPage() {
             />
           </FieldWrap>
           {editingId && (
-            <FieldWrap label="Durum">
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-                <input
-                  type="checkbox"
-                  checked={form.active}
-                  onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))}
+            <>
+              <FieldWrap label="Yıllık Fiyat (₺)">
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={form.annualPrice}
+                  onChange={(e) => setForm((f) => ({ ...f, annualPrice: e.target.value }))}
+                  placeholder="Boş bırakılırsa yıllık seçenek gösterilmez"
                 />
-                Aktif
-              </label>
-            </FieldWrap>
+              </FieldWrap>
+              <FieldWrap label="Etiket (ör. En Popüler)">
+                <Input value={form.badge} onChange={(e) => setForm((f) => ({ ...f, badge: e.target.value }))} />
+              </FieldWrap>
+              <FieldWrap label="Görsel URL">
+                <Input value={form.imageUrl} onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))} />
+              </FieldWrap>
+              <FieldWrap label="Açıklama">
+                <Textarea
+                  value={form.description}
+                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                  rows={2}
+                />
+              </FieldWrap>
+              <FieldWrap label="Özellikler">
+                {form.features.map((feature, index) => (
+                  <div key={index} className={styles.featureRow}>
+                    <Input value={feature} onChange={(e) => updateFeature(index, e.target.value)} />
+                    <Button type="button" variant="tertiary" onClick={() => removeFeature(index)}>
+                      Kaldır
+                    </Button>
+                  </div>
+                ))}
+                <Button type="button" variant="secondary" onClick={addFeature}>
+                  + Özellik Ekle
+                </Button>
+              </FieldWrap>
+              <FieldWrap label="Durum">
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                  <input
+                    type="checkbox"
+                    checked={form.active}
+                    onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))}
+                  />
+                  Aktif
+                </label>
+              </FieldWrap>
+            </>
           )}
 
           <div className={styles.modalActions}>
