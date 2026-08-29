@@ -40,8 +40,14 @@ RUNID=$(date +%s)
 echo "===================================================="
 echo "1) KLINIK KAYDI + STAFF OLUSTURMA"
 echo "===================================================="
-REG=$(curl -s -X POST $BASE/api/v1/auth/register-clinic -H "Content-Type: application/json" \
-  -d '{"tenantName":"Smoke Test Klinik","taxNumber":"1112223334","branchName":"Merkez","adminFullName":"Admin Smoke","adminEmail":"smoke-admin-'"$RUNID"'@example.com","adminPassword":"password123"}')
+PA_LOGIN=$(curl -s -X POST $BASE/api/v1/platform-admin/auth/login -H "Content-Type: application/json" \
+  -d '{"email":"admin@myvet.local","password":"change-me-local-dev-only"}')
+PA_TOKEN=$(echo "$PA_LOGIN" | jf token)
+
+curl -s -o /dev/null -X POST $BASE/api/v1/platform-admin/tenants -H "Authorization: Bearer $PA_TOKEN" -H "Content-Type: application/json" \
+  -d '{"tenantName":"Smoke Test Klinik","taxNumber":"1112223334","branchName":"Merkez","adminFullName":"Admin Smoke","adminEmail":"smoke-admin-'"$RUNID"'@example.com","adminPassword":"password123"}'
+
+REG=$(curl -s -X POST $BASE/api/v1/auth/login -H "Content-Type: application/json" -d '{"email":"smoke-admin-'"$RUNID"'@example.com","password":"password123"}')
 ADMIN_TOKEN=$(echo "$REG" | jf token)
 TENANT_ID=$(echo "$REG" | jf tenantId)
 BRANCH_ID=$(echo "$REG" | jf branchId)
