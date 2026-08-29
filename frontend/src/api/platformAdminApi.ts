@@ -29,6 +29,15 @@ export interface UpdateTenantSubscriptionPayload {
   renewsAt?: string | null;
 }
 
+export interface CreateTenantPayload {
+  tenantName: string;
+  taxNumber: string;
+  branchName: string;
+  adminFullName: string;
+  adminEmail: string;
+  adminPassword: string;
+}
+
 export interface Plan {
   id: string;
   code: string;
@@ -71,6 +80,8 @@ export const platformAdminApi = {
     platformAdminClient.post<PlatformAdminSession>('/api/v1/platform-admin/auth/login', payload),
   listTenants: () => platformAdminClient.get<TenantAdminOverview[]>('/api/v1/platform-admin/tenants'),
   getTenant: (id: string) => platformAdminClient.get<TenantAdminOverview>(`/api/v1/platform-admin/tenants/${id}`),
+  createTenant: (payload: CreateTenantPayload) =>
+    platformAdminClient.post<TenantAdminOverview>('/api/v1/platform-admin/tenants', payload),
   updateSubscription: (id: string, payload: UpdateTenantSubscriptionPayload) =>
     platformAdminClient.put<void>(`/api/v1/platform-admin/tenants/${id}/subscription`, payload),
   suspendTenant: (id: string) => platformAdminClient.post<void>(`/api/v1/platform-admin/tenants/${id}/suspend`),
