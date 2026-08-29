@@ -28,3 +28,42 @@
   color: var(--color-text-muted);
   margin-bottom: 10px;
 }
+
+.invoicesCard {
+  margin-top: 16px;
+  padding: 24px;
+}
+.invoicesTitle {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+.paymentInstructions {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  background: var(--color-cream);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin: 10px 0 16px;
+}
+.invoiceRow {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr 0.8fr;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--color-border);
+  font-size: 13px;
+}
+.invoiceRowHead {
+  color: var(--color-text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-top: none;
+  padding-bottom: 6px;
+}
+.muted {
+  color: var(--color-text-muted);
+}
