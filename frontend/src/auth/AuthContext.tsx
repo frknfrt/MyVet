@@ -1,12 +1,11 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { setAuthToken, setUnauthorizedHandler } from '../api/client';
-import { authApi, LoginPayload, RegisterClinicPayload } from '../api/authApi';
+import { authApi, LoginPayload } from '../api/authApi';
 import { AuthSession, clearStoredSession, loadStoredSession, storeSession } from './session';
 
 interface AuthContextValue {
   session: AuthSession | null;
   login: (payload: LoginPayload) => Promise<AuthSession>;
-  registerClinic: (payload: RegisterClinicPayload) => Promise<AuthSession>;
   logout: () => void;
 }
 
@@ -36,14 +35,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return result;
   }
 
-  async function registerClinic(payload: RegisterClinicPayload) {
-    const result = await authApi.registerClinic(payload);
-    storeSession(result);
-    setAuthToken(result.token);
-    setSession(result);
-    return result;
-  }
-
   function logout() {
     clearStoredSession();
     setAuthToken(null);
@@ -51,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, login, registerClinic, logout }}>
+    <AuthContext.Provider value={{ session, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

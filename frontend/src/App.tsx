@@ -1,7 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { RequireAuth } from './auth/RequireAuth';
 import { LoginPage } from './pages/LoginPage';
-import { RegisterClinicPage } from './pages/auth/RegisterClinicPage';
 import { AcceptInvitePage } from './pages/auth/AcceptInvitePage';
 import { SetupWizardPage } from './pages/auth/SetupWizardPage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
@@ -30,7 +29,6 @@ export function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/kayit" element={<RegisterClinicPage />} />
       <Route path="/davet/:token" element={<AcceptInvitePage />} />
       <Route
         path="/kurulum"
@@ -59,7 +57,7 @@ export function App() {
       <Route
         path="/hastalar/yeni"
         element={
-          <RequireAuth>
+          <RequireAuth roles={['VET', 'RECEPTIONIST', 'ADMIN']}>
             <NewPatientPage />
           </RequireAuth>
         }
@@ -83,7 +81,7 @@ export function App() {
       <Route
         path="/musteriler/yeni"
         element={
-          <RequireAuth>
+          <RequireAuth roles={['VET', 'RECEPTIONIST', 'ADMIN']}>
             <NewOwnerPage />
           </RequireAuth>
         }
@@ -107,7 +105,7 @@ export function App() {
       <Route
         path="/muayene/:encounterId"
         element={
-          <RequireAuth>
+          <RequireAuth roles={['VET', 'TECHNICIAN', 'ADMIN']}>
             <EncounterPage />
           </RequireAuth>
         }
@@ -123,7 +121,7 @@ export function App() {
       <Route
         path="/asi-takvimi/yeni"
         element={
-          <RequireAuth>
+          <RequireAuth roles={['VET', 'TECHNICIAN', 'ADMIN']}>
             <NewVaccinationPage />
           </RequireAuth>
         }

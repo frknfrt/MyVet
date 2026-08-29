@@ -1,5 +1,5 @@
 import { FormEvent, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { AuthLayout } from '../components/layout/AuthLayout';
@@ -63,10 +63,6 @@ export function LoginPage() {
         <Button type="submit" variant="primary" className={styles.fullWidth} disabled={loading}>
           {loading ? 'Giriş yapılıyor...' : 'Giriş yap'}
         </Button>
-
-        <p className={styles.footNote}>
-          Kliniğiniz için ilk kez mi kayıt oluyorsunuz? <Link to="/kayit">Klinik kaydı oluştur</Link>
-        </p>
       </form>
     </AuthLayout>
   );
