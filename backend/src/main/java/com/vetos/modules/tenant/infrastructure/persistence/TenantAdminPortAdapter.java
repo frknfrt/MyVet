@@ -69,6 +69,7 @@ class TenantAdminPortAdapter implements TenantAdminPort {
         return subscriptionJpaRepository.findAll().stream()
             .filter(s -> !"TRIAL".equals(s.getPlanCode()))
             .filter(s -> s.getRenewsAt() != null && !s.getRenewsAt().isAfter(date))
+            .filter(s -> s.getBillingStatus() != BillingStatus.CANCELED)
             .map(s -> new BillableSubscription(s.getTenantId(), s.getPlanCode(), s.getRenewsAt()))
             .toList();
     }

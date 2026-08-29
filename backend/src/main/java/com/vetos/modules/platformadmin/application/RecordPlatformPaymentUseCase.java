@@ -6,10 +6,6 @@ import com.vetos.modules.platformadmin.domain.PlatformInvoiceRepository;
 import com.vetos.modules.platformadmin.domain.PlatformPayment;
 import com.vetos.modules.platformadmin.domain.PlatformPaymentRepository;
 import com.vetos.modules.platformadmin.domain.exception.PlatformInvoiceNotFoundException;
-import com.vetos.modules.tenant.domain.BillingStatus;
-import com.vetos.modules.tenant.domain.TenantAdminOverview;
-import com.vetos.modules.tenant.domain.TenantAdminPort;
-import com.vetos.modules.tenant.domain.TenantStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +16,7 @@ public class RecordPlatformPaymentUseCase {
 
     private final PlatformInvoiceRepository platformInvoiceRepository;
     private final PlatformPaymentRepository platformPaymentRepository;
-    private final TenantAdminPort tenantAdminPort;
+    private final TenantBillingReconciler tenantBillingReconciler;
 
     @Transactional
     public void execute(RecordPlatformPaymentCommand command) {
@@ -34,11 +30,6 @@ public class RecordPlatformPaymentUseCase {
             invoice.getId(), command.amount(), command.method(), command.paidAt(), command.recordedByAdminId(), command.notes()
         ));
 
-        tenantAdminPort.updateBillingStatus(invoice.getTenantId(), BillingStatus.ACTIVE);
-
-        TenantAdminOverview overview = tenantAdminPort.getOverview(invoice.getTenantId());
-        if (overview.status() == TenantStatus.SUSPENDED) {
-            tenantAdminPort.activate(invoice.getTenantId());
-        }
+        tenantBillingReconciler.reconcileAfterInvoiceResolved(invoice.getTenantId(), invoice.getId());
     }
 }
