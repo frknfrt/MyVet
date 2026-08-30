@@ -14,8 +14,6 @@ import com.vetos.modules.platformadmin.domain.exception.PlanNotFoundException;
 import com.vetos.modules.platformadmin.domain.exception.TenantSignupRequestNotFoundException;
 import com.vetos.modules.tenant.domain.InviteEmailPort;
 import com.vetos.modules.tenant.domain.StaffInvite;
-import com.vetos.modules.tenant.domain.StaffInviteRepository;
-import com.vetos.modules.tenant.domain.StaffRole;
 import com.vetos.modules.tenant.domain.TenantAdminPort;
 import com.vetos.modules.tenant.domain.TenantSignupResult;
 import lombok.RequiredArgsConstructor;
@@ -43,7 +41,6 @@ public class HandleSignupPaymentCallbackUseCase {
     private final TenantSignupRequestRepository tenantSignupRequestRepository;
     private final PlanRepository planRepository;
     private final TenantAdminPort tenantAdminPort;
-    private final StaffInviteRepository staffInviteRepository;
     private final InviteEmailPort inviteEmailPort;
     private final PlatformInvoiceRepository platformInvoiceRepository;
     private final RecordPlatformPaymentUseCase recordPlatformPaymentUseCase;
@@ -76,9 +73,9 @@ public class HandleSignupPaymentCallbackUseCase {
             request.getClinicName(), "-", request.getClinicName(), "-", "-", request.getPlanCode(), renewsAt
         );
 
-        StaffInvite invite = staffInviteRepository.save(StaffInvite.create(
-            tenant.tenantId(), tenant.branchId(), request.getAdminEmail(), request.getAdminFullName(), StaffRole.ADMIN, null
-        ));
+        StaffInvite invite = tenantAdminPort.createAdminInviteForPaidSignup(
+            tenant.tenantId(), tenant.branchId(), request.getAdminEmail(), request.getAdminFullName()
+        );
         String acceptUrl = frontendBaseUrl + "/davet/" + invite.getToken();
         inviteEmailPort.sendInvite(invite, request.getClinicName(), acceptUrl);
 

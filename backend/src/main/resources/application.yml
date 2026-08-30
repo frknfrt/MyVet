@@ -28,6 +28,9 @@ app:
   # Davet e-postasindaki kabul linki gibi frontend'e donen URL'ler icin.
   # Prod'da FRONTEND_BASE_URL env degiskeniyle mutlaka override edilmeli.
   frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:5173}
+  # vetly.com'dan gelen CORS istekleri icin (public signup akisi). Prod'da
+  # VETLY_SITE_ORIGIN env degiskeniyle mutlaka override edilmeli.
+  vetly-site-origin: ${VETLY_SITE_ORIGIN:http://localhost:5175}
 
 jwt:
   # Prod'da JWT_SECRET env degiskeniyle mutlaka override edilmeli.

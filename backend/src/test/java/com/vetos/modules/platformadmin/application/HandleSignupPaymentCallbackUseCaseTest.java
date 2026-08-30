@@ -5,7 +5,6 @@ import com.vetos.modules.platformadmin.domain.*;
 import com.vetos.modules.platformadmin.domain.exception.TenantSignupRequestNotFoundException;
 import com.vetos.modules.tenant.domain.InviteEmailPort;
 import com.vetos.modules.tenant.domain.StaffInvite;
-import com.vetos.modules.tenant.domain.StaffInviteRepository;
 import com.vetos.modules.tenant.domain.StaffRole;
 import com.vetos.modules.tenant.domain.TenantAdminPort;
 import com.vetos.modules.tenant.domain.TenantSignupResult;
@@ -35,7 +34,6 @@ class HandleSignupPaymentCallbackUseCaseTest {
     @Mock private TenantSignupRequestRepository tenantSignupRequestRepository;
     @Mock private PlanRepository planRepository;
     @Mock private TenantAdminPort tenantAdminPort;
-    @Mock private StaffInviteRepository staffInviteRepository;
     @Mock private InviteEmailPort inviteEmailPort;
     @Mock private PlatformInvoiceRepository platformInvoiceRepository;
     @Mock private RecordPlatformPaymentUseCase recordPlatformPaymentUseCase;
@@ -46,7 +44,7 @@ class HandleSignupPaymentCallbackUseCaseTest {
     void setUp() {
         useCase = new HandleSignupPaymentCallbackUseCase(
             paymentGatewayPort, tenantSignupRequestRepository, planRepository, tenantAdminPort,
-            staffInviteRepository, inviteEmailPort, platformInvoiceRepository, recordPlatformPaymentUseCase
+            inviteEmailPort, platformInvoiceRepository, recordPlatformPaymentUseCase
         );
         ReflectionTestUtils.setField(useCase, "frontendBaseUrl", "http://localhost:5173");
     }
@@ -72,12 +70,14 @@ class HandleSignupPaymentCallbackUseCaseTest {
         when(tenantAdminPort.createTenantForPaidSignup(
             "Mutlu Pati", "-", "Mutlu Pati", "-", "-", "PRO", today.plusMonths(1)
         )).thenReturn(new TenantSignupResult(tenantId, branchId));
-        when(staffInviteRepository.save(any(StaffInvite.class))).thenReturn(savedInvite);
+        when(tenantAdminPort.createAdminInviteForPaidSignup(tenantId, branchId, "ayse@example.com", "Ayse Yilmaz"))
+            .thenReturn(savedInvite);
         when(platformInvoiceRepository.save(any(PlatformInvoice.class))).thenReturn(savedInvoice);
 
         boolean result = useCase.execute("tok-1", today);
 
         assertThat(result).isTrue();
+        verify(tenantAdminPort).createAdminInviteForPaidSignup(tenantId, branchId, "ayse@example.com", "Ayse Yilmaz");
         verify(inviteEmailPort).sendInvite(eq(savedInvite), eq("Mutlu Pati"), eq("http://localhost:5173/davet/" + savedInvite.getToken()));
         ArgumentCaptor<RecordPlatformPaymentCommand> captor = ArgumentCaptor.forClass(RecordPlatformPaymentCommand.class);
         verify(recordPlatformPaymentUseCase).execute(captor.capture());
@@ -94,7 +94,7 @@ class HandleSignupPaymentCallbackUseCaseTest {
         boolean result = useCase.execute("tok-2", LocalDate.of(2026, 8, 30));
 
         assertThat(result).isFalse();
-        verifyNoInteractions(tenantSignupRequestRepository, tenantAdminPort, staffInviteRepository, platformInvoiceRepository);
+        verifyNoInteractions(tenantSignupRequestRepository, tenantAdminPort, platformInvoiceRepository);
     }
 
     @Test
@@ -109,7 +109,7 @@ class HandleSignupPaymentCallbackUseCaseTest {
         boolean result = useCase.execute("tok-3", LocalDate.of(2026, 8, 30));
 
         assertThat(result).isTrue();
-        verifyNoInteractions(tenantAdminPort, staffInviteRepository, platformInvoiceRepository);
+        verifyNoInteractions(tenantAdminPort, platformInvoiceRepository);
     }
 
     @Test

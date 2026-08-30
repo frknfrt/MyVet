@@ -3,6 +3,9 @@ package com.vetos.modules.tenant.infrastructure.persistence;
 import com.vetos.modules.tenant.domain.BillableSubscription;
 import com.vetos.modules.tenant.domain.BillingStatus;
 import com.vetos.modules.tenant.domain.Branch;
+import com.vetos.modules.tenant.domain.StaffInvite;
+import com.vetos.modules.tenant.domain.StaffInviteRepository;
+import com.vetos.modules.tenant.domain.StaffInviteStatus;
 import com.vetos.modules.tenant.domain.StaffRole;
 import com.vetos.modules.tenant.domain.StaffUser;
 import com.vetos.modules.tenant.domain.Subscription;
@@ -32,6 +35,7 @@ class TenantAdminPortAdapter implements TenantAdminPort {
     private final SubscriptionJpaRepository subscriptionJpaRepository;
     private final BranchJpaRepository branchJpaRepository;
     private final StaffUserJpaRepository staffUserJpaRepository;
+    private final StaffInviteRepository staffInviteRepository;
     private final PasswordEncoder passwordEncoder;
     private final DomainEventPublisher eventPublisher;
 
@@ -151,8 +155,16 @@ class TenantAdminPortAdapter implements TenantAdminPort {
     }
 
     @Override
+    public StaffInvite createAdminInviteForPaidSignup(UUID tenantId, UUID branchId, String email, String fullName) {
+        return staffInviteRepository.save(
+            StaffInvite.create(tenantId, branchId, email, fullName, StaffRole.ADMIN, null)
+        );
+    }
+
+    @Override
     public boolean isEmailRegistered(String email) {
-        return staffUserJpaRepository.existsByEmail(email);
+        return staffUserJpaRepository.existsByEmail(email)
+            || staffInviteRepository.existsByEmailAndStatus(email, StaffInviteStatus.PENDING);
     }
 
     private Optional<StaffUser> findBillingContact(UUID tenantId) {

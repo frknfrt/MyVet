@@ -56,6 +56,13 @@ public interface TenantAdminPort {
         String planCode, LocalDate renewsAt
     );
 
+    /**
+     * Odeme sonrasi self-servis kayit icin: yeni tenant'in ilk admin'i icin
+     * bir StaffInvite olusturur ve kaydeder (StaffInviteRepository sadece bu
+     * modul icinde kullanilir -- diger moduller bu port araciligiyla erisir).
+     */
+    StaffInvite createAdminInviteForPaidSignup(UUID tenantId, UUID branchId, String email, String fullName);
+
     /** Odeme oncesi e-posta benzersizligini kontrol etmek icin. */
     boolean isEmailRegistered(String email);
 }
