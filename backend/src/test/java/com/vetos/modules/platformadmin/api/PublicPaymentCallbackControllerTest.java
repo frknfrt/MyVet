@@ -1,8 +1,11 @@
 package com.vetos.modules.platformadmin.api;
 
 import com.vetos.modules.platformadmin.application.HandlePaymentCallbackUseCase;
+import com.vetos.modules.platformadmin.application.HandleSignupPaymentCallbackUseCase;
 import com.vetos.modules.platformadmin.domain.PaymentGatewayPort;
+import com.vetos.modules.platformadmin.domain.exception.PlatformInvoiceInvalidTransitionException;
 import com.vetos.modules.platformadmin.domain.exception.PlatformInvoiceNotFoundException;
+import com.vetos.modules.platformadmin.domain.PlatformInvoiceStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,15 +29,19 @@ import static org.mockito.Mockito.when;
 class PublicPaymentCallbackControllerTest {
 
     private static final String FRONTEND = "http://localhost:5173";
+    private static final String VETLY_SITE = "http://localhost:5175";
 
     @Mock private HandlePaymentCallbackUseCase handlePaymentCallbackUseCase;
+    @Mock private HandleSignupPaymentCallbackUseCase handleSignupPaymentCallbackUseCase;
     @Mock private PaymentGatewayPort paymentGatewayPort;
 
     private PublicPaymentCallbackController controller;
 
     @BeforeEach
     void setUp() {
-        controller = new PublicPaymentCallbackController(handlePaymentCallbackUseCase, paymentGatewayPort, FRONTEND);
+        controller = new PublicPaymentCallbackController(
+            handlePaymentCallbackUseCase, handleSignupPaymentCallbackUseCase, paymentGatewayPort, FRONTEND, VETLY_SITE
+        );
     }
 
     private static String location(ResponseEntity<Void> response) {
@@ -42,11 +49,6 @@ class PublicPaymentCallbackControllerTest {
         return String.valueOf(response.getHeaders().getLocation());
     }
 
-    /**
-     * BULGU 1 (ikinci savunma katmani): gateway gercekten yapilandirilmissa GET
-     * rotasi token'a hic dokunmadan reddedilmeli -- gercek iyzico her zaman POST eder,
-     * GET yalnizca yerel simule mod icin var.
-     */
     @Test
     void should_rejectGetWithoutTouchingToken_when_gatewayIsConfigured() {
         when(paymentGatewayPort.isConfigured()).thenReturn(true);
@@ -54,7 +56,7 @@ class PublicPaymentCallbackControllerTest {
         ResponseEntity<Void> response = controller.handleGet("SIMULATED-" + UUID.randomUUID());
 
         assertThat(location(response)).isEqualTo(FRONTEND + "/ayarlar/abonelik?odeme=hata");
-        verifyNoInteractions(handlePaymentCallbackUseCase);
+        verifyNoInteractions(handlePaymentCallbackUseCase, handleSignupPaymentCallbackUseCase);
     }
 
     @Test
@@ -69,37 +71,65 @@ class PublicPaymentCallbackControllerTest {
     }
 
     @Test
-    void should_redirectToSuccess_when_postCallbackSucceeds() {
+    void should_redirectToAppSuccess_when_postCallbackSucceedsAsInvoicePayment() {
         when(handlePaymentCallbackUseCase.execute(anyString(), any(LocalDate.class))).thenReturn(true);
 
         assertThat(location(controller.handlePost("token-1"))).isEqualTo(FRONTEND + "/ayarlar/abonelik?odeme=basarili");
+        verifyNoInteractions(handleSignupPaymentCallbackUseCase);
         verify(paymentGatewayPort, never()).isConfigured();
     }
 
     @Test
-    void should_redirectToFailure_when_postCallbackReturnsFalse() {
+    void should_redirectToAppFailure_when_postCallbackReturnsFalseAsInvoicePayment() {
         when(handlePaymentCallbackUseCase.execute(anyString(), any(LocalDate.class))).thenReturn(false);
 
         assertThat(location(controller.handlePost("token-1"))).isEqualTo(FRONTEND + "/ayarlar/abonelik?odeme=hata");
+        verifyNoInteractions(handleSignupPaymentCallbackUseCase);
     }
 
-    /**
-     * BULGU 3: use case istisna firlatirsa kullaniciya ham JSON hata govdesi
-     * gosterilmemeli -- her durumda frontend'e yonlendirilmeli.
-     */
     @Test
-    void should_redirectToFailure_when_useCaseThrowsDomainException() {
+    void should_redirectToAppFailure_when_invoiceUseCaseThrowsNonNotFoundDomainException() {
         when(handlePaymentCallbackUseCase.execute(anyString(), any(LocalDate.class)))
-            .thenThrow(new PlatformInvoiceNotFoundException(UUID.randomUUID()));
+            .thenThrow(new PlatformInvoiceInvalidTransitionException(PlatformInvoiceStatus.PAID, PlatformInvoiceStatus.PAID));
 
         assertThat(location(controller.handlePost("token-1"))).isEqualTo(FRONTEND + "/ayarlar/abonelik?odeme=hata");
+        verifyNoInteractions(handleSignupPaymentCallbackUseCase);
     }
 
     @Test
-    void should_redirectToFailure_when_useCaseThrowsUnexpectedRuntimeException() {
+    void should_redirectToAppFailure_when_useCaseThrowsUnexpectedRuntimeException() {
         when(handlePaymentCallbackUseCase.execute(anyString(), any(LocalDate.class)))
             .thenThrow(new IllegalArgumentException("Invalid UUID string"));
 
         assertThat(location(controller.handlePost("token-1"))).isEqualTo(FRONTEND + "/ayarlar/abonelik?odeme=hata");
+        verifyNoInteractions(handleSignupPaymentCallbackUseCase);
+    }
+
+    @Test
+    void should_fallBackToSignupSuccess_when_invoiceUseCaseThrowsNotFound() {
+        when(handlePaymentCallbackUseCase.execute(anyString(), any(LocalDate.class)))
+            .thenThrow(new PlatformInvoiceNotFoundException(UUID.randomUUID()));
+        when(handleSignupPaymentCallbackUseCase.execute(anyString(), any(LocalDate.class))).thenReturn(true);
+
+        assertThat(location(controller.handlePost("token-1"))).isEqualTo(VETLY_SITE + "/?kayit=basarili");
+    }
+
+    @Test
+    void should_fallBackToSignupFailure_when_invoiceUseCaseThrowsNotFoundAndSignupReturnsFalse() {
+        when(handlePaymentCallbackUseCase.execute(anyString(), any(LocalDate.class)))
+            .thenThrow(new PlatformInvoiceNotFoundException(UUID.randomUUID()));
+        when(handleSignupPaymentCallbackUseCase.execute(anyString(), any(LocalDate.class))).thenReturn(false);
+
+        assertThat(location(controller.handlePost("token-1"))).isEqualTo(VETLY_SITE + "/?kayit=hata");
+    }
+
+    @Test
+    void should_fallBackToSignupFailure_when_bothUseCasesFindNothing() {
+        when(handlePaymentCallbackUseCase.execute(anyString(), any(LocalDate.class)))
+            .thenThrow(new PlatformInvoiceNotFoundException(UUID.randomUUID()));
+        when(handleSignupPaymentCallbackUseCase.execute(anyString(), any(LocalDate.class)))
+            .thenThrow(new RuntimeException("bilinmeyen conversationId"));
+
+        assertThat(location(controller.handlePost("token-1"))).isEqualTo(VETLY_SITE + "/?kayit=hata");
     }
 }
