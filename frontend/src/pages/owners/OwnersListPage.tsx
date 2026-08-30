@@ -1,12 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../auth/AuthContext';
 import { AppShell } from '../../components/layout/AppShell';
 import { Button } from '../../components/ui/Button';
 import { OwnerSearchResult, patientApi } from '../../api/patientApi';
 import styles from './OwnersListPage.module.css';
 
+/** api-conventions.md rol matrisi: /owners yazma -- VET/RECEPTIONIST/ADMIN. */
+const CAN_WRITE_ROLES = ['VET', 'RECEPTIONIST', 'ADMIN'];
+
 export function OwnersListPage() {
   const navigate = useNavigate();
+  const { session } = useAuth();
+  const canWrite = session ? CAN_WRITE_ROLES.includes(session.role) : false;
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<OwnerSearchResult[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,9 +41,11 @@ export function OwnersListPage() {
           <h1 className={styles.title}>Hastalar &amp; Sahipler</h1>
           <div className={styles.sub}>Kayıtlı müşteriler (sahipler)</div>
         </div>
-        <Button variant="primary" onClick={() => navigate('/musteriler/yeni')}>
-          Yeni Müşteri
-        </Button>
+        {canWrite && (
+          <Button variant="primary" onClick={() => navigate('/musteriler/yeni')}>
+            Yeni Müşteri
+          </Button>
+        )}
       </div>
 
       <div className={styles.tabs}>

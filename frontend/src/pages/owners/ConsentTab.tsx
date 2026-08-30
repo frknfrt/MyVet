@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '../../auth/AuthContext';
 import { ApiError } from '../../api/client';
 import { ConsentRecordItem, ConsentType, patientApi } from '../../api/patientApi';
 import { Badge } from '../../components/ui/Badge';
@@ -43,6 +44,9 @@ interface ConsentTabProps {
 }
 
 export function ConsentTab({ ownerId }: ConsentTabProps) {
+  const { session } = useAuth();
+  // OwnersController /owners/{id}/consents yazma -- VET/RECEPTIONIST/ADMIN.
+  const canWrite = session ? ['VET', 'RECEPTIONIST', 'ADMIN'].includes(session.role) : false;
   const [records, setRecords] = useState<ConsentRecordItem[] | null>(null);
   const [busyType, setBusyType] = useState<ConsentType | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -113,15 +117,16 @@ export function ConsentTab({ ownerId }: ConsentTabProps) {
                   </>
                 )}
               </div>
-              {granted ? (
-                <Button variant="danger" onClick={() => handleRevoke(latest!)} disabled={busyType === type}>
-                  Geri Çek
-                </Button>
-              ) : (
-                <Button variant="secondary" onClick={() => handleGrant(type)} disabled={busyType === type}>
-                  Onay Al
-                </Button>
-              )}
+              {canWrite &&
+                (granted ? (
+                  <Button variant="danger" onClick={() => handleRevoke(latest!)} disabled={busyType === type}>
+                    Geri Çek
+                  </Button>
+                ) : (
+                  <Button variant="secondary" onClick={() => handleGrant(type)} disabled={busyType === type}>
+                    Onay Al
+                  </Button>
+                ))}
             </div>
           );
         })}

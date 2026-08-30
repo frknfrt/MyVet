@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../auth/AuthContext';
 import { AppShell } from '../../components/layout/AppShell';
 import { ApiError } from '../../api/client';
 import { Button } from '../../components/ui/Button';
@@ -27,6 +28,9 @@ function isSameDay(a: Date, b: Date) {
 
 export function VaccinationsPage() {
   const navigate = useNavigate();
+  const { session } = useAuth();
+  // VaccinationRecordsController yazma -- VET/TECHNICIAN/ADMIN (RECEPTIONIST yok).
+  const canWrite = session ? ['VET', 'TECHNICIAN', 'ADMIN'].includes(session.role) : false;
   const [items, setItems] = useState<VaccinationScheduleItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>('planlanan');
@@ -129,9 +133,11 @@ export function VaccinationsPage() {
           <h1 className={styles.title}>Aşı Takvimi</h1>
           <div className={styles.sub}>Planlanan ve yapılan aşılar</div>
         </div>
-        <Button variant="primary" onClick={() => navigate('/asi-takvimi/yeni')}>
-          + Yeni Aşı Ekle
-        </Button>
+        {canWrite && (
+          <Button variant="primary" onClick={() => navigate('/asi-takvimi/yeni')}>
+            + Yeni Aşı Ekle
+          </Button>
+        )}
       </div>
 
       <div className={styles.kpiRow}>
@@ -213,13 +219,13 @@ export function VaccinationsPage() {
       </div>
 
       <div className={styles.tableCard}>
-        <div className={`${styles.tableHead} ${tab === 'planlanan' ? styles.rowWithActions : styles.rowPlain}`}>
+        <div className={`${styles.tableHead} ${tab === 'planlanan' && canWrite ? styles.rowWithActions : styles.rowPlain}`}>
           <div>Hasta</div>
           <div>Sahip</div>
           <div>Aşı</div>
           <div>Tarih</div>
           <div>Durum</div>
-          {tab === 'planlanan' && <div>İşlem</div>}
+          {tab === 'planlanan' && canWrite && <div>İşlem</div>}
         </div>
         {loading ? (
           <div className={styles.empty}>Yükleniyor...</div>
@@ -228,15 +234,17 @@ export function VaccinationsPage() {
             <div className={styles.emptyIcon}>+</div>
             <div>Henüz aşı kaydı yok</div>
             <div className={styles.emptySub}>İlk aşı kaydını eklemek için buraya tıklayın</div>
-            <Button variant="secondary" onClick={() => navigate('/asi-takvimi/yeni')}>
-              Yeni Aşı Ekle
-            </Button>
+            {canWrite && (
+              <Button variant="secondary" onClick={() => navigate('/asi-takvimi/yeni')}>
+                Yeni Aşı Ekle
+              </Button>
+            )}
           </div>
         ) : (
           filtered.map((v) => (
             <div
               key={v.id}
-              className={`${styles.row} ${tab === 'planlanan' ? styles.rowWithActions : styles.rowPlain}`}
+              className={`${styles.row} ${tab === 'planlanan' && canWrite ? styles.rowWithActions : styles.rowPlain}`}
               onClick={() => navigate(`/hastalar/${v.patientId}`)}
             >
               <div className={styles.patientName}>{v.patientName}</div>
@@ -246,7 +254,7 @@ export function VaccinationsPage() {
               <div>
                 <VaccinationStatusBadge status={v.status} />
               </div>
-              {tab === 'planlanan' && (
+              {tab === 'planlanan' && canWrite && (
                 <div className={styles.actionsCell} onClick={(e) => e.stopPropagation()}>
                   <button
                     type="button"

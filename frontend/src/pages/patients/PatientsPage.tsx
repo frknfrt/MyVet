@@ -1,13 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../auth/AuthContext';
 import { AppShell } from '../../components/layout/AppShell';
 import { Button } from '../../components/ui/Button';
 import { patientApi, PatientSearchResult, SpeciesItem } from '../../api/patientApi';
 import { PatientStatusBadge } from './statusBadge';
 import styles from './PatientsPage.module.css';
 
+/** api-conventions.md rol matrisi: /patients ve /owners yazma -- VET/RECEPTIONIST/ADMIN. */
+const CAN_WRITE_ROLES = ['VET', 'RECEPTIONIST', 'ADMIN'];
+
 export function PatientsPage() {
   const navigate = useNavigate();
+  const { session } = useAuth();
+  const canWrite = session ? CAN_WRITE_ROLES.includes(session.role) : false;
   const [query, setQuery] = useState('');
   const [searchResults, setSearchResults] = useState<PatientSearchResult[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,14 +67,16 @@ export function PatientsPage() {
           <h1 className={styles.title}>Hastalar &amp; Sahipler</h1>
           <div className={styles.sub}>Kayıtlı hastalar ve sahipleri</div>
         </div>
-        <div className={styles.actions}>
-          <Button variant="secondary" onClick={() => navigate('/musteriler/yeni')}>
-            Yeni Müşteri
-          </Button>
-          <Button variant="primary" onClick={() => navigate('/hastalar/yeni')}>
-            Yeni Hasta
-          </Button>
-        </div>
+        {canWrite && (
+          <div className={styles.actions}>
+            <Button variant="secondary" onClick={() => navigate('/musteriler/yeni')}>
+              Yeni Müşteri
+            </Button>
+            <Button variant="primary" onClick={() => navigate('/hastalar/yeni')}>
+              Yeni Hasta
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className={styles.tabs}>

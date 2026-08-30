@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '../../auth/AuthContext';
 import { AppShell } from '../../components/layout/AppShell';
 import { ApiError } from '../../api/client';
 import { encounterApi, EncounterDetail } from '../../api/encounterApi';
@@ -52,6 +53,11 @@ function InfoItem({ label, value }: { label: string; value: ReactNode }) {
 export function PatientDetailPage() {
   const { patientId } = useParams<{ patientId: string }>();
   const navigate = useNavigate();
+  const { session } = useAuth();
+  // PatientsController /patients yazma -- VET/RECEPTIONIST/ADMIN (TECHNICIAN yok).
+  const canWritePatient = session ? ['VET', 'RECEPTIONIST', 'ADMIN'].includes(session.role) : false;
+  // EncountersController POST /encounters -- sadece VET/ADMIN.
+  const canStartEncounter = session?.role === 'VET' || session?.role === 'ADMIN';
 
   const [profile, setProfile] = useState<PatientProfile | null>(null);
   const [tab, setTab] = useState<Tab>('genel-bakis');
@@ -170,10 +176,12 @@ export function PatientDetailPage() {
           </div>
           <div className={styles.spacer} />
           <div className={styles.headerActions}>
-            <Button variant="secondary" onClick={() => setEditOpen(true)}>
-              Düzenle
-            </Button>
-            {profile.status === 'ACTIVE' && (
+            {canWritePatient && (
+              <Button variant="secondary" onClick={() => setEditOpen(true)}>
+                Düzenle
+              </Button>
+            )}
+            {profile.status === 'ACTIVE' && canStartEncounter && (
               <Button variant="primary" onClick={handleStartEncounter} disabled={startingEncounter}>
                 {startingEncounter ? 'Açılıyor...' : draftEncounterId ? 'Muayeneye Devam Et' : 'Muayene Başlat'}
               </Button>
@@ -208,7 +216,7 @@ export function PatientDetailPage() {
           </div>
         )}
 
-        {profile.status === 'ACTIVE' && (
+        {profile.status === 'ACTIVE' && canWritePatient && (
           <div className={styles.dangerRow}>
             <Button variant="danger" onClick={handleMarkDeceased} disabled={busy}>
               {busy ? 'İşleniyor...' : 'Vefat etti olarak işaretle'}

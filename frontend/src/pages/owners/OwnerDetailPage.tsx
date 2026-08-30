@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '../../auth/AuthContext';
 import { AppShell } from '../../components/layout/AppShell';
 import { ApiError } from '../../api/client';
 import { billingApi, InvoiceSummary } from '../../api/billingApi';
@@ -23,6 +24,9 @@ function ConsentBadge({ label, granted }: { label: string; granted: boolean }) {
 export function OwnerDetailPage() {
   const { ownerId } = useParams<{ ownerId: string }>();
   const navigate = useNavigate();
+  const { session } = useAuth();
+  // OwnersController/PatientsController yazma -- VET/RECEPTIONIST/ADMIN (TECHNICIAN yok).
+  const canWrite = session ? ['VET', 'RECEPTIONIST', 'ADMIN'].includes(session.role) : false;
 
   const [profile, setProfile] = useState<OwnerProfile | null>(null);
   const [tab, setTab] = useState<Tab>('hastalar');
@@ -89,14 +93,16 @@ export function OwnerDetailPage() {
             </div>
           </div>
           <div className={styles.spacer} />
-          <div className={styles.headerActions}>
-            <Button variant="secondary" onClick={() => setEditOpen(true)}>
-              Düzenle
-            </Button>
-            <Button variant="primary" onClick={() => navigate(`/hastalar/yeni?ownerId=${ownerId}`)}>
-              Yeni Hasta Ekle
-            </Button>
-          </div>
+          {canWrite && (
+            <div className={styles.headerActions}>
+              <Button variant="secondary" onClick={() => setEditOpen(true)}>
+                Düzenle
+              </Button>
+              <Button variant="primary" onClick={() => navigate(`/hastalar/yeni?ownerId=${ownerId}`)}>
+                Yeni Hasta Ekle
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className={styles.infoGrid}>

@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
+import { useAuth } from '../../auth/AuthContext';
 import { inventoryApi, InventoryItem, StockMovement, StockMovementType } from '../../api/inventoryApi';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
@@ -16,6 +17,9 @@ interface ItemDetailModalProps {
 }
 
 export function ItemDetailModal({ item, onClose, onChanged }: ItemDetailModalProps) {
+  const { session } = useAuth();
+  // InventoryItemsController POST /movements -- sadece TECHNICIAN/ADMIN.
+  const canWrite = session ? ['TECHNICIAN', 'ADMIN'].includes(session.role) : false;
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [movementType, setMovementType] = useState<StockMovementType>('IN');
   const [quantity, setQuantity] = useState('1');
@@ -85,21 +89,23 @@ export function ItemDetailModal({ item, onClose, onChanged }: ItemDetailModalPro
             ))
           )}
 
-          <form className={styles.adjustForm} onSubmit={handleAdjust}>
-            <FieldWrap label="Hareket türü">
-              <Select value={movementType} onChange={(e) => setMovementType(e.target.value as StockMovementType)}>
-                <option value="IN">Giriş</option>
-                <option value="OUT">Çıkış</option>
-                <option value="ADJUSTMENT">Düzeltme</option>
-              </Select>
-            </FieldWrap>
-            <FieldWrap label="Miktar">
-              <Input type="number" min={1} value={quantity} onChange={(e) => setQuantity(e.target.value)} required />
-            </FieldWrap>
-            <Button type="submit" variant="secondary" disabled={busy}>
-              Uygula
-            </Button>
-          </form>
+          {canWrite && (
+            <form className={styles.adjustForm} onSubmit={handleAdjust}>
+              <FieldWrap label="Hareket türü">
+                <Select value={movementType} onChange={(e) => setMovementType(e.target.value as StockMovementType)}>
+                  <option value="IN">Giriş</option>
+                  <option value="OUT">Çıkış</option>
+                  <option value="ADJUSTMENT">Düzeltme</option>
+                </Select>
+              </FieldWrap>
+              <FieldWrap label="Miktar">
+                <Input type="number" min={1} value={quantity} onChange={(e) => setQuantity(e.target.value)} required />
+              </FieldWrap>
+              <Button type="submit" variant="secondary" disabled={busy}>
+                Uygula
+              </Button>
+            </form>
+          )}
         </>
       )}
     </Modal>

@@ -32,25 +32,34 @@ interface SettingsTabConfig {
  */
 const SETTINGS_TABS: SettingsTabConfig[] = [
   { path: 'kullanicilar', label: 'Kullanıcılar', roles: ['ADMIN'] },
-  { path: 'subeler', label: 'Şubeler' },
-  { path: 'calisma-saatleri', label: 'Çalışma Saatleri' },
+  // Şubeler/Çalışma Saatleri (BranchesController) -- yazma ADMIN-only.
+  { path: 'subeler', label: 'Şubeler', roles: ['ADMIN'] },
+  { path: 'calisma-saatleri', label: 'Çalışma Saatleri', roles: ['ADMIN'] },
   { path: 'roller', label: 'Rol & Yetki' },
-  { path: 'abonelik', label: 'Abonelik' },
-  { path: 'entegrasyonlar', label: 'Entegrasyonlar' },
-  { path: 'tur-irk', label: 'Tür & Irk' },
-  { path: 'hizmetler', label: 'Hizmetler' },
-  { path: 'ilac-katalogu', label: 'İlaç Kataloğu' },
+  // SubscriptionsController: GET /subscriptions/current ADMIN-only.
+  { path: 'abonelik', label: 'Abonelik', roles: ['ADMIN'] },
+  // TarbilController tamamı ADMIN-only.
+  { path: 'entegrasyonlar', label: 'Entegrasyonlar', roles: ['ADMIN'] },
+  // SpeciesController: POST (tür/ırk ekleme) ADMIN-only.
+  { path: 'tur-irk', label: 'Tür & Irk', roles: ['ADMIN'] },
+  // ServiceTypesController: POST (hizmet ekleme) ADMIN-only.
+  { path: 'hizmetler', label: 'Hizmetler', roles: ['ADMIN'] },
+  // DrugsController: POST/PUT (ilaç ekleme/düzenleme) ADMIN-only.
+  { path: 'ilac-katalogu', label: 'İlaç Kataloğu', roles: ['ADMIN'] },
   { path: 'ai-merkezi', label: 'AI Merkezi' },
   { path: 'sms-whatsapp', label: 'SMS / WhatsApp', roles: ['ADMIN', 'RECEPTIONIST'] },
-  { path: 'e-fatura', label: 'e-Fatura' },
+  // EInvoiceController tamamı ADMIN-only.
+  { path: 'e-fatura', label: 'e-Fatura', roles: ['ADMIN'] },
 ];
 
 export function SettingsPage() {
   const { session } = useAuth();
   const isAdmin = session?.role === 'ADMIN';
-  const hasAccess = (t: SettingsTabConfig) => !t.roles || (session && t.roles.includes(session.role));
+  const hasRoles = (roles?: StaffRole[]) => !roles || (session != null && roles.includes(session.role));
+  const hasAccess = (t: SettingsTabConfig) => hasRoles(t.roles);
   const visibleTabs = SETTINGS_TABS.filter(hasAccess);
-  const canViewSmsWhatsapp = hasAccess({ path: 'sms-whatsapp', label: '', roles: ['ADMIN', 'RECEPTIONIST'] });
+  const canViewSmsWhatsapp = hasRoles(['ADMIN', 'RECEPTIONIST']);
+  const forbidden = <div className={styles.errorBanner}>Bu bölümü görüntüleme yetkiniz yok</div>;
 
   return (
     <AppShell>
@@ -72,24 +81,18 @@ export function SettingsPage() {
 
       <Routes>
         <Route index element={<Navigate to={visibleTabs[0]?.path ?? 'entegrasyonlar'} replace />} />
-        <Route
-          path="kullanicilar"
-          element={isAdmin ? <StaffManagementPanel /> : <div className={styles.errorBanner}>Bu bölümü görüntüleme yetkiniz yok</div>}
-        />
-        <Route path="subeler" element={<BranchManagementPanel />} />
-        <Route path="calisma-saatleri" element={<WorkingHoursPanel />} />
+        <Route path="kullanicilar" element={isAdmin ? <StaffManagementPanel /> : forbidden} />
+        <Route path="subeler" element={isAdmin ? <BranchManagementPanel /> : forbidden} />
+        <Route path="calisma-saatleri" element={isAdmin ? <WorkingHoursPanel /> : forbidden} />
         <Route path="roller" element={<RolePermissionsPanel />} />
-        <Route path="abonelik" element={<SubscriptionPanel />} />
-        <Route path="entegrasyonlar" element={<IntegrationsPanel />} />
-        <Route path="tur-irk" element={<SpeciesBreedsPanel />} />
-        <Route path="hizmetler" element={<ServiceTypesPanel />} />
-        <Route path="ilac-katalogu" element={<DrugCatalogPanel />} />
+        <Route path="abonelik" element={isAdmin ? <SubscriptionPanel /> : forbidden} />
+        <Route path="entegrasyonlar" element={isAdmin ? <IntegrationsPanel /> : forbidden} />
+        <Route path="tur-irk" element={isAdmin ? <SpeciesBreedsPanel /> : forbidden} />
+        <Route path="hizmetler" element={isAdmin ? <ServiceTypesPanel /> : forbidden} />
+        <Route path="ilac-katalogu" element={isAdmin ? <DrugCatalogPanel /> : forbidden} />
         <Route path="ai-merkezi" element={<AiCenterPanel />} />
-        <Route
-          path="sms-whatsapp"
-          element={canViewSmsWhatsapp ? <SmsWhatsappPanel /> : <div className={styles.errorBanner}>Bu bölümü görüntüleme yetkiniz yok</div>}
-        />
-        <Route path="e-fatura" element={<EfaturaPanel />} />
+        <Route path="sms-whatsapp" element={canViewSmsWhatsapp ? <SmsWhatsappPanel /> : forbidden} />
+        <Route path="e-fatura" element={isAdmin ? <EfaturaPanel /> : forbidden} />
       </Routes>
     </AppShell>
   );

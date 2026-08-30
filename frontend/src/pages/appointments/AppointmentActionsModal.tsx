@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppointmentItem, appointmentApi, StaffItem } from '../../api/appointmentApi';
+import { useAuth } from '../../auth/AuthContext';
 import { ApiError } from '../../api/client';
 import { encounterApi } from '../../api/encounterApi';
 import { Badge } from '../../components/ui/Badge';
@@ -23,6 +24,10 @@ function errorMessageOf(err: unknown): string {
 
 export function AppointmentActionsModal({ appointment, onClose, onChanged }: AppointmentActionsModalProps) {
   const navigate = useNavigate();
+  const { session } = useAuth();
+  // encounterApi.start() (POST /encounters) sadece VET/ADMIN'e acik -- SOAP'a
+  // Git butonlari baska rollerde 403'e dusurur, o yuzden onlara gosterilmez.
+  const canStartEncounter = session?.role === 'VET' || session?.role === 'ADMIN';
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [staff, setStaff] = useState<StaffItem[]>([]);
@@ -135,12 +140,12 @@ export function AppointmentActionsModal({ appointment, onClose, onChanged }: App
               Check-in yap
             </Button>
           )}
-          {status === 'CHECKED_IN' && (
+          {status === 'CHECKED_IN' && canStartEncounter && (
             <Button variant="primary" disabled={busy} onClick={() => goToSoap(true)}>
               Muayeneyi Başlat (SOAP'a Git)
             </Button>
           )}
-          {status === 'IN_PROGRESS' && (
+          {status === 'IN_PROGRESS' && canStartEncounter && (
             <Button variant="primary" disabled={busy} onClick={() => goToSoap(false)}>
               SOAP'a Git
             </Button>

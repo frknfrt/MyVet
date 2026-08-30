@@ -43,11 +43,13 @@ public class PrescriptionsController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('VET', 'TECHNICIAN', 'ADMIN')")
     public PrescriptionResponse get(@PathVariable UUID id) {
         return PrescriptionResponse.from(getPrescriptionUseCase.execute(id));
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('VET', 'TECHNICIAN', 'ADMIN')")
     public List<PrescriptionResponse> listByPatient(@RequestParam UUID patientId) {
         return listPrescriptionsByPatientUseCase.execute(patientId).stream().map(PrescriptionResponse::from).toList();
     }

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../../auth/AuthContext';
 import { AppShell } from '../../components/layout/AppShell';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
@@ -8,6 +9,9 @@ import { NewInventoryItemModal } from './NewInventoryItemModal';
 import styles from './InventoryPage.module.css';
 
 export function InventoryPage() {
+  const { session } = useAuth();
+  // InventoryItemsController yazma -- sadece TECHNICIAN/ADMIN (VET/RECEPTIONIST yok).
+  const canWrite = session ? ['TECHNICIAN', 'ADMIN'].includes(session.role) : false;
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
@@ -50,9 +54,11 @@ export function InventoryPage() {
         </div>
         <div>
           <input className={styles.search} placeholder="Ara..." value={query} onChange={(e) => setQuery(e.target.value)} />
-          <Button variant="primary" onClick={() => setCreateOpen(true)}>
-            Yeni Ürün
-          </Button>
+          {canWrite && (
+            <Button variant="primary" onClick={() => setCreateOpen(true)}>
+              Yeni Ürün
+            </Button>
+          )}
         </div>
       </div>
 

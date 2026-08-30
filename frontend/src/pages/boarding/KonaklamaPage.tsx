@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../auth/AuthContext';
 import { AppShell } from '../../components/layout/AppShell';
 import { ApiError } from '../../api/client';
 import { boardingApi, BoardingRoom, BoardingStay } from '../../api/boardingApi';
@@ -19,6 +20,9 @@ function isoToday() {
 
 export function KonaklamaPage() {
   const navigate = useNavigate();
+  const { session } = useAuth();
+  // BoardingRoomsController POST (oda ekleme) -- sadece RECEPTIONIST/ADMIN.
+  const canCreateRoom = session ? ['RECEPTIONIST', 'ADMIN'].includes(session.role) : false;
   const [rooms, setRooms] = useState<BoardingRoom[]>([]);
   const [stays, setStays] = useState<BoardingStay[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,9 +123,11 @@ export function KonaklamaPage() {
           <div className={styles.sub}>Pansiyon odaları ve aktif konaklamalar</div>
         </div>
         <div className={styles.topbarActions}>
-          <Button variant="secondary" onClick={() => setRoomModalOpen(true)}>
-            + Oda Ekle
-          </Button>
+          {canCreateRoom && (
+            <Button variant="secondary" onClick={() => setRoomModalOpen(true)}>
+              + Oda Ekle
+            </Button>
+          )}
           <Button variant="primary" onClick={() => navigate('/konaklama/yeni')}>
             + Yeni Konaklama Kaydı
           </Button>
@@ -168,9 +174,11 @@ export function KonaklamaPage() {
           <div className={styles.emptyIcon}>+</div>
           <div>Henüz konaklama odası tanımlanmadı</div>
           <div className={styles.emptySub}>Kliniğinize uygun oda/kafes kategorilerini ekleyerek başlayın</div>
-          <Button variant="secondary" onClick={() => setRoomModalOpen(true)}>
-            Oda Ekle
-          </Button>
+          {canCreateRoom && (
+            <Button variant="secondary" onClick={() => setRoomModalOpen(true)}>
+              Oda Ekle
+            </Button>
+          )}
         </div>
       ) : (
         groups.map(([groupName, groupRooms]) => (
