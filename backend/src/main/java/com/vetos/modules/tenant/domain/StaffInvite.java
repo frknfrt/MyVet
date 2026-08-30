@@ -45,7 +45,7 @@ public class StaffInvite {
     @Column(nullable = false)
     private StaffInviteStatus status;
 
-    @Column(name = "invited_by_staff_user_id", nullable = false)
+    @Column(name = "invited_by_staff_user_id")
     private UUID invitedByStaffUserId;
 
     @Column(name = "created_at", nullable = false)
