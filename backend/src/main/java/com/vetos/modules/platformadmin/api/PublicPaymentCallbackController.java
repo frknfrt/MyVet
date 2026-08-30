@@ -91,7 +91,7 @@ public class PublicPaymentCallbackController {
         boolean isSignupRequest;
         try {
             isSignupRequest = tenantSignupRequestRepository.findById(UUID.fromString(result.conversationId())).isPresent();
-        } catch (IllegalArgumentException malformedConversationId) {
+        } catch (IllegalArgumentException | NullPointerException malformedOrMissingConversationId) {
             isSignupRequest = false;
         }
 

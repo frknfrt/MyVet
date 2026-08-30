@@ -151,6 +151,17 @@ class PublicPaymentCallbackControllerTest {
     }
 
     @Test
+    void should_routeToInvoiceFlow_when_conversationIdIsNull() {
+        when(paymentGatewayPort.retrieveCheckoutResult("token-1"))
+            .thenReturn(new CheckoutResult(false, null, null));
+        when(handlePaymentCallbackUseCase.execute(anyString(), any(LocalDate.class))).thenReturn(false);
+
+        assertThat(location(controller.handlePost("token-1"))).isEqualTo(FRONTEND + "/ayarlar/abonelik?odeme=hata");
+        verifyNoInteractions(handleSignupPaymentCallbackUseCase);
+        verifyNoInteractions(tenantSignupRequestRepository);
+    }
+
+    @Test
     void should_routeToSignupFlow_when_conversationIdMatchesTenantSignupRequest() {
         UUID requestId = UUID.randomUUID();
         stubCheckoutResult("token-1", requestId);
