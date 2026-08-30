@@ -42,4 +42,20 @@ public interface TenantAdminPort {
         String tenantName, String taxNumber, String branchName, String address, String city,
         String adminFullName, String adminEmail, String adminPassword
     );
+
+    /**
+     * Odeme sonrasi self-servis kayit icin: Tenant + Branch + Subscription
+     * (secilen plan, ACTIVE durumda -- TRIAL DEGIL) olusturur ama StaffUser
+     * OLUSTURMAZ -- ilk admin, ayri bir StaffInvite kabul ederek kendi
+     * hesabini/sifresini olusturur (mevcut invite-accept akisiyla ayni).
+     * createTenant(...)'tan farkli olarak burada admin sifresi CAGIRAN
+     * TARAFTAN gelmiyor -- odeme yapan ziyaretci henuz hicbir sifre girmedi.
+     */
+    TenantSignupResult createTenantForPaidSignup(
+        String tenantName, String taxNumber, String branchName, String address, String city,
+        String planCode, LocalDate renewsAt
+    );
+
+    /** Odeme oncesi e-posta benzersizligini kontrol etmek icin. */
+    boolean isEmailRegistered(String email);
 }

@@ -29,4 +29,17 @@ class SubscriptionTest {
         assertThat(subscription.getBillingStatus()).isEqualTo(BillingStatus.PAST_DUE);
         assertThat(subscription.getPlanCode()).isEqualTo(originalPlanCode);
     }
+
+    @Test
+    void should_startActiveWithChosenPlan_when_startPaidCalled() {
+        UUID tenantId = UUID.randomUUID();
+        LocalDate renewsAt = LocalDate.of(2026, 9, 30);
+
+        Subscription subscription = Subscription.startPaid(tenantId, "PRO", renewsAt);
+
+        assertThat(subscription.getTenantId()).isEqualTo(tenantId);
+        assertThat(subscription.getPlanCode()).isEqualTo("PRO");
+        assertThat(subscription.getRenewsAt()).isEqualTo(renewsAt);
+        assertThat(subscription.getBillingStatus()).isEqualTo(BillingStatus.ACTIVE);
+    }
 }

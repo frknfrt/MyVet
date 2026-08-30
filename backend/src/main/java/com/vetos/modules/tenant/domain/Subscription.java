@@ -44,6 +44,16 @@ public class Subscription {
         return subscription;
     }
 
+    public static Subscription startPaid(UUID tenantId, String planCode, LocalDate renewsAt) {
+        Subscription subscription = new Subscription();
+        subscription.tenantId = tenantId;
+        subscription.planCode = planCode;
+        subscription.startedAt = LocalDate.now();
+        subscription.renewsAt = renewsAt;
+        subscription.billingStatus = BillingStatus.ACTIVE;
+        return subscription;
+    }
+
     public void changePlan(String planCode, BillingStatus billingStatus, LocalDate renewsAt) {
         this.planCode = planCode;
         this.billingStatus = billingStatus;

@@ -9,6 +9,7 @@ import com.vetos.modules.tenant.domain.Subscription;
 import com.vetos.modules.tenant.domain.Tenant;
 import com.vetos.modules.tenant.domain.TenantAdminOverview;
 import com.vetos.modules.tenant.domain.TenantAdminPort;
+import com.vetos.modules.tenant.domain.TenantSignupResult;
 import com.vetos.modules.tenant.domain.event.ClinicRegisteredEvent;
 import com.vetos.modules.tenant.domain.exception.EmailAlreadyRegisteredConflictException;
 import com.vetos.modules.tenant.domain.exception.SubscriptionNotFoundException;
@@ -129,6 +130,29 @@ class TenantAdminPortAdapter implements TenantAdminPort {
         eventPublisher.publish(new ClinicRegisteredEvent(tenant.getId(), branch.getId(), admin.getId()));
 
         return tenant.getId();
+    }
+
+    @Override
+    public TenantSignupResult createTenantForPaidSignup(
+        String tenantName, String taxNumber, String branchName, String address, String city,
+        String planCode, LocalDate renewsAt
+    ) {
+        Tenant tenant = tenantJpaRepository.save(Tenant.register(tenantName, taxNumber));
+        tenant.activate();
+        tenant = tenantJpaRepository.save(tenant);
+
+        Branch branch = Branch.create(tenant.getId(), branchName);
+        branch.updateDetails(address, city, branch.getTimezone(), null);
+        branch = branchJpaRepository.save(branch);
+
+        subscriptionJpaRepository.save(Subscription.startPaid(tenant.getId(), planCode, renewsAt));
+
+        return new TenantSignupResult(tenant.getId(), branch.getId());
+    }
+
+    @Override
+    public boolean isEmailRegistered(String email) {
+        return staffUserJpaRepository.existsByEmail(email);
     }
 
     private Optional<StaffUser> findBillingContact(UUID tenantId) {
