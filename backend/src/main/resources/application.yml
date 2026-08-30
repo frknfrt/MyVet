@@ -49,10 +49,18 @@ notification:
   twilio:
     # WhatsApp Sandbox icin: TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN bos
     # birakilirsa gonderim simule edilir (bkz. TwilioNotificationAdapter).
-    # SMS bu turda kapsam disi -- her zaman simule edilir.
     account-sid: ${TWILIO_ACCOUNT_SID:}
     auth-token: ${TWILIO_AUTH_TOKEN:}
     whatsapp-from: ${TWILIO_WHATSAPP_FROM:whatsapp:+14155238886}
+  ileti-merkezi:
+    # SMS gonderimi icin. Bos birakilirsa (varsayilan) SMS gonderimi simule
+    # edilir (bkz. TwilioNotificationAdapter.sendSmsViaIletiMerkezi). Ayni
+    # ILETI_MERKEZI_* env degiskenleri platform-billing.ileti-merkezi
+    # tarafindan da kullanilir -- tek hesap, iki izole istemci (bkz.
+    # PlatformBillingSmsPort'un "paralel altyapi" javadoc'u).
+    api-key: ${ILETI_MERKEZI_API_KEY:}
+    hash: ${ILETI_MERKEZI_HASH:}
+    sender: ${ILETI_MERKEZI_SENDER:vetly}
 
 platform-admin:
   # Uygulama ilk ayaga kalktiginda platform_admin_users bosken bu bilgilerle
@@ -75,6 +83,13 @@ platform-billing:
   payment-instructions: >
     Odemenizi IBAN TR00 0000 0000 0000 0000 0000 00 (Vetly Yazilim A.S.) hesabina
     yapip aciklama kismina klinik adinizi yazmaniz yeterlidir.
+  ileti-merkezi:
+    # Platform fatura SMS'leri icin -- notification.ileti-merkezi ile ayni
+    # ILETI_MERKEZI_* env degiskenlerini kullanir ama bilincli olarak ayri
+    # bir istemci uzerinden gonderir (bkz. PlatformBillingSmsPort).
+    api-key: ${ILETI_MERKEZI_API_KEY:}
+    hash: ${ILETI_MERKEZI_HASH:}
+    sender: ${ILETI_MERKEZI_SENDER:vetly}
 
 payment-gateway:
   iyzico:
