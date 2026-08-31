@@ -7,6 +7,10 @@
 
 .main {
   padding: 1.8rem 2.2rem 3rem;
+  /* grid items default to min-width:auto, letting a deep min-width'd
+     descendant (e.g. a horizontally-scrollable table) blow out this whole
+     track instead of scrolling within its own bounds */
+  min-width: 0;
 }
 
 .mobileTopbar {

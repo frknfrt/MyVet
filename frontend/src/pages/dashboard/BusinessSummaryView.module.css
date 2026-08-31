@@ -1,6 +1,6 @@
 .kpiStrip {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 12px;
   margin-bottom: 1.2rem;
 }
@@ -50,6 +50,12 @@
   display: grid;
   grid-template-columns: 1.4fr 1fr;
   gap: 16px;
+}
+
+@media (max-width: 880px) {
+  .chartsGrid {
+    grid-template-columns: 1fr;
+  }
 }
 .chartTitle {
   font-size: 13.5px;

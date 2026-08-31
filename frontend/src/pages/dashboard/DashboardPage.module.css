@@ -61,7 +61,7 @@
 
 .kpiStrip {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 12px;
   margin-bottom: 1.6rem;
   animation: fadeInUp 0.5s 0.05s both;

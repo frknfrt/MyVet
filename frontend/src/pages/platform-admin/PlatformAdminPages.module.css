@@ -33,6 +33,16 @@
   align-items: center;
   font-size: 13px;
 }
+
+@media (max-width: 700px) {
+  .tableCard {
+    overflow-x: auto;
+  }
+  .tableHead,
+  .row {
+    min-width: 560px;
+  }
+}
 .tableHead {
   font-size: 11px;
   font-weight: 600;
