@@ -26,6 +26,10 @@ export function AuthLayout({ headline, subcopy, children }: AuthLayoutProps) {
       </div>
 
       <div className={styles.formPanel}>
+        <div className={styles.mobileMark}>
+          <img className={styles.mobileGlyph} src={vetlyIcon} alt="" />
+          <span className={styles.mobileWord}>Vetly</span>
+        </div>
         <div className={styles.formCard}>{children}</div>
       </div>
     </div>

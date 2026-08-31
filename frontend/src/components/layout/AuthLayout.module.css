@@ -63,6 +63,7 @@
 .formPanel {
   background: var(--color-paper);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 3rem 2rem;
@@ -73,11 +74,37 @@
   max-width: 400px;
 }
 
+.mobileMark {
+  display: none;
+}
+
 @media (max-width: 880px) {
   .shell {
     grid-template-columns: 1fr;
   }
   .brandPanel {
     display: none;
+  }
+  .formPanel {
+    padding-top: 2rem;
+  }
+  .mobileMark {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 400px;
+    margin-bottom: 1.75rem;
+  }
+  .mobileGlyph {
+    height: 34px;
+    width: auto;
+    display: block;
+  }
+  .mobileWord {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 20px;
+    color: var(--color-text-ink);
   }
 }
