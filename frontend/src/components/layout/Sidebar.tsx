@@ -11,6 +11,8 @@ interface SidebarProps {
   userRole: string;
   userInitials: string;
   onLogout: () => void;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 /**
@@ -18,7 +20,7 @@ interface SidebarProps {
  * NavLink bileşeni, mevcut URL'ye göre "active" class'ını otomatik uyguluyor.
  * Bu bileşen tüm sayfalarda BİREBİR AYNI import edilir, kopyalanmaz.
  */
-export function Sidebar({ userName, userRole, userInitials, onLogout }: SidebarProps) {
+export function Sidebar({ userName, userRole, userInitials, onLogout, isOpen, onClose }: SidebarProps) {
   const { session } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
@@ -37,7 +39,13 @@ export function Sidebar({ userName, userRole, userInitials, onLogout }: SidebarP
   }, [menuOpen]);
 
   return (
-    <aside className={styles.sidebar}>
+    <>
+      <div
+        className={[styles.backdrop, isOpen && styles.backdropOpen].filter(Boolean).join(' ')}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <aside className={[styles.sidebar, isOpen && styles.open].filter(Boolean).join(' ')}>
       <div className={styles.brandMark}>
         <img className={styles.glyph} src={vetlyIcon} alt="" />
         <span className={styles.word}>Vetly</span>
@@ -48,6 +56,7 @@ export function Sidebar({ userName, userRole, userInitials, onLogout }: SidebarP
           <NavLink
             key={item.key}
             to={item.path}
+            onClick={onClose}
             className={({ isActive }) => [styles.navItem, isActive && styles.active].filter(Boolean).join(' ')}
           >
             {item.icon}
@@ -88,6 +97,7 @@ export function Sidebar({ userName, userRole, userInitials, onLogout }: SidebarP
       </div>
 
       <ChangePasswordModal open={passwordModalOpen} onClose={() => setPasswordModalOpen(false)} />
-    </aside>
+      </aside>
+    </>
   );
 }

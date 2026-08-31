@@ -7,6 +7,8 @@ interface PlatformAdminSidebarProps {
   userName: string;
   userInitials: string;
   onLogout: () => void;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 interface NavItem {
@@ -58,7 +60,7 @@ const NAV_ITEMS: NavItem[] = [
  * sadece "Hesap Ayarları"/"Şifre Değiştir" yok (platform admin'de karşılığı
  * yok), menüde tek öğe olarak "Çıkış Yap" kalıyor.
  */
-export function PlatformAdminSidebar({ userName, userInitials, onLogout }: PlatformAdminSidebarProps) {
+export function PlatformAdminSidebar({ userName, userInitials, onLogout, isOpen, onClose }: PlatformAdminSidebarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const footRef = useRef<HTMLDivElement>(null);
 
@@ -74,7 +76,13 @@ export function PlatformAdminSidebar({ userName, userInitials, onLogout }: Platf
   }, [menuOpen]);
 
   return (
-    <aside className={styles.sidebar}>
+    <>
+      <div
+        className={[styles.backdrop, isOpen && styles.backdropOpen].filter(Boolean).join(' ')}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <aside className={[styles.sidebar, isOpen && styles.open].filter(Boolean).join(' ')}>
       <div className={styles.brandMark}>
         <img className={styles.glyph} src={vetlyIcon} alt="" />
         <span className={styles.word}>Vetly</span>
@@ -86,6 +94,7 @@ export function PlatformAdminSidebar({ userName, userInitials, onLogout }: Platf
           <NavLink
             key={item.path}
             to={item.path}
+            onClick={onClose}
             className={({ isActive }) => [styles.navItem, isActive && styles.active].filter(Boolean).join(' ')}
           >
             {item.icon}
@@ -114,6 +123,7 @@ export function PlatformAdminSidebar({ userName, userInitials, onLogout }: Platf
           </div>
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }

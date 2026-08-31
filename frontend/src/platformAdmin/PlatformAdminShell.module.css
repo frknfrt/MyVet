@@ -8,3 +8,48 @@
 .main {
   padding: 1.8rem 2.2rem 3rem;
 }
+
+.mobileTopbar {
+  display: none;
+}
+
+@media (max-width: 880px) {
+  .app {
+    grid-template-columns: 1fr;
+  }
+  .mobileTopbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--color-ink-900);
+    position: sticky;
+    top: 0;
+    z-index: 40;
+  }
+  .hamburgerBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: none;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .hamburgerBtn svg {
+    width: 20px;
+    height: 20px;
+  }
+  .mobileTopbarWord {
+    color: #fff;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 16px;
+  }
+  .main {
+    padding: 1.4rem 1.1rem 2.5rem;
+  }
+}
