@@ -29,6 +29,7 @@
   gap: 0;
   border-bottom: 1.5px solid var(--color-border);
   margin-bottom: 1.1rem;
+  overflow-x: auto;
 }
 .tab {
   padding: 10px 16px;
@@ -37,6 +38,8 @@
   color: var(--color-text-muted);
   cursor: pointer;
   text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
   border-bottom: 2px solid transparent;
   margin-bottom: -1.5px;
 }

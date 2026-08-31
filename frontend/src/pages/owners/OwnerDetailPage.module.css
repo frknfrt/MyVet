@@ -87,7 +87,7 @@
 
 .infoGrid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 14px 20px;
   padding-top: 18px;
   border-top: 1px solid var(--color-border);
