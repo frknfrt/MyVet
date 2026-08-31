@@ -73,6 +73,16 @@
   border-top: 1px solid var(--color-border);
   font-size: 13px;
 }
+
+@media (max-width: 700px) {
+  .tableCard {
+    overflow-x: auto;
+  }
+  .tableHead,
+  .row {
+    min-width: 620px;
+  }
+}
 .muted {
   color: var(--color-text-muted);
 }

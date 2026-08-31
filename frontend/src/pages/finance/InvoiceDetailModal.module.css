@@ -100,3 +100,16 @@
   gap: 10px;
   margin-top: 20px;
 }
+
+@media (max-width: 640px) {
+  .addLineForm {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .lineHeaderRow,
+  .lineRow {
+    min-width: 620px;
+  }
+}

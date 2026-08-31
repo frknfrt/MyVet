@@ -22,6 +22,7 @@
   gap: 0;
   border-bottom: 1.5px solid var(--color-border);
   margin-bottom: 1.1rem;
+  overflow-x: auto;
 }
 .tab {
   padding: 10px 16px;
@@ -29,6 +30,8 @@
   font-weight: 600;
   color: var(--color-text-muted);
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
   border-bottom: 2px solid transparent;
   margin-bottom: -1.5px;
   transition: color 0.15s;
@@ -185,4 +188,28 @@
   padding: 3rem 1rem;
   color: var(--color-text-muted);
   font-size: 13px;
+}
+
+@media (max-width: 700px) {
+  .tableCard {
+    overflow-x: auto;
+  }
+  .revenueHead,
+  .revenueRow,
+  .totalsRow {
+    min-width: 620px;
+  }
+  .productHead,
+  .productRow,
+  .totalsRowProducts {
+    min-width: 380px;
+  }
+  .staffHead,
+  .staffRow,
+  .branchHead,
+  .branchRow,
+  .totalsRowStaff,
+  .totalsRowBranches {
+    min-width: 420px;
+  }
 }

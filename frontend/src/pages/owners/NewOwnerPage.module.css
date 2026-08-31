@@ -104,3 +104,10 @@
   padding-top: 20px;
   border-top: 1px solid var(--color-border);
 }
+
+@media (max-width: 600px) {
+  .row2,
+  .row3 {
+    grid-template-columns: 1fr;
+  }
+}

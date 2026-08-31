@@ -140,3 +140,11 @@
   color: var(--color-brand-500);
   cursor: pointer;
 }
+
+@media (max-width: 600px) {
+  .row2,
+  .row3,
+  .row4 {
+    grid-template-columns: 1fr;
+  }
+}

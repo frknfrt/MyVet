@@ -124,6 +124,7 @@
   gap: 0;
   border-bottom: 1.5px solid var(--color-border);
   margin-bottom: 1.1rem;
+  overflow-x: auto;
 }
 .tab {
   padding: 10px 16px;
@@ -131,6 +132,8 @@
   font-weight: 600;
   color: var(--color-text-muted);
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
   border-bottom: 2px solid transparent;
   margin-bottom: -1.5px;
   transition: color 0.15s;
@@ -237,4 +240,14 @@
 }
 .patientName {
   font-weight: 600;
+}
+
+@media (max-width: 700px) {
+  .tableCard {
+    overflow-x: auto;
+  }
+  .invoicesHead,
+  .invoicesRow {
+    min-width: 340px;
+  }
 }

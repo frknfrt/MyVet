@@ -100,3 +100,10 @@
 .previewTableRow {
   border-top: 1px solid var(--color-border);
 }
+
+@media (max-width: 700px) {
+  .previewTableHead,
+  .previewTableRow {
+    min-width: 380px;
+  }
+}

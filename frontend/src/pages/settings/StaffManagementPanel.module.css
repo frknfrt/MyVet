@@ -50,6 +50,17 @@
   border-top: 1px solid var(--color-border);
   font-size: 13px;
 }
+
+@media (max-width: 700px) {
+  .inviteHead,
+  .inviteRow {
+    min-width: 560px;
+  }
+  .tableHead,
+  .tableRow {
+    min-width: 580px;
+  }
+}
 .rowActions {
   display: flex;
   gap: 8px;

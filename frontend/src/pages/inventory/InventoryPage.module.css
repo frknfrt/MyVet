@@ -47,6 +47,16 @@
   padding: 13px 20px;
   align-items: center;
 }
+
+@media (max-width: 700px) {
+  .tableCard {
+    overflow-x: auto;
+  }
+  .tableHead,
+  .row {
+    min-width: 560px;
+  }
+}
 .tableHead {
   font-size: 11px;
   font-weight: 600;

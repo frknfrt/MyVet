@@ -47,6 +47,15 @@
   align-items: end;
   margin-bottom: 8px;
 }
+
+@media (max-width: 700px) {
+  .form {
+    overflow-x: auto;
+  }
+  .itemRow {
+    min-width: 520px;
+  }
+}
 .removeBtn {
   background: none;
   border: none;

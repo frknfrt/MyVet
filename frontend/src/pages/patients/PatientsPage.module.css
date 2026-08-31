@@ -42,6 +42,7 @@
   gap: 0;
   border-bottom: 1.5px solid var(--color-border);
   margin-bottom: 1.4rem;
+  overflow-x: auto;
 }
 .tab {
   padding: 10px 16px;
@@ -50,6 +51,8 @@
   color: var(--color-text-muted);
   cursor: pointer;
   text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
   border-bottom: 2px solid transparent;
   margin-bottom: -1.5px;
 }
@@ -153,4 +156,14 @@ select.filterInput {
   padding: 3.4rem 1rem;
   color: var(--color-text-muted);
   font-size: 13px;
+}
+
+@media (max-width: 700px) {
+  .tableCard {
+    overflow-x: auto;
+  }
+  .tableHead,
+  .row {
+    min-width: 480px;
+  }
 }
