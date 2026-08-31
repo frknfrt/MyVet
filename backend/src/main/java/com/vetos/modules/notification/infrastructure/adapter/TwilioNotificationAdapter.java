@@ -43,6 +43,7 @@ class TwilioNotificationAdapter implements NotificationSendPort {
     private static final double SIMULATED_FAILURE_RATE = 0.1;
 
     private final String accountSid;
+    private final String authSid;
     private final String authToken;
     private final String whatsappFrom;
     private final String iletiMerkeziApiKey;
@@ -56,6 +57,7 @@ class TwilioNotificationAdapter implements NotificationSendPort {
     @Autowired
     TwilioNotificationAdapter(
         @Value("${notification.twilio.account-sid:}") String accountSid,
+        @Value("${notification.twilio.auth-sid:}") String authSid,
         @Value("${notification.twilio.auth-token:}") String authToken,
         @Value("${notification.twilio.whatsapp-from:whatsapp:+14155238886}") String whatsappFrom,
         @Value("${notification.ileti-merkezi.api-key:}") String iletiMerkeziApiKey,
@@ -63,7 +65,7 @@ class TwilioNotificationAdapter implements NotificationSendPort {
         @Value("${notification.ileti-merkezi.sender:vetly}") String iletiMerkeziSender
     ) {
         this(
-            accountSid, authToken, whatsappFrom, iletiMerkeziApiKey, iletiMerkeziHash, iletiMerkeziSender,
+            accountSid, authSid, authToken, whatsappFrom, iletiMerkeziApiKey, iletiMerkeziHash, iletiMerkeziSender,
             "https://api.twilio.com/2010-04-01/Accounts/{accountSid}/Messages.json",
             "https://api.iletimerkezi.com/v1/send-sms/json"
         );
@@ -71,11 +73,16 @@ class TwilioNotificationAdapter implements NotificationSendPort {
 
     // paket-ozel: testler yerel sahte sunuculara yonlendirmek icin kullanir
     TwilioNotificationAdapter(
-        String accountSid, String authToken, String whatsappFrom,
+        String accountSid, String authSid, String authToken, String whatsappFrom,
         String iletiMerkeziApiKey, String iletiMerkeziHash, String iletiMerkeziSender,
         String twilioMessagesUrl, String iletiMerkeziSendUrl
     ) {
         this.accountSid = accountSid;
+        // Twilio, Basic Auth kullanici adi olarak ya gercek Account SID'i (AC...)
+        // ya da ayri bir API Key SID'i (SK...) kabul eder -- API Key kullanilan
+        // hesaplarda bu ikisi FARKLI degerlerdir. authSid bos ise (klasik
+        // Account SID + Auth Token modu) accountSid'e geri duser.
+        this.authSid = authSid.isBlank() ? accountSid : authSid;
         this.authToken = authToken;
         this.whatsappFrom = whatsappFrom;
         this.iletiMerkeziApiKey = iletiMerkeziApiKey;
@@ -116,7 +123,7 @@ class TwilioNotificationAdapter implements NotificationSendPort {
         form.add("From", whatsappFrom);
         form.add("Body", request.message());
 
-        String credentials = Base64.getEncoder().encodeToString((accountSid + ":" + authToken).getBytes(StandardCharsets.UTF_8));
+        String credentials = Base64.getEncoder().encodeToString((authSid + ":" + authToken).getBytes(StandardCharsets.UTF_8));
 
         try {
             String responseBody = restClient.post()

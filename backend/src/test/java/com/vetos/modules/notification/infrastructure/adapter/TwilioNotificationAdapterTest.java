@@ -29,6 +29,7 @@ class TwilioNotificationAdapterTest {
 
     private HttpServer stubServer;
     private final Map<String, String> capturedBodies = new ConcurrentHashMap<>();
+    private final Map<String, String> capturedAuthHeaders = new ConcurrentHashMap<>();
     private volatile String iletiMerkeziStubResponse = "{\"response\":{\"status\":{\"code\":200,\"message\":\"Islem basarili\"},\"order\":{\"id\":\"1\"}}}";
     private volatile String twilioStubResponse = "{}";
 
@@ -48,6 +49,10 @@ class TwilioNotificationAdapterTest {
     private void handle(HttpExchange exchange, String responseBody) throws IOException {
         capturedBodies.put(exchange.getRequestURI().getPath(),
             new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+        String authHeader = exchange.getRequestHeaders().getFirst("Authorization");
+        if (authHeader != null) {
+            capturedAuthHeaders.put(exchange.getRequestURI().getPath(), authHeader);
+        }
         byte[] payload = responseBody.getBytes(StandardCharsets.UTF_8);
         exchange.getResponseHeaders().add("Content-Type", "application/json");
         exchange.sendResponseHeaders(200, payload.length);
@@ -62,8 +67,14 @@ class TwilioNotificationAdapterTest {
     private TwilioNotificationAdapter adapter(
         String accountSid, String authToken, String iletiMerkeziApiKey, String iletiMerkeziHash
     ) {
+        return adapter(accountSid, "", authToken, iletiMerkeziApiKey, iletiMerkeziHash);
+    }
+
+    private TwilioNotificationAdapter adapter(
+        String accountSid, String authSid, String authToken, String iletiMerkeziApiKey, String iletiMerkeziHash
+    ) {
         return new TwilioNotificationAdapter(
-            accountSid, authToken, "whatsapp:+14155238886",
+            accountSid, authSid, authToken, "whatsapp:+14155238886",
             iletiMerkeziApiKey, iletiMerkeziHash, "vetly",
             stubBaseUrl() + TWILIO_PATH, stubBaseUrl() + ILETI_MERKEZI_PATH
         );
@@ -156,6 +167,19 @@ class TwilioNotificationAdapterTest {
         assertThat(outcome.success()).isTrue();
         assertThat(capturedBodies).containsKey(TWILIO_PATH);
         assertThat(capturedBodies).doesNotContainKey(ILETI_MERKEZI_PATH);
+    }
+
+    @Test
+    void should_useAuthSidNotAccountSid_forBasicAuth_when_apiKeyCredentialsAreUsed() throws Exception {
+        // Twilio API Key modu: Basic Auth kullanici adi (SK... API Key SID) ile
+        // URL yolundaki gercek Account SID (AC...) FARKLI degerlerdir.
+        TwilioNotificationAdapter apiKeyAdapter = adapter("AC-real-account-sid", "SK-api-key-sid", "api-key-secret", "", "");
+
+        apiKeyAdapter.send(new NotificationSendRequest(NotificationChannel.WHATSAPP, "05551234567", "Merhaba"));
+
+        String expectedAuth = "Basic " + java.util.Base64.getEncoder()
+            .encodeToString("SK-api-key-sid:api-key-secret".getBytes(StandardCharsets.UTF_8));
+        assertThat(capturedAuthHeaders.get(TWILIO_PATH)).isEqualTo(expectedAuth);
     }
 
     @Test
