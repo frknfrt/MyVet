@@ -29,6 +29,9 @@ public class SecurityConfig {
     @org.springframework.beans.factory.annotation.Value("${app.vetly-site-origin:http://localhost:5175}")
     private String vetlySiteOrigin;
 
+    @org.springframework.beans.factory.annotation.Value("${app.frontend-base-url:http://localhost:5173}")
+    private String frontendBaseUrl;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -57,7 +60,7 @@ public class SecurityConfig {
 
     private CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("http://localhost:*", vetlySiteOrigin));
+        configuration.setAllowedOriginPatterns(List.of("http://localhost:*", vetlySiteOrigin, frontendBaseUrl));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         // 201 Created yanitlarinda olusturulan kaynagin id'sini tasiyan Location
