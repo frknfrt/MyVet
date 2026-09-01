@@ -76,7 +76,10 @@ platform-admin:
   bootstrap-full-name: ${PLATFORM_ADMIN_FULL_NAME:Platform Admin}
 
 server:
-  port: ${SERVER_PORT:8080}
+  # Render (ve benzeri container platformlari) uygulamanin PORT ortam
+  # degiskeninde belirttikleri porta baglanmasini bekliyor -- SERVER_PORT
+  # yerel/diger ortamlar icin geriye donuk uyumluluk olarak korunuyor.
+  port: ${PORT:${SERVER_PORT:8080}}
 
 logging:
   level:
