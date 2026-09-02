@@ -19,6 +19,15 @@
 @media (max-width: 880px) {
   .app {
     grid-template-columns: 1fr;
+    /* Mobilde .app tek sutuna dusunce mobileTopbar ve main ayri grid
+       satirlari oluyor. .app'in min-height:100vh'i, satirlarin toplam
+       icerik yuksekligini asinca, Grid'in varsayilan align-content:stretch
+       davranisiyla fazla bosluk TUM auto satirlara (topbar dahil) esit
+       dagitiliyor -- icerigi kisa sayfalarda (bos liste vb.) topbar
+       cirkin sekilde uzuyordu. align-content:start bunu onluyor, fazla
+       bosluk en sona (main'in altina) yigiliyor.
+    */
+    align-content: start;
   }
   .mobileTopbar {
     display: flex;

@@ -20,6 +20,10 @@
 @media (max-width: 880px) {
   .app {
     grid-template-columns: 1fr;
+    /* AppShell.module.css'teki ayni duzeltmeyle ayni sebep: Grid'in
+       varsayilan align-content:stretch'i, icerigi kisa sayfalarda fazla
+       bosluk mobileTopbar dahil tum auto satirlara yayiyordu. */
+    align-content: start;
   }
   .mobileTopbar {
     display: flex;
