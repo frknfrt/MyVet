@@ -1,0 +1,31 @@
+# "prod" profili -- SPRING_PROFILES_ACTIVE=prod ile aktif edilir (Render'da
+# bu env degiskeni ayarlanmali). application.yml'deki guvenli/localhost
+# varsayilanlarinin USTUNE gelir: burada tanimlanan degerlerin HICBIRINDE
+# varsayilan YOKTUR -- karsilik gelen env degiskeni eksikse uygulama
+# BASLAMAYI REDDEDER (PlaceholderResolutionException), sessizce yanlis/
+# guvensiz bir varsayilana (localhost, "change-me-local-dev-only" vb.)
+# dusmek yerine.
+#
+# Neden: yerel bir terminalde unutulmus bir DB_HOST=... export'u, sonraki
+# bir komutta backend'in farkinda olunmadan uzak/prod veritabanina baglanip
+# oradan hicbir uyari vermeden calismasina neden olabiliyor (bu projede
+# gercekten yasandi) -- prod profili SADECE bilincli sekilde
+# SPRING_PROFILES_ACTIVE=prod verildiginde devreye girer, bu da hangi
+# ortama baglanildigini terminal gecmisinden degil, acikca yapilan bir
+# seciminden okunabilir kilar.
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+
+jwt:
+  secret: ${JWT_SECRET}
+
+platform-admin:
+  bootstrap-email: ${PLATFORM_ADMIN_EMAIL}
+  bootstrap-password: ${PLATFORM_ADMIN_PASSWORD}
+
+app:
+  frontend-base-url: ${FRONTEND_BASE_URL}
+  vetly-site-origin: ${VETLY_SITE_ORIGIN}
