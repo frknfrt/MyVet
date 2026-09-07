@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -42,6 +43,7 @@ public class AiJobDecision {
     }
 
     public void decide(DecisionStatus status, String appliedContent, UUID decidedByStaffUserId) {
+        Objects.requireNonNull(status, "status");
         if (this.decisionStatus != null) {
             throw new AiDecisionAlreadyRecordedException(this.aiJobId);
         }
@@ -52,6 +54,7 @@ public class AiJobDecision {
     }
 
     public void recordFeedback(AccuracyFeedback feedback) {
+        Objects.requireNonNull(feedback, "feedback");
         if (this.decisionStatus == null) {
             throw new AiDecisionNotYetMadeException(this.aiJobId);
         }
