@@ -1,6 +1,7 @@
 package com.vetos.modules.ai.domain;
 
-import com.vetos.modules.ai.domain.exception.AiDecisionAlreadyRecordedException;
+import com.vetos.modules.ai.domain.exception.AiDecisionAlreadyRecordedConflictException;
+import com.vetos.modules.ai.domain.exception.AiDecisionMissingAppliedContentException;
 import com.vetos.modules.ai.domain.exception.AiDecisionNotYetMadeException;
 import org.junit.jupiter.api.Test;
 
@@ -40,7 +41,7 @@ class AiJobDecisionTest {
         decision.decide(DecisionStatus.REJECTED, null, UUID.randomUUID());
 
         assertThatThrownBy(() -> decision.decide(DecisionStatus.ACCEPTED_AS_IS, null, UUID.randomUUID()))
-            .isInstanceOf(AiDecisionAlreadyRecordedException.class);
+            .isInstanceOf(AiDecisionAlreadyRecordedConflictException.class);
     }
 
     @Test
@@ -69,6 +70,14 @@ class AiJobDecisionTest {
         decision.recordFeedback(AccuracyFeedback.INACCURATE);
 
         assertThatThrownBy(() -> decision.recordFeedback(AccuracyFeedback.ACCURATE))
-            .isInstanceOf(AiDecisionAlreadyRecordedException.class);
+            .isInstanceOf(AiDecisionAlreadyRecordedConflictException.class);
+    }
+
+    @Test
+    void should_throwMissingAppliedContent_when_acceptedWithEditsHasBlankContent() {
+        AiJobDecision decision = AiJobDecision.createPending(UUID.randomUUID());
+
+        assertThatThrownBy(() -> decision.decide(DecisionStatus.ACCEPTED_WITH_EDITS, "   ", UUID.randomUUID()))
+            .isInstanceOf(AiDecisionMissingAppliedContentException.class);
     }
 }

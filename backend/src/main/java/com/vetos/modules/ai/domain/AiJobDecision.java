@@ -1,6 +1,7 @@
 package com.vetos.modules.ai.domain;
 
-import com.vetos.modules.ai.domain.exception.AiDecisionAlreadyRecordedException;
+import com.vetos.modules.ai.domain.exception.AiDecisionAlreadyRecordedConflictException;
+import com.vetos.modules.ai.domain.exception.AiDecisionMissingAppliedContentException;
 import com.vetos.modules.ai.domain.exception.AiDecisionNotYetMadeException;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -44,8 +45,12 @@ public class AiJobDecision {
 
     public void decide(DecisionStatus status, String appliedContent, UUID decidedByStaffUserId) {
         Objects.requireNonNull(status, "status");
+        Objects.requireNonNull(decidedByStaffUserId, "decidedByStaffUserId");
         if (this.decisionStatus != null) {
-            throw new AiDecisionAlreadyRecordedException(this.aiJobId);
+            throw new AiDecisionAlreadyRecordedConflictException(this.aiJobId);
+        }
+        if (status == DecisionStatus.ACCEPTED_WITH_EDITS && (appliedContent == null || appliedContent.isBlank())) {
+            throw new AiDecisionMissingAppliedContentException(this.aiJobId);
         }
         this.decisionStatus = status;
         this.appliedContent = appliedContent;
@@ -59,7 +64,7 @@ public class AiJobDecision {
             throw new AiDecisionNotYetMadeException(this.aiJobId);
         }
         if (this.accuracyFeedback != null) {
-            throw new AiDecisionAlreadyRecordedException(this.aiJobId);
+            throw new AiDecisionAlreadyRecordedConflictException(this.aiJobId);
         }
         this.accuracyFeedback = feedback;
         this.feedbackAt = Instant.now();

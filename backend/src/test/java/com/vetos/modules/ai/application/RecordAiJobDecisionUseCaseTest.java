@@ -1,7 +1,7 @@
 package com.vetos.modules.ai.application;
 
 import com.vetos.modules.ai.domain.*;
-import com.vetos.modules.ai.domain.exception.AiDecisionAlreadyRecordedException;
+import com.vetos.modules.ai.domain.exception.AiDecisionAlreadyRecordedConflictException;
 import com.vetos.modules.ai.domain.exception.AiJobNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -70,6 +70,6 @@ class RecordAiJobDecisionUseCaseTest {
 
         assertThatThrownBy(() -> useCase.execute(
             new RecordAiJobDecisionCommand(aiJobId, DecisionStatus.REJECTED, null, UUID.randomUUID())
-        )).isInstanceOf(AiDecisionAlreadyRecordedException.class);
+        )).isInstanceOf(AiDecisionAlreadyRecordedConflictException.class);
     }
 }
