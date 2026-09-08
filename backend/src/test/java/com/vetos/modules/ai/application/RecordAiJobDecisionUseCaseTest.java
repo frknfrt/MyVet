@@ -28,22 +28,23 @@ class RecordAiJobDecisionUseCaseTest {
         useCase = new RecordAiJobDecisionUseCase(aiJobRepository, aiJobDecisionRepository);
     }
 
-    private AiJob anAiJob() {
+    private AiJob anAiJob(UUID tenantId) {
         return AiJob.create(
-            UUID.randomUUID(), AiTaskType.TREATMENT_RECOMMENDATION, UUID.randomUUID(),
+            tenantId, AiTaskType.TREATMENT_RECOMMENDATION, UUID.randomUUID(),
             "Sivi tedavisi onerilir", "ollama", "llama3.1:8b", UUID.randomUUID()
         );
     }
 
     @Test
     void should_createAndSaveDecision_when_noDecisionExistsYet() {
+        UUID tenantId = UUID.randomUUID();
         UUID aiJobId = UUID.randomUUID();
         UUID staffUserId = UUID.randomUUID();
-        when(aiJobRepository.findById(aiJobId)).thenReturn(Optional.of(anAiJob()));
+        when(aiJobRepository.findById(aiJobId)).thenReturn(Optional.of(anAiJob(tenantId)));
         when(aiJobDecisionRepository.findByAiJobId(aiJobId)).thenReturn(Optional.empty());
         when(aiJobDecisionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        useCase.execute(new RecordAiJobDecisionCommand(aiJobId, DecisionStatus.ACCEPTED_AS_IS, null, staffUserId));
+        useCase.execute(new RecordAiJobDecisionCommand(tenantId, aiJobId, DecisionStatus.ACCEPTED_AS_IS, null, staffUserId));
 
         verify(aiJobDecisionRepository).save(argThat(d ->
             d.getDecisionStatus() == DecisionStatus.ACCEPTED_AS_IS && d.getDecidedByStaffUserId().equals(staffUserId)
@@ -56,20 +57,35 @@ class RecordAiJobDecisionUseCaseTest {
         when(aiJobRepository.findById(aiJobId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> useCase.execute(
-            new RecordAiJobDecisionCommand(aiJobId, DecisionStatus.REJECTED, null, UUID.randomUUID())
+            new RecordAiJobDecisionCommand(UUID.randomUUID(), aiJobId, DecisionStatus.REJECTED, null, UUID.randomUUID())
         )).isInstanceOf(AiJobNotFoundException.class);
     }
 
     @Test
+    void should_throwAiJobNotFound_when_aiJobBelongsToDifferentTenant() {
+        UUID aiJobId = UUID.randomUUID();
+        UUID jobTenantId = UUID.randomUUID();
+        UUID callerTenantId = UUID.randomUUID();
+        when(aiJobRepository.findById(aiJobId)).thenReturn(Optional.of(anAiJob(jobTenantId)));
+
+        assertThatThrownBy(() -> useCase.execute(
+            new RecordAiJobDecisionCommand(callerTenantId, aiJobId, DecisionStatus.REJECTED, null, UUID.randomUUID())
+        )).isInstanceOf(AiJobNotFoundException.class);
+
+        verifyNoInteractions(aiJobDecisionRepository);
+    }
+
+    @Test
     void should_throwAlreadyRecorded_when_decisionAlreadyMade() {
+        UUID tenantId = UUID.randomUUID();
         UUID aiJobId = UUID.randomUUID();
         AiJobDecision existing = AiJobDecision.createPending(aiJobId);
         existing.decide(DecisionStatus.ACCEPTED_AS_IS, null, UUID.randomUUID());
-        when(aiJobRepository.findById(aiJobId)).thenReturn(Optional.of(anAiJob()));
+        when(aiJobRepository.findById(aiJobId)).thenReturn(Optional.of(anAiJob(tenantId)));
         when(aiJobDecisionRepository.findByAiJobId(aiJobId)).thenReturn(Optional.of(existing));
 
         assertThatThrownBy(() -> useCase.execute(
-            new RecordAiJobDecisionCommand(aiJobId, DecisionStatus.REJECTED, null, UUID.randomUUID())
+            new RecordAiJobDecisionCommand(tenantId, aiJobId, DecisionStatus.REJECTED, null, UUID.randomUUID())
         )).isInstanceOf(AiDecisionAlreadyRecordedConflictException.class);
     }
 }

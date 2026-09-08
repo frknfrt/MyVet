@@ -18,6 +18,7 @@ public class RecordAiJobDecisionUseCase {
     @Transactional
     public void execute(RecordAiJobDecisionCommand command) {
         aiJobRepository.findById(command.aiJobId())
+            .filter(job -> job.getTenantId().equals(command.tenantId()))
             .orElseThrow(() -> new AiJobNotFoundException(command.aiJobId()));
 
         AiJobDecision decision = aiJobDecisionRepository.findByAiJobId(command.aiJobId())

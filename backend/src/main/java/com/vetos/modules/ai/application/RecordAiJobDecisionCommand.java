@@ -4,5 +4,5 @@ import com.vetos.modules.ai.domain.DecisionStatus;
 import java.util.UUID;
 
 public record RecordAiJobDecisionCommand(
-    UUID aiJobId, DecisionStatus status, String appliedContent, UUID decidedByStaffUserId
+    UUID tenantId, UUID aiJobId, DecisionStatus status, String appliedContent, UUID decidedByStaffUserId
 ) {}
