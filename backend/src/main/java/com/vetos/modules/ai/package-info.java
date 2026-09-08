@@ -1,7 +1,7 @@
 @org.springframework.modulith.ApplicationModule(
     displayName = "AI Servisleri",
     allowedDependencies = {
-        "platform::security", "platform::tenancy", "platform::exception"
+        "modules.encounter::domain", "platform::security", "platform::tenancy", "platform::exception"
     }
 )
 package com.vetos.modules.ai;
