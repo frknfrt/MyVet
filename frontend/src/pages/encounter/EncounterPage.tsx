@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { aiApi } from '../../api/aiApi';
+import { aiApi, TreatmentRecommendation } from '../../api/aiApi';
 import { ApiError } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { encounterApi, EncounterDetail } from '../../api/encounterApi';
@@ -50,8 +50,9 @@ export function EncounterPage() {
   const [draftApplied, setDraftApplied] = useState(false);
   const [generatingRecommendation, setGeneratingRecommendation] = useState(false);
   const [recommendationError, setRecommendationError] = useState<string | null>(null);
-  const [recommendation, setRecommendation] = useState<{ aiJobId: string; suggestionText: string; modelConnected: boolean } | null>(null);
+  const [recommendation, setRecommendation] = useState<TreatmentRecommendation | null>(null);
   const [recommendationDecided, setRecommendationDecided] = useState(false);
+  const [decidingRecommendation, setDecidingRecommendation] = useState(false);
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
@@ -157,24 +158,31 @@ export function EncounterPage() {
   }
 
   async function acceptRecommendation() {
-    if (!recommendation) return;
+    if (!recommendation || decidingRecommendation) return;
+    setDecidingRecommendation(true);
     try {
       await aiApi.decideTreatmentRecommendation(recommendation.aiJobId, 'ACCEPTED_AS_IS');
       setSoap((s) => ({ ...s, plan: recommendation.suggestionText }));
+      setSoapAiGenerated(true);
       setRecommendationDecided(true);
       setTimeout(() => setRecommendation(null), 3000);
     } catch (err) {
       setRecommendationError(errorMessageOf(err));
+    } finally {
+      setDecidingRecommendation(false);
     }
   }
 
   async function rejectRecommendation() {
-    if (!recommendation) return;
+    if (!recommendation || decidingRecommendation) return;
+    setDecidingRecommendation(true);
     try {
       await aiApi.decideTreatmentRecommendation(recommendation.aiJobId, 'REJECTED');
       setRecommendation(null);
     } catch (err) {
       setRecommendationError(errorMessageOf(err));
+    } finally {
+      setDecidingRecommendation(false);
     }
   }
 
@@ -372,14 +380,22 @@ export function EncounterPage() {
                   Bu öneri gerçek bir tıbbi referans kaynağına dayanmaz, yalnızca genel AI bilgisine dayanır.
                   Bağımsız olarak değerlendirin.
                 </div>
+                {!recommendation.modelConnected && (
+                  <div className={styles.aiWarning}>
+                    Gerçek AI modeli henüz bağlı değil — bu, kullanılamaz bir yer tutucu metindir. Lütfen tedavi
+                    planını elle girin.
+                  </div>
+                )}
                 <div className={styles.draftLabel}>Öneri önizleme</div>
                 <div className={styles.draftPreview}>{recommendation.suggestionText || '—'}</div>
                 {!isReadOnly && !recommendationDecided && (
                   <div className={styles.aiActions}>
-                    <Button variant="ai" onClick={acceptRecommendation}>
-                      Aynen Kabul Et
-                    </Button>
-                    <Button variant="secondary" onClick={rejectRecommendation}>
+                    {recommendation.modelConnected && (
+                      <Button variant="ai" onClick={acceptRecommendation} disabled={decidingRecommendation}>
+                        {decidingRecommendation ? 'İşleniyor...' : 'Aynen Kabul Et'}
+                      </Button>
+                    )}
+                    <Button variant="secondary" onClick={rejectRecommendation} disabled={decidingRecommendation}>
                       Reddet
                     </Button>
                   </div>
