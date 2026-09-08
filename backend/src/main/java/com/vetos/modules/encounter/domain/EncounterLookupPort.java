@@ -8,4 +8,5 @@ import java.util.UUID;
  */
 public interface EncounterLookupPort {
     EncounterSummary findSummaryById(UUID encounterId);
+    EncounterClinicalContext findClinicalContext(UUID encounterId, int historyLimit);
 }
