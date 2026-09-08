@@ -51,8 +51,10 @@ public record EncounterClinicalContext(
 
 ```java
 // encounter/domain/PastEncounterSummary.java (yeni)
-public record PastEncounterSummary(LocalDate date, String assessment, String plan) {}
+public record PastEncounterSummary(Instant date, String assessment, String plan) {}
 ```
+
+(`Instant` — `Encounter` entity'sindeki `encounterDate` alanının tipiyle birebir aynı, dönüşüm gerekmez.)
 
 `EncounterLookupAdapter` (mevcut, `infrastructure/persistence`), yeni metodu implemente eder: verilen `encounterId`'nin kendi `assessment`/`patientId`'sini okur (yoksa `EncounterNotFoundException`), sonra aynı `patientId`'ye ait, mevcut encounter hariç, en güncel `historyLimit` kadar **FINALIZED** durumdaki muayeneyi tarih azalan sırada döner (implementasyon sırasında mevcut `EncounterJpaRepository`'de uygun bir sorgu metodu yoksa eklenir — reference-module.md §6 deseniyle).
 
