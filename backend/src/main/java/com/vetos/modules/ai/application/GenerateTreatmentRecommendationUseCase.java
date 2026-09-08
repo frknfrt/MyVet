@@ -17,18 +17,18 @@ public class GenerateTreatmentRecommendationUseCase {
     private final EncounterLookupPort encounterLookupPort;
     private final TreatmentRecommendationPort treatmentRecommendationPort;
     private final RecordAiJobUseCase recordAiJobUseCase;
-    private final String ollamaModelName;
+    private final String providerName;
 
     public GenerateTreatmentRecommendationUseCase(
         EncounterLookupPort encounterLookupPort,
         TreatmentRecommendationPort treatmentRecommendationPort,
         RecordAiJobUseCase recordAiJobUseCase,
-        @Value("${ai.ollama.model:llama3.1}") String ollamaModelName
+        @Value("${ai.provider:ollama}") String providerName
     ) {
         this.encounterLookupPort = encounterLookupPort;
         this.treatmentRecommendationPort = treatmentRecommendationPort;
         this.recordAiJobUseCase = recordAiJobUseCase;
-        this.ollamaModelName = ollamaModelName;
+        this.providerName = providerName;
     }
 
     public TreatmentRecommendationResult execute(GenerateTreatmentRecommendationCommand command) {
@@ -47,7 +47,7 @@ public class GenerateTreatmentRecommendationUseCase {
 
         UUID aiJobId = recordAiJobUseCase.execute(new RecordAiJobCommand(
             command.tenantId(), AiTaskType.TREATMENT_RECOMMENDATION, command.encounterId(),
-            draft.suggestionText(), "ollama", ollamaModelName, command.requestedByStaffUserId()
+            draft.suggestionText(), providerName, draft.modelVersion(), command.requestedByStaffUserId()
         ));
 
         return new TreatmentRecommendationResult(aiJobId, draft.suggestionText(), draft.modelConnected());

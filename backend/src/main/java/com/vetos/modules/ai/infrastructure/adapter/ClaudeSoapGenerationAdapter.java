@@ -6,6 +6,7 @@ import com.vetos.modules.ai.domain.AudioTranscript;
 import com.vetos.modules.ai.domain.SoapDraft;
 import com.vetos.modules.ai.domain.SoapGenerationPort;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
@@ -13,26 +14,24 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.util.List;
 import java.util.Map;
 
 /**
- * Lokal Ollama uzerinden gercek LLM cagrisi (OLLAMA_BASE_URL bos ise eski
- * mock davranisina duser -- TwilioNotificationAdapter'daki "kimlik bilgisi/URL
- * yoksa simule et" ile ayni desen, bkz. implementation-plan.md). Ollama disinda
- * bulut tabanli bir saglayici (orn. Anthropic) eklenmek istendiginde,
- * SoapGenerationPort sozlesmesi ve cagiran kod (GenerateSoapDraftUseCase) hic
- * degismeden sadece bu sinif degisir/yeni bir @Component eklenir
- * (@docs/architecture.md Bolum 3) -- bkz. ClaudeSoapGenerationAdapter.
+ * Anthropic Messages API uzerinden SOAP taslagi uretimi -- OllamaSoapGenerationAdapter
+ * ile ayni sozlesme (SoapGenerationPort) ve ayni "kimlik bilgisi yoksa simule et"
+ * deseni, sadece cagirdigi API farkli. ai.provider=claude oldugunda aktif olur
+ * (bkz. OllamaSoapGenerationAdapter'daki @ConditionalOnProperty).
  */
 @Component
-@ConditionalOnProperty(prefix = "ai", name = "provider", havingValue = "ollama", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "ai", name = "provider", havingValue = "claude")
 @Slf4j
-class OllamaSoapGenerationAdapter implements SoapGenerationPort {
+class ClaudeSoapGenerationAdapter implements SoapGenerationPort {
 
     private static final String STATUS_NOTE =
         "[AI modeli henuz baglanmadi -- bu, dikte edilen/yazilan metnin oldugu gibi Subjective alanina "
-        + "aktarilmasidir. Gercek bir LLM baglantisi eklendiginde (OLLAMA_BASE_URL) SOAP alanlari otomatik "
-        + "olarak yapilandirilacak. Su an icin Objective/Assessment/Plan alanlarini elle doldurun.]";
+        + "aktarilmasidir. Gercek bir Claude API baglantisi eklendiginde (ANTHROPIC_API_KEY) SOAP alanlari "
+        + "otomatik olarak yapilandirilacak. Su an icin Objective/Assessment/Plan alanlarini elle doldurun.]";
 
     private static final String SYSTEM_PROMPT = """
         Sen bir veteriner klinigi icin SOAP (Subjective/Objective/Assessment/Plan) notu yapilandiran bir \
@@ -42,19 +41,28 @@ class OllamaSoapGenerationAdapter implements SoapGenerationPort {
         Baska hicbir metin, aciklama veya markdown ekleme -- sadece JSON dondur. Tibbi tani koyma, sadece \
         hekimin soylediklerini SOAP formatina yerlestir.""";
 
-    private final String baseUrl;
+    private static final String ANTHROPIC_VERSION = "2023-06-01";
+
+    private final String apiKey;
     private final String model;
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
+    private final String apiUrl;
 
-    OllamaSoapGenerationAdapter(
-        @Value("${ai.ollama.base-url:}") String baseUrl,
-        @Value("${ai.ollama.model:llama3.1}") String model,
+    @Autowired
+    ClaudeSoapGenerationAdapter(
+        @Value("${ai.anthropic.api-key:}") String apiKey,
+        @Value("${ai.anthropic.model:claude-sonnet-5}") String model,
         ObjectMapper objectMapper
     ) {
-        this.baseUrl = baseUrl;
+        this(apiKey, model, objectMapper, "https://api.anthropic.com/v1/messages");
+    }
+
+    ClaudeSoapGenerationAdapter(String apiKey, String model, ObjectMapper objectMapper, String apiUrl) {
+        this.apiKey = apiKey;
         this.model = model;
         this.objectMapper = objectMapper;
+        this.apiUrl = apiUrl;
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(5_000);
         requestFactory.setReadTimeout(120_000);
@@ -64,34 +72,36 @@ class OllamaSoapGenerationAdapter implements SoapGenerationPort {
     @Override
     public SoapDraft generate(AudioTranscript transcript) {
         String text = transcript.text() == null ? "" : transcript.text().trim();
-        if (baseUrl.isBlank() || text.isEmpty()) {
+        if (apiKey.isBlank() || text.isEmpty()) {
             return fallback(text);
         }
         try {
-            return generateViaOllama(text);
+            return generateViaClaude(text);
         } catch (Exception e) {
-            log.warn("Ollama SOAP uretimi basarisiz, mock'a duseluyor: {}", e.getMessage());
+            log.warn("Claude SOAP uretimi basarisiz, mock'a duseluyor: {}", e.getMessage());
             return fallback(text);
         }
     }
 
-    private SoapDraft generateViaOllama(String text) throws Exception {
+    private SoapDraft generateViaClaude(String text) throws Exception {
         Map<String, Object> body = Map.of(
             "model", model,
+            "max_tokens", 1024,
             "system", SYSTEM_PROMPT,
-            "prompt", text,
-            "format", "json",
-            "stream", false
+            "messages", List.of(Map.of("role", "user", "content", text))
         );
         String raw = restClient.post()
-            .uri(baseUrl + "/api/generate")
+            .uri(apiUrl)
+            .header("x-api-key", apiKey)
+            .header("anthropic-version", ANTHROPIC_VERSION)
             .contentType(MediaType.APPLICATION_JSON)
             .body(body)
             .retrieve()
             .body(String.class);
 
         JsonNode root = objectMapper.readTree(raw);
-        JsonNode fields = objectMapper.readTree(root.path("response").asText("{}"));
+        String responseText = root.path("content").path(0).path("text").asText("{}");
+        JsonNode fields = objectMapper.readTree(responseText);
 
         return new SoapDraft(
             fields.path("subjective").asText(""),

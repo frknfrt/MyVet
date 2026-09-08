@@ -6,6 +6,7 @@ import com.vetos.modules.ai.domain.TreatmentRecommendationDraft;
 import com.vetos.modules.ai.domain.TreatmentRecommendationInput;
 import com.vetos.modules.ai.domain.TreatmentRecommendationPort;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
@@ -13,24 +14,20 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Lokal Ollama uzerinden tedavi onerisi uretimi -- OllamaSoapGenerationAdapter
- * ile ayni desen (OLLAMA_BASE_URL bos ise simule davranisa duser). SOAP'tan
- * farkli olarak format:json ISTEMIYOR -- tek bir serbest metin oneri yeterli,
- * S/O/A/P gibi alan ayristirmasi yok.
- *
- * ai.provider=claude ise bunun yerine ClaudeTreatmentRecommendationAdapter
- * aktif olur (bkz. o sinifin javadoc'u) -- Spring'in tek bir
- * TreatmentRecommendationPort bean'i olmasi gerektigi icin ikisi ayni anda
- * aktif olamaz.
+ * Anthropic Messages API uzerinden tedavi onerisi uretimi --
+ * OllamaTreatmentRecommendationAdapter ile ayni sozlesme (TreatmentRecommendationPort)
+ * ve ayni "kimlik bilgisi yoksa simule et" deseni. ai.provider=claude oldugunda
+ * aktif olur (bkz. OllamaTreatmentRecommendationAdapter'daki @ConditionalOnProperty).
  */
 @Component
-@ConditionalOnProperty(prefix = "ai", name = "provider", havingValue = "ollama", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "ai", name = "provider", havingValue = "claude")
 @Slf4j
-class OllamaTreatmentRecommendationAdapter implements TreatmentRecommendationPort {
+class ClaudeTreatmentRecommendationAdapter implements TreatmentRecommendationPort {
 
     private static final String STATUS_NOTE =
         "[AI modeli henuz baglanmadi -- gercek bir tedavi onerisi uretilemedi. Lutfen tedavi planini elle girin.]";
@@ -41,19 +38,28 @@ class OllamaTreatmentRecommendationAdapter implements TreatmentRecommendationPor
         dayanarak olasi bir tedavi plani oner. Kesin tani koyma, sadece tedavi secenekleri sun. \
         Yanitin sade bir paragraf/madde listesi olsun, JSON veya markdown kullanma.""";
 
-    private final String baseUrl;
+    private static final String ANTHROPIC_VERSION = "2023-06-01";
+
+    private final String apiKey;
     private final String model;
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
+    private final String apiUrl;
 
-    OllamaTreatmentRecommendationAdapter(
-        @Value("${ai.ollama.base-url:}") String baseUrl,
-        @Value("${ai.ollama.model:llama3.1}") String model,
+    @Autowired
+    ClaudeTreatmentRecommendationAdapter(
+        @Value("${ai.anthropic.api-key:}") String apiKey,
+        @Value("${ai.anthropic.model:claude-sonnet-5}") String model,
         ObjectMapper objectMapper
     ) {
-        this.baseUrl = baseUrl;
+        this(apiKey, model, objectMapper, "https://api.anthropic.com/v1/messages");
+    }
+
+    ClaudeTreatmentRecommendationAdapter(String apiKey, String model, ObjectMapper objectMapper, String apiUrl) {
+        this.apiKey = apiKey;
         this.model = model;
         this.objectMapper = objectMapper;
+        this.apiUrl = apiUrl;
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(5_000);
         requestFactory.setReadTimeout(120_000);
@@ -62,34 +68,36 @@ class OllamaTreatmentRecommendationAdapter implements TreatmentRecommendationPor
 
     @Override
     public TreatmentRecommendationDraft generate(TreatmentRecommendationInput input) {
-        if (baseUrl.isBlank()) {
+        if (apiKey.isBlank()) {
             return fallback();
         }
         try {
-            return generateViaOllama(input);
+            return generateViaClaude(input);
         } catch (Exception e) {
-            log.warn("Ollama tedavi onerisi uretimi basarisiz, mock'a duseluyor: {}", e.getMessage());
+            log.warn("Claude tedavi onerisi uretimi basarisiz, mock'a duseluyor: {}", e.getMessage());
             return fallback();
         }
     }
 
-    private TreatmentRecommendationDraft generateViaOllama(TreatmentRecommendationInput input) throws Exception {
+    private TreatmentRecommendationDraft generateViaClaude(TreatmentRecommendationInput input) throws Exception {
         String prompt = buildPrompt(input);
         Map<String, Object> body = Map.of(
             "model", model,
+            "max_tokens", 1024,
             "system", SYSTEM_PROMPT,
-            "prompt", prompt,
-            "stream", false
+            "messages", List.of(Map.of("role", "user", "content", prompt))
         );
         String raw = restClient.post()
-            .uri(baseUrl + "/api/generate")
+            .uri(apiUrl)
+            .header("x-api-key", apiKey)
+            .header("anthropic-version", ANTHROPIC_VERSION)
             .contentType(MediaType.APPLICATION_JSON)
             .body(body)
             .retrieve()
             .body(String.class);
 
         JsonNode root = objectMapper.readTree(raw);
-        String suggestion = root.path("response").asText("").trim();
+        String suggestion = root.path("content").path(0).path("text").asText("").trim();
         return new TreatmentRecommendationDraft(suggestion, true, model);
     }
 

@@ -32,7 +32,7 @@ class GenerateTreatmentRecommendationUseCaseTest {
     @BeforeEach
     void setUp() {
         useCase = new GenerateTreatmentRecommendationUseCase(
-            encounterLookupPort, treatmentRecommendationPort, recordAiJobUseCase, "llama3.1:8b"
+            encounterLookupPort, treatmentRecommendationPort, recordAiJobUseCase, "ollama"
         );
     }
 
@@ -47,7 +47,7 @@ class GenerateTreatmentRecommendationUseCaseTest {
             List.of(new PastEncounterSummary(Instant.now(), "Gecmis degerlendirme", "Gecmis plan"))
         );
         when(encounterLookupPort.findClinicalContext(encounterId, 5)).thenReturn(context);
-        TreatmentRecommendationDraft draft = new TreatmentRecommendationDraft("Diyet degisikligi onerilir", true);
+        TreatmentRecommendationDraft draft = new TreatmentRecommendationDraft("Diyet degisikligi onerilir", true, "llama3.1:8b");
         when(treatmentRecommendationPort.generate(any())).thenReturn(draft);
         when(recordAiJobUseCase.execute(any())).thenReturn(aiJobId);
 

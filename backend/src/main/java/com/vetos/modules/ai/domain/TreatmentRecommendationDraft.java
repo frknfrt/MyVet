@@ -1,3 +1,3 @@
 package com.vetos.modules.ai.domain;
 
-public record TreatmentRecommendationDraft(String suggestionText, boolean modelConnected) {}
+public record TreatmentRecommendationDraft(String suggestionText, boolean modelConnected, String modelVersion) {}

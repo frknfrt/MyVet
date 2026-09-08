@@ -38,12 +38,23 @@ jwt:
   expiration-minutes: ${JWT_EXPIRATION_MINUTES:480}
 
 ai:
+  # Hangi saglayici adaptorunun (SoapGenerationPort/TreatmentRecommendationPort)
+  # aktif olacagini secer: "ollama" (varsayilan, yerel/ucretsiz) veya "claude"
+  # (Anthropic API, ucretli ama VRAM siniri yok). Ikisi ayni anda aktif olamaz --
+  # bkz. OllamaSoapGenerationAdapter/ClaudeSoapGenerationAdapter @ConditionalOnProperty.
+  provider: ${AI_PROVIDER:ollama}
   ollama:
     # Lokal Ollama'ya baglanmak icin OLLAMA_BASE_URL=http://localhost:11434 set edin.
     # Bos birakilirsa (varsayilan) SOAP uretimi mock/simule modda kalir
     # (bkz. OllamaSoapGenerationAdapter).
     base-url: ${OLLAMA_BASE_URL:}
     model: ${OLLAMA_MODEL:llama3.1}
+  anthropic:
+    # ai.provider=claude oldugunda kullanilir. ANTHROPIC_API_KEY asla commit
+    # edilmemeli -- backend/.env.local (gitignored) veya ortam degiskeni olarak
+    # verilmeli.
+    api-key: ${ANTHROPIC_API_KEY:}
+    model: ${ANTHROPIC_MODEL:claude-sonnet-5}
 
 notification:
   twilio:
