@@ -158,16 +158,24 @@ export function EncounterPage() {
 
   async function acceptRecommendation() {
     if (!recommendation) return;
-    setSoap((s) => ({ ...s, plan: recommendation.suggestionText }));
-    await aiApi.decideTreatmentRecommendation(recommendation.aiJobId, 'ACCEPTED_AS_IS');
-    setRecommendationDecided(true);
-    setTimeout(() => setRecommendation(null), 3000);
+    try {
+      await aiApi.decideTreatmentRecommendation(recommendation.aiJobId, 'ACCEPTED_AS_IS');
+      setSoap((s) => ({ ...s, plan: recommendation.suggestionText }));
+      setRecommendationDecided(true);
+      setTimeout(() => setRecommendation(null), 3000);
+    } catch (err) {
+      setRecommendationError(errorMessageOf(err));
+    }
   }
 
   async function rejectRecommendation() {
     if (!recommendation) return;
-    await aiApi.decideTreatmentRecommendation(recommendation.aiJobId, 'REJECTED');
-    setRecommendation(null);
+    try {
+      await aiApi.decideTreatmentRecommendation(recommendation.aiJobId, 'REJECTED');
+      setRecommendation(null);
+    } catch (err) {
+      setRecommendationError(errorMessageOf(err));
+    }
   }
 
   async function handleSaveSoap() {
