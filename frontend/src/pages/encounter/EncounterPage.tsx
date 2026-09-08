@@ -48,6 +48,10 @@ export function EncounterPage() {
   const [draft, setDraft] = useState<{ subjective: string; objective: string; assessment: string; plan: string; modelConnected: boolean } | null>(null);
   const [soapAiGenerated, setSoapAiGenerated] = useState(false);
   const [draftApplied, setDraftApplied] = useState(false);
+  const [generatingRecommendation, setGeneratingRecommendation] = useState(false);
+  const [recommendationError, setRecommendationError] = useState<string | null>(null);
+  const [recommendation, setRecommendation] = useState<{ aiJobId: string; suggestionText: string; modelConnected: boolean } | null>(null);
+  const [recommendationDecided, setRecommendationDecided] = useState(false);
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
@@ -135,6 +139,35 @@ export function EncounterPage() {
     setSoapAiGenerated(true);
     setDraftApplied(true);
     setTimeout(() => setDraftApplied(false), 3000);
+  }
+
+  async function handleGenerateRecommendation() {
+    if (generatingRecommendation || !soap.assessment.trim() || !encounterId) return;
+    setGeneratingRecommendation(true);
+    setRecommendationError(null);
+    try {
+      const result = await aiApi.generateTreatmentRecommendation(encounterId);
+      setRecommendation(result);
+      setRecommendationDecided(false);
+    } catch (err) {
+      setRecommendationError(errorMessageOf(err));
+    } finally {
+      setGeneratingRecommendation(false);
+    }
+  }
+
+  async function acceptRecommendation() {
+    if (!recommendation) return;
+    setSoap((s) => ({ ...s, plan: recommendation.suggestionText }));
+    await aiApi.decideTreatmentRecommendation(recommendation.aiJobId, 'ACCEPTED_AS_IS');
+    setRecommendationDecided(true);
+    setTimeout(() => setRecommendation(null), 3000);
+  }
+
+  async function rejectRecommendation() {
+    if (!recommendation) return;
+    await aiApi.decideTreatmentRecommendation(recommendation.aiJobId, 'REJECTED');
+    setRecommendation(null);
   }
 
   async function handleSaveSoap() {
@@ -292,6 +325,62 @@ export function EncounterPage() {
                 <Button variant="primary" onClick={handleFinalize} disabled={finalizing}>
                   {finalizing ? 'Tamamlanıyor...' : 'Muayeneyi Tamamla'}
                 </Button>
+              </div>
+            )}
+          </div>
+
+          <div className={styles.aiCard}>
+            <div className={styles.aiTitle}>✦ AI Tedavi Önerisi</div>
+            <p className={styles.aiCopy}>
+              Assessment alanına ve hastanın son muayenelerine dayanarak bir tedavi planı önerisi üretir.
+              Öneri hekim onayına sunulur, Plan alanına siz onaylamadan uygulanmaz.
+            </p>
+
+            {!soap.assessment.trim() && (
+              <p className={styles.aiCopy}>Önce Assessment alanını doldurup kaydedin.</p>
+            )}
+
+            {!isReadOnly && (
+              <div className={styles.aiActions}>
+                <Button
+                  variant="ai"
+                  onClick={handleGenerateRecommendation}
+                  disabled={generatingRecommendation || !soap.assessment.trim()}
+                >
+                  {generatingRecommendation ? 'Oluşturuluyor...' : 'Tedavi Önerisi Al'}
+                </Button>
+              </div>
+            )}
+
+            {generatingRecommendation && (
+              <p className={styles.aiCopy}>AI önerisi hazırlanıyor, bu işlem ~30-60 saniye sürebilir…</p>
+            )}
+
+            {recommendationError && <div className={styles.aiError}>{recommendationError}</div>}
+
+            {recommendation && (
+              <div className={styles.draftBox}>
+                <div className={styles.aiWarning}>
+                  Bu öneri gerçek bir tıbbi referans kaynağına dayanmaz, yalnızca genel AI bilgisine dayanır.
+                  Bağımsız olarak değerlendirin.
+                </div>
+                <div className={styles.draftLabel}>Öneri önizleme</div>
+                <div className={styles.draftPreview}>{recommendation.suggestionText || '—'}</div>
+                {!isReadOnly && !recommendationDecided && (
+                  <div className={styles.aiActions}>
+                    <Button variant="ai" onClick={acceptRecommendation}>
+                      Aynen Kabul Et
+                    </Button>
+                    <Button variant="secondary" onClick={rejectRecommendation}>
+                      Reddet
+                    </Button>
+                  </div>
+                )}
+                {recommendationDecided && (
+                  <p className={styles.aiCopy}>
+                    ✓ Plan alanına uygulandı — kontrol edip "SOAP Kaydet"e basmayı unutmayın.
+                  </p>
+                )}
               </div>
             )}
           </div>
