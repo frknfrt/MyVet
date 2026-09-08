@@ -47,6 +47,7 @@ export function EncounterPage() {
   const [draftError, setDraftError] = useState<string | null>(null);
   const [draft, setDraft] = useState<{ subjective: string; objective: string; assessment: string; plan: string; modelConnected: boolean } | null>(null);
   const [soapAiGenerated, setSoapAiGenerated] = useState(false);
+  const [draftApplied, setDraftApplied] = useState(false);
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
@@ -132,6 +133,8 @@ export function EncounterPage() {
     if (!draft) return;
     setSoap({ subjective: draft.subjective, objective: draft.objective, assessment: draft.assessment, plan: draft.plan });
     setSoapAiGenerated(true);
+    setDraftApplied(true);
+    setTimeout(() => setDraftApplied(false), 3000);
   }
 
   async function handleSaveSoap() {
@@ -335,6 +338,10 @@ export function EncounterPage() {
               </div>
             )}
 
+            {generatingDraft && (
+              <p className={styles.aiCopy}>AI taslağı hazırlanıyor, bu işlem ~30-40 saniye sürebilir…</p>
+            )}
+
             {draftError && <div className={styles.aiError}>{draftError}</div>}
 
             {draft && (
@@ -351,6 +358,11 @@ export function EncounterPage() {
                   <Button variant="ai" onClick={applyDraft}>
                     Alanlara Uygula
                   </Button>
+                )}
+                {draftApplied && (
+                  <p className={styles.aiCopy}>
+                    ✓ Soldaki "SOAP Notu" kartına uygulandı — kontrol edip "SOAP Kaydet"e basmayı unutmayın.
+                  </p>
                 )}
               </div>
             )}
