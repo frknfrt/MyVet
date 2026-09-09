@@ -90,6 +90,9 @@ export function EfaturaPanel() {
               <div className={styles.muted}>{eInvoiceDocumentTypeLabel(s.documentType)}</div>
               <div>
                 <EInvoiceSubmissionStatusBadge status={s.status} />
+                {s.status === 'FAILED' && s.failureReason && (
+                  <div className={styles.failureReason}>{s.failureReason}</div>
+                )}
               </div>
               <div className={styles.muted}>{new Date(s.attemptedAt).toLocaleString('tr-TR')}</div>
               <div>

@@ -9,11 +9,12 @@ import java.util.UUID;
 
 public record EInvoiceSubmissionResponse(
     UUID id, UUID invoiceId, String ownerName, EInvoiceDocumentType documentType,
-    EInvoiceSubmissionStatus status, String gibReference, Instant attemptedAt
+    EInvoiceSubmissionStatus status, String gibReference, String failureReason, Instant attemptedAt
 ) {
     public static EInvoiceSubmissionResponse from(EInvoiceSubmissionSummary s) {
         return new EInvoiceSubmissionResponse(
-            s.id(), s.invoiceId(), s.ownerName(), s.documentType(), s.status(), s.gibReference(), s.attemptedAt()
+            s.id(), s.invoiceId(), s.ownerName(), s.documentType(), s.status(), s.gibReference(),
+            s.failureReason(), s.attemptedAt()
         );
     }
 }

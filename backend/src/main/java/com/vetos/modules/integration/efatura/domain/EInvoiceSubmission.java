@@ -45,6 +45,17 @@ public class EInvoiceSubmission {
     @Column(name = "gib_reference")
     private String gibReference;
 
+    // Saglayicinin (faturaentegrator) kendi takip ID'si -- PROCESSING durumunda
+    // set edilir, callback bu degerle submission'i bulur (bkz. V32 migration).
+    @Column(name = "provider_reference")
+    private String providerReference;
+
+    // Basarisizlik sebebi (saglayici hata mesaji ya da bizim on-dogrulama
+    // mesajimiz) -- personel neden basarisiz oldugunu MyVet arayuzunde
+    // gorsun diye ayrica saklanir (bkz. V33 migration).
+    @Column(name = "failure_reason")
+    private String failureReason;
+
     @Column(name = "attempted_at", nullable = false)
     private Instant attemptedAt;
 
@@ -66,16 +77,27 @@ public class EInvoiceSubmission {
     public void markSubmitted(String gibReference) {
         this.status = EInvoiceSubmissionStatus.SUBMITTED;
         this.gibReference = gibReference;
+        this.failureReason = null;
         this.attemptedAt = Instant.now();
     }
 
-    public void markFailed() {
+    /** Asenkron saglayici istegi kabul etti ama GIB resmilesmesi henuz tamamlanmadi. */
+    public void markAcceptedByProvider(String providerReference) {
+        this.status = EInvoiceSubmissionStatus.PROCESSING;
+        this.providerReference = providerReference;
+        this.failureReason = null;
+        this.attemptedAt = Instant.now();
+    }
+
+    public void markFailed(String reason) {
         this.status = EInvoiceSubmissionStatus.FAILED;
+        this.failureReason = reason;
         this.attemptedAt = Instant.now();
     }
 
     public void markRetrying() {
         this.status = EInvoiceSubmissionStatus.PENDING;
+        this.failureReason = null;
         this.attemptedAt = Instant.now();
     }
 }

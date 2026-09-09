@@ -5,6 +5,7 @@ import java.util.UUID;
 
 public record UpdateOwnerCommand(
     UUID ownerId,
+    String fullName,
     String phone,
     String email,
     String address,

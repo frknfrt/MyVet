@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import java.math.BigDecimal;
 
 public record UpdateOwnerRequest(
+    @NotBlank String fullName,
     @NotBlank String phone,
     String email,
     String address,

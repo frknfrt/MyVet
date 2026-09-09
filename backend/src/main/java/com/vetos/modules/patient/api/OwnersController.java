@@ -76,7 +76,7 @@ public class OwnersController {
     @PreAuthorize("hasAnyRole('VET', 'RECEPTIONIST', 'ADMIN')")
     public void update(@PathVariable UUID id, @RequestBody @Valid UpdateOwnerRequest request) {
         updateOwnerUseCase.execute(new UpdateOwnerCommand(
-            id, request.phone(), request.email(), request.address(), request.middleName(),
+            id, request.fullName(), request.phone(), request.email(), request.address(), request.middleName(),
             request.secondaryPhone(), request.city(), request.district(), request.occupation(),
             request.referralSource(), request.clientDiscount(), request.criticalAlert(), request.notes(),
             request.smsConsent(), request.whatsappConsent(), request.notificationConsent(), request.protocolNumber()

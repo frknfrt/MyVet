@@ -98,6 +98,14 @@ public class Owner {
         this.address = address;
     }
 
+    // fullName kayit sirasinda bir kere set edilip hicbir yerden
+    // degistirilemiyordu -- personel yanlis/eksik girdiginde (orn. sadece
+    // ad, soyadsiz) duzeltecek bir yol yoktu. e-Fatura'nin GIB soyad
+    // kuralini karsilayabilmek icin duzenlenebilir hale getirildi.
+    public void updateFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
     public void updateDetails(
         String middleName, String secondaryPhone, String city, String district, String occupation,
         String referralSource, BigDecimal clientDiscount, String criticalAlert, String notes,

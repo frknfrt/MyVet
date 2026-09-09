@@ -140,6 +140,7 @@ export interface RegisterOwnerPayload {
 }
 
 export interface UpdateOwnerPayload {
+  fullName: string;
   phone: string;
   email?: string;
   address?: string;

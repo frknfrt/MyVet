@@ -18,6 +18,7 @@ interface OwnerEditModalProps {
 }
 
 export function OwnerEditModal({ open, profile, onClose, onSaved }: OwnerEditModalProps) {
+  const [fullName, setFullName] = useState('');
   const [middleName, setMiddleName] = useState('');
   const [phone, setPhone] = useState('');
   const [secondaryPhone, setSecondaryPhone] = useState('');
@@ -39,6 +40,7 @@ export function OwnerEditModal({ open, profile, onClose, onSaved }: OwnerEditMod
 
   useEffect(() => {
     if (!open || !profile) return;
+    setFullName(profile.fullName);
     setMiddleName(profile.middleName ?? '');
     setPhone(profile.phone);
     setSecondaryPhone(profile.secondaryPhone ?? '');
@@ -65,6 +67,7 @@ export function OwnerEditModal({ open, profile, onClose, onSaved }: OwnerEditMod
     setError(null);
     try {
       await patientApi.updateOwner(profile.id, {
+        fullName,
         phone,
         email: email || undefined,
         address: address || undefined,
@@ -100,6 +103,9 @@ export function OwnerEditModal({ open, profile, onClose, onSaved }: OwnerEditMod
         {error && <div className={styles.errorBanner}>{error}</div>}
 
         <div className={styles.sectionLabel}>İletişim</div>
+        <FieldWrap label="Ad Soyad">
+          <Input value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+        </FieldWrap>
         <div className={styles.row2}>
           <FieldWrap label="İkinci ad (opsiyonel)">
             <Input value={middleName} onChange={(e) => setMiddleName(e.target.value)} />

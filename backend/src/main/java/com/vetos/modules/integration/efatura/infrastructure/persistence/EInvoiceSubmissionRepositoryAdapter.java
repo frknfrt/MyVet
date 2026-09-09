@@ -23,4 +23,9 @@ class EInvoiceSubmissionRepositoryAdapter implements EInvoiceSubmissionRepositor
 
     @Override
     public List<EInvoiceSubmission> findByTenantId(UUID tenantId) { return jpaRepository.findByTenantId(tenantId); }
+
+    @Override
+    public Optional<EInvoiceSubmission> findByProviderReference(String providerReference) {
+        return jpaRepository.findByProviderReference(providerReference);
+    }
 }

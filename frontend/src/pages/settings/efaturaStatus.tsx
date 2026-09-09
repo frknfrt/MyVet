@@ -3,6 +3,7 @@ import { EInvoiceDocumentType, EInvoiceSubmissionStatus } from '../../api/efatur
 
 const STATUS_CONFIG: Record<EInvoiceSubmissionStatus, { label: string; tone: BadgeTone }> = {
   PENDING: { label: 'Bekliyor', tone: 'neutral' },
+  PROCESSING: { label: 'GİB Resmileştiriyor', tone: 'warning' },
   SUBMITTED: { label: 'Gönderildi', tone: 'success' },
   FAILED: { label: 'Başarısız', tone: 'danger' },
 };

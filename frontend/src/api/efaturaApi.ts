@@ -1,7 +1,7 @@
 import { apiClient } from './client';
 
 export type EInvoiceDocumentType = 'E_ARSIV' | 'E_FATURA';
-export type EInvoiceSubmissionStatus = 'PENDING' | 'SUBMITTED' | 'FAILED';
+export type EInvoiceSubmissionStatus = 'PENDING' | 'PROCESSING' | 'SUBMITTED' | 'FAILED';
 
 export interface EInvoiceStatus {
   pendingCount: number;
@@ -18,6 +18,7 @@ export interface EInvoiceSubmission {
   documentType: EInvoiceDocumentType;
   status: EInvoiceSubmissionStatus;
   gibReference: string | null;
+  failureReason: string | null;
   attemptedAt: string;
 }
 

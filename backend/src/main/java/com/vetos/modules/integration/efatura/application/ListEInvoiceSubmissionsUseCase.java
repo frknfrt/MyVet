@@ -23,7 +23,7 @@ public class ListEInvoiceSubmissionsUseCase {
         return eInvoiceSubmissionRepository.findByTenantId(tenantId).stream()
             .map(s -> new EInvoiceSubmissionSummary(
                 s.getId(), s.getInvoiceId(), ownerLookupPort.findSummaryById(s.getOwnerId()).fullName(),
-                s.getDocumentType(), s.getStatus(), s.getGibReference(), s.getAttemptedAt()
+                s.getDocumentType(), s.getStatus(), s.getGibReference(), s.getFailureReason(), s.getAttemptedAt()
             ))
             .sorted(Comparator.comparing(EInvoiceSubmissionSummary::attemptedAt).reversed())
             .toList();

@@ -1,12 +1,19 @@
 package com.vetos.modules.integration.efatura.domain;
 
-/**
- * @docs/architecture.md Bolum 3 (Open/Closed) -- yeni bir saglayici (GIB
- * dogrudan entegrasyonu, Foriba, Uyumsoft, Logo...) eklemek icin tek
- * yapilan: bu arayuzu implemente eden yeni bir @Component yazmak. Gercek
- * saglayici hesabi/API anahtari gelene kadar MockEInvoiceGatewayAdapter
- * kullanilir (@docs/architecture.md TARBIL/MockTarbilAdapter ile ayni desen).
- */
 public interface EInvoiceGatewayPort {
     EInvoiceSubmissionOutcome submit(EInvoiceSubmissionRequest request);
+
+    /** Gercek bir saglayici hesabi/API anahtari yapilandirilmis mi (Ayarlar > e-Fatura ekrani icin). */
+    default boolean isConfigured() {
+        return false;
+    }
+
+    /**
+     * Asenkron saglayicilarda (faturaentegrator) callback bildirimi geldiginde
+     * guncel durumu sorgulamak icin -- bkz. ApplyEInvoiceCallbackUseCase.
+     * Senkron saglayicilar (mock) bu duruma hic girmez, cagirmalari beklenmez.
+     */
+    default EInvoiceSubmissionOutcome fetchStatus(String providerReference) {
+        throw new UnsupportedOperationException("Bu saglayici asenkron durum sorgulamayi desteklemiyor");
+    }
 }

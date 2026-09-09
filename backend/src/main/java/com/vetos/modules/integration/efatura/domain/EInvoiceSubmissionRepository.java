@@ -8,4 +8,5 @@ public interface EInvoiceSubmissionRepository {
     EInvoiceSubmission save(EInvoiceSubmission submission);
     Optional<EInvoiceSubmission> findById(UUID id);
     List<EInvoiceSubmission> findByTenantId(UUID tenantId);
+    Optional<EInvoiceSubmission> findByProviderReference(String providerReference);
 }

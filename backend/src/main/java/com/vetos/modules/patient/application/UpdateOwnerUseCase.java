@@ -18,6 +18,7 @@ public class UpdateOwnerUseCase {
     public void execute(UpdateOwnerCommand command) {
         Owner owner = ownerRepository.findById(command.ownerId())
             .orElseThrow(() -> new OwnerNotFoundException(command.ownerId()));
+        owner.updateFullName(command.fullName());
         owner.updateContactInfo(command.phone(), command.email(), command.address());
         owner.updateDetails(
             command.middleName(), command.secondaryPhone(), command.city(), command.district(),

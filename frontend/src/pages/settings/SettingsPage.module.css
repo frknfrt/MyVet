@@ -138,6 +138,11 @@
 .muted {
   color: var(--color-text-muted);
 }
+.failureReason {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--color-danger-700);
+}
 .empty {
   text-align: center;
   padding: 3rem 1rem;

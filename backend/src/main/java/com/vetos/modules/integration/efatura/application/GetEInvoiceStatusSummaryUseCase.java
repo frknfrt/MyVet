@@ -1,6 +1,7 @@
 package com.vetos.modules.integration.efatura.application;
 
 import com.vetos.modules.integration.efatura.application.dto.EInvoiceStatusSummary;
+import com.vetos.modules.integration.efatura.domain.EInvoiceGatewayPort;
 import com.vetos.modules.integration.efatura.domain.EInvoiceSubmission;
 import com.vetos.modules.integration.efatura.domain.EInvoiceSubmissionRepository;
 import com.vetos.modules.integration.efatura.domain.EInvoiceSubmissionStatus;
@@ -17,12 +18,18 @@ import java.util.UUID;
 public class GetEInvoiceStatusSummaryUseCase {
 
     private final EInvoiceSubmissionRepository eInvoiceSubmissionRepository;
+    private final EInvoiceGatewayPort eInvoiceGatewayPort;
 
     @Transactional(readOnly = true)
     public EInvoiceStatusSummary execute(UUID tenantId) {
         List<EInvoiceSubmission> submissions = eInvoiceSubmissionRepository.findByTenantId(tenantId);
 
-        long pending = submissions.stream().filter(s -> s.getStatus() == EInvoiceSubmissionStatus.PENDING).count();
+        // PROCESSING (saglayiciya iletildi, GIB resmilesmesi bekleniyor) henuz
+        // sonuclanmamis sayilir -- ekranda "Bekliyor" sayacina dahil edilir,
+        // frontend'in EInvoiceSubmissionStatus union'ini genisletmeye gerek kalmaz.
+        long pending = submissions.stream()
+            .filter(s -> s.getStatus() == EInvoiceSubmissionStatus.PENDING || s.getStatus() == EInvoiceSubmissionStatus.PROCESSING)
+            .count();
         long submitted = submissions.stream().filter(s -> s.getStatus() == EInvoiceSubmissionStatus.SUBMITTED).count();
         long failed = submissions.stream().filter(s -> s.getStatus() == EInvoiceSubmissionStatus.FAILED).count();
         Instant lastSubmittedAt = submissions.stream()
@@ -31,9 +38,6 @@ public class GetEInvoiceStatusSummaryUseCase {
             .max(Instant::compareTo)
             .orElse(null);
 
-        // Gercek bir e-Fatura/e-Arsiv saglayici hesabi/API anahtari bu
-        // ortamda mevcut degil -- MockEInvoiceGatewayAdapter aktif oldugu
-        // surece false.
-        return new EInvoiceStatusSummary(pending, submitted, failed, lastSubmittedAt, false);
+        return new EInvoiceStatusSummary(pending, submitted, failed, lastSubmittedAt, eInvoiceGatewayPort.isConfigured());
     }
 }

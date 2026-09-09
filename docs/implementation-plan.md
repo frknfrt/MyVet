@@ -171,3 +171,133 @@ Kullanıcı Tanı Desteği'ni test ederken (başarılı) ardından Tedavi Öneri
 **Ders:** Anthropic Messages API'de `content[]` dizisinin sırası/uzunluğu sabit değil (extended thinking, gelecekte başka blok tipleri) — hangi adaptör olursa olsun content bloklarını HER ZAMAN `type` alanına göre filtrelemek gerekiyor, index'e güvenilmemeli.
 
 Kullanıcı düzeltmeden sonra Tedavi Önerisi'ni tekrar test etti, sorunsuz çalıştı — **SOAP + Tedavi Önerisi + Tanı Desteği üçü de lokalde uçtan uca doğrulandı, hatasız.**
+
+### Ek not (2026-09-09, devam #3) — git push tamamlandı
+
+Tüm değişiklikler (Tanı Desteği + extended-thinking bug düzeltmesi + yeni test coverage) `main`'e push edildi (commit `ec34e4f`). `./mvnw test` ve `npm run build` push öncesi kullanıcı tarafından yeşil doğrulandı. Render'ın otomatik deploy'u tetiklenmiş olmalı. **Kalan tek adım:** Render Environment'a `AI_PROVIDER=claude` + `ANTHROPIC_API_KEY` eklenmiş mi teyit edilmesi, ardından production'da üç AI özelliğinin de (SOAP, Tedavi Önerisi, Tanı Desteği) canlıda test edilmesi.
+
+
+## e-Fatura: faturaentegrator.com gercek entegrasyonu (2026-09-09)
+
+Mock adaptorun yanina gercek bir saglayici (faturaentegrator.com, Dummy Fatura
+test hesabi -- fiyat/ucretsiz test onceligiyle secildi) eklendi. Ozet:
+
+- **Domain genisletildi:** `EInvoiceSubmissionRequest`'e satir kalemleri
+  (`EInvoiceLineItem`, billing modulundeki `InvoiceLine`'dan turetiliyor) ve
+  tam alici bilgisi (sehir/ilce) eklendi.
+- **TCKN karari:** Sahiplerin gercek TCKN'si sistemde hic tutulmuyor (sadece
+  maskeli hali var) -- kullanici ile birlikte GIB'in "isimsiz/nihai tuketici"
+  TCKN'si (11111111111) kullanilmasina karar verildi; her fatura otomatik
+  e-Arsiv olarak kesiliyor. Gercek TCKN toplama (KVKK etkili, kayit akisini
+  degistiren bir is) ileride ayrica degerlendirilebilir.
+- **Asenkron akis karari:** faturaentegrator `POST /invoices` ANINDA GIB
+  ETTN'i donmuyor (workflow_status=processing). Yeni bir ara durum
+  (`EInvoiceSubmissionStatus.PROCESSING`) eklendi. Kullanici ile birlikte
+  callback (webhook) yaklasimi secildi (polling yerine) -- callback govdesi
+  sadece `{invoice_id, team_id, time, hash}` tasiyor (durum bilgisi YOK), bu
+  yuzden bildirim gelince ayrica `GET /invoices/{id}` ile guncel durum
+  cekiliyor (`EInvoiceGatewayPort.fetchStatus`). Imza HMAC-SHA512 ile
+  dogrulaniyor (`FaturaEntegratorCallbackController`, IyzicoPaymentGatewayAdapter
+  ile ayni HMAC deseni).
+- **"Tekrar Dene" guvenligi:** PROCESSING durumdaki bir gonderim tekrar
+  denenirse saglayici tarafinda mukerrer fatura olusur -- bu yuzden
+  `RetryEInvoiceSubmissionUseCase` artik PROCESSING icin
+  `EInvoiceSubmissionAlreadyProcessingException` firlatiyor.
+- **Musteri eslestirme:** faturaentegrator `customer.id` alanini sayisal
+  bekliyor, sahip kayitlarimiz UUID -- sahip UUID'sinden sabit bir sayisal ID
+  turetiliyor (ayni sahip = ayni ID = saglayici panelinde mukerrer musteri
+  olusmuyor).
+- **Bilinen sinirlama:** KDV orani 0 olan satirlar icin GIB istisna
+  kodu/gerekcesi modellenmiyor (InvoiceLine'da bu alan yok) -- boyle bir
+  satir gelirse istek saglayici tarafinda reddedilir (yanlis istisna kodu
+  uydurmak yerine bilincli tercih).
+- **Config:** `EFATURA_PROVIDER=faturaentegrator` (varsayilan `mock`),
+  `EFATURA_FATURAENTEGRATOR_API_KEY`, `EFATURA_FATURAENTEGRATOR_INVOICE_INTEGRATION_ID`
+  (test hesabi: 753), `EFATURA_FATURAENTEGRATOR_SALE_CHANNEL_ID` (test kanali:
+  1045), `EFATURA_FATURAENTEGRATOR_CALLBACK_BASE_URL` (public erisilebilir
+  backend adresi -- localde callback gercekten test edilemez, Render'da
+  https://<servis>.onrender.com olarak set edilmeli).
+- **Yeni migration:** `V32__efatura_provider_reference.sql`
+  (`efatura_submission.provider_reference` kolonu).
+- **Testler yazildi:** `FaturaEntegratorEInvoiceGatewayAdapterTest`,
+  `FaturaEntegratorCallbackControllerTest`, `ApplyEInvoiceCallbackUseCaseTest`,
+  `RetryEInvoiceSubmissionUseCaseTest`. Bu oturumun sandbox'i Maven/Java
+  calistiramadigi icin `./mvnw test` kullanicinin kendi makinesinde
+  DOGRULANMADI -- bir sonraki adim budur.
+- **Kalan is:** kullanici `./mvnw test` calistirip sonucu paylasacak; localde
+  Dummy Fatura ile gercek bir `POST /invoices` denemesi (env degiskenleri set
+  edilip backend ayaga kaldirilarak) yapilacak; callback ucu ancak public bir
+  URL'den (Render deploy'u ya da ngrok gibi bir tunel) gercekten test
+  edilebilir.
+
+### Guncelleme (2026-09-09, ayni gun) -- ilk gercek lokal test ve soyad bug'i
+
+Kullanici `EFATURA_PROVIDER=faturaentegrator` ile lokalde gercek bir test
+yaptı: `./mvnw test` yesil gecti, backend gercek adaptoru sececek sekilde
+ayaga kalkti, `POST /invoices` faturaentegrator'a basariyla ulasti
+(providerReference=232420 dogru sekilde kaydedildi, durum PROCESSING /
+"GİB Resmileştiriyor" -- callback localhost'a ulasamadigi icin bu durumda
+takili kalmasi beklenen ve dogru davranis).
+
+faturaentegrator panelinde ayni fatura icin "Resmileştirme Hatalı" bulundu:
+**"Soyad(FamilyName) alanı 2 haneden az olamaz."** Kok sebep: test sahibi
+"hale" sistemde tek kelimelik isim olarak kayitli (Owner'da ayri
+firstName/lastName yok, tek serbest metin `fullName` alani var), adaptorun
+`splitName()` fonksiyonu boşluk bulamayinca soyadi `"-"` (1 karakter) ile
+dolduruyordu, GIB bunu reddediyor.
+
+Kullaniciya soruldu, "gercek musterilerin zaten soyadi olur, soyadsiz islem
+yapilmamali" karari verildi -- yani soyad UYDURULMUYOR, bunun yerine:
+
+- `EInvoiceSubmissionExecutor.attemptSubmit()` artik saglayiciyi hic
+  cagirmadan once `owner.fullName()`'de gecerli bir soyad (son bosluktan
+  sonraki kisim >= 2 karakter) olup olmadigini kontrol ediyor. Yoksa
+  submission direkt FAILED'e geciyor, saglayici tarafinda bos/hatali kayit
+  birikmiyor.
+- **Yeni: `failure_reason` kolonu** (`V33__efatura_submission_failure_reason.sql`)
+  -- daha once basarisizlik SEBEBI hicbir yerde saklanmiyordu (`markFailed()`
+  parametresizdi), personel neden basarisiz oldugunu gormek icin
+  faturaentegrator panelini acmak zorundaydi. Artik hem on-dogrulama
+  mesaji hem de saglayicinin/GIB'in gercek hata metni
+  (`EInvoiceSubmissionOutcome.message()`) `EInvoiceSubmission.failureReason`'a
+  yaziliyor, API (`EInvoiceSubmissionResponse.failureReason`) ve frontend
+  (Ayarlar > e-Fatura tablosunda FAILED satirlarin altinda kucuk kirmizi
+  metin) uzerinden gorunuyor.
+- Yeni test: `EInvoiceSubmissionExecutorTest` (bu sinifin daha once hic testi
+  yoktu) -- soyad on-dogrulamasi, basarili gonderim, saglayici reddi,
+  submission bulunamama senaryolarini kapsiyor.
+- `./mvnw test` bu degisiklikler icin de kullanicinin kendi makinesinde
+  DOGRULANMADI -- bir sonraki adim budur.
+
+**Kalan is:** "hale" test sahibinin kaydina soyad eklenip (or. "hale
+Yilmaz") ayni fatura "Tekrar Dene" ile yeniden denenip artik SUBMITTED/
+Resmilesiyor durumuna gecebildigi dogrulanacak; sonra callback ucu Render
+deploy'u ya da ngrok ile test edilecek.
+
+### Guncelleme (2026-09-09, ayni gun) -- asil kok sebep: Ad Soyad hic duzenlenemiyordu
+
+Kullanici "hale" sahibinin soyadini duzeltmeye calisti ama Ayarlar > e-Fatura
+yine ayni hatayi verdi. Sebebi bulundu: **`fullName` (Ad Soyad) alani
+kayittan sonra HICBIR yerden guncellenemiyordu** -- ne `Owner` domain
+sinifinda bir metot, ne `UpdateOwnerCommand`/`UpdateOwnerRequest`'te bir
+alan, ne de `OwnerEditModal.tsx`'te bir form alani vardi. Kullanicinin
+duzenle ekraninda gordugu tek isimle-ilgili alan "İkinci ad (opsiyonel)"
+(middleName) idi -- kullanici oraya "Say" yazinca sahip detay basligi
+kozmetik olarak "hale Say" gorunuyordu ama gercek `fullName` kolonu hala
+sadece "hale" olarak kaliyordu, bu yuzden e-Fatura'nin soyad kontrolu
+(fullName'e bakiyor, middleName'e degil) tekrar basarisiz oluyordu.
+
+Bu, e-Fatura ozelligiyle ortaya cikan ama daha once de var olan genel bir
+urun eksigiydi -- duzeltildi:
+
+- `Owner.updateFullName(String)` (domain) eklendi.
+- `UpdateOwnerCommand`, `UpdateOwnerRequest` (`@NotBlank fullName`),
+  `OwnersController`, `UpdateOwnerUseCase` zincirine `fullName` eklendi.
+- `OwnerEditModal.tsx`'e "Ad Soyad" (zorunlu) alani eklendi;
+  `UpdateOwnerPayload`'a `fullName: string` eklendi.
+- Yeni test: `UpdateOwnerUseCaseTest` (bu use case'in hic testi yoktu).
+
+**Kalan is:** kullanici `./mvnw test` calistirip yeşil oldugunu dogrulayacak
+(bu degisiklikler icin henuz DOGRULANMADI); sonra "hale" kaydini gercekten
+"Ad Soyad" alanindan "hale Yılmaz" gibi duzenleyip Ayarlar > e-Fatura'dan
+"Tekrar Dene" ile test edecek.

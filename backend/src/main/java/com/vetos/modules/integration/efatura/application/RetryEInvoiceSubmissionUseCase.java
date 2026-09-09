@@ -2,6 +2,8 @@ package com.vetos.modules.integration.efatura.application;
 
 import com.vetos.modules.integration.efatura.domain.EInvoiceSubmission;
 import com.vetos.modules.integration.efatura.domain.EInvoiceSubmissionRepository;
+import com.vetos.modules.integration.efatura.domain.EInvoiceSubmissionStatus;
+import com.vetos.modules.integration.efatura.domain.exception.EInvoiceSubmissionAlreadyProcessingException;
 import com.vetos.modules.integration.efatura.domain.exception.EInvoiceSubmissionNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,13 @@ public class RetryEInvoiceSubmissionUseCase {
     public void execute(UUID submissionId) {
         EInvoiceSubmission submission = eInvoiceSubmissionRepository.findById(submissionId)
             .orElseThrow(() -> new EInvoiceSubmissionNotFoundException(submissionId));
+
+        // PROCESSING: saglayici istegi zaten kabul etti, GIB resmilesme
+        // callback'i bekleniyor -- tekrar gonderim mukerrer fatura yaratir.
+        if (submission.getStatus() == EInvoiceSubmissionStatus.PROCESSING) {
+            throw new EInvoiceSubmissionAlreadyProcessingException(submissionId);
+        }
+
         submission.markRetrying();
         eInvoiceSubmissionRepository.save(submission);
 

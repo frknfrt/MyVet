@@ -56,6 +56,28 @@ ai:
     api-key: ${ANTHROPIC_API_KEY:}
     model: ${ANTHROPIC_MODEL:claude-sonnet-5}
 
+efatura:
+  # Hangi saglayici adaptorunun (EInvoiceGatewayPort) aktif olacagini secer:
+  # "mock" (varsayilan, gercekci simulasyon) veya "faturaentegrator" (gercek
+  # API, faturaentegrator.com). Ikisi ayni anda aktif olamaz -- bkz.
+  # MockEInvoiceGatewayAdapter/FaturaEntegratorEInvoiceGatewayAdapter
+  # @ConditionalOnProperty.
+  provider: ${EFATURA_PROVIDER:mock}
+  faturaentegrator:
+    # efatura.provider=faturaentegrator oldugunda kullanilir. API anahtari
+    # panelde (app.faturaentegrator.com > Ayarlar > Entegrasyon/API) uretilir,
+    # ASLA commit edilmemeli -- ortam degiskeni olarak verilmeli.
+    api-key: ${EFATURA_FATURAENTEGRATOR_API_KEY:}
+    # Panelde eklenen fatura hesabinin (Test Entegratör/Dummy Fatura ya da
+    # gercek entegrator) ID'si.
+    invoice-integration-id: ${EFATURA_FATURAENTEGRATOR_INVOICE_INTEGRATION_ID:0}
+    # Panelde tanimlanan "API (Ozel Entegrasyon)" satis kanalinin ID'si.
+    sale-channel-id: ${EFATURA_FATURAENTEGRATOR_SALE_CHANNEL_ID:0}
+    # faturaentegrator'in asenkron callback_url bildirimini gonderecegi adres
+    # icin backend'in disaridan erisilebilir gercek adresi (Render'da
+    # https://<servis-adi>.onrender.com gibi) -- prod'da mutlaka set edilmeli.
+    callback-base-url: ${EFATURA_FATURAENTEGRATOR_CALLBACK_BASE_URL:http://localhost:8080}
+
 notification:
   twilio:
     # WhatsApp Sandbox icin: TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN bos
