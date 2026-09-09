@@ -23,6 +23,7 @@ public class AiController {
 
     private final GenerateSoapDraftUseCase generateSoapDraftUseCase;
     private final GenerateTreatmentRecommendationUseCase generateTreatmentRecommendationUseCase;
+    private final GenerateDiagnosisSuggestionUseCase generateDiagnosisSuggestionUseCase;
     private final RecordAiJobDecisionUseCase recordAiJobDecisionUseCase;
 
     @PostMapping("/soap-drafts")
@@ -43,6 +44,28 @@ public class AiController {
 
     @PostMapping("/treatment-recommendations/{aiJobId}/decision")
     public void decideTreatmentRecommendation(
+        @PathVariable UUID aiJobId,
+        @RequestBody @Valid DecideTreatmentRecommendationRequest request,
+        @AuthenticationPrincipal AuthenticatedStaffUser principal
+    ) {
+        recordAiJobDecisionUseCase.execute(new RecordAiJobDecisionCommand(
+            principal.tenantId(), aiJobId, request.status(), request.appliedContent(), principal.staffUserId()
+        ));
+    }
+
+    @PostMapping("/diagnosis-suggestions")
+    public DiagnosisSuggestionResponse generateDiagnosisSuggestion(
+        @RequestBody @Valid GenerateDiagnosisSuggestionRequest request,
+        @AuthenticationPrincipal AuthenticatedStaffUser principal
+    ) {
+        DiagnosisSuggestionResult result = generateDiagnosisSuggestionUseCase.execute(
+            new GenerateDiagnosisSuggestionCommand(principal.tenantId(), request.encounterId(), principal.staffUserId())
+        );
+        return DiagnosisSuggestionResponse.from(result);
+    }
+
+    @PostMapping("/diagnosis-suggestions/{aiJobId}/decision")
+    public void decideDiagnosisSuggestion(
         @PathVariable UUID aiJobId,
         @RequestBody @Valid DecideTreatmentRecommendationRequest request,
         @AuthenticationPrincipal AuthenticatedStaffUser principal

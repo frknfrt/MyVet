@@ -1,7 +1,7 @@
 package com.vetos.modules.ai.application;
 
 import com.vetos.modules.ai.domain.*;
-import com.vetos.modules.ai.domain.exception.AssessmentRequiredForRecommendationException;
+import com.vetos.modules.ai.domain.exception.ClinicalFindingsRequiredForDiagnosisException;
 import com.vetos.modules.encounter.domain.EncounterClinicalContext;
 import com.vetos.modules.encounter.domain.EncounterLookupPort;
 import com.vetos.modules.encounter.domain.PastEncounterSummary;
@@ -20,70 +20,74 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
+/**
+ * GenerateTreatmentRecommendationUseCaseTest ile ayni desen -- tek fark:
+ * Assessment yerine Subjective/Objective doluluğu araniyor.
+ */
 @ExtendWith(MockitoExtension.class)
-class GenerateTreatmentRecommendationUseCaseTest {
+class GenerateDiagnosisSuggestionUseCaseTest {
 
     @Mock private EncounterLookupPort encounterLookupPort;
-    @Mock private TreatmentRecommendationPort treatmentRecommendationPort;
+    @Mock private DiagnosisSuggestionPort diagnosisSuggestionPort;
     @Mock private RecordAiJobUseCase recordAiJobUseCase;
 
-    private GenerateTreatmentRecommendationUseCase useCase;
+    private GenerateDiagnosisSuggestionUseCase useCase;
 
     @BeforeEach
     void setUp() {
-        useCase = new GenerateTreatmentRecommendationUseCase(
-            encounterLookupPort, treatmentRecommendationPort, recordAiJobUseCase, "ollama"
+        useCase = new GenerateDiagnosisSuggestionUseCase(
+            encounterLookupPort, diagnosisSuggestionPort, recordAiJobUseCase, "ollama"
         );
     }
 
     @Test
-    void should_recordAiJobAndReturnResult_when_assessmentPresent() {
+    void should_recordAiJobAndReturnResult_when_subjectiveOrObjectivePresent() {
         UUID tenantId = UUID.randomUUID();
         UUID encounterId = UUID.randomUUID();
         UUID staffUserId = UUID.randomUUID();
         UUID aiJobId = UUID.randomUUID();
         EncounterClinicalContext context = new EncounterClinicalContext(
-            encounterId, UUID.randomUUID(), "Hafif gastrit supheli",
-            "Kusma sikayeti", "Karin hassasiyeti", "Kilo: 5 kg", "",
+            encounterId, UUID.randomUUID(), "",
+            "Sahip kusma bildiriyor", "Karin hassasiyeti", "Nabiz: 185 /dk", "Gastrointestinal: Anormal",
             List.of(new PastEncounterSummary(Instant.now(), "Gecmis degerlendirme", "Gecmis plan"))
         );
         when(encounterLookupPort.findClinicalContext(encounterId, 5)).thenReturn(context);
-        TreatmentRecommendationDraft draft = new TreatmentRecommendationDraft("Diyet degisikligi onerilir", true, "llama3.1:8b");
-        when(treatmentRecommendationPort.generate(any())).thenReturn(draft);
+        DiagnosisSuggestionDraft draft = new DiagnosisSuggestionDraft("Olasi gastroenterit", true, "llama3.1:8b");
+        when(diagnosisSuggestionPort.generate(any())).thenReturn(draft);
         when(recordAiJobUseCase.execute(any())).thenReturn(aiJobId);
 
-        TreatmentRecommendationResult result = useCase.execute(
-            new GenerateTreatmentRecommendationCommand(tenantId, encounterId, staffUserId)
+        DiagnosisSuggestionResult result = useCase.execute(
+            new GenerateDiagnosisSuggestionCommand(tenantId, encounterId, staffUserId)
         );
 
         assertThat(result.aiJobId()).isEqualTo(aiJobId);
-        assertThat(result.suggestionText()).isEqualTo("Diyet degisikligi onerilir");
+        assertThat(result.suggestionText()).isEqualTo("Olasi gastroenterit");
         assertThat(result.modelConnected()).isTrue();
 
         ArgumentCaptor<RecordAiJobCommand> captor = ArgumentCaptor.forClass(RecordAiJobCommand.class);
         verify(recordAiJobUseCase).execute(captor.capture());
         RecordAiJobCommand recorded = captor.getValue();
         assertThat(recorded.tenantId()).isEqualTo(tenantId);
-        assertThat(recorded.taskType()).isEqualTo(AiTaskType.TREATMENT_RECOMMENDATION);
+        assertThat(recorded.taskType()).isEqualTo(AiTaskType.DIAGNOSIS_SUGGESTION);
         assertThat(recorded.encounterId()).isEqualTo(encounterId);
-        assertThat(recorded.suggestionText()).isEqualTo("Diyet degisikligi onerilir");
+        assertThat(recorded.suggestionText()).isEqualTo("Olasi gastroenterit");
         assertThat(recorded.modelName()).isEqualTo("ollama");
         assertThat(recorded.modelVersion()).isEqualTo("llama3.1:8b");
         assertThat(recorded.requestedByStaffUserId()).isEqualTo(staffUserId);
     }
 
     @Test
-    void should_throwAssessmentRequired_when_assessmentIsBlank() {
+    void should_throwClinicalFindingsRequired_when_subjectiveAndObjectiveAreBothBlank() {
         UUID encounterId = UUID.randomUUID();
         EncounterClinicalContext context = new EncounterClinicalContext(
-            encounterId, UUID.randomUUID(), "   ", "", "", "", "", List.of()
+            encounterId, UUID.randomUUID(), "", "   ", "   ", "", "", List.of()
         );
         when(encounterLookupPort.findClinicalContext(encounterId, 5)).thenReturn(context);
 
         assertThatThrownBy(() -> useCase.execute(
-            new GenerateTreatmentRecommendationCommand(UUID.randomUUID(), encounterId, UUID.randomUUID())
-        )).isInstanceOf(AssessmentRequiredForRecommendationException.class);
+            new GenerateDiagnosisSuggestionCommand(UUID.randomUUID(), encounterId, UUID.randomUUID())
+        )).isInstanceOf(ClinicalFindingsRequiredForDiagnosisException.class);
 
-        verifyNoInteractions(treatmentRecommendationPort, recordAiJobUseCase);
+        verifyNoInteractions(diagnosisSuggestionPort, recordAiJobUseCase);
     }
 }

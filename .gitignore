@@ -27,3 +27,5 @@ Thumbs.db
 
 # Local git worktrees (isolated implementation workspaces)
 .worktrees/
+# Claude Code local session state (machine/session-specific, not for the repo)
+.claude/

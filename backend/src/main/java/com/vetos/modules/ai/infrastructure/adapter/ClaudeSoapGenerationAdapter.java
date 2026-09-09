@@ -42,6 +42,7 @@ class ClaudeSoapGenerationAdapter implements SoapGenerationPort {
         hekimin soylediklerini SOAP formatina yerlestir.""";
 
     private static final String ANTHROPIC_VERSION = "2023-06-01";
+    private static final String TOOL_NAME = "structure_soap_note";
 
     private final String apiKey;
     private final String model;
@@ -84,10 +85,34 @@ class ClaudeSoapGenerationAdapter implements SoapGenerationPort {
     }
 
     private SoapDraft generateViaClaude(String text) throws Exception {
+        // Assistant "prefill" ile JSON'u garanti etme yontemini denedik ama bazi
+        // modeller (orn. Sonnet 5) bunu reddediyor ("does not support assistant
+        // message prefill", bkz. implementation-plan.md Faz 3). Bunun yerine "tool
+        // use" (function calling) kullaniyoruz: modeli serbest metin degil, dogrudan
+        // yapilandirilmis bir arac cagrisi parametresi olarak JSON uretmeye
+        // zorluyoruz -- markdown'a sarilma riski hic yok, ayrica prefill destegi
+        // olmayan modellerde de calisir.
+        Map<String, Object> inputSchema = Map.of(
+            "type", "object",
+            "properties", Map.of(
+                "subjective", Map.of("type", "string"),
+                "objective", Map.of("type", "string"),
+                "assessment", Map.of("type", "string"),
+                "plan", Map.of("type", "string")
+            ),
+            "required", List.of("subjective", "objective", "assessment", "plan")
+        );
+        Map<String, Object> tool = Map.of(
+            "name", TOOL_NAME,
+            "description", "Hekimin dikte ettigi/yazdigi serbest metni SOAP (Subjective/Objective/Assessment/Plan) alanlarina yapilandirir.",
+            "input_schema", inputSchema
+        );
         Map<String, Object> body = Map.of(
             "model", model,
             "max_tokens", 1024,
             "system", SYSTEM_PROMPT,
+            "tools", List.of(tool),
+            "tool_choice", Map.of("type", "tool", "name", TOOL_NAME),
             "messages", List.of(Map.of("role", "user", "content", text))
         );
         String raw = restClient.post()
@@ -100,8 +125,16 @@ class ClaudeSoapGenerationAdapter implements SoapGenerationPort {
             .body(String.class);
 
         JsonNode root = objectMapper.readTree(raw);
-        String responseText = root.path("content").path(0).path("text").asText("{}");
-        JsonNode fields = objectMapper.readTree(responseText);
+        JsonNode fields = null;
+        for (JsonNode block : root.path("content")) {
+            if ("tool_use".equals(block.path("type").asText())) {
+                fields = block.path("input");
+                break;
+            }
+        }
+        if (fields == null) {
+            throw new IllegalStateException("Claude yanitinda tool_use bloğu bulunamadi: " + raw);
+        }
 
         return new SoapDraft(
             fields.path("subjective").asText(""),

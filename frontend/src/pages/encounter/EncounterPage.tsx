@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { aiApi, TreatmentRecommendation } from '../../api/aiApi';
+import { aiApi, DiagnosisSuggestion, TreatmentRecommendation } from '../../api/aiApi';
 import { ApiError } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { encounterApi, EncounterDetail } from '../../api/encounterApi';
@@ -53,6 +53,11 @@ export function EncounterPage() {
   const [recommendation, setRecommendation] = useState<TreatmentRecommendation | null>(null);
   const [recommendationDecided, setRecommendationDecided] = useState(false);
   const [decidingRecommendation, setDecidingRecommendation] = useState(false);
+  const [generatingDiagnosis, setGeneratingDiagnosis] = useState(false);
+  const [diagnosisError, setDiagnosisError] = useState<string | null>(null);
+  const [diagnosis, setDiagnosis] = useState<DiagnosisSuggestion | null>(null);
+  const [diagnosisDecided, setDiagnosisDecided] = useState(false);
+  const [decidingDiagnosis, setDecidingDiagnosis] = useState(false);
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
@@ -183,6 +188,51 @@ export function EncounterPage() {
       setRecommendationError(errorMessageOf(err));
     } finally {
       setDecidingRecommendation(false);
+    }
+  }
+
+  async function handleGenerateDiagnosis() {
+    const hasFindings = soap.subjective.trim() || soap.objective.trim();
+    if (generatingDiagnosis || !hasFindings || !encounterId) return;
+    setGeneratingDiagnosis(true);
+    setDiagnosisError(null);
+    try {
+      const result = await aiApi.generateDiagnosisSuggestion(encounterId);
+      setDiagnosis(result);
+      setDiagnosisDecided(false);
+    } catch (err) {
+      setDiagnosisError(errorMessageOf(err));
+    } finally {
+      setGeneratingDiagnosis(false);
+    }
+  }
+
+  async function acceptDiagnosis() {
+    if (!diagnosis || decidingDiagnosis) return;
+    setDecidingDiagnosis(true);
+    try {
+      await aiApi.decideDiagnosisSuggestion(diagnosis.aiJobId, 'ACCEPTED_AS_IS');
+      setSoap((s) => ({ ...s, assessment: diagnosis.suggestionText }));
+      setSoapAiGenerated(true);
+      setDiagnosisDecided(true);
+      setTimeout(() => setDiagnosis(null), 3000);
+    } catch (err) {
+      setDiagnosisError(errorMessageOf(err));
+    } finally {
+      setDecidingDiagnosis(false);
+    }
+  }
+
+  async function rejectDiagnosis() {
+    if (!diagnosis || decidingDiagnosis) return;
+    setDecidingDiagnosis(true);
+    try {
+      await aiApi.decideDiagnosisSuggestion(diagnosis.aiJobId, 'REJECTED');
+      setDiagnosis(null);
+    } catch (err) {
+      setDiagnosisError(errorMessageOf(err));
+    } finally {
+      setDecidingDiagnosis(false);
     }
   }
 
@@ -341,6 +391,71 @@ export function EncounterPage() {
                 <Button variant="primary" onClick={handleFinalize} disabled={finalizing}>
                   {finalizing ? 'Tamamlanıyor...' : 'Muayeneyi Tamamla'}
                 </Button>
+              </div>
+            )}
+          </div>
+
+          <div className={styles.aiCard}>
+            <div className={styles.aiTitle}>✦ AI Tanı Desteği</div>
+            <p className={styles.aiCopy}>
+              Subjective ve Objective alanlarına, vital bulgulara ve fiziksel muayeneye dayanarak olası
+              tanı/ayırıcı tanı önerisi üretir. Öneri hekim onayına sunulur, Assessment alanına siz
+              onaylamadan uygulanmaz — kesin tanı koymaz.
+            </p>
+
+            {!(soap.subjective.trim() || soap.objective.trim()) && (
+              <p className={styles.aiCopy}>Önce Subjective veya Objective alanını doldurup kaydedin.</p>
+            )}
+
+            {!isReadOnly && (
+              <div className={styles.aiActions}>
+                <Button
+                  variant="ai"
+                  onClick={handleGenerateDiagnosis}
+                  disabled={generatingDiagnosis || !(soap.subjective.trim() || soap.objective.trim())}
+                >
+                  {generatingDiagnosis ? 'Oluşturuluyor...' : 'Tanı Desteği Al'}
+                </Button>
+              </div>
+            )}
+
+            {generatingDiagnosis && (
+              <p className={styles.aiCopy}>AI önerisi hazırlanıyor, bu işlem ~30-60 saniye sürebilir…</p>
+            )}
+
+            {diagnosisError && <div className={styles.aiError}>{diagnosisError}</div>}
+
+            {diagnosis && (
+              <div className={styles.draftBox}>
+                <div className={styles.aiWarning}>
+                  Bu öneri gerçek bir tıbbi referans kaynağına dayanmaz, yalnızca genel AI bilgisine dayanır.
+                  Kesin tanı değildir, bağımsız olarak değerlendirin.
+                </div>
+                {!diagnosis.modelConnected && (
+                  <div className={styles.aiWarning}>
+                    Gerçek AI modeli henüz bağlı değil — bu, kullanılamaz bir yer tutucu metindir. Lütfen
+                    Assessment alanını elle girin.
+                  </div>
+                )}
+                <div className={styles.draftLabel}>Öneri önizleme</div>
+                <div className={styles.draftPreview}>{diagnosis.suggestionText || '—'}</div>
+                {!isReadOnly && !diagnosisDecided && (
+                  <div className={styles.aiActions}>
+                    {diagnosis.modelConnected && (
+                      <Button variant="ai" onClick={acceptDiagnosis} disabled={decidingDiagnosis}>
+                        {decidingDiagnosis ? 'İşleniyor...' : 'Aynen Kabul Et'}
+                      </Button>
+                    )}
+                    <Button variant="secondary" onClick={rejectDiagnosis} disabled={decidingDiagnosis}>
+                      Reddet
+                    </Button>
+                  </div>
+                )}
+                {diagnosisDecided && (
+                  <p className={styles.aiCopy}>
+                    ✓ Assessment alanına uygulandı — kontrol edip "SOAP Kaydet"e basmayı unutmayın.
+                  </p>
+                )}
               </div>
             )}
           </div>

@@ -54,9 +54,12 @@ class ClaudeSoapGenerationAdapterTest {
 
     @Test
     void should_returnParsedFields_when_claudeRespondsSuccessfully() {
-        String innerJson = "{\\\"subjective\\\":\\\"Iki gundur kusma\\\",\\\"objective\\\":\\\"Ates yok\\\","
-            + "\\\"assessment\\\":\\\"Hafif gastrit\\\",\\\"plan\\\":\\\"Ac birakma, kontrol\\\"}";
-        stubResponseBody = "{\"content\":[{\"type\":\"text\",\"text\":\"" + innerJson + "\"}]}";
+        // Gercek adaptor "tool use" (function calling) kullaniyor -- model
+        // serbest metin degil, structure_soap_note aracina dogrudan yapilandirilmis
+        // JSON input olarak cevap veriyor (bkz. ClaudeSoapGenerationAdapter.generateViaClaude).
+        stubResponseBody = "{\"content\":[{\"type\":\"tool_use\",\"id\":\"toolu_01\",\"name\":\"structure_soap_note\","
+            + "\"input\":{\"subjective\":\"Iki gundur kusma\",\"objective\":\"Ates yok\","
+            + "\"assessment\":\"Hafif gastrit\",\"plan\":\"Ac birakma, kontrol\"}}]}";
         SoapGenerationPort adapter = new ClaudeSoapGenerationAdapter("test-api-key", "claude-sonnet-5", new ObjectMapper(), stubUrl());
 
         SoapDraft draft = adapter.generate(new AudioTranscript("Hasta kusuyor, iki gundur"));
@@ -66,6 +69,23 @@ class ClaudeSoapGenerationAdapterTest {
         assertThat(draft.objective()).isEqualTo("Ates yok");
         assertThat(draft.assessment()).isEqualTo("Hafif gastrit");
         assertThat(draft.plan()).isEqualTo("Ac birakma, kontrol");
+    }
+
+    @Test
+    void should_returnParsedFields_when_claudeRespondsWithThinkingBlockBeforeToolUse() {
+        // Extended thinking acikken content[0] bir "thinking" blogu olabiliyor --
+        // adaptor index degil type=="tool_use" arayarak buluyor (bkz. 2026-09-09
+        // tedavi onerisi bug'i, implementation-plan.md'de kayitli).
+        stubResponseBody = "{\"content\":[{\"type\":\"thinking\",\"thinking\":\"...\"},"
+            + "{\"type\":\"tool_use\",\"id\":\"toolu_02\",\"name\":\"structure_soap_note\","
+            + "\"input\":{\"subjective\":\"S\",\"objective\":\"O\",\"assessment\":\"A\",\"plan\":\"P\"}}]}";
+        SoapGenerationPort adapter = new ClaudeSoapGenerationAdapter("test-api-key", "claude-sonnet-5", new ObjectMapper(), stubUrl());
+
+        SoapDraft draft = adapter.generate(new AudioTranscript("Hasta kusuyor"));
+
+        assertThat(draft.modelConnected()).isTrue();
+        assertThat(draft.subjective()).isEqualTo("S");
+        assertThat(draft.plan()).isEqualTo("P");
     }
 
     @Test

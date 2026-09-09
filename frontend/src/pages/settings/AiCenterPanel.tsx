@@ -48,11 +48,18 @@ export function AiCenterPanel() {
             onAction={() => navigate('/randevu')}
           />
           <CapabilityCard
-            title="Tanı Desteği / Tedavi Önerisi"
-            description="Hasta geçmişi ve semptomlara göre olası tanı/tedavi önerisi. Gerçek bir dil modeli entegrasyonu ve güvenilir bir tıbbi referans kaynağı olmadan uydurma veri üretilmeyecek."
-            badge={{ label: 'Planlanıyor', tone: 'neutral' }}
-            actionLabel="Yakında"
-            onAction={() => {}}
+            title="Tanı Desteği"
+            description="Subjective/Objective, vital bulgular ve fiziksel muayeneye göre olası tanı/ayırıcı tanı önerisi üretir. Kesin tanı koymaz, hekim onayı olmadan Assessment alanına uygulanmaz."
+            badge={{ label: 'Aktif — Taslak Adaptör', tone: 'ai' }}
+            actionLabel="Bir muayenede kullan"
+            onAction={() => navigate('/randevu')}
+          />
+          <CapabilityCard
+            title="Tedavi Önerisi"
+            description="Assessment alanına ve hastanın geçmiş muayenelerine göre olası tedavi planı önerisi üretir. Hekim onayı olmadan Plan alanına uygulanmaz."
+            badge={{ label: 'Aktif — Taslak Adaptör', tone: 'ai' }}
+            actionLabel="Bir muayenede kullan"
+            onAction={() => navigate('/randevu')}
           />
         </div>
       </section>

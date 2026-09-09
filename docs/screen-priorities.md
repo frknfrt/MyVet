@@ -48,8 +48,8 @@ Tam liste (P0/P1/P2/P3, notlarla): `docs/screen-priorities.xlsx`
 - [ ] Voice Recording AI — *(tarayıcı yerleşik Web Speech API ile gerçek sesli dikte çalışıyor; özel/barındırılan bir ses-AI servisi değil)*
 - [ ] AI SOAP Generator — *(uçtan uca bağlı ama backend adaptörü stub — gerçek model henüz bağlı değil, transkripti Subjective alanına kopyalıyor; UI bunu açıkça uyarıyor)*
 - [x] Physical Examination Form — *(SOAP sayfasına Vital Bulgular ile SOAP Notu arasında "Fiziksel Muayene" kartı eklendi: 10 sabit vücut sistemi — Genel Görünüm, Deri/Kürk, Göz-Kulak-Ağız, Kardiyovasküler, Solunum, Gastrointestinal, Ürogenital, Kas-İskelet, Nörolojik, Lenf Nodları — her biri Muayene Edilmedi/Normal/Anormal durumu + Anormal seçilince açılan not alanı taşır. `Encounter.physicalExamFindings` jsonb kolonunda tutulur, Objective serbest metin alanına dokunulmadı, ikisi birbirini tamamlıyor.)*
-- [ ] Diagnosis Selection (+ AI oneri) — *(Assessment serbest metin; tanı seçim UI'ı veya AI öneri endpoint'i yok)*
-- [ ] Treatment Plan (+ AI oneri) — *(Plan serbest metin; ayrı bir tedavi planı UI'ı veya AI öneri endpoint'i yok)*
+- [x] Diagnosis Selection (+ AI oneri) — *(Assessment serbest metin kalmaya devam ediyor — ayrı bir "tanı seçim" UI'ı yok, ama "AI Tanı Desteği" kartı: Subjective/Objective/vital/fiziksel muayeneye dayanarak olası tanı/ayırıcı tanı önerisi üretiyor, hekim onayıyla Assessment'e uygulanıyor. Bkz. implementation-plan.md.)*
+- [x] Treatment Plan (+ AI oneri) — *(Plan serbest metin kalmaya devam ediyor — "AI Tedavi Önerisi" kartı: Assessment + geçmiş muayenelere dayanarak tedavi önerisi üretiyor, hekim onayıyla Plan'a uygulanıyor. Bkz. implementation-plan.md.)*
 - [x] Prescription Create — *(ilaç etkileşim uyarısı: kural tabanlı çapraz kontrol eklendi, bkz. implementation-plan.md — etkileşim verisi gerçek bir farmakolojik referans kaynağından uydurulmadı, Ayarlar > İlaç Kataloğu'nda klinik/hekim tarafından girilir)*
 - [x] Prescription History
 
@@ -94,8 +94,8 @@ Tam liste (P0/P1/P2/P3, notlarla): `docs/screen-priorities.xlsx`
 
 ### 11. AI Merkezi
 - [x] Voice To SOAP — *(Ayarlar > AI Merkezi'nde bağlantı — bir muayeneye yönlendiriyor, kendisi zaten var olan sesli dikte/taslak akışı)*
-- [ ] Diagnosis Assistant — *("Planlanıyor" olarak Ayarlar > AI Merkezi'nde listeleniyor; gerçek bir LLM entegrasyonu ve tıbbi referans kaynağı olmadan uydurma yapılmayacak, kullanıcı onayıyla bu turda ertelendi)*
-- [ ] Treatment Recommendation — *(Diagnosis Assistant ile aynı gerekçeyle ertelendi)*
+- [x] Diagnosis Assistant — *(Ayarlar > AI Merkezi'nde "Tanı Desteği" — AI Tedavi Önerisi ile aynı Claude/Ollama port-adaptör mimarisi, bkz. implementation-plan.md)*
+- [x] Treatment Recommendation — *(Ayarlar > AI Merkezi'nde "Tedavi Önerisi" — bkz. implementation-plan.md)*
 - [x] Drug Interaction Check — *(Ayarlar > AI Merkezi'nde bağlantı — İlaç Kataloğu'na yönlendiriyor; kural tabanlı olduğu için AI mavisi değil, uyarı tonuyla ayrıca işaretlendi)*
 
 ### 12. Yonetim ve Ayarlar
