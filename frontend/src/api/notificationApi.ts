@@ -9,7 +9,8 @@ export interface NotificationStatus {
   sentCount: number;
   failedCount: number;
   lastSentAt: string | null;
-  connected: boolean;
+  smsConfigured: boolean;
+  whatsappConfigured: boolean;
 }
 
 export interface NotificationLog {

@@ -98,6 +98,16 @@ class TwilioNotificationAdapter implements NotificationSendPort {
         return twilioConfigured() || iletiMerkeziConfigured();
     }
 
+    @Override
+    public boolean isSmsConfigured() {
+        return iletiMerkeziConfigured();
+    }
+
+    @Override
+    public boolean isWhatsappConfigured() {
+        return twilioConfigured();
+    }
+
     private boolean twilioConfigured() {
         return !accountSid.isBlank() && !authToken.isBlank();
     }

@@ -3,6 +3,11 @@ import { notificationApi, NotificationStatus } from '../../api/notificationApi';
 import { Badge } from '../../components/ui/Badge';
 import styles from './SettingsTab.module.css';
 
+// Her kanalin (SMS: Ileti Merkezi, WhatsApp: Twilio) gercekten baglanip
+// baglanmadigi birbirinden bagimsiz -- daha once burada tek bir "connected"
+// bayragi vardi ve metin sabit kodlanmisti ("WhatsApp gercek, SMS mock"),
+// bu yuzden SMS gercekten baglandiktan sonra bile ekran hala "simule
+// ediliyor" diyordu. Artik ikisi ayri ayri gosteriliyor.
 export function SettingsTab() {
   const [status, setStatus] = useState<NotificationStatus | null>(null);
 
@@ -16,17 +21,19 @@ export function SettingsTab() {
         <div>
           <div className={styles.name}>SMS / WhatsApp Sağlayıcı Durumu</div>
           <div className={styles.desc}>
-            {status?.connected
-              ? 'WhatsApp, Twilio Sandbox üzerinden gerçek gönderim yapıyor. SMS tarafı henüz sağlayıcıya bağlı değil, simüle ediliyor.'
-              : 'Twilio kimlik bilgileri tanımlı değil — hem SMS hem WhatsApp gönderimleri şu an simüle ediliyor.'}
+            {status && (
+              <>
+                WhatsApp {status.whatsappConfigured ? 'Twilio üzerinden gerçek gönderim yapıyor.' : 'henüz sağlayıcıya bağlı değil, simüle ediliyor.'}{' '}
+                SMS {status.smsConfigured ? 'İleti Merkezi üzerinden gerçek gönderim yapıyor.' : 'henüz sağlayıcıya bağlı değil, simüle ediliyor.'}
+              </>
+            )}
           </div>
         </div>
         {status ? (
-          status.connected ? (
-            <Badge tone="success">WhatsApp: Twilio (gerçek)</Badge>
-          ) : (
-            <Badge tone="warning">Mock modu — sağlayıcı bağlı değil</Badge>
-          )
+          <div className={styles.badgeGroup}>
+            <Badge tone={status.smsConfigured ? 'success' : 'warning'}>SMS: {status.smsConfigured ? 'İleti Merkezi (gerçek)' : 'Mock'}</Badge>
+            <Badge tone={status.whatsappConfigured ? 'success' : 'warning'}>WhatsApp: {status.whatsappConfigured ? 'Twilio (gerçek)' : 'Mock'}</Badge>
+          </div>
         ) : (
           <Badge tone="neutral">Yükleniyor...</Badge>
         )}

@@ -108,6 +108,29 @@ class TwilioNotificationAdapterTest {
         assertThat(adapter("sid", "token", "", "").isConfigured()).isTrue();
     }
 
+    // ------------------------------------------------------ kanal-bazli durum (Ayarlar > SMS/WhatsApp ekrani icin)
+
+    @Test
+    void should_reportPerChannelStatus_when_onlyIletiMerkeziCredentialsAreSet() {
+        var adapter = adapter("", "", "test-key", "test-hash");
+        assertThat(adapter.isSmsConfigured()).isTrue();
+        assertThat(adapter.isWhatsappConfigured()).isFalse();
+    }
+
+    @Test
+    void should_reportPerChannelStatus_when_onlyTwilioCredentialsAreSet() {
+        var adapter = adapter("sid", "token", "", "");
+        assertThat(adapter.isSmsConfigured()).isFalse();
+        assertThat(adapter.isWhatsappConfigured()).isTrue();
+    }
+
+    @Test
+    void should_reportBothChannelsConfigured_when_bothCredentialsAreSet() {
+        var adapter = adapter("sid", "token", "test-key", "test-hash");
+        assertThat(adapter.isSmsConfigured()).isTrue();
+        assertThat(adapter.isWhatsappConfigured()).isTrue();
+    }
+
     // ------------------------------------------------------ gercek Ileti Merkezi cagrisi (yerel sahte sunucu)
 
     @Test

@@ -33,6 +33,8 @@ public class GetNotificationStatusSummaryUseCase {
             .max(Instant::compareTo)
             .orElse(null);
 
-        return new NotificationStatusSummary(pending, sent, failed, lastSentAt, notificationSendPort.isConfigured());
+        return new NotificationStatusSummary(
+            pending, sent, failed, lastSentAt, notificationSendPort.isSmsConfigured(), notificationSendPort.isWhatsappConfigured()
+        );
     }
 }

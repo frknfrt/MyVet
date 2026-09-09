@@ -19,4 +19,14 @@ public interface NotificationSendPort {
     default boolean isConfigured() {
         return false;
     }
+
+    /** SMS kanali gercek bir saglayiciya (Ileti Merkezi) bagli mi -- Ayarlar > SMS/WhatsApp ekraninda ayri gosterilir. */
+    default boolean isSmsConfigured() {
+        return false;
+    }
+
+    /** WhatsApp kanali gercek bir saglayiciya (Twilio) bagli mi -- Ayarlar > SMS/WhatsApp ekraninda ayri gosterilir. */
+    default boolean isWhatsappConfigured() {
+        return false;
+    }
 }

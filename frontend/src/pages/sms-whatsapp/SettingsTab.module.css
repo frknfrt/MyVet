@@ -47,3 +47,9 @@
   color: var(--color-text-muted);
   margin-top: 10px;
 }
+.badgeGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
