@@ -171,7 +171,7 @@ export function NewImagingRecordModal({ open, onClose, onCreated }: NewImagingRe
                       }}
                     />
                     {ownerSearchOpen && ownerResults.length > 0 && (
-                      <div className={styles.ownerDropdown}>
+                      <div className={styles.ownerDropdown} onMouseDown={(e) => e.preventDefault()}>
                         {ownerResults.map((o) => (
                           <div key={o.id} className={styles.ownerOption} onClick={() => selectOwner(o)}>
                             <span className={styles.ownerOptionName}>{o.fullName}</span>
