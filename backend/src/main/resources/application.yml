@@ -90,6 +90,13 @@ notification:
     auth-sid: ${TWILIO_AUTH_SID:}
     auth-token: ${TWILIO_AUTH_TOKEN:}
     whatsapp-from: ${TWILIO_WHATSAPP_FROM:whatsapp:+14155238886}
+    # Onayli WhatsApp Content Template SID'i (HX... ile baslar). Bos birakilirsa
+    # serbest metin ("Body") gonderilir -- bu YALNIZCA aliciyla acik bir 24 saatlik
+    # "musteri hizmeti penceresi" varken calisir (ornegin sandbox'a "join" mesaji
+    # atildiktan sonraki 24 saat icinde). Pencere kapaliysa Twilio 21654 hatasi
+    # ("ContentSid Required") doner -- bunu kalici cozmek icin Twilio Content
+    # Template Builder'da bir sablon onaylatip SID'ini buraya verin.
+    whatsapp-content-sid: ${TWILIO_WHATSAPP_CONTENT_SID:}
   ileti-merkezi:
     # SMS gonderimi icin. Bos birakilirsa (varsayilan) SMS gonderimi simule
     # edilir (bkz. TwilioNotificationAdapter.sendSmsViaIletiMerkezi). Ayni

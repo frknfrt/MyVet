@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Component
@@ -20,5 +21,10 @@ class TenantLookupAdapter implements TenantLookupPort {
         return jpaRepository.findByStatusIn(List.of(TenantStatus.ACTIVE, TenantStatus.TRIAL)).stream()
             .map(Tenant::getId)
             .toList();
+    }
+
+    @Override
+    public Optional<String> findTenantName(UUID tenantId) {
+        return jpaRepository.findById(tenantId).map(Tenant::getName);
     }
 }

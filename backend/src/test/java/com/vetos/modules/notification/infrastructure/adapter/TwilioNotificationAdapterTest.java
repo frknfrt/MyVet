@@ -74,7 +74,7 @@ class TwilioNotificationAdapterTest {
         String accountSid, String authSid, String authToken, String iletiMerkeziApiKey, String iletiMerkeziHash
     ) {
         return new TwilioNotificationAdapter(
-            accountSid, authSid, authToken, "whatsapp:+14155238886",
+            accountSid, authSid, authToken, "whatsapp:+14155238886", "",
             iletiMerkeziApiKey, iletiMerkeziHash, "vetly",
             stubBaseUrl() + TWILIO_PATH, stubBaseUrl() + ILETI_MERKEZI_PATH
         );
@@ -203,6 +203,22 @@ class TwilioNotificationAdapterTest {
         String expectedAuth = "Basic " + java.util.Base64.getEncoder()
             .encodeToString("SK-api-key-sid:api-key-secret".getBytes(StandardCharsets.UTF_8));
         assertThat(capturedAuthHeaders.get(TWILIO_PATH)).isEqualTo(expectedAuth);
+    }
+
+    @Test
+    void should_sendContentSidAndVariablesInsteadOfBody_when_whatsappContentSidConfigured() {
+        TwilioNotificationAdapter templatedAdapter = new TwilioNotificationAdapter(
+            "test-sid", "", "test-token", "whatsapp:+14155238886", "HX-test-template",
+            "", "", "vetly",
+            stubBaseUrl() + TWILIO_PATH, stubBaseUrl() + ILETI_MERKEZI_PATH
+        );
+
+        templatedAdapter.send(new NotificationSendRequest(NotificationChannel.WHATSAPP, "05551234567", "Vetly Klinik: Randevunuz yarin"));
+
+        String body = capturedBodies.get(TWILIO_PATH);
+        assertThat(body).contains("ContentSid=HX-test-template");
+        assertThat(body).contains("ContentVariables=");
+        assertThat(body).doesNotContain("Body=");
     }
 
     @Test

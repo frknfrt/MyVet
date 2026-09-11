@@ -46,6 +46,7 @@ class TwilioNotificationAdapter implements NotificationSendPort {
     private final String authSid;
     private final String authToken;
     private final String whatsappFrom;
+    private final String whatsappContentSid;
     private final String iletiMerkeziApiKey;
     private final String iletiMerkeziHash;
     private final String iletiMerkeziSender;
@@ -60,12 +61,13 @@ class TwilioNotificationAdapter implements NotificationSendPort {
         @Value("${notification.twilio.auth-sid:}") String authSid,
         @Value("${notification.twilio.auth-token:}") String authToken,
         @Value("${notification.twilio.whatsapp-from:whatsapp:+14155238886}") String whatsappFrom,
+        @Value("${notification.twilio.whatsapp-content-sid:}") String whatsappContentSid,
         @Value("${notification.ileti-merkezi.api-key:}") String iletiMerkeziApiKey,
         @Value("${notification.ileti-merkezi.hash:}") String iletiMerkeziHash,
         @Value("${notification.ileti-merkezi.sender:vetly}") String iletiMerkeziSender
     ) {
         this(
-            accountSid, authSid, authToken, whatsappFrom, iletiMerkeziApiKey, iletiMerkeziHash, iletiMerkeziSender,
+            accountSid, authSid, authToken, whatsappFrom, whatsappContentSid, iletiMerkeziApiKey, iletiMerkeziHash, iletiMerkeziSender,
             "https://api.twilio.com/2010-04-01/Accounts/{accountSid}/Messages.json",
             "https://api.iletimerkezi.com/v1/send-sms/json"
         );
@@ -73,7 +75,7 @@ class TwilioNotificationAdapter implements NotificationSendPort {
 
     // paket-ozel: testler yerel sahte sunuculara yonlendirmek icin kullanir
     TwilioNotificationAdapter(
-        String accountSid, String authSid, String authToken, String whatsappFrom,
+        String accountSid, String authSid, String authToken, String whatsappFrom, String whatsappContentSid,
         String iletiMerkeziApiKey, String iletiMerkeziHash, String iletiMerkeziSender,
         String twilioMessagesUrl, String iletiMerkeziSendUrl
     ) {
@@ -85,6 +87,7 @@ class TwilioNotificationAdapter implements NotificationSendPort {
         this.authSid = authSid.isBlank() ? accountSid : authSid;
         this.authToken = authToken;
         this.whatsappFrom = whatsappFrom;
+        this.whatsappContentSid = whatsappContentSid;
         this.iletiMerkeziApiKey = iletiMerkeziApiKey;
         this.iletiMerkeziHash = iletiMerkeziHash;
         this.iletiMerkeziSender = iletiMerkeziSender;
@@ -131,7 +134,26 @@ class TwilioNotificationAdapter implements NotificationSendPort {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("To", "whatsapp:" + toE164(request.recipientContact()));
         form.add("From", whatsappFrom);
-        form.add("Body", request.message());
+
+        if (whatsappContentSid.isBlank()) {
+            // Onayli bir Content Template tanimli degil: serbest metin ("Body") gonderilir.
+            // WhatsApp Is Politikasi geregi bu, YALNIZCA aliciyla acik bir "musteri hizmeti
+            // penceresi" varken (aliciden son 24 saat icinde gelen bir mesaj -- ornegin
+            // sandbox "join" mesaji) calisir. Pencere kapaliysa Twilio 21654 hatasi
+            // ("ContentSid Required") ile reddeder -- bu durumda notification.twilio.
+            // whatsapp-content-sid'i onayli bir sablonun SID'i (HX...) ile doldurun.
+            form.add("Body", request.message());
+        } else {
+            // Onayli sablon ile gonderim: pencere acik olsun olmasin her zaman calisir.
+            // Sablon govdesi tek bir degisken icerir (ornek: "Bildirim: {{1}}") -- klinik
+            // markasina ozel sabit metin BILEREK yok, cunku {{1}}'in icine giren mesaj
+            // NotificationSendExecutor tarafindan zaten "<Klinik Adi>: <mesaj>" seklinde
+            // hazirlaniyor (bkz. o sinifin attemptSend metodu).
+            Map<String, Object> contentVariables = new LinkedHashMap<>();
+            contentVariables.put("1", request.message());
+            form.add("ContentSid", whatsappContentSid);
+            form.add("ContentVariables", toJson(contentVariables));
+        }
 
         String credentials = Base64.getEncoder().encodeToString((authSid + ":" + authToken).getBytes(StandardCharsets.UTF_8));
 
