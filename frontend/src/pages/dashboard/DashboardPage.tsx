@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AppShell } from '../../components/layout/AppShell';
 import { Button } from '../../components/ui/Button';
 import { appointmentApi, AppointmentItem, AppointmentStatus } from '../../api/appointmentApi';
+import { billingApi, TodaySalesSummary } from '../../api/billingApi';
 import { useAuth } from '../../auth/AuthContext';
 import { isoDate } from '../appointments/weekUtils';
 import { QuickSaleModal } from '../finance/QuickSaleModal';
@@ -44,6 +45,7 @@ export function DashboardPage() {
   const [appointments, setAppointments] = useState<AppointmentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [quickSaleOpen, setQuickSaleOpen] = useState(false);
+  const [todaySales, setTodaySales] = useState<TodaySalesSummary | null>(null);
 
   const todayIso = isoDate(new Date());
 
@@ -53,6 +55,7 @@ export function DashboardPage() {
       .weeklyCalendar(todayIso)
       .then((list) => setAppointments(list.filter((a) => a.scheduledStart.slice(0, 10) === todayIso)))
       .finally(() => setLoading(false));
+    billingApi.todaySalesSummary().then(setTodaySales).catch(() => setTodaySales(null));
   }
 
   useEffect(() => {
@@ -145,6 +148,12 @@ export function DashboardPage() {
             <div className={styles.kpiCard}>
               <div className={styles.kpiLabel}>No-show riski yüksek</div>
               <div className={`${styles.kpiValue} ${styles.warn}`}>{highRiskCount}</div>
+            </div>
+            <div className={styles.kpiCard}>
+              <div className={styles.kpiLabel}>Bugünkü satış</div>
+              <div className={styles.kpiValue}>
+                {todaySales ? `${todaySales.totalAmount.toFixed(0)} ₺` : '—'}
+              </div>
             </div>
           </div>
 
