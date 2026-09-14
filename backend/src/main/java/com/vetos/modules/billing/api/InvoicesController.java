@@ -3,6 +3,8 @@ package com.vetos.modules.billing.api;
 import com.vetos.modules.billing.api.dto.*;
 import com.vetos.modules.billing.application.*;
 import com.vetos.modules.billing.application.dto.AddInvoiceLineCommand;
+import com.vetos.modules.billing.application.dto.CompleteQuickSaleCommand;
+import com.vetos.modules.billing.application.dto.QuickSaleLineCommand;
 import com.vetos.modules.billing.application.dto.RecordPaymentCommand;
 import com.vetos.modules.billing.application.dto.BranchComparisonLine;
 import com.vetos.modules.billing.application.dto.ProductSalesLine;
@@ -52,6 +54,7 @@ public class InvoicesController {
     private final IssueInvoiceUseCase issueInvoiceUseCase;
     private final VoidInvoiceUseCase voidInvoiceUseCase;
     private final RecordPaymentUseCase recordPaymentUseCase;
+    private final CompleteQuickSaleUseCase completeQuickSaleUseCase;
 
     @GetMapping
     public List<InvoiceSummaryResponse> list() {
@@ -235,6 +238,19 @@ public class InvoicesController {
         @AuthenticationPrincipal AuthenticatedStaffUser principal, @RequestBody @Valid CreateInvoiceRequest request
     ) {
         UUID id = createManualInvoiceUseCase.execute(principal.branchIds().get(0), request.ownerId(), principal.staffUserId());
+        return ResponseEntity.created(java.net.URI.create("/api/v1/invoices/" + id)).build();
+    }
+
+    @PostMapping("/quick-sale")
+    public ResponseEntity<Void> quickSale(
+        @AuthenticationPrincipal AuthenticatedStaffUser principal, @RequestBody @Valid CompleteQuickSaleRequest request
+    ) {
+        List<QuickSaleLineCommand> lines = request.lines().stream()
+            .map(l -> new QuickSaleLineCommand(l.inventoryItemId(), l.description(), l.quantity(), l.unitPrice()))
+            .toList();
+        UUID id = completeQuickSaleUseCase.execute(new CompleteQuickSaleCommand(
+            principal.branchIds().get(0), request.ownerId(), principal.staffUserId(), lines, request.paymentMethod()
+        ));
         return ResponseEntity.created(java.net.URI.create("/api/v1/invoices/" + id)).build();
     }
 
