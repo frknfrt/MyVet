@@ -35,7 +35,7 @@ public class GetOwnerProfileUseCase {
             owner.getEmail(), owner.getAddress(), owner.getCity(), owner.getDistrict(), owner.getOccupation(),
             owner.getReferralSource(), owner.getClientDiscount(), owner.getCriticalAlert(), owner.getNotes(),
             owner.isMarketingConsent(), owner.isSmsConsent(), owner.isWhatsappConsent(), owner.isNotificationConsent(),
-            owner.getProtocolNumber(), patients
+            owner.getProtocolNumber(), owner.getBirthDate(), owner.getNationalId(), patients
         );
     }
 

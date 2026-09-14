@@ -62,7 +62,7 @@ public class OwnersController {
             request.secondaryPhone(), request.email(), request.address(), request.city(), request.district(),
             request.occupation(), request.referralSource(), request.clientDiscount(), request.criticalAlert(),
             request.notes(), request.marketingConsent(), request.smsConsent(), request.whatsappConsent(),
-            request.notificationConsent(), request.protocolNumber()
+            request.notificationConsent(), request.protocolNumber(), request.birthDate(), request.nationalId()
         ));
         return ResponseEntity.status(201).body(new OwnerResponse(id, request.fullName()));
     }
@@ -79,7 +79,8 @@ public class OwnersController {
             id, request.fullName(), request.phone(), request.email(), request.address(), request.middleName(),
             request.secondaryPhone(), request.city(), request.district(), request.occupation(),
             request.referralSource(), request.clientDiscount(), request.criticalAlert(), request.notes(),
-            request.smsConsent(), request.whatsappConsent(), request.notificationConsent(), request.protocolNumber()
+            request.smsConsent(), request.whatsappConsent(), request.notificationConsent(), request.protocolNumber(),
+            request.birthDate(), request.nationalId()
         ));
     }
 

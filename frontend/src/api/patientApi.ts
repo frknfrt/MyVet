@@ -115,6 +115,8 @@ export interface OwnerProfile {
   whatsappConsent: boolean;
   notificationConsent: boolean;
   protocolNumber: string | null;
+  birthDate: string | null;
+  nationalId: string | null;
   patients: { id: string; name: string; speciesName: string | null; breedName: string | null; status: PatientStatus }[];
 }
 
@@ -137,6 +139,8 @@ export interface RegisterOwnerPayload {
   whatsappConsent?: boolean;
   notificationConsent?: boolean;
   protocolNumber?: string;
+  birthDate: string;
+  nationalId?: string;
 }
 
 export interface UpdateOwnerPayload {
@@ -157,6 +161,8 @@ export interface UpdateOwnerPayload {
   whatsappConsent?: boolean;
   notificationConsent?: boolean;
   protocolNumber?: string;
+  birthDate: string;
+  nationalId?: string;
 }
 
 export interface PatientGrowthSummary {

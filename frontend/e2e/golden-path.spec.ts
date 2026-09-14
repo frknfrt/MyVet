@@ -77,9 +77,10 @@ test('Platform admin → Randevu → Muayene → Fatura altın yolu', async ({ p
     await page.goto('/musteriler/yeni');
     await field(page, 'Ad Soyad').fill(ownerName);
     await field(page, 'Telefon').fill(ownerPhone);
+    await field(page, 'Doğum Tarihi').fill('1990-01-01');
     await page.getByLabel(/KVKK Aydınlatma Metni/).check();
     await page.getByRole('button', { name: 'Müşteriyi Kaydet' }).click();
-    await expect(page).toHaveURL(/\/musteriler\//);
+    await expect(page).toHaveURL(/\/musteriler\/[0-9a-f-]{36}$/);
     await expect(page.getByText(ownerName)).toBeVisible();
   });
 

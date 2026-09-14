@@ -1,6 +1,7 @@
 package com.vetos.modules.patient.application.dto;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.UUID;
 
 public record UpdateOwnerCommand(
@@ -21,5 +22,7 @@ public record UpdateOwnerCommand(
     boolean smsConsent,
     boolean whatsappConsent,
     boolean notificationConsent,
-    String protocolNumber
+    String protocolNumber,
+    LocalDate birthDate,
+    String nationalId
 ) {}

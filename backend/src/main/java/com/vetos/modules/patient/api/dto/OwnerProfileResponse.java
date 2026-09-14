@@ -4,6 +4,7 @@ import com.vetos.modules.patient.application.dto.OwnerProfile;
 import com.vetos.modules.patient.domain.PatientStatus;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,6 +28,8 @@ public record OwnerProfileResponse(
     boolean whatsappConsent,
     boolean notificationConsent,
     String protocolNumber,
+    LocalDate birthDate,
+    String nationalId,
     List<PatientItem> patients
 ) {
     public record PatientItem(UUID id, String name, String speciesName, String breedName, PatientStatus status) {}
@@ -37,7 +40,7 @@ public record OwnerProfileResponse(
             profile.email(), profile.address(), profile.city(), profile.district(), profile.occupation(),
             profile.referralSource(), profile.clientDiscount(), profile.criticalAlert(), profile.notes(),
             profile.marketingConsent(), profile.smsConsent(), profile.whatsappConsent(), profile.notificationConsent(),
-            profile.protocolNumber(),
+            profile.protocolNumber(), profile.birthDate(), profile.nationalId(),
             profile.patients().stream()
                 .map(p -> new PatientItem(p.id(), p.name(), p.speciesName(), p.breedName(), p.status()))
                 .toList()

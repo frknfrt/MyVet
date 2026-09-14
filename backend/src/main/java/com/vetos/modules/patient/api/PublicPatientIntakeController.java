@@ -38,7 +38,7 @@ public class PublicPatientIntakeController {
     public ResponseEntity<OwnerResponse> registerOwner(@RequestBody @Valid PublicRegisterOwnerRequest request) {
         UUID id = registerOwnerUseCase.execute(new RegisterOwnerCommand(
             request.tenantId(), request.fullName(), null, request.phone(), null, request.email(), null,
-            null, null, null, null, null, null, null, false, true, true, true, null
+            null, null, null, null, null, null, null, false, true, true, true, null, null, null
         ));
         return ResponseEntity.status(201).body(new OwnerResponse(id, request.fullName()));
     }

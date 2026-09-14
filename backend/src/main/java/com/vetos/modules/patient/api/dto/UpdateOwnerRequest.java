@@ -1,8 +1,10 @@
 package com.vetos.modules.patient.api.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 public record UpdateOwnerRequest(
     @NotBlank String fullName,
@@ -21,5 +23,7 @@ public record UpdateOwnerRequest(
     boolean smsConsent,
     boolean whatsappConsent,
     boolean notificationConsent,
-    String protocolNumber
+    String protocolNumber,
+    @NotNull LocalDate birthDate,
+    String nationalId
 ) {}

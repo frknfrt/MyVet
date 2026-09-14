@@ -24,7 +24,7 @@ public class UpdateOwnerUseCase {
             command.middleName(), command.secondaryPhone(), command.city(), command.district(),
             command.occupation(), command.referralSource(), command.clientDiscount(), command.criticalAlert(),
             command.notes(), command.smsConsent(), command.whatsappConsent(), command.notificationConsent(),
-            command.protocolNumber()
+            command.protocolNumber(), command.birthDate(), command.nationalId()
         );
         ownerRepository.save(owner);
     }

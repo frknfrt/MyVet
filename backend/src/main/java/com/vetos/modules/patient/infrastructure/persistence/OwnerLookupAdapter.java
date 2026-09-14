@@ -20,7 +20,7 @@ class OwnerLookupAdapter implements OwnerLookupPort {
         Owner owner = jpaRepository.findById(ownerId).orElseThrow(() -> new OwnerNotFoundException(ownerId));
         return new OwnerSummary(
             owner.getId(), owner.getFullName(), owner.getPhone(), owner.getAddress(), owner.getCity(), owner.getDistrict(),
-            owner.getNationalIdMasked(), owner.isSmsConsent(), owner.isWhatsappConsent()
+            owner.getNationalId(), owner.isSmsConsent(), owner.isWhatsappConsent()
         );
     }
 }

@@ -123,6 +123,16 @@ export function OwnerDetailPage() {
             <div className={styles.infoValue}>{profile.occupation ?? '—'}</div>
           </div>
           <div className={styles.infoItem}>
+            <div className={styles.infoLabel}>Doğum Tarihi</div>
+            <div className={styles.infoValue}>
+              {profile.birthDate ? new Date(profile.birthDate).toLocaleDateString('tr-TR') : '—'}
+            </div>
+          </div>
+          <div className={styles.infoItem}>
+            <div className={styles.infoLabel}>TC Kimlik No</div>
+            <div className={styles.infoValue}>{profile.nationalId ?? '—'}</div>
+          </div>
+          <div className={styles.infoItem}>
             <div className={styles.infoLabel}>Adres</div>
             <div className={styles.infoValue}>
               {[profile.address, profile.district, profile.city].filter(Boolean).join(', ') || '—'}

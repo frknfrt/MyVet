@@ -5,6 +5,7 @@ import { ApiError } from '../../api/client';
 import { patientApi } from '../../api/patientApi';
 import { Button } from '../../components/ui/Button';
 import { FieldWrap, Input, Textarea } from '../../components/ui/Field';
+import { isValidTcKimlik } from './tcKimlik';
 import styles from './NewOwnerPage.module.css';
 
 function errorMessageOf(err: unknown): string {
@@ -23,6 +24,8 @@ export function NewOwnerPage() {
   const [city, setCity] = useState('');
   const [district, setDistrict] = useState('');
   const [occupation, setOccupation] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+  const [nationalId, setNationalId] = useState('');
   const [referralSource, setReferralSource] = useState('');
   const [clientDiscount, setClientDiscount] = useState('0');
   const [protocolNumber, setProtocolNumber] = useState('');
@@ -36,9 +39,11 @@ export function NewOwnerPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const nationalIdError = nationalId && !isValidTcKimlik(nationalId) ? 'Geçersiz TC kimlik numarası' : null;
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (busy) return;
+    if (busy || !!nationalIdError) return;
     setBusy(true);
     setError(null);
     try {
@@ -52,6 +57,8 @@ export function NewOwnerPage() {
         city: city || undefined,
         district: district || undefined,
         occupation: occupation || undefined,
+        birthDate,
+        nationalId: nationalId || undefined,
         referralSource: referralSource || undefined,
         clientDiscount: clientDiscount ? Number(clientDiscount) : undefined,
         criticalAlert: criticalAlert || undefined,
@@ -110,6 +117,21 @@ export function NewOwnerPage() {
             </FieldWrap>
             <FieldWrap label="E-posta (opsiyonel)">
               <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            </FieldWrap>
+          </div>
+          <div className={styles.row2}>
+            <FieldWrap label="Doğum Tarihi">
+              <Input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} required />
+            </FieldWrap>
+            <FieldWrap label="TC Kimlik No (opsiyonel)">
+              <Input
+                value={nationalId}
+                onChange={(e) => setNationalId(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                maxLength={11}
+                inputMode="numeric"
+                placeholder="11 haneli TC kimlik no"
+              />
+              {nationalIdError && <div className={styles.fieldError}>{nationalIdError}</div>}
             </FieldWrap>
           </div>
 
@@ -181,7 +203,7 @@ export function NewOwnerPage() {
             <Button type="button" variant="secondary" onClick={() => navigate('/hastalar')}>
               Vazgeç
             </Button>
-            <Button type="submit" variant="primary" disabled={busy}>
+            <Button type="submit" variant="primary" disabled={busy || !!nationalIdError}>
               {busy ? 'Kaydediliyor...' : 'Müşteriyi Kaydet'}
             </Button>
           </div>

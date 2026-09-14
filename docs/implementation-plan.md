@@ -301,3 +301,24 @@ urun eksigiydi -- duzeltildi:
 (bu degisiklikler icin henuz DOGRULANMADI); sonra "hale" kaydini gercekten
 "Ad Soyad" alanindan "hale Yılmaz" gibi duzenleyip Ayarlar > e-Fatura'dan
 "Tekrar Dene" ile test edecek.
+
+## Sahip kaydina dogum tarihi + gercek TCKN alani (2026-09-14)
+
+**TCKN karari guncellendi:** 2026-09-09 tarihli "Faz 1'de gercek TCKN hic
+tutulmuyor" karari kullaniciyla birlikte degistirildi -- artik gercek TC
+kimlik numarasi (opsiyonel) veritabaninda tutuluyor. e-Fatura akisi
+degismedi, hala "nihai tuketici" TCKN'sini (11111111111) kullaniyor --
+gercek TCKN'nin e-Fatura'ya baglanmasi ayrica degerlendirilecek.
+
+- Migration `V34`: hic kullanilmayan `national_id_masked` kolonu
+  `national_id`'ye yeniden adlandirildi; yeni nullable `birth_date DATE`
+  eklendi (patients.birth_date ile ayni yaklasim -- zorunluluk sadece
+  API/form katmaninda, mevcut kayitlari bozmamak icin).
+- `Owner.updateNationalId`: doluysa resmi TCKN checksum algoritmasiyla
+  dogrulanir (`TcKimlikValidator`), gecersizse `InvalidNationalIdException`
+  (422) firlatilir. Dogum tarihi UI'da zorunlu ama DB'de serbest.
+- `RegisterOwnerCommand/Request`, `UpdateOwnerCommand/Request`,
+  `OwnerProfile(Response)` zincirine `birthDate`/`nationalId` eklendi.
+- `NewOwnerPage.tsx`, `OwnerEditModal.tsx`: "Doğum Tarihi" (zorunlu) ve
+  "TC Kimlik No" (opsiyonel, 11 hane) alanlari; `OwnerDetailPage.tsx`'te
+  goruntuleniyor.

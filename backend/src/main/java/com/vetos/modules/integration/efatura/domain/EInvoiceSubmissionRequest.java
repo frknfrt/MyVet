@@ -5,10 +5,11 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * buyerIdentifier: Faz 1'de sahiplerin TCKN'si sistemde hic tutulmuyor
- * (sadece nationalIdMasked var) -- bu yuzden GIB'in "isimsiz/nihai tuketici"
- * icin ayirdigi ozel TCKN'si (11111111111) kullanilir; her fatura otomatik
- * e-Arsiv olarak kesilir (bkz. docs/implementation-plan.md e-Fatura bolumu).
+ * buyerIdentifier: Owner.nationalId artik toplanabiliyor olsa da (bkz.
+ * docs/implementation-plan.md "TCKN karari" guncellemesi) e-Fatura akisi
+ * hala GIB'in "isimsiz/nihai tuketici" icin ayirdigi ozel TCKN'sini
+ * (11111111111) kullanir; her fatura otomatik e-Arsiv olarak kesilir.
+ * Gercek TCKN'nin e-Fatura'ya baglanmasi ayrica degerlendirilecek bir is.
  * ownerId: FaturaEntegratorEInvoiceGatewayAdapter'da saglayici panelinde
  * ayni sahip icin ayni musteri kaydinin kullanilmasi (mukerrer musteri
  * olusmamasi) icin sabit bir sayisal ID turetmede kullanilir.
