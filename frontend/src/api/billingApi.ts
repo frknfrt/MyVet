@@ -82,6 +82,18 @@ export interface CashRegisterSession {
   notes: string | null;
 }
 
+export interface QuickSaleLine {
+  inventoryItemId?: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface TodaySalesSummary {
+  totalAmount: number;
+  saleCount: number;
+}
+
 export const billingApi = {
   listInvoices: () => apiClient.get<InvoiceSummary[]>('/api/v1/invoices'),
   getInvoice: (id: string) => apiClient.get<InvoiceDetail>(`/api/v1/invoices/${id}`),
@@ -109,4 +121,7 @@ export const billingApi = {
   closeCashRegister: (id: string, payload: { closingBalance: number; notes?: string }) =>
     apiClient.post<void>(`/api/v1/cash-register/${id}/close`, payload),
   cashRegisterHistory: () => apiClient.get<CashRegisterSession[]>('/api/v1/cash-register/history'),
+  quickSale: (payload: { ownerId?: string; lines: QuickSaleLine[]; paymentMethod: PaymentMethod }) =>
+    apiClient.postForId('/api/v1/invoices/quick-sale', payload),
+  todaySalesSummary: () => apiClient.get<TodaySalesSummary>('/api/v1/invoices/today-summary'),
 };
