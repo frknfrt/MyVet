@@ -8,4 +8,7 @@ import java.util.UUID;
  */
 public interface OwnerLookupPort {
     OwnerSummary findSummaryById(UUID ownerId);
+
+    /** Hizli Satis icin: tenant'in anonim musteri kaydini bulur/olusturur. */
+    UUID getOrCreateAnonymousOwnerId(UUID tenantId);
 }

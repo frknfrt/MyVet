@@ -1,5 +1,6 @@
 package com.vetos.modules.patient.infrastructure.persistence;
 
+import com.vetos.modules.patient.application.GetOrCreateAnonymousOwnerUseCase;
 import com.vetos.modules.patient.domain.Owner;
 import com.vetos.modules.patient.domain.OwnerLookupPort;
 import com.vetos.modules.patient.domain.OwnerSummary;
@@ -14,6 +15,7 @@ import java.util.UUID;
 class OwnerLookupAdapter implements OwnerLookupPort {
 
     private final OwnerJpaRepository jpaRepository;
+    private final GetOrCreateAnonymousOwnerUseCase getOrCreateAnonymousOwnerUseCase;
 
     @Override
     public OwnerSummary findSummaryById(UUID ownerId) {
@@ -22,5 +24,10 @@ class OwnerLookupAdapter implements OwnerLookupPort {
             owner.getId(), owner.getFullName(), owner.getPhone(), owner.getAddress(), owner.getCity(), owner.getDistrict(),
             owner.getNationalId(), owner.isSmsConsent(), owner.isWhatsappConsent()
         );
+    }
+
+    @Override
+    public UUID getOrCreateAnonymousOwnerId(UUID tenantId) {
+        return getOrCreateAnonymousOwnerUseCase.execute(tenantId);
     }
 }
