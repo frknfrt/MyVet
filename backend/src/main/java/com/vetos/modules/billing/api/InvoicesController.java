@@ -45,6 +45,7 @@ public class InvoicesController {
     private final GetInvoiceUseCase getInvoiceUseCase;
     private final GetInvoiceByBoardingStayUseCase getInvoiceByBoardingStayUseCase;
     private final GetRevenueSummaryUseCase getRevenueSummaryUseCase;
+    private final GetTodaySalesSummaryUseCase getTodaySalesSummaryUseCase;
     private final GetRevenueReportUseCase getRevenueReportUseCase;
     private final GetProductSalesReportUseCase getProductSalesReportUseCase;
     private final GetStaffPerformanceReportUseCase getStaffPerformanceReportUseCase;
@@ -74,6 +75,12 @@ public class InvoicesController {
     @GetMapping("/revenue-summary")
     public RevenueSummaryResponse revenueSummary() {
         return RevenueSummaryResponse.from(getRevenueSummaryUseCase.execute(TenantContext.current()));
+    }
+
+    @GetMapping("/today-summary")
+    @PreAuthorize("hasAnyRole('VET', 'TECHNICIAN', 'RECEPTIONIST', 'ADMIN')")
+    public TodaySalesSummaryResponse todaySummary() {
+        return TodaySalesSummaryResponse.from(getTodaySalesSummaryUseCase.execute(TenantContext.current()));
     }
 
     @GetMapping("/reports/revenue")
