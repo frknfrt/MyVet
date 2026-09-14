@@ -31,4 +31,9 @@ class OwnerRepositoryAdapter implements OwnerRepository {
     public List<Owner> findByTenantIdWithFilters(UUID tenantId, String nameContains, Instant registeredFrom, Instant registeredTo) {
         return jpaRepository.findByTenantIdWithFilters(tenantId, nameContains, registeredFrom, registeredTo);
     }
+
+    @Override
+    public Optional<Owner> findAnonymousPlaceholder(UUID tenantId) {
+        return jpaRepository.findAnonymousPlaceholder(tenantId);
+    }
 }

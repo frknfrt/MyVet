@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 interface OwnerJpaRepository extends JpaRepository<Owner, UUID> {
@@ -29,4 +30,10 @@ interface OwnerJpaRepository extends JpaRepository<Owner, UUID> {
         @Param("tenantId") UUID tenantId, @Param("nameContains") String nameContains,
         @Param("registeredFrom") Instant registeredFrom, @Param("registeredTo") Instant registeredTo
     );
+
+    @Query(
+        value = "SELECT * FROM owners o WHERE o.tenant_id = :tenantId AND o.is_anonymous_placeholder = true LIMIT 1",
+        nativeQuery = true
+    )
+    Optional<Owner> findAnonymousPlaceholder(@Param("tenantId") UUID tenantId);
 }
