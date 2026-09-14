@@ -23,25 +23,36 @@ class GetOrCreateAnonymousOwnerUseCaseTest {
     private GetOrCreateAnonymousOwnerUseCase useCase;
 
     @Test
-    void should_returnExistingId_when_placeholderAlreadyExists() {
+    void should_returnExistingId_when_placeholderAlreadyExists() throws Exception {
         useCase = new GetOrCreateAnonymousOwnerUseCase(ownerRepository);
         UUID tenantId = UUID.randomUUID();
         Owner existing = Owner.createAnonymousPlaceholder(tenantId);
+        UUID existingId = UUID.randomUUID();
+        java.lang.reflect.Field idField = Owner.class.getDeclaredField("id");
+        idField.setAccessible(true);
+        idField.set(existing, existingId);
         when(ownerRepository.findAnonymousPlaceholder(tenantId)).thenReturn(Optional.of(existing));
 
         UUID result = useCase.execute(tenantId);
 
-        assertThat(result).isEqualTo(existing.getId());
+        assertThat(result).isEqualTo(existingId);
         verify(ownerRepository, never()).save(org.mockito.ArgumentMatchers.any());
     }
 
     @Test
-    void should_createAndReturnNewId_when_placeholderMissing() {
+    void should_createAndReturnNewId_when_placeholderMissing() throws Exception {
         useCase = new GetOrCreateAnonymousOwnerUseCase(ownerRepository);
         UUID tenantId = UUID.randomUUID();
         when(ownerRepository.findAnonymousPlaceholder(tenantId)).thenReturn(Optional.empty());
         when(ownerRepository.save(org.mockito.ArgumentMatchers.any(Owner.class)))
-            .thenAnswer(invocation -> invocation.getArgument(0));
+            .thenAnswer(invocation -> {
+                Owner owner = invocation.getArgument(0);
+                UUID generatedId = UUID.randomUUID();
+                java.lang.reflect.Field idField = Owner.class.getDeclaredField("id");
+                idField.setAccessible(true);
+                idField.set(owner, generatedId);
+                return owner;
+            });
 
         UUID result = useCase.execute(tenantId);
 
