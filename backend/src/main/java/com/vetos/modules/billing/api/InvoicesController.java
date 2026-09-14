@@ -242,7 +242,7 @@ public class InvoicesController {
     public void addLine(@PathVariable UUID id, @RequestBody @Valid AddInvoiceLineRequest request) {
         addInvoiceLineUseCase.execute(new AddInvoiceLineCommand(
             id, request.description(), request.quantity(), request.unitPrice(),
-            request.discountAmount(), request.vatRate(), request.serviceTypeId()
+            request.discountAmount(), request.vatRate(), request.serviceTypeId(), request.inventoryItemId()
         ));
     }
 

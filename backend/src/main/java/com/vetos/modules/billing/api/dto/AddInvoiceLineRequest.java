@@ -14,5 +14,6 @@ public record AddInvoiceLineRequest(
     @NotNull BigDecimal unitPrice,
     @PositiveOrZero BigDecimal discountAmount,
     @PositiveOrZero BigDecimal vatRate,
-    UUID serviceTypeId
+    UUID serviceTypeId,
+    UUID inventoryItemId
 ) {}

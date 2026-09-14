@@ -5,5 +5,5 @@ import java.util.UUID;
 
 public record AddInvoiceLineCommand(
     UUID invoiceId, String description, int quantity, BigDecimal unitPrice,
-    BigDecimal discountAmount, BigDecimal vatRate, UUID serviceTypeId
+    BigDecimal discountAmount, BigDecimal vatRate, UUID serviceTypeId, UUID inventoryItemId
 ) {}
