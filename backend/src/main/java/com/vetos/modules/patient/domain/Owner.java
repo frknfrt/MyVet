@@ -44,6 +44,9 @@ public class Owner {
     @Column(name = "birth_date")
     private LocalDate birthDate;
 
+    @Column(name = "is_anonymous_placeholder", nullable = false)
+    private boolean anonymousPlaceholder;
+
     private String address;
 
     private String city;
@@ -94,6 +97,12 @@ public class Owner {
         owner.whatsappConsent = true;
         owner.notificationConsent = true;
         owner.createdAt = Instant.now();
+        return owner;
+    }
+
+    public static Owner createAnonymousPlaceholder(UUID tenantId) {
+        Owner owner = register(tenantId, "Anonim Müşteri", "0000000000", null, null);
+        owner.anonymousPlaceholder = true;
         return owner;
     }
 
