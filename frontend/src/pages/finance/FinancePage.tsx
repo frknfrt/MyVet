@@ -6,6 +6,7 @@ import { CashRegisterPanel } from './CashRegisterPanel';
 import { InvoiceDetailModal } from './InvoiceDetailModal';
 import { InvoiceStatusBadge } from './invoiceStatus';
 import { NewInvoiceModal } from './NewInvoiceModal';
+import { QuickSaleModal } from './QuickSaleModal';
 import styles from './FinancePage.module.css';
 
 type Tab = 'invoices' | 'cash-register' | 'debtors';
@@ -17,6 +18,7 @@ export function FinancePage() {
   const [loading, setLoading] = useState(true);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [newInvoiceOpen, setNewInvoiceOpen] = useState(false);
+  const [quickSaleOpen, setQuickSaleOpen] = useState(false);
 
   function loadInvoices() {
     setLoading(true);
@@ -42,9 +44,14 @@ export function FinancePage() {
           <h1 className={styles.title}>Finans</h1>
         </div>
         {tab === 'invoices' && (
-          <Button variant="primary" onClick={() => setNewInvoiceOpen(true)}>
-            Yeni Fatura
-          </Button>
+          <div className={styles.actions}>
+            <Button variant="secondary" onClick={() => setQuickSaleOpen(true)}>
+              Hızlı Satış
+            </Button>
+            <Button variant="primary" onClick={() => setNewInvoiceOpen(true)}>
+              Yeni Fatura
+            </Button>
+          </div>
         )}
       </div>
 
@@ -125,6 +132,16 @@ export function FinancePage() {
         onClose={() => setNewInvoiceOpen(false)}
         onCreated={(invoiceId) => {
           setNewInvoiceOpen(false);
+          loadInvoices();
+          setSelectedInvoiceId(invoiceId);
+        }}
+      />
+
+      <QuickSaleModal
+        open={quickSaleOpen}
+        onClose={() => setQuickSaleOpen(false)}
+        onCompleted={(invoiceId) => {
+          setQuickSaleOpen(false);
           loadInvoices();
           setSelectedInvoiceId(invoiceId);
         }}

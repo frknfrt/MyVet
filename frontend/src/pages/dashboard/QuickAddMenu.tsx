@@ -31,11 +31,23 @@ const ICON_PATIENT = (
     <path d="M2.5 20v-1a6.5 6.5 0 0 1 13 0v1" />
   </svg>
 );
+const ICON_SALE = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h7.2a2 2 0 0 0 2-1.6L21 8H6" />
+    <circle cx="9" cy="20" r="1" />
+    <circle cx="17" cy="20" r="1" />
+  </svg>
+);
+
+interface QuickAddMenuProps {
+  onQuickSale: () => void;
+}
+
 /**
  * Tasarım sistemi kuralı korunuyor: sayfada tek bir primary buton.
  * Kolayvet'teki 5-6 ayrı "Hızlı X" butonu yerine, tek buton + açılır menü.
  */
-export function QuickAddMenu() {
+export function QuickAddMenu({ onQuickSale }: QuickAddMenuProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -48,12 +60,10 @@ export function QuickAddMenu() {
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, []);
 
-  // NOT: "Yeni satış" (retail POS) ve "Tahsilat al" (bağımsız tahsilat) Faz 2
-  // kapsamında (@docs/requirements.md 4.14) -- henüz backend'i yok, bu yüzden
-  // menüden çıkarıldı. Eklendiklerinde buraya geri eklenecekler.
   const options: QuickAddOption[] = [
     { label: 'Yeni randevu', icon: ICON_APPT, onSelect: () => navigate('/randevu') },
     { label: 'Yeni hasta', icon: ICON_PATIENT, onSelect: () => navigate('/hastalar') },
+    { label: 'Yeni satış', icon: ICON_SALE, onSelect: onQuickSale },
   ];
 
   return (

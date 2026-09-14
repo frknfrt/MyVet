@@ -11,6 +11,10 @@
   font-weight: 700;
   letter-spacing: -0.01em;
 }
+.actions {
+  display: flex;
+  gap: 10px;
+}
 .tabs {
   display: flex;
   gap: 0;

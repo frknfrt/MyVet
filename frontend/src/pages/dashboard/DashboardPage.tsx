@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button';
 import { appointmentApi, AppointmentItem, AppointmentStatus } from '../../api/appointmentApi';
 import { useAuth } from '../../auth/AuthContext';
 import { isoDate } from '../appointments/weekUtils';
+import { QuickSaleModal } from '../finance/QuickSaleModal';
 import { BusinessSummaryView } from './BusinessSummaryView';
 import { QuickAddMenu } from './QuickAddMenu';
 import { WorklistRow } from './WorklistRow';
@@ -42,6 +43,7 @@ export function DashboardPage() {
   const [query, setQuery] = useState('');
   const [appointments, setAppointments] = useState<AppointmentItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [quickSaleOpen, setQuickSaleOpen] = useState(false);
 
   const todayIso = isoDate(new Date());
 
@@ -118,7 +120,7 @@ export function DashboardPage() {
             <Button variant={onlyMine ? 'primary' : 'secondary'} onClick={() => setOnlyMine((v) => !v)}>
               Bana atanan
             </Button>
-            <QuickAddMenu />
+            <QuickAddMenu onQuickSale={() => setQuickSaleOpen(true)} />
           </div>
         )}
       </div>
@@ -184,6 +186,14 @@ export function DashboardPage() {
         </>
       )}
 
+      <QuickSaleModal
+        open={quickSaleOpen}
+        onClose={() => setQuickSaleOpen(false)}
+        onCompleted={() => {
+          setQuickSaleOpen(false);
+          load();
+        }}
+      />
     </AppShell>
   );
 }
