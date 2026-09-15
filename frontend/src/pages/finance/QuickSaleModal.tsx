@@ -233,6 +233,11 @@ export function QuickSaleModal({ open, onClose, onCompleted }: QuickSaleModalPro
           Sepete Ekle
         </Button>
       </div>
+      {linePrice !== '' && (
+        <div className={styles.linePreview}>
+          Tutar: {(Number(lineQty || 0) * Number(linePrice || 0) * (1 + Number(lineVatRate || 0) / 100)).toFixed(2)} ₺
+        </div>
+      )}
 
       <div className={styles.sectionLabel}>Sepet</div>
       {cart.length === 0 ? (
