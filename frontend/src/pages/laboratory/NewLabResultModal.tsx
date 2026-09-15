@@ -130,8 +130,10 @@ export function NewLabResultModal({ open, onClose, onCreated }: NewLabResultModa
     }
   }
 
+  const dirty = testName !== '' || ownerId !== null || patientId !== '' || files.length > 0;
+
   return (
-    <Modal open={open} onClose={onClose} width={840}>
+    <Modal open={open} onClose={onClose} width={840} dirty={dirty}>
       <div className={styles.banner}>Laboratuvar Sonucu Yükleme</div>
       <form onSubmit={handleSubmit} className={styles.body}>
         {error && <div className={styles.errorBanner}>{error}</div>}

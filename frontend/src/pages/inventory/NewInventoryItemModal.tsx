@@ -56,8 +56,11 @@ export function NewInventoryItemModal({ open, onClose, onCreated }: NewInventory
     }
   }
 
+  const dirty =
+    name !== '' || category !== '' || initialQuantity !== '0' || reorderThreshold !== '5' || unitCost !== '' || expiryDate !== '';
+
   return (
-    <Modal open={open} onClose={reset} width={420}>
+    <Modal open={open} onClose={reset} width={420} dirty={dirty}>
       <form onSubmit={handleSubmit}>
         <h2 className={styles.modalTitle}>Yeni stok kalemi</h2>
         {error && <div className={styles.errorBanner}>{error}</div>}

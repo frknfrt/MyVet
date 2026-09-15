@@ -49,8 +49,10 @@ export function ItemDetailModal({ item, onClose, onChanged }: ItemDetailModalPro
     }
   }
 
+  const dirty = movementType !== 'IN' || quantity !== '1';
+
   return (
-    <Modal open={item !== null} onClose={onClose} width={480}>
+    <Modal open={item !== null} onClose={onClose} width={480} dirty={dirty}>
       {!item ? null : (
         <>
           <div className={styles.header}>

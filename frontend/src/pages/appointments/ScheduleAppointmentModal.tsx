@@ -93,8 +93,10 @@ export function ScheduleAppointmentModal({ open, onClose, onScheduled, defaultDa
     }
   }
 
+  const dirty = patientQuery !== '' || selectedPatient !== null || notes !== '';
+
   return (
-    <Modal open={open} onClose={reset} width={460}>
+    <Modal open={open} onClose={reset} width={460} dirty={dirty}>
       <form onSubmit={handleSubmit}>
         <h2 className={styles.title}>Yeni randevu</h2>
         <p className={styles.lede}>Hasta arayın ve randevu bilgilerini girin</p>

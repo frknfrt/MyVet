@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { ApiError } from '../../api/client';
 import { BreedItem, patientApi, PatientProfile, Sex, SpeciesItem } from '../../api/patientApi';
 import { Button } from '../../components/ui/Button';
@@ -38,6 +38,7 @@ export function PatientEditModal({ open, profile, onClose, onSaved }: PatientEdi
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const initialRef = useRef<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     if (!open || !profile) return;
@@ -59,6 +60,24 @@ export function PatientEditModal({ open, profile, onClose, onSaved }: PatientEdi
     setCriticalAlert(profile.criticalAlert ?? '');
     setNotes(profile.notes ?? '');
     setError(null);
+    initialRef.current = {
+      breedId: '',
+      sex: profile.sex ?? 'UNKNOWN',
+      birthDate: profile.birthDate ?? '',
+      neutered: profile.neutered,
+      color: profile.color ?? '',
+      temperament: profile.temperament ?? '',
+      distinguishingMarks: profile.distinguishingMarks ?? '',
+      aggressive: profile.aggressive,
+      bloodType: profile.bloodType ?? '',
+      foodBrand: profile.foodBrand ?? '',
+      microchipNumber: profile.microchipNumber ?? '',
+      tarbilAnimalId: profile.tarbilAnimalId ?? '',
+      rabiesTag: profile.rabiesTag ?? '',
+      protocolNumber: profile.protocolNumber ?? '',
+      criticalAlert: profile.criticalAlert ?? '',
+      notes: profile.notes ?? '',
+    };
   }, [open, profile]);
 
   const speciesId = species.find((s) => s.name === profile?.speciesName)?.id;
@@ -72,6 +91,7 @@ export function PatientEditModal({ open, profile, onClose, onSaved }: PatientEdi
       setBreeds(list);
       const match = list.find((b) => b.name === profile?.breedName);
       setBreedId(match?.id ?? '');
+      if (initialRef.current) initialRef.current.breedId = match?.id ?? '';
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [speciesId]);
@@ -113,8 +133,16 @@ export function PatientEditModal({ open, profile, onClose, onSaved }: PatientEdi
 
   if (!profile) return null;
 
+  const dirty =
+    !!initialRef.current &&
+    JSON.stringify(initialRef.current) !==
+      JSON.stringify({
+        breedId, sex, birthDate, neutered, color, temperament, distinguishingMarks, aggressive,
+        bloodType, foodBrand, microchipNumber, tarbilAnimalId, rabiesTag, protocolNumber, criticalAlert, notes,
+      });
+
   return (
-    <Modal open={open} onClose={onClose} width={620}>
+    <Modal open={open} onClose={onClose} width={620} dirty={dirty}>
       <form onSubmit={handleSubmit}>
         <h2 className={styles.title}>{profile.name} — Hasta bilgilerini düzenle</h2>
 

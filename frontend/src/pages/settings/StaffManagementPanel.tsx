@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { StaffRole } from '../../auth/session';
 import { ApiError } from '../../api/client';
@@ -87,10 +87,12 @@ export function StaffManagementPanel() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<StaffFormState>(emptyForm(session?.branchId ?? ''));
   const [saving, setSaving] = useState(false);
+  const initialFormRef = useRef<StaffFormState>(form);
 
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [inviteForm, setInviteForm] = useState<InviteFormState>(emptyInviteForm(session?.branchId ?? ''));
   const [inviting, setInviting] = useState(false);
+  const initialInviteFormRef = useRef<InviteFormState>(inviteForm);
 
   function load() {
     setLoading(true);
@@ -108,13 +110,15 @@ export function StaffManagementPanel() {
 
   function openCreate() {
     setEditingId(null);
-    setForm(emptyForm(session?.branchId ?? ''));
+    const initial = emptyForm(session?.branchId ?? '');
+    setForm(initial);
+    initialFormRef.current = initial;
     setModalOpen(true);
   }
 
   function openEdit(s: StaffUserItem) {
     setEditingId(s.id);
-    setForm({
+    const initial: StaffFormState = {
       branchId: s.branchId,
       fullName: s.fullName,
       email: s.email,
@@ -124,7 +128,9 @@ export function StaffManagementPanel() {
       licenseNumber: s.licenseNumber ?? '',
       specialty: s.specialty ?? '',
       bio: s.bio ?? '',
-    });
+    };
+    setForm(initial);
+    initialFormRef.current = initial;
     setModalOpen(true);
   }
 
@@ -179,7 +185,9 @@ export function StaffManagementPanel() {
   const isSelf = editingId !== null && editingId === session?.staffUserId;
 
   function openInvite() {
-    setInviteForm(emptyInviteForm(session?.branchId ?? ''));
+    const initial = emptyInviteForm(session?.branchId ?? '');
+    setInviteForm(initial);
+    initialInviteFormRef.current = initial;
     setInviteModalOpen(true);
   }
 
@@ -300,7 +308,12 @@ export function StaffManagementPanel() {
         </>
       )}
 
-      <Modal open={inviteModalOpen} onClose={() => setInviteModalOpen(false)} width={480}>
+      <Modal
+        open={inviteModalOpen}
+        onClose={() => setInviteModalOpen(false)}
+        width={480}
+        dirty={JSON.stringify(inviteForm) !== JSON.stringify(initialInviteFormRef.current)}
+      >
         <form onSubmit={handleInviteSubmit}>
           <div className={styles.modalTitle}>Ekip Üyesi Davet Et</div>
           <div className={styles.formGrid}>
@@ -359,7 +372,12 @@ export function StaffManagementPanel() {
         </form>
       </Modal>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} width={560}>
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        width={560}
+        dirty={JSON.stringify(form) !== JSON.stringify(initialFormRef.current)}
+      >
         <form onSubmit={handleSubmit}>
           <div className={styles.modalTitle}>{editingId ? 'Kullanıcıyı Düzenle' : 'Yeni Kullanıcı'}</div>
 

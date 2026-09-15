@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { ApiError } from '../../api/client';
 import { OwnerProfile, patientApi } from '../../api/patientApi';
 import { Button } from '../../components/ui/Button';
@@ -40,6 +40,7 @@ export function OwnerEditModal({ open, profile, onClose, onSaved }: OwnerEditMod
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const initialRef = useRef<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     if (!open || !profile) return;
@@ -63,9 +64,39 @@ export function OwnerEditModal({ open, profile, onClose, onSaved }: OwnerEditMod
     setCriticalAlert(profile.criticalAlert ?? '');
     setNotes(profile.notes ?? '');
     setError(null);
+    initialRef.current = {
+      fullName: profile.fullName,
+      middleName: profile.middleName ?? '',
+      phone: profile.phone,
+      secondaryPhone: profile.secondaryPhone ?? '',
+      email: profile.email ?? '',
+      address: profile.address ?? '',
+      city: profile.city ?? '',
+      district: profile.district ?? '',
+      occupation: profile.occupation ?? '',
+      birthDate: profile.birthDate ?? '',
+      nationalId: profile.nationalId ?? '',
+      referralSource: profile.referralSource ?? '',
+      clientDiscount: String(profile.clientDiscount ?? 0),
+      protocolNumber: profile.protocolNumber ?? '',
+      smsConsent: profile.smsConsent,
+      whatsappConsent: profile.whatsappConsent,
+      notificationConsent: profile.notificationConsent,
+      criticalAlert: profile.criticalAlert ?? '',
+      notes: profile.notes ?? '',
+    };
   }, [open, profile]);
 
   const nationalIdError = nationalId && !isValidTcKimlik(nationalId) ? 'Geçersiz TC kimlik numarası' : null;
+
+  const dirty =
+    !!initialRef.current &&
+    JSON.stringify(initialRef.current) !==
+      JSON.stringify({
+        fullName, middleName, phone, secondaryPhone, email, address, city, district, occupation,
+        birthDate, nationalId, referralSource, clientDiscount, protocolNumber, smsConsent,
+        whatsappConsent, notificationConsent, criticalAlert, notes,
+      });
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -105,7 +136,7 @@ export function OwnerEditModal({ open, profile, onClose, onSaved }: OwnerEditMod
   if (!profile) return null;
 
   return (
-    <Modal open={open} onClose={onClose} width={620}>
+    <Modal open={open} onClose={onClose} width={620} dirty={dirty}>
       <form onSubmit={handleSubmit}>
         <h2 className={styles.title}>{profile.fullName} — Müşteri bilgilerini düzenle</h2>
 

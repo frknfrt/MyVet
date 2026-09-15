@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { ApiError } from '../../api/client';
 import { Plan, platformAdminApi } from '../../api/platformAdminApi';
 import { Badge } from '../../components/ui/Badge';
@@ -43,6 +43,7 @@ export function PlanManagementPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<PlanFormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const initialFormRef = useRef<PlanFormState>(EMPTY_FORM);
 
   function load() {
     setLoading(true);
@@ -58,12 +59,13 @@ export function PlanManagementPage() {
   function openCreate() {
     setEditingId(null);
     setForm(EMPTY_FORM);
+    initialFormRef.current = EMPTY_FORM;
     setModalOpen(true);
   }
 
   function openEdit(plan: Plan) {
     setEditingId(plan.id);
-    setForm({
+    const initial: PlanFormState = {
       code: plan.code,
       name: plan.name,
       monthlyPrice: String(plan.monthlyPrice),
@@ -73,7 +75,9 @@ export function PlanManagementPage() {
       imageUrl: plan.imageUrl ?? '',
       features: plan.features,
       active: plan.active,
-    });
+    };
+    setForm(initial);
+    initialFormRef.current = initial;
     setModalOpen(true);
   }
 
@@ -176,7 +180,12 @@ export function PlanManagementPage() {
         )}
       </div>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} width={480}>
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        width={480}
+        dirty={JSON.stringify(form) !== JSON.stringify(initialFormRef.current)}
+      >
         <form onSubmit={handleSubmit}>
           <div className={styles.modalTitle}>{editingId ? 'Planı Düzenle' : 'Yeni Plan'}</div>
 

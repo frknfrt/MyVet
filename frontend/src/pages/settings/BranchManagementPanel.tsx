@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { ApiError } from '../../api/client';
 import { BranchItem, branchesApi } from '../../api/branchesApi';
 import { Button } from '../../components/ui/Button';
@@ -29,6 +29,7 @@ export function BranchManagementPanel() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<BranchFormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const initialFormRef = useRef<BranchFormState>(form);
 
   function load() {
     setLoading(true);
@@ -44,18 +45,21 @@ export function BranchManagementPanel() {
   function openCreate() {
     setEditingId(null);
     setForm(EMPTY_FORM);
+    initialFormRef.current = EMPTY_FORM;
     setModalOpen(true);
   }
 
   function openEdit(b: BranchItem) {
     setEditingId(b.branchId);
-    setForm({
+    const initial: BranchFormState = {
       name: b.branchName,
       address: b.address ?? '',
       city: b.city ?? '',
       timezone: b.timezone ?? 'Europe/Istanbul',
       tarbilBranchCode: b.tarbilBranchCode ?? '',
-    });
+    };
+    setForm(initial);
+    initialFormRef.current = initial;
     setModalOpen(true);
   }
 
@@ -128,7 +132,12 @@ export function BranchManagementPanel() {
         )}
       </div>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} width={480}>
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        width={480}
+        dirty={JSON.stringify(form) !== JSON.stringify(initialFormRef.current)}
+      >
         <form onSubmit={handleSubmit}>
           <div className={styles.modalTitle}>{editingId ? 'Şubeyi Düzenle' : 'Yeni Şube'}</div>
           <FieldWrap label="Şube adı">

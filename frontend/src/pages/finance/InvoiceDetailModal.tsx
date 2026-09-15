@@ -129,8 +129,16 @@ export function InvoiceDetailModal({ invoiceId, onClose, onChanged }: InvoiceDet
     }
   }
 
+  const dirty =
+    lineServiceTypeId !== '' ||
+    lineDesc !== '' ||
+    linePrice !== '' ||
+    lineDiscount !== '0' ||
+    lineVatRate !== '20' ||
+    paymentAmount !== '';
+
   return (
-    <Modal open={invoiceId !== null} onClose={onClose} width={700}>
+    <Modal open={invoiceId !== null} onClose={onClose} width={700} dirty={dirty}>
       {!invoice ? (
         <div>Yükleniyor...</div>
       ) : (

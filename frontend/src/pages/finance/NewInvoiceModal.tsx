@@ -56,7 +56,7 @@ export function NewInvoiceModal({ open, onClose, onCreated }: NewInvoiceModalPro
   }
 
   return (
-    <Modal open={open} onClose={onClose} width={440}>
+    <Modal open={open} onClose={onClose} width={440} dirty={ownerId !== null}>
       <div className={styles.title}>Yeni Fatura</div>
       <div className={styles.sub}>Faturayı hangi müşteri için açmak istiyorsunuz?</div>
 

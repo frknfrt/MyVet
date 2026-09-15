@@ -146,8 +146,10 @@ export function QuickSaleModal({ open, onClose, onCompleted }: QuickSaleModalPro
     }
   }
 
+  const dirty = ownerId !== null || isAnonymous || cart.length > 0 || selectedItemId !== '' || linePrice !== '';
+
   return (
-    <Modal open={open} onClose={onClose} width={640}>
+    <Modal open={open} onClose={onClose} width={640} dirty={dirty}>
       <div className={styles.title}>Hızlı Satış</div>
       <div className={styles.sub}>Kayıtlı bir müşteri seçin veya anonim satış yapın, ürünleri ekleyip ödemeyi alın.</div>
 

@@ -115,7 +115,12 @@ export function TenantListPage() {
         )}
       </div>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} width={480}>
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        width={480}
+        dirty={JSON.stringify(form) !== JSON.stringify(EMPTY_FORM)}
+      >
         <form onSubmit={handleSubmit}>
           <div className={styles.modalTitle}>Yeni Klinik Oluştur</div>
 

@@ -58,8 +58,10 @@ export function NewRoomModal({ open, onClose, onCreated }: NewRoomModalProps) {
     }
   }
 
+  const dirty = groupName !== '' || name !== '' || capacity !== '1' || dailyRate !== '' || notes !== '';
+
   return (
-    <Modal open={open} onClose={onClose} width={460}>
+    <Modal open={open} onClose={onClose} width={460} dirty={dirty}>
       <h2 className={styles.title}>Yeni Oda / Alan Ekle</h2>
       <form onSubmit={handleSubmit}>
         {error && <div className={styles.errorBanner}>{error}</div>}

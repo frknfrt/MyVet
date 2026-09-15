@@ -36,18 +36,21 @@ export function LabResultDetailModal({ resultId, onClose, onChanged }: LabResult
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const initialFormRef = useRef({ resultSummary: '', items: [] as LabResultItemInput[] });
 
   function load() {
     if (!resultId) return;
     labApi.get(resultId).then((d) => {
       setDetail(d);
       setAiEvaluated(false);
-      setResultSummary(d.resultSummary ?? '');
-      setItems(
+      const summary = d.resultSummary ?? '';
+      const loadedItems =
         d.items.length > 0
           ? d.items.map((i) => ({ parameterName: i.parameterName, value: i.value, unit: i.unit ?? '', referenceRange: i.referenceRange ?? '', flag: i.flag ?? undefined }))
-          : [{ parameterName: '', value: '', unit: '', referenceRange: '' }]
-      );
+          : [{ parameterName: '', value: '', unit: '', referenceRange: '' }];
+      setResultSummary(summary);
+      setItems(loadedItems);
+      initialFormRef.current = { resultSummary: summary, items: loadedItems };
     });
   }
 
@@ -162,9 +165,12 @@ export function LabResultDetailModal({ resultId, onClose, onChanged }: LabResult
   }
 
   const isPending = detail.status === 'PENDING';
+  const dirty =
+    isPending &&
+    JSON.stringify({ resultSummary, items }) !== JSON.stringify(initialFormRef.current);
 
   return (
-    <Modal open={resultId !== null} onClose={onClose} width={640}>
+    <Modal open={resultId !== null} onClose={onClose} width={640} dirty={dirty}>
       <div className={styles.header}>
         <div>
           <div className={styles.testName}>{detail.testName}</div>

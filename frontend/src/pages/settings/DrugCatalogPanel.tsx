@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { ApiError } from '../../api/client';
 import { clinicalApi, DrugSummary } from '../../api/clinicalApi';
 import { Badge } from '../../components/ui/Badge';
@@ -31,6 +31,7 @@ export function DrugCatalogPanel() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<DrugFormState>(emptyForm());
   const [saving, setSaving] = useState(false);
+  const initialFormRef = useRef<DrugFormState>(form);
 
   function load() {
     setLoading(true);
@@ -45,18 +46,22 @@ export function DrugCatalogPanel() {
 
   function openCreate() {
     setEditingId(null);
-    setForm(emptyForm());
+    const initial = emptyForm();
+    setForm(initial);
+    initialFormRef.current = initial;
     setModalOpen(true);
   }
 
   function openEdit(d: DrugSummary) {
     setEditingId(d.id);
-    setForm({
+    const initial: DrugFormState = {
       name: d.name,
       activeIngredient: d.activeIngredient ?? '',
       isControlled: d.isControlled,
       interactingDrugIds: d.interactingDrugIds,
-    });
+    };
+    setForm(initial);
+    initialFormRef.current = initial;
     setModalOpen(true);
   }
 
@@ -140,7 +145,12 @@ export function DrugCatalogPanel() {
         )}
       </div>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} width={560}>
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        width={560}
+        dirty={JSON.stringify(form) !== JSON.stringify(initialFormRef.current)}
+      >
         <form onSubmit={handleSubmit}>
           <div className={styles.modalTitle}>{editingId ? 'İlacı Düzenle' : 'Yeni İlaç'}</div>
 

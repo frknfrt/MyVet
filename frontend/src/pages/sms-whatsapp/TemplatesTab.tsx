@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { MessageTemplate, MessageTemplateInput, TemplateChannel, templateApi } from '../../api/campaignApi';
 import { ApiError } from '../../api/client';
 import { Badge } from '../../components/ui/Badge';
@@ -24,6 +24,7 @@ export function TemplatesTab() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<MessageTemplateInput>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const initialFormRef = useRef<MessageTemplateInput>(form);
 
   function load() {
     setLoading(true);
@@ -39,12 +40,15 @@ export function TemplatesTab() {
   function openCreate() {
     setEditingId(null);
     setForm(EMPTY_FORM);
+    initialFormRef.current = EMPTY_FORM;
     setModalOpen(true);
   }
 
   function openEdit(t: MessageTemplate) {
     setEditingId(t.id);
-    setForm({ name: t.name, channel: t.channel, category: t.category, body: t.body });
+    const initial: MessageTemplateInput = { name: t.name, channel: t.channel, category: t.category, body: t.body };
+    setForm(initial);
+    initialFormRef.current = initial;
     setModalOpen(true);
   }
 
@@ -118,7 +122,12 @@ export function TemplatesTab() {
         )}
       </div>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} width={520}>
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        width={520}
+        dirty={JSON.stringify(form) !== JSON.stringify(initialFormRef.current)}
+      >
         <form onSubmit={handleSubmit}>
           <div className={templateStyles.modalTitle}>{editingId ? 'Şablonu Düzenle' : 'Yeni Şablon'}</div>
           <FieldWrap label="Ad">

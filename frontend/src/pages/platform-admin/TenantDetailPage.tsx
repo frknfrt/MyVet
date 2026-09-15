@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ApiError } from '../../api/client';
 import {
@@ -38,6 +38,8 @@ export function TenantDetailPage() {
   const [paymentInvoiceId, setPaymentInvoiceId] = useState<string | null>(null);
   const [paymentForm, setPaymentForm] = useState({ amount: '', method: 'BANK_TRANSFER' as PlatformPaymentMethod, paidAt: '', notes: '' });
   const [savingPayment, setSavingPayment] = useState(false);
+  const initialSubscriptionFormRef = useRef<SubscriptionFormState>({ planCode: '', billingStatus: 'TRIAL', renewsAt: '' });
+  const initialPaymentFormRef = useRef({ amount: '', method: 'BANK_TRANSFER' as PlatformPaymentMethod, paidAt: '', notes: '' });
 
   function load() {
     if (!tenantId) return;
@@ -54,11 +56,13 @@ export function TenantDetailPage() {
 
   function openSubscriptionModal() {
     if (!tenant) return;
-    setForm({
+    const initial: SubscriptionFormState = {
       planCode: tenant.planCode,
       billingStatus: tenant.billingStatus,
       renewsAt: tenant.renewsAt ?? '',
-    });
+    };
+    setForm(initial);
+    initialSubscriptionFormRef.current = initial;
     setModalOpen(true);
   }
 
@@ -97,7 +101,9 @@ export function TenantDetailPage() {
   }
 
   function openPaymentModal(invoiceId: string) {
-    setPaymentForm({ amount: '', method: 'BANK_TRANSFER', paidAt: new Date().toISOString().slice(0, 10), notes: '' });
+    const initial = { amount: '', method: 'BANK_TRANSFER' as PlatformPaymentMethod, paidAt: new Date().toISOString().slice(0, 10), notes: '' };
+    setPaymentForm(initial);
+    initialPaymentFormRef.current = initial;
     setPaymentInvoiceId(invoiceId);
   }
 
@@ -230,7 +236,12 @@ export function TenantDetailPage() {
             )}
           </div>
 
-          <Modal open={paymentInvoiceId !== null} onClose={() => setPaymentInvoiceId(null)} width={420}>
+          <Modal
+            open={paymentInvoiceId !== null}
+            onClose={() => setPaymentInvoiceId(null)}
+            width={420}
+            dirty={JSON.stringify(paymentForm) !== JSON.stringify(initialPaymentFormRef.current)}
+          >
             <form onSubmit={handleRecordPayment}>
               <div className={styles.modalTitle}>Ödeme Kaydet</div>
 
@@ -277,7 +288,12 @@ export function TenantDetailPage() {
             </form>
           </Modal>
 
-          <Modal open={modalOpen} onClose={() => setModalOpen(false)} width={480}>
+          <Modal
+            open={modalOpen}
+            onClose={() => setModalOpen(false)}
+            width={480}
+            dirty={JSON.stringify(form) !== JSON.stringify(initialSubscriptionFormRef.current)}
+          >
             <form onSubmit={handleSubscriptionSubmit}>
               <div className={styles.modalTitle}>Abonelik Değiştir</div>
 

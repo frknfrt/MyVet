@@ -145,9 +145,10 @@ export function ImagingRecordDetailModal({ recordId, onClose, onChanged }: Imagi
   }
 
   const isPending = detail.status === 'PENDING';
+  const dirty = isPending && findings !== (detail.findings ?? '');
 
   return (
-    <Modal open={recordId !== null} onClose={onClose} width={680}>
+    <Modal open={recordId !== null} onClose={onClose} width={680} dirty={dirty}>
       <div className={styles.header}>
         <div>
           <div className={styles.title}>
