@@ -84,7 +84,8 @@ export function QuickSaleModal({ open, onClose, onCompleted }: QuickSaleModalPro
 
   function handleItemSelect(id: string) {
     setSelectedItemId(id);
-    setLinePrice('');
+    const item = items.find((i) => i.id === id);
+    setLinePrice(item?.unitCost != null ? String(item.unitCost) : '');
   }
 
   function addToCart() {
@@ -118,10 +119,17 @@ export function QuickSaleModal({ open, onClose, onCompleted }: QuickSaleModalPro
   // KDV dahil gosterilmeli, aksi halde yazan tutar ile cekilen tutar ayrisir.
   const lineTotalOf = (l: CartLine) => l.quantity * l.unitPrice * (1 + l.vatRate / 100);
   const total = cart.reduce((sum, l) => sum + lineTotalOf(l), 0);
-  const canComplete = (ownerId !== null || isAnonymous) && cart.length > 0 && !busy;
 
   async function handleComplete() {
-    if (!canComplete) return;
+    if (busy) return;
+    if (ownerId === null && !isAnonymous) {
+      setError('Lütfen bir müşteri seçin veya anonim satış olarak devam edin.');
+      return;
+    }
+    if (cart.length === 0) {
+      setError('Sepete en az bir ürün ekleyin.');
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -261,7 +269,7 @@ export function QuickSaleModal({ open, onClose, onCompleted }: QuickSaleModalPro
         <Button variant="secondary" onClick={onClose} disabled={busy}>
           Vazgeç
         </Button>
-        <Button variant="primary" onClick={handleComplete} disabled={!canComplete}>
+        <Button variant="primary" onClick={handleComplete} disabled={busy}>
           {busy ? 'Tamamlanıyor...' : 'Satışı Tamamla'}
         </Button>
       </div>
