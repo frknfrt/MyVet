@@ -123,7 +123,7 @@ export function DashboardPage() {
             <Button variant={onlyMine ? 'primary' : 'secondary'} onClick={() => setOnlyMine((v) => !v)}>
               Bana atanan
             </Button>
-            <QuickAddMenu onQuickSale={() => setQuickSaleOpen(true)} />
+            <QuickAddMenu role={role} onQuickSale={() => setQuickSaleOpen(true)} />
           </div>
         )}
       </div>

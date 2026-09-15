@@ -40,14 +40,25 @@ const ICON_SALE = (
 );
 
 interface QuickAddMenuProps {
+  role: string | undefined;
   onQuickSale: () => void;
+}
+
+/**
+ * POST /invoices/quick-sale, InvoicesController'ın sınıf seviyesindeki
+ * @PreAuthorize'ı gereği sadece RECEPTIONIST ve ADMIN'e açık
+ * (api-conventions.md rol matrisi). VET/TECHNICIAN'a "Yeni satış" gösterip
+ * sepet doldurttuktan sonra 403 vermemek için menüde de aynı kısıt uygulanır.
+ */
+function canQuickSale(role: string | undefined): boolean {
+  return role === 'ADMIN' || role === 'RECEPTIONIST';
 }
 
 /**
  * Tasarım sistemi kuralı korunuyor: sayfada tek bir primary buton.
  * Kolayvet'teki 5-6 ayrı "Hızlı X" butonu yerine, tek buton + açılır menü.
  */
-export function QuickAddMenu({ onQuickSale }: QuickAddMenuProps) {
+export function QuickAddMenu({ role, onQuickSale }: QuickAddMenuProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -63,7 +74,7 @@ export function QuickAddMenu({ onQuickSale }: QuickAddMenuProps) {
   const options: QuickAddOption[] = [
     { label: 'Yeni randevu', icon: ICON_APPT, onSelect: () => navigate('/randevu') },
     { label: 'Yeni hasta', icon: ICON_PATIENT, onSelect: () => navigate('/hastalar') },
-    { label: 'Yeni satış', icon: ICON_SALE, onSelect: onQuickSale },
+    ...(canQuickSale(role) ? [{ label: 'Yeni satış', icon: ICON_SALE, onSelect: onQuickSale }] : []),
   ];
 
   return (
