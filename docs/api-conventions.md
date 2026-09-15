@@ -95,6 +95,9 @@ Her istekte JWT'den çözülen `tenantId`, `TenantContext` (ThreadLocal) üzerin
 | `/encounters/**` (okuma: SOAP, malzeme listesi) | ✅ | ✅ | ❌ | ✅ |
 | `/message-templates/**`, `/notifications/**` (SMS/WhatsApp) | ❌ | ❌ | ✅ | ✅ |
 | `**/campaign-candidates` (SMS/WhatsApp kampanya adayı listeleri) | ✅ | ❌ | ✅ | ✅ |
+| `GET /invoices/today-summary` (istisna, aşağıya bak) | ✅ | ✅ | ✅ | ✅ |
+
+**İstisna (Hızlı Satış turu):** `GET /invoices/today-summary`, `/invoices/**` satırını metot seviyesinde bir `@PreAuthorize` ile kasıtlı olarak geçersiz kılar ve dört role de açıktır — anasayfadaki "Bugünkü satış" KPI kartı için salt-okunur tek bir toplam döner, fatura/müşteri detayı sızdırmaz. `/invoices/**` altındaki diğer tüm uçlar RECEPTIONIST + ADMIN olarak kalır.
 
 Yetki kontrolü Spring Security `@PreAuthorize("hasRole('VET')")` ile controller metodu seviyesinde yapılır — use-case katmanında rol kontrolü YAPILMAZ (rol, bir HTTP/API kavramıdır, domain'in bilmesi gerekmez).
 
