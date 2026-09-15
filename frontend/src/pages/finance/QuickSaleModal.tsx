@@ -41,6 +41,7 @@ export function QuickSaleModal({ open, onClose, onCompleted }: QuickSaleModalPro
   const [selectedItemId, setSelectedItemId] = useState('');
   const [lineQty, setLineQty] = useState('1');
   const [linePrice, setLinePrice] = useState('');
+  const [lineVatRate, setLineVatRate] = useState('20');
   const [cart, setCart] = useState<CartLine[]>([]);
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH');
@@ -57,6 +58,7 @@ export function QuickSaleModal({ open, onClose, onCompleted }: QuickSaleModalPro
       setSelectedItemId('');
       setLineQty('1');
       setLinePrice('');
+      setLineVatRate('20');
       setCart([]);
       setPaymentMethod('CASH');
       setError(null);
@@ -92,18 +94,30 @@ export function QuickSaleModal({ open, onClose, onCompleted }: QuickSaleModalPro
     if (!item || qty <= 0 || price < 0 || linePrice === '') return;
     setCart((prev) => [
       ...prev,
-      { key: `${item.id}-${Date.now()}`, inventoryItemId: item.id, description: item.name, quantity: qty, unitPrice: price },
+      {
+        key: `${item.id}-${Date.now()}`,
+        inventoryItemId: item.id,
+        description: item.name,
+        quantity: qty,
+        unitPrice: price,
+        vatRate: Number(lineVatRate) || 0,
+      },
     ]);
     setSelectedItemId('');
     setLineQty('1');
     setLinePrice('');
+    setLineVatRate('20');
   }
 
   function removeFromCart(key: string) {
     setCart((prev) => prev.filter((l) => l.key !== key));
   }
 
-  const total = cart.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0);
+  // Backend kalem toplamini KDV dahil hesaplar (InvoiceLine.create) ve Hizli
+  // Satis'te tahsilat fatura toplami uzerinden alinir -- sepetteki tutarlar da
+  // KDV dahil gosterilmeli, aksi halde yazan tutar ile cekilen tutar ayrisir.
+  const lineTotalOf = (l: CartLine) => l.quantity * l.unitPrice * (1 + l.vatRate / 100);
+  const total = cart.reduce((sum, l) => sum + lineTotalOf(l), 0);
   const canComplete = (ownerId !== null || isAnonymous) && cart.length > 0 && !busy;
 
   async function handleComplete() {
@@ -202,6 +216,9 @@ export function QuickSaleModal({ open, onClose, onCompleted }: QuickSaleModalPro
         <FieldWrap label="Birim Fiyat">
           <Input type="number" step="0.01" min={0} value={linePrice} onChange={(e) => setLinePrice(e.target.value)} />
         </FieldWrap>
+        <FieldWrap label="KDV %">
+          <Input type="number" step="1" min={0} value={lineVatRate} onChange={(e) => setLineVatRate(e.target.value)} />
+        </FieldWrap>
         <Button type="button" variant="secondary" onClick={addToCart} disabled={!selectedItemId || linePrice === ''}>
           Sepete Ekle
         </Button>
@@ -216,7 +233,8 @@ export function QuickSaleModal({ open, onClose, onCompleted }: QuickSaleModalPro
             <span>{l.description}</span>
             <span>{l.quantity}x</span>
             <span>{l.unitPrice.toFixed(2)} ₺</span>
-            <span>{(l.quantity * l.unitPrice).toFixed(2)} ₺</span>
+            <span>%{l.vatRate} KDV</span>
+            <span>{lineTotalOf(l).toFixed(2)} ₺</span>
             <button type="button" className={styles.removeBtn} onClick={() => removeFromCart(l.key)}>
               ×
             </button>
@@ -225,7 +243,7 @@ export function QuickSaleModal({ open, onClose, onCompleted }: QuickSaleModalPro
       )}
 
       <div className={styles.totalRow}>
-        <span>Toplam</span>
+        <span>Toplam (KDV dahil)</span>
         <span className={styles.totalValue}>{total.toFixed(2)} ₺</span>
       </div>
 

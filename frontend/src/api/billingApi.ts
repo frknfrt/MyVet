@@ -87,6 +87,7 @@ export interface QuickSaleLine {
   description: string;
   quantity: number;
   unitPrice: number;
+  vatRate: number;
 }
 
 export interface TodaySalesSummary {

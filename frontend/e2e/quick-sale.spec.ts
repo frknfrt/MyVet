@@ -73,9 +73,11 @@ test('Hızlı Satış: anonim müşteriyle ürün satışı ve günlük ciroya y
     await field(page, 'Ürün').selectOption({ label: `${productName} (20 adet stokta)` });
     await field(page, 'Adet').fill('2');
     await field(page, 'Birim Fiyat').fill('150');
+    // KDV % alani varsayilan 20 ile geliyor -- 2 x 150 = 300 + %20 KDV = 360.
+    await expect(field(page, 'KDV %')).toHaveValue('20');
     await page.getByRole('button', { name: 'Sepete Ekle' }).click();
 
-    await expect(page.getByText('300.00 ₺').first()).toBeVisible();
+    await expect(page.getByText('360.00 ₺').first()).toBeVisible();
 
     await page.getByRole('button', { name: 'Satışı Tamamla' }).click();
     await expect(page.getByRole('button', { name: 'Satışı Tamamla' })).not.toBeVisible();
@@ -85,7 +87,7 @@ test('Hızlı Satış: anonim müşteriyle ürün satışı ve günlük ciroya y
     await page.reload();
     await goToOperationalView(page);
     await expect(page.getByText('Bugünkü satış')).toBeVisible();
-    await expect(page.getByText('300 ₺')).toBeVisible();
+    await expect(page.getByText('360 ₺')).toBeVisible();
   });
 
   await test.step('Stok düşümünü doğrula (20 - 2 = 18)', async () => {

@@ -54,7 +54,7 @@ class CompleteQuickSaleUseCaseTest {
     }
 
     private QuickSaleLineCommand aLine() {
-        return new QuickSaleLineCommand(UUID.randomUUID(), "Kedi Maması", 1, BigDecimal.valueOf(200));
+        return new QuickSaleLineCommand(UUID.randomUUID(), "Kedi Maması", 1, BigDecimal.valueOf(200), BigDecimal.valueOf(20));
     }
 
     @Test
@@ -114,20 +114,22 @@ class CompleteQuickSaleUseCaseTest {
         UUID staffId = UUID.randomUUID();
         UUID invoiceId = UUID.randomUUID();
         QuickSaleLineCommand line1 = aLine();
-        QuickSaleLineCommand line2 = aLine();
+        QuickSaleLineCommand line2 = new QuickSaleLineCommand(UUID.randomUUID(), "Köpek Tasması", 2, BigDecimal.valueOf(50), BigDecimal.TEN);
         when(createManualInvoiceUseCase.execute(branchId, ownerId, staffId)).thenReturn(invoiceId);
         Invoice invoice = Invoice.createDraft(UUID.randomUUID(), branchId, ownerId, null, staffId);
         when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(invoice));
 
         useCase.execute(new CompleteQuickSaleCommand(branchId, ownerId, staffId, List.of(line1, line2), PaymentMethod.CARD));
 
+        // KDV orani her kalem icin komuttan aynen tasinir (hardcoded 0 DEGIL),
+        // indirim ise Hizli Satis akisinda her zaman 0.
         verify(addInvoiceLineUseCase).execute(new AddInvoiceLineCommand(
             invoiceId, line1.description(), line1.quantity(), line1.unitPrice(),
-            BigDecimal.ZERO, BigDecimal.ZERO, null, line1.inventoryItemId()
+            BigDecimal.ZERO, BigDecimal.valueOf(20), null, line1.inventoryItemId()
         ));
         verify(addInvoiceLineUseCase).execute(new AddInvoiceLineCommand(
             invoiceId, line2.description(), line2.quantity(), line2.unitPrice(),
-            BigDecimal.ZERO, BigDecimal.ZERO, null, line2.inventoryItemId()
+            BigDecimal.ZERO, BigDecimal.TEN, null, line2.inventoryItemId()
         ));
     }
 }

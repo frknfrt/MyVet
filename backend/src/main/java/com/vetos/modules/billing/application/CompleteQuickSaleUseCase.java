@@ -43,7 +43,7 @@ public class CompleteQuickSaleUseCase {
         for (QuickSaleLineCommand line : command.lines()) {
             addInvoiceLineUseCase.execute(new AddInvoiceLineCommand(
                 invoiceId, line.description(), line.quantity(), line.unitPrice(),
-                BigDecimal.ZERO, BigDecimal.ZERO, null, line.inventoryItemId()
+                BigDecimal.ZERO, line.vatRate(), null, line.inventoryItemId()
             ));
         }
 

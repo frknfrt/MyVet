@@ -253,7 +253,7 @@ public class InvoicesController {
         @AuthenticationPrincipal AuthenticatedStaffUser principal, @RequestBody @Valid CompleteQuickSaleRequest request
     ) {
         List<QuickSaleLineCommand> lines = request.lines().stream()
-            .map(l -> new QuickSaleLineCommand(l.inventoryItemId(), l.description(), l.quantity(), l.unitPrice()))
+            .map(l -> new QuickSaleLineCommand(l.inventoryItemId(), l.description(), l.quantity(), l.unitPrice(), l.vatRate()))
             .toList();
         UUID id = completeQuickSaleUseCase.execute(new CompleteQuickSaleCommand(
             principal.branchIds().get(0), request.ownerId(), principal.staffUserId(), lines, request.paymentMethod()
