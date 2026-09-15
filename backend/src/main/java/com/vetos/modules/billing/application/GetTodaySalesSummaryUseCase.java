@@ -1,19 +1,17 @@
 package com.vetos.modules.billing.application;
 
 import com.vetos.modules.billing.application.dto.TodaySalesSummary;
-import com.vetos.modules.billing.domain.Invoice;
 import com.vetos.modules.billing.domain.InvoiceRepository;
 import com.vetos.modules.billing.domain.InvoiceStatus;
+import com.vetos.modules.billing.domain.SalesAggregate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.EnumSet;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -37,12 +35,9 @@ public class GetTodaySalesSummaryUseCase {
         Instant startOfToday = LocalDate.now(ZoneOffset.UTC).atStartOfDay(ZoneOffset.UTC).toInstant();
         Instant startOfTomorrow = startOfToday.plusSeconds(86400);
 
-        List<Invoice> todayInvoices = invoiceRepository.findByTenantId(tenantId).stream()
-            .filter(inv -> REVENUE_STATUSES.contains(inv.getStatus()) && inv.getIssuedAt() != null)
-            .filter(inv -> !inv.getIssuedAt().isBefore(startOfToday) && inv.getIssuedAt().isBefore(startOfTomorrow))
-            .toList();
-
-        BigDecimal total = todayInvoices.stream().map(Invoice::getTotalAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
-        return new TodaySalesSummary(total, todayInvoices.size());
+        SalesAggregate aggregate = invoiceRepository.sumIssuedBetween(
+            tenantId, REVENUE_STATUSES, startOfToday, startOfTomorrow
+        );
+        return new TodaySalesSummary(aggregate.totalAmount(), Math.toIntExact(aggregate.count()));
     }
 }

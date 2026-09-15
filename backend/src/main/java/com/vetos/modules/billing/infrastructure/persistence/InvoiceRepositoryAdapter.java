@@ -3,9 +3,12 @@ package com.vetos.modules.billing.infrastructure.persistence;
 import com.vetos.modules.billing.domain.Invoice;
 import com.vetos.modules.billing.domain.InvoiceRepository;
 import com.vetos.modules.billing.domain.InvoiceStatus;
+import com.vetos.modules.billing.domain.SalesAggregate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -36,5 +39,12 @@ class InvoiceRepositoryAdapter implements InvoiceRepository {
     @Override
     public Optional<Invoice> findByBoardingStayId(UUID boardingStayId) {
         return jpaRepository.findByBoardingStayId(boardingStayId);
+    }
+
+    @Override
+    public SalesAggregate sumIssuedBetween(
+        UUID tenantId, Collection<InvoiceStatus> statuses, Instant start, Instant end
+    ) {
+        return jpaRepository.sumIssuedBetween(tenantId, statuses, start, end);
     }
 }
