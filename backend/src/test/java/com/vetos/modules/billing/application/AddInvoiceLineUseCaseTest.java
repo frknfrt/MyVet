@@ -76,7 +76,7 @@ class AddInvoiceLineUseCaseTest {
         Invoice invoice = Invoice.createDraft(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), null, null);
         ReflectionTestUtils.setField(invoice, "id", invoiceId);
         when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(invoice));
-        doThrow(new InsufficientStockException(itemId, 2, 0)).when(stockDeductionPort).deductForSale(itemId, 2, invoiceId);
+        doThrow(new InsufficientStockException("Kedi Maması", 2, 0)).when(stockDeductionPort).deductForSale(itemId, 2, invoiceId);
 
         assertThatThrownBy(() -> useCase.execute(aCommand(invoiceId, itemId)))
             .isInstanceOf(InsufficientStockException.class);

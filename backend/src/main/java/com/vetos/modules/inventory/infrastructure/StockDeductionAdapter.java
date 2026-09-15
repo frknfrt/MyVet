@@ -26,7 +26,7 @@ class StockDeductionAdapter implements StockDeductionPort {
             .orElseThrow(() -> new InventoryItemNotFoundException(inventoryItemId));
 
         if (item.getQuantityOnHand() < quantity) {
-            throw new InsufficientStockException(inventoryItemId, quantity, item.getQuantityOnHand());
+            throw new InsufficientStockException(item.getName(), quantity, item.getQuantityOnHand());
         }
 
         recordStockMovementUseCase.execute(inventoryItemId, StockMovementType.OUT, quantity, StockReferenceType.MANUAL, invoiceId);

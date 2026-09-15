@@ -37,8 +37,11 @@ class StockDeductionAdapterTest {
         );
         when(inventoryItemRepository.findById(itemId)).thenReturn(Optional.of(item));
 
+        // Mesaj kullaniciya gosteriliyor -- ham UUID degil, urun adi gecmeli.
         assertThatThrownBy(() -> adapter.deductForSale(itemId, 5, UUID.randomUUID()))
-            .isInstanceOf(InsufficientStockException.class);
+            .isInstanceOf(InsufficientStockException.class)
+            .hasMessageContaining("Mama")
+            .hasMessageNotContaining(itemId.toString());
 
         verify(recordStockMovementUseCase, never()).execute(any(), any(), anyInt(), any(), any());
     }
