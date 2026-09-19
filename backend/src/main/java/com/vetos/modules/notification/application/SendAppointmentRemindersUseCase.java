@@ -9,6 +9,7 @@ import com.vetos.modules.patient.domain.OwnerLookupPort;
 import com.vetos.modules.patient.domain.PatientLookupPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -36,7 +37,11 @@ public class SendAppointmentRemindersUseCase {
     private final OwnerLookupPort ownerLookupPort;
     private final PatientLookupPort patientLookupPort;
 
-    @Transactional
+    // REQUIRES_NEW: bu metot RANDEVU_HATIRLATMA_KILIDI'ni tutan disi transaction'a (AppointmentReminderScheduler)
+    // katilirsa, bir kiracinin hatasi TUM kiracilarin isini sessizce geri alir (Spring
+    // globalRollbackOnParticipationFailure) -- bagimsiz transaction bunu onler, kilit disi transaction askiya
+    // alinip devam ettigi icin etkilenmez.
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public int execute(UUID tenantId, Instant rangeStart, Instant rangeEnd) {
         int queued = 0;
         for (AppointmentReminderCandidate candidate : appointmentLookupPort.findConfirmedBetween(tenantId, rangeStart, rangeEnd)) {
