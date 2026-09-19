@@ -18,9 +18,16 @@ public class RetryTarbilSyncUseCase {
     private final TarbilSyncLogRepository tarbilSyncLogRepository;
     private final TarbilSyncExecutor tarbilSyncExecutor;
 
+    /**
+     * TarbilSyncLog @TenantId DISINDA tutuluyor (NotificationLog ile ayni
+     * karar) -- bu yuzden kiraci kontrolu ELLE yapilir. Baska kiracinin
+     * kaydi, mevcut TarbilSyncLogNotFoundException (404) ile "yok" gibi
+     * gorunur; var oldugu bile sizdirilmaz.
+     */
     @Transactional
-    public void execute(UUID logId) {
+    public void execute(UUID tenantId, UUID logId) {
         TarbilSyncLog log = tarbilSyncLogRepository.findById(logId)
+            .filter(l -> l.getTenantId().equals(tenantId))
             .orElseThrow(() -> new TarbilSyncLogNotFoundException(logId));
         log.markRetrying();
         tarbilSyncLogRepository.save(log);

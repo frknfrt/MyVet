@@ -38,6 +38,6 @@ public class TarbilController {
 
     @PostMapping("/sync-logs/{id}/retry")
     public void retry(@PathVariable UUID id) {
-        retryTarbilSyncUseCase.execute(id);
+        retryTarbilSyncUseCase.execute(TenantContext.current(), id);
     }
 }
