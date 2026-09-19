@@ -34,7 +34,7 @@ class EncounterLookupAdapterTest {
     }
 
     private Encounter anEncounter(UUID patientId, Instant date, String assessment, String plan, boolean finalize) {
-        Encounter e = Encounter.start(patientId, UUID.randomUUID(), null, null);
+        Encounter e = Encounter.start(UUID.randomUUID(), patientId, UUID.randomUUID(), null, null);
         ReflectionTestUtils.setField(e, "id", UUID.randomUUID());
         ReflectionTestUtils.setField(e, "encounterDate", date);
         e.updateSoap("s", "o", assessment, plan);

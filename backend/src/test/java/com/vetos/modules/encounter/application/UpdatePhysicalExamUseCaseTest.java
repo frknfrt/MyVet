@@ -29,7 +29,7 @@ class UpdatePhysicalExamUseCaseTest {
 
     @Test
     void should_saveEncounterWithFindings_when_encounterExists() {
-        Encounter encounter = Encounter.start(UUID.randomUUID(), UUID.randomUUID(), null, null);
+        Encounter encounter = Encounter.start(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), null, null);
         UUID encounterId = encounter.getId();
         List<PhysicalExamFinding> findings = List.of(
             new PhysicalExamFinding(ExamBodySystem.SKIN_COAT, ExamFindingStatus.NORMAL, null)

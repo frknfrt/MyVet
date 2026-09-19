@@ -11,7 +11,7 @@ class EncounterTest {
 
     @Test
     void should_storeFindings_when_updatePhysicalExamCalledWithFindings() {
-        Encounter encounter = Encounter.start(UUID.randomUUID(), UUID.randomUUID(), null, null);
+        Encounter encounter = Encounter.start(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), null, null);
         List<PhysicalExamFinding> findings = List.of(
             new PhysicalExamFinding(ExamBodySystem.CARDIOVASCULAR, ExamFindingStatus.ABNORMAL, "Üfürüm duyuldu"),
             new PhysicalExamFinding(ExamBodySystem.RESPIRATORY, ExamFindingStatus.NORMAL, null)
@@ -24,7 +24,7 @@ class EncounterTest {
 
     @Test
     void should_startWithEmptyFindings_when_encounterStarted() {
-        Encounter encounter = Encounter.start(UUID.randomUUID(), UUID.randomUUID(), null, null);
+        Encounter encounter = Encounter.start(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), null, null);
 
         assertThat(encounter.getPhysicalExamFindings()).isEmpty();
     }

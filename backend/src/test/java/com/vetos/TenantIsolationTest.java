@@ -47,6 +47,12 @@ import com.vetos.modules.ai.domain.AiJobRepository;
 import com.vetos.modules.ai.domain.AiTaskType;
 import com.vetos.modules.encounter.domain.Encounter;
 import com.vetos.modules.encounter.domain.EncounterRepository;
+import com.vetos.modules.encounter.domain.Prescription;
+import com.vetos.modules.encounter.domain.PrescriptionRepository;
+import com.vetos.modules.inventory.domain.StockMovement;
+import com.vetos.modules.inventory.domain.StockMovementRepository;
+import com.vetos.modules.inventory.domain.StockMovementType;
+import com.vetos.modules.inventory.domain.StockReferenceType;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.AfterEach;
@@ -105,6 +111,8 @@ class TenantIsolationTest extends TenantScopedTestSupport {
     @Autowired private AiJobRepository aiJobRepository;
     @Autowired private AiJobDecisionRepository aiJobDecisionRepository;
     @Autowired private EncounterRepository encounterRepository;
+    @Autowired private PrescriptionRepository prescriptionRepository;
+    @Autowired private StockMovementRepository stockMovementRepository;
 
     @PersistenceContext private EntityManager entityManager;
 
@@ -361,11 +369,9 @@ class TenantIsolationTest extends TenantScopedTestSupport {
         ).getId());
     }
 
-    // NOT: Encounter Task 5'te @TenantId aliyor -- o task bu cagriyi
-    // Encounter.start(tenantId, ...) olarak gunceller.
     private UUID createEncounter(TenantFixture f, UUID patientId) {
         return asTenant(f.tenantId(), () -> encounterRepository.save(
-            Encounter.start(patientId, f.staffUserId(), null, null)
+            Encounter.start(f.tenantId(), patientId, f.staffUserId(), null, null)
         ).getId());
     }
 
@@ -445,5 +451,52 @@ class TenantIsolationTest extends TenantScopedTestSupport {
 
         assertThat(asTenant(a.tenantId(), () -> aiJobDecisionRepository.findByAiJobId(aiJobBId))).isEmpty();
         assertThat(asTenant(b.tenantId(), () -> aiJobDecisionRepository.findByAiJobId(aiJobBId))).isPresent();
+    }
+
+    // --- Task 5 ---
+
+    private UUID createInventoryItem(TenantFixture f) {
+        return asTenant(f.tenantId(), () -> inventoryItemRepository.save(InventoryItem.create(
+            f.tenantId(), f.branchId(), "Mama", "Gida", null, 10, 1, null, null, BigDecimal.TEN
+        )).getId());
+    }
+
+    @Test
+    void encounter_isIsolatedAcrossTenants() {
+        TenantFixture a = createTenantFixture("Izolasyon A");
+        TenantFixture b = createTenantFixture("Izolasyon B");
+        UUID encounterBId = createEncounter(b, createPatient(b));
+
+        assertThat(asTenant(a.tenantId(), () -> encounterRepository.findById(encounterBId))).isEmpty();
+        assertThat(asTenant(b.tenantId(), () -> encounterRepository.findById(encounterBId))).isPresent();
+    }
+
+    @Test
+    void prescription_isIsolatedAcrossTenants() {
+        TenantFixture a = createTenantFixture("Izolasyon A");
+        TenantFixture b = createTenantFixture("Izolasyon B");
+        UUID patientBId = createPatient(b);
+        UUID encounterBId = createEncounter(b, patientBId);
+
+        UUID prescriptionBId = asTenant(b.tenantId(), () -> prescriptionRepository.save(
+            Prescription.issue(b.tenantId(), patientBId, encounterBId, b.staffUserId(), false)
+        ).getId());
+
+        assertThat(asTenant(a.tenantId(), () -> prescriptionRepository.findById(prescriptionBId))).isEmpty();
+        assertThat(asTenant(b.tenantId(), () -> prescriptionRepository.findById(prescriptionBId))).isPresent();
+    }
+
+    @Test
+    void stockMovement_isIsolatedAcrossTenants() {
+        TenantFixture a = createTenantFixture("Izolasyon A");
+        TenantFixture b = createTenantFixture("Izolasyon B");
+        UUID itemBId = createInventoryItem(b);
+
+        asTenantVoid(b.tenantId(), () -> stockMovementRepository.save(StockMovement.record(
+            b.tenantId(), itemBId, StockMovementType.IN, 5, StockReferenceType.MANUAL, null
+        )));
+
+        assertThat(asTenant(a.tenantId(), () -> stockMovementRepository.findByInventoryItemId(itemBId))).isEmpty();
+        assertThat(asTenant(b.tenantId(), () -> stockMovementRepository.findByInventoryItemId(itemBId))).hasSize(1);
     }
 }

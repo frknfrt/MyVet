@@ -30,7 +30,7 @@ public class RecordStockMovementUseCase {
         inventoryItemRepository.save(item);
 
         return stockMovementRepository.save(
-            StockMovement.record(inventoryItemId, type, quantity, referenceType, referenceId)
+            StockMovement.record(item.getTenantId(), inventoryItemId, type, quantity, referenceType, referenceId)
         ).getId();
     }
 }

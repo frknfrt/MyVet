@@ -24,6 +24,10 @@ public class Encounter {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @org.hibernate.annotations.TenantId
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
+
     @Column(name = "patient_id", nullable = false)
     private UUID patientId;
 
@@ -77,8 +81,11 @@ public class Encounter {
     @Column(name = "finalized_at")
     private Instant finalizedAt;
 
-    public static Encounter start(UUID patientId, UUID staffUserId, UUID appointmentId, String templateUsed) {
+    public static Encounter start(
+        UUID tenantId, UUID patientId, UUID staffUserId, UUID appointmentId, String templateUsed
+    ) {
         Encounter encounter = new Encounter();
+        encounter.tenantId = tenantId;
         encounter.patientId = patientId;
         encounter.staffUserId = staffUserId;
         encounter.appointmentId = appointmentId;

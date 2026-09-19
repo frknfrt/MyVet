@@ -18,6 +18,10 @@ public class Prescription {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @org.hibernate.annotations.TenantId
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
+
     @Column(name = "patient_id", nullable = false)
     private UUID patientId;
 
@@ -40,8 +44,11 @@ public class Prescription {
     @Column(name = "pharmacy_integration_ref")
     private String pharmacyIntegrationRef;
 
-    public static Prescription issue(UUID patientId, UUID encounterId, UUID prescribingStaffId, boolean controlledSubstance) {
+    public static Prescription issue(
+        UUID tenantId, UUID patientId, UUID encounterId, UUID prescribingStaffId, boolean controlledSubstance
+    ) {
         Prescription prescription = new Prescription();
+        prescription.tenantId = tenantId;
         prescription.patientId = patientId;
         prescription.encounterId = encounterId;
         prescription.prescribingStaffId = prescribingStaffId;

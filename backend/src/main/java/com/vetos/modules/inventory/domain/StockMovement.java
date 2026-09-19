@@ -18,6 +18,10 @@ public class StockMovement {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @org.hibernate.annotations.TenantId
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
+
     @Column(name = "inventory_item_id", nullable = false)
     private UUID inventoryItemId;
 
@@ -39,9 +43,11 @@ public class StockMovement {
     private Instant createdAt;
 
     public static StockMovement record(
-        UUID inventoryItemId, StockMovementType movementType, int quantity, StockReferenceType referenceType, UUID referenceId
+        UUID tenantId, UUID inventoryItemId, StockMovementType movementType, int quantity,
+        StockReferenceType referenceType, UUID referenceId
     ) {
         StockMovement movement = new StockMovement();
+        movement.tenantId = tenantId;
         movement.inventoryItemId = inventoryItemId;
         movement.movementType = movementType;
         movement.quantity = quantity;
