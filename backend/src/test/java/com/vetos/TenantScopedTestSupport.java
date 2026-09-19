@@ -30,6 +30,16 @@ import java.util.function.Supplier;
  * tercih edildi cunku Spring Data repository'leri (testin dogruladigi
  * gercek uretim yolu) transaction'a boylece dogal olarak katiliyor ve
  * EntityManager yasam dongusunu elle yonetmek gerekmiyor.
+ *
+ * ONEMLI (code review bulgusu 2, Fix round 1): dort yardimci metod da
+ * ambient TenantContext'i cagirmadan ONCE yakalar ve finally'de AYNEN
+ * GERI YUKLER (varsa set(previous), yoksa clear()) -- kosulsuz clear()
+ * YAPMAZLAR. Bu, ic ice kullanima (orn. bir asTenant(...) lambda'sinin
+ * icinde baska bir asTenant/inRootSession cagrilmasina) karsi guvenlidir;
+ * aksi halde ic cagri bitince dis context sessizce kaybolur ve sonraki
+ * TenantContext.current() cagrilari ya patlar ya da (daha kotusu)
+ * yanlislikla root/filtresiz calisir -- "assertion yanlis sebeple gecer"
+ * sinifi bir hata, tam bu test altyapisinin onlemeye calistigi sey.
  */
 abstract class TenantScopedTestSupport {
 
@@ -38,11 +48,12 @@ abstract class TenantScopedTestSupport {
 
     /** Verilen kiraci kimligiyle, TAZE bir Session/transaction icinde calistirir. */
     protected <T> T asTenant(UUID tenantId, Supplier<T> work) {
+        UUID previous = TenantContext.currentOrNull();
         TenantContext.set(tenantId);
         try {
             return newTransaction().execute(status -> work.get());
         } finally {
-            TenantContext.clear();
+            restore(previous);
         }
     }
 
@@ -59,8 +70,13 @@ abstract class TenantScopedTestSupport {
      * gercek durumunu taklit eder (root Session, _tenantId filtresi kapali).
      */
     protected <T> T inRootSession(Supplier<T> work) {
+        UUID previous = TenantContext.currentOrNull();
         TenantContext.clear();
-        return newTransaction().execute(status -> work.get());
+        try {
+            return newTransaction().execute(status -> work.get());
+        } finally {
+            restore(previous);
+        }
     }
 
     protected void inRootSessionVoid(Runnable work) {
@@ -68,6 +84,15 @@ abstract class TenantScopedTestSupport {
             work.run();
             return null;
         });
+    }
+
+    /** Cagrilmadan onceki ambient TenantContext degerini aynen geri yukler. */
+    private void restore(UUID previous) {
+        if (previous != null) {
+            TenantContext.set(previous);
+        } else {
+            TenantContext.clear();
+        }
     }
 
     private TransactionTemplate newTransaction() {

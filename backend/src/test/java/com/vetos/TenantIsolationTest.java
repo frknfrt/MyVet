@@ -26,6 +26,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Bu turun GERCEK kabul kriteri (spec S8): Hibernate @TenantId
@@ -185,5 +186,30 @@ class TenantIsolationTest extends TenantScopedTestSupport {
         Optional<Patient> seenFromRoot = inRootSession(() -> patientRepository.findById(patientBId));
 
         assertThat(seenFromRoot).isPresent();
+    }
+
+    @Test
+    void patientPersist_rejectsExplicitTenantId_thatDiffersFromSessionTenant() {
+        // Global Constraints'teki kritik kural: elle atanan @TenantId degeri,
+        // session'in tenant kimliginden FARKLIYSA (ve root degilse) persist
+        // sirasinda reddedilir. Task 2-8'in TUM cagri yeri tasarimi (factory
+        // konvansiyonu: tenantId ilk parametre, cagiran her zaman kendi
+        // TenantContext.current()'ini gecirir) bu garantiye dayanir -- eger
+        // Hibernate bunu sessizce KABUL ETSEYDI, bir cagiranin yanlislikla
+        // baska bir tenantId gecirmesi veriyi baska bir kiraciya sessizce
+        // yazardi.
+        TenantFixture a = createTenantFixture("Izolasyon A");
+        TenantFixture b = createTenantFixture("Izolasyon B");
+        UUID speciesId = anySpeciesId();
+
+        // Gercek davranis (dogrulandi): Hibernate, flush sirasinda
+        // org.hibernate.PropertyValueException firlatiyor, Spring Data JPA'nin
+        // exception-translation katmani bunu DataIntegrityViolationException'a
+        // ceviriyor -- mesaji Hibernate'in kendi kontrolunu birebir tasiyor.
+        assertThatThrownBy(() -> asTenant(a.tenantId(), () -> patientRepository.save(
+            Patient.register(b.tenantId(), b.ownerId(), speciesId, null, "Yanlis Kiraci", Sex.MALE, null)
+        )))
+            .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class)
+            .hasMessageContaining("assigned tenant id differs from current tenant id");
     }
 }

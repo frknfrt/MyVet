@@ -16,7 +16,25 @@ public final class TenantContext {
     private TenantContext() {
     }
 
+    /**
+     * @throws IllegalArgumentException tenantId,
+     *     {@link TenantContextIdentifierResolver#ROOT_TENANT_ID} sentinel'ine
+     *     esitse. O sentinel, Hibernate'e bir Session'in _tenantId filtresini
+     *     TAMAMEN devre disi biraktirir (bkz. TenantContextIdentifierResolver);
+     *     istek verisinden (bozuk bir JWT claim'i, hatali bir fixture, ileride
+     *     bir bug) asla buraya sizip kimlik-dogrulanmis bir istegi sessizce
+     *     izolasyonsuz calistirmamasi icin burada reddedilir. Yalnizca
+     *     resolver'in kendisi, context bosken bu degeri DONER -- hicbir
+     *     cagiran onu set() ile elle ATAYAMAZ.
+     */
     public static void set(UUID tenantId) {
+        if (TenantContextIdentifierResolver.ROOT_TENANT_ID.equals(tenantId)) {
+            throw new IllegalArgumentException(
+                "ROOT_TENANT_ID sentinel'i TenantContext.set() ile elle atanamaz -- "
+                    + "bu deger yalnizca TenantContextIdentifierResolver'in ic kullanimidir "
+                    + "ve istek verisinden asla ulasilamaz olmalidir"
+            );
+        }
         CURRENT_TENANT.set(tenantId);
     }
 
