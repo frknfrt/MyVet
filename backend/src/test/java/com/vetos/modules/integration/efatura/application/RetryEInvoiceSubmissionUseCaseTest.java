@@ -37,7 +37,7 @@ class RetryEInvoiceSubmissionUseCaseTest {
             UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), EInvoiceDocumentType.E_ARSIV,
             new BigDecimal("120.00"), new BigDecimal("20.00")
         );
-        submission.markFailed("onceki hata mesaji");
+        submission.markFailed("onceki hata mesaji", null);
         return submission;
     }
 

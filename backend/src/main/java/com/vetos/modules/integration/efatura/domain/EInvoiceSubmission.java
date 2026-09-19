@@ -56,6 +56,12 @@ public class EInvoiceSubmission {
     @Column(name = "failure_reason")
     private String failureReason;
 
+    @Column(name = "attempt_count", nullable = false)
+    private int attemptCount;
+
+    @Column(name = "next_retry_at")
+    private Instant nextRetryAt;
+
     @Column(name = "attempted_at", nullable = false)
     private Instant attemptedAt;
 
@@ -89,15 +95,18 @@ public class EInvoiceSubmission {
         this.attemptedAt = Instant.now();
     }
 
-    public void markFailed(String reason) {
+    public void markFailed(String reason, Instant nextRetryAt) {
         this.status = EInvoiceSubmissionStatus.FAILED;
         this.failureReason = reason;
         this.attemptedAt = Instant.now();
+        this.attemptCount++;
+        this.nextRetryAt = nextRetryAt;
     }
 
     public void markRetrying() {
         this.status = EInvoiceSubmissionStatus.PENDING;
         this.failureReason = null;
         this.attemptedAt = Instant.now();
+        this.nextRetryAt = null;
     }
 }

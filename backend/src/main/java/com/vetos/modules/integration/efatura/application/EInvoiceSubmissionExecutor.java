@@ -65,7 +65,7 @@ class EInvoiceSubmissionExecutor {
             submission.markFailed(
                 "Sahibin adi soyadi eksik: \"" + owner.fullName() + "\". GIB e-Fatura'da soyad alani en az 2 "
                     + "karakter olmali -- lutfen sahip kaydini duzenleyip \"Ad Soyad\" alanina soyadi da ekleyin, "
-                    + "sonra tekrar deneyin."
+                    + "sonra tekrar deneyin.", null
             );
             eInvoiceSubmissionRepository.save(submission);
             log.warn(
@@ -98,7 +98,7 @@ class EInvoiceSubmissionExecutor {
         ));
 
         if (!outcome.success()) {
-            submission.markFailed(outcome.message());
+            submission.markFailed(outcome.message(), null);
             log.warn("e-Fatura gonderimi basarisiz: submissionId={}, sebep={}", submissionId, outcome.message());
         } else if (outcome.finalResult()) {
             submission.markSubmitted(outcome.gibReference());

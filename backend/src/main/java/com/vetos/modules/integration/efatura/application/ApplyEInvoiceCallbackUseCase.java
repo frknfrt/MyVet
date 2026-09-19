@@ -50,7 +50,7 @@ public class ApplyEInvoiceCallbackUseCase {
 
         EInvoiceSubmissionOutcome outcome = eInvoiceGatewayPort.fetchStatus(providerReference);
         if (!outcome.success()) {
-            submission.markFailed(outcome.message());
+            submission.markFailed(outcome.message(), null);
             eInvoiceSubmissionRepository.save(submission);
             log.warn("faturaentegrator durumu basarisiz bildirdi: providerReference={}, sebep={}", providerReference, outcome.message());
         } else if (outcome.finalResult()) {
