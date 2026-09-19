@@ -53,7 +53,7 @@ class NotificationSendExecutor {
         if (outcome.success()) {
             notificationLog.markSent();
         } else {
-            notificationLog.markFailed();
+            notificationLog.markFailed(null);
             log.warn("Bildirim gonderimi basarisiz: logId={}, sebep={}", logId, outcome.message());
         }
         notificationLogRepository.save(notificationLog);
