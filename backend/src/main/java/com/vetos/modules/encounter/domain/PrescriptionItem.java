@@ -17,6 +17,10 @@ public class PrescriptionItem {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @org.hibernate.annotations.TenantId
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
+
     @Column(name = "prescription_id", nullable = false)
     private UUID prescriptionId;
 
@@ -36,8 +40,9 @@ public class PrescriptionItem {
     @Column(nullable = false)
     private DrugRoute route;
 
-    public static PrescriptionItem add(UUID prescriptionId, UUID drugId, String dosage, String frequency, int durationDays, DrugRoute route) {
+    public static PrescriptionItem add(UUID tenantId, UUID prescriptionId, UUID drugId, String dosage, String frequency, int durationDays, DrugRoute route) {
         PrescriptionItem item = new PrescriptionItem();
+        item.tenantId = tenantId;
         item.prescriptionId = prescriptionId;
         item.drugId = drugId;
         item.dosage = dosage;

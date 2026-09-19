@@ -45,9 +45,15 @@ import com.vetos.modules.ai.domain.AiJobDecision;
 import com.vetos.modules.ai.domain.AiJobDecisionRepository;
 import com.vetos.modules.ai.domain.AiJobRepository;
 import com.vetos.modules.ai.domain.AiTaskType;
+import com.vetos.modules.encounter.domain.DrugCatalogRepository;
+import com.vetos.modules.encounter.domain.DrugRoute;
 import com.vetos.modules.encounter.domain.Encounter;
+import com.vetos.modules.encounter.domain.EncounterInventoryUsage;
+import com.vetos.modules.encounter.domain.EncounterInventoryUsageRepository;
 import com.vetos.modules.encounter.domain.EncounterRepository;
 import com.vetos.modules.encounter.domain.Prescription;
+import com.vetos.modules.encounter.domain.PrescriptionItem;
+import com.vetos.modules.encounter.domain.PrescriptionItemRepository;
 import com.vetos.modules.encounter.domain.PrescriptionRepository;
 import com.vetos.modules.inventory.domain.StockMovement;
 import com.vetos.modules.inventory.domain.StockMovementRepository;
@@ -113,6 +119,9 @@ class TenantIsolationTest extends TenantScopedTestSupport {
     @Autowired private EncounterRepository encounterRepository;
     @Autowired private PrescriptionRepository prescriptionRepository;
     @Autowired private StockMovementRepository stockMovementRepository;
+    @Autowired private EncounterInventoryUsageRepository encounterInventoryUsageRepository;
+    @Autowired private PrescriptionItemRepository prescriptionItemRepository;
+    @Autowired private DrugCatalogRepository drugCatalogRepository;
 
     @PersistenceContext private EntityManager entityManager;
 
@@ -498,5 +507,45 @@ class TenantIsolationTest extends TenantScopedTestSupport {
 
         assertThat(asTenant(a.tenantId(), () -> stockMovementRepository.findByInventoryItemId(itemBId))).isEmpty();
         assertThat(asTenant(b.tenantId(), () -> stockMovementRepository.findByInventoryItemId(itemBId))).hasSize(1);
+    }
+
+    // --- Task 6 ---
+
+    @Test
+    void encounterInventoryUsage_isIsolatedAcrossTenants() {
+        TenantFixture a = createTenantFixture("Izolasyon A");
+        TenantFixture b = createTenantFixture("Izolasyon B");
+        UUID encounterBId = createEncounter(b, createPatient(b));
+        UUID itemBId = createInventoryItem(b);
+
+        asTenantVoid(b.tenantId(), () -> encounterInventoryUsageRepository.save(
+            EncounterInventoryUsage.record(b.tenantId(), encounterBId, itemBId, 2)
+        ));
+
+        assertThat(asTenant(a.tenantId(), () -> encounterInventoryUsageRepository.findByEncounterId(encounterBId))).isEmpty();
+        assertThat(asTenant(b.tenantId(), () -> encounterInventoryUsageRepository.findByEncounterId(encounterBId))).hasSize(1);
+    }
+
+    @Test
+    void prescriptionItem_isIsolatedAcrossTenants() {
+        TenantFixture a = createTenantFixture("Izolasyon A");
+        TenantFixture b = createTenantFixture("Izolasyon B");
+        UUID patientBId = createPatient(b);
+        UUID encounterBId = createEncounter(b, patientBId);
+        // drug_catalog kiraci-bagimsiz paylasimli referans verisi (V4'te tohumlanir).
+        UUID drugId = inRootSession(() -> drugCatalogRepository.findAll().get(0).getId());
+
+        UUID prescriptionBId = asTenant(b.tenantId(), () -> {
+            Prescription prescription = prescriptionRepository.save(
+                Prescription.issue(b.tenantId(), patientBId, encounterBId, b.staffUserId(), false)
+            );
+            prescriptionItemRepository.save(PrescriptionItem.add(
+                b.tenantId(), prescription.getId(), drugId, "1x1", "gunde 1", 5, DrugRoute.ORAL
+            ));
+            return prescription.getId();
+        });
+
+        assertThat(asTenant(a.tenantId(), () -> prescriptionItemRepository.findByPrescriptionId(prescriptionBId))).isEmpty();
+        assertThat(asTenant(b.tenantId(), () -> prescriptionItemRepository.findByPrescriptionId(prescriptionBId))).hasSize(1);
     }
 }

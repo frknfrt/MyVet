@@ -23,6 +23,10 @@ public class EncounterInventoryUsage {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @org.hibernate.annotations.TenantId
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
+
     @Column(name = "encounter_id", nullable = false)
     private UUID encounterId;
 
@@ -32,8 +36,9 @@ public class EncounterInventoryUsage {
     @Column(nullable = false)
     private int quantity;
 
-    public static EncounterInventoryUsage record(UUID encounterId, UUID inventoryItemId, int quantity) {
+    public static EncounterInventoryUsage record(UUID tenantId, UUID encounterId, UUID inventoryItemId, int quantity) {
         EncounterInventoryUsage usage = new EncounterInventoryUsage();
+        usage.tenantId = tenantId;
         usage.encounterId = encounterId;
         usage.inventoryItemId = inventoryItemId;
         usage.quantity = quantity;

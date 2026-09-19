@@ -27,7 +27,8 @@ public class IssuePrescriptionUseCase {
         ));
 
         command.items().forEach(item -> prescriptionItemRepository.save(PrescriptionItem.add(
-            prescription.getId(), item.drugId(), item.dosage(), item.frequency(), item.durationDays(), item.route()
+            prescription.getTenantId(), prescription.getId(), item.drugId(), item.dosage(),
+            item.frequency(), item.durationDays(), item.route()
         )));
 
         return prescription.getId();
