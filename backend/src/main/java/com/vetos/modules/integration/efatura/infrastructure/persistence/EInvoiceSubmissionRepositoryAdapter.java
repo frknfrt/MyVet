@@ -5,6 +5,7 @@ import com.vetos.modules.integration.efatura.domain.EInvoiceSubmissionRepository
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,5 +28,10 @@ class EInvoiceSubmissionRepositoryAdapter implements EInvoiceSubmissionRepositor
     @Override
     public Optional<EInvoiceSubmission> findByProviderReference(String providerReference) {
         return jpaRepository.findByProviderReference(providerReference);
+    }
+
+    @Override
+    public List<EInvoiceSubmission> claimDueForRetry(Instant now, int limit) {
+        return jpaRepository.claimDueForRetry(now, limit);
     }
 }
