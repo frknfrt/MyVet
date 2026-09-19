@@ -29,7 +29,7 @@
 **Interfaces:**
 - Üretir: `GET /actuator/health` → `{"status":"UP"}` (kimlik doğrulaması gerektirmez, `SecurityConfig`'de zaten `permitAll` — bkz. `.requestMatchers("/actuator/health").permitAll()`, mevcut kodda zaten var).
 
-- [ ] **Step 1: `pom.xml`'e Actuator bağımlılığını ekle**
+- [x] **Step 1: `pom.xml`'e Actuator bağımlılığını ekle**
 
 `backend/pom.xml` — `spring-boot-starter-validation` bağımlılığından hemen sonra (satır 53'ten sonra), diğer boş satırdan önce ekle:
 ```xml
@@ -40,7 +40,7 @@
 ```
 (Versiyon belirtilmiyor — `spring-boot-starter-parent` BOM'u zaten yönetiyor, diğer `spring-boot-starter-*` bağımlılıklarıyla aynı desen.)
 
-- [ ] **Step 2: `application.yml`'e `management` bölümünü ekle**
+- [x] **Step 2: `application.yml`'e `management` bölümünü ekle**
 
 `backend/src/main/resources/application.yml` — `spring:` bloğunun bittiği yere (mevcut `servlet.multipart` alt bloğundan sonra, `app:` bölümünden önce), yeni bir üst seviye anahtar olarak ekle:
 ```yaml
@@ -54,12 +54,12 @@ management:
       show-details: never
 ```
 
-- [ ] **Step 3: Backend'in derlendiğini doğrula**
+- [x] **Step 3: Backend'in derlendiğini doğrula**
 
 Run: `cd backend && ./mvnw -q -DskipTests compile`
 Expected: hatasız derleme.
 
-- [ ] **Step 4: Uç noktayı yerelde manuel doğrula**
+- [x] **Step 4: Uç noktayı yerelde manuel doğrula**
 
 Docker Compose Postgres'i başlat (henüz çalışmıyorsa): `cd backend && docker-compose up -d`
 Backend'i başlat: `cd backend && ./mvnw spring-boot:run` (ayrı bir terminalde/arka planda)
@@ -67,12 +67,12 @@ Başka bir terminalde: `curl -s http://localhost:8080/actuator/health`
 Expected: `{"status":"UP"}` (başka detay yok — `show-details: never` ayarı bunu doğruluyor).
 Backend'i durdur (Ctrl+C ya da işlemi sonlandır).
 
-- [ ] **Step 5: Mevcut backend test paketinin hâlâ geçtiğini doğrula**
+- [x] **Step 5: Mevcut backend test paketinin hâlâ geçtiğini doğrula**
 
 Run: `cd backend && ./mvnw -q test`
 Expected: tüm testler PASS (yeni bağımlılık mevcut hiçbir testi bozmamalı).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd backend && git add pom.xml src/main/resources/application.yml
@@ -89,7 +89,7 @@ git commit -m "feat: Actuator saglik kontrolu ucnoktasi ekle"
 **Interfaces:**
 - Üretir: `backend` ve `frontend` adında iki GitHub Actions job'ı — Task 3'teki branch protection kuralı bu isimleri "required status check" olarak kullanacak.
 
-- [ ] **Step 1: Workflow dosyasını oluştur**
+- [x] **Step 1: Workflow dosyasını oluştur**
 
 `.github/workflows/ci.yml`:
 ```yaml
@@ -153,7 +153,7 @@ jobs:
         run: npm run build
 ```
 
-- [ ] **Step 2: YAML söz dizimini yerel olarak doğrula**
+- [x] **Step 2: YAML söz dizimini yerel olarak doğrula**
 
 Run (Python zaten kuruluysa; değilse bu adımı atla, Step 3'teki gerçek Actions çalışması zaten doğrulayacak):
 ```bash
@@ -161,7 +161,7 @@ python3 -c "import yaml; yaml.safe_load(open('.github/workflows/ci.yml'))" 2>/de
 ```
 Expected: "YAML gecerli" ya da atlama mesajı (hata değil).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add .github/workflows/ci.yml
@@ -179,23 +179,25 @@ git commit -m "ci: GitHub Actions ile backend+frontend hizli test gate'i ekle"
 **Interfaces:**
 - Consumes: Task 2'nin ürettiği `backend`/`frontend` job isimleri.
 
-- [ ] **Step 1: Kullanıcıdan push için açık onay iste**
+- [x] **Step 1: Kullanıcıdan push için açık onay iste**
 
 Bu adım koddan önce **durur ve sorar** — repoya push etmek paylaşılan/uzak bir duruma etki eden bir eylem (bu projenin genel güvenlik ilkeleri gereği otomatik yapılamaz). Sor: "Task 1-2'deki commit'leri (ve bu oturumda birikmiş diğer commit'leri) `origin/main`'e push edebilir miyim, CI'ın gerçekten çalıştığını görmek için?"
 
-- [ ] **Step 2: Onay sonrası push et**
+- [x] **Step 2: Onay sonrası push et**
 
 Kullanıcı onaylarsa:
 ```bash
 git push origin main
 ```
 
-- [ ] **Step 3: GitHub Actions sonucunu doğrula**
+- [x] **Step 3: GitHub Actions sonucunu doğrula**
 
 `gh run list --limit 1` (ya da GitHub arayüzünden Actions sekmesi) ile son çalıştırmanın hem `backend` hem `frontend` job'larının **yeşil (success)** bittiğini doğrula.
 Expected: iki job da `success`.
 
 Eğer kırmızıysa: `gh run view --log-failed` ile hatayı incele, düzelt, yeni bir commit'le tekrar push et — bu adım tekrarlanır, bir sonraki step'e geçilmez.
+
+**Not (2026-09-19):** Push ve CI doğrulaması tamamlandı, ikisi de yeşil (`backend`/`frontend` job'ları `success`). Branch protection adımı (Step 4-6), kullanıcının açık isteğiyle **bilinçli olarak ertelendi** — "bu liste de yazılı kalsın, ileride ekleyeceğim." `gh` CLI bu ortamda kurulu olmadığı/kimlik doğrulaması olmadığı için otomatik uygulanamadı da; kullanıcı GitHub arayüzünden (`Settings → Branches → Add rule`) manuel ekleyebilir ya da `gh` CLI kurup/giriş yapıp bu adımı tekrar isteyebilir.
 
 - [ ] **Step 4: Kullanıcıdan branch protection için açık onay iste**
 
