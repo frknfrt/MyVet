@@ -2,11 +2,13 @@ package com.vetos.modules.notification.infrastructure.scheduling;
 
 import com.vetos.modules.notification.application.SendAppointmentRemindersUseCase;
 import com.vetos.modules.tenant.domain.TenantLookupPort;
+import com.vetos.platform.concurrency.AdvisoryLock;
 import com.vetos.platform.tenancy.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -26,12 +28,20 @@ import java.util.UUID;
 class AppointmentReminderScheduler {
 
     private static final ZoneId ISTANBUL = ZoneId.of("Europe/Istanbul");
+    private static final long REMINDER_LOCK_KEY = 7_301_001; // sabit, bu is icin ayrilmis rastgele bir anahtar
 
     private final TenantLookupPort tenantLookupPort;
     private final SendAppointmentRemindersUseCase sendAppointmentRemindersUseCase;
+    private final AdvisoryLock advisoryLock;
 
     @Scheduled(cron = "0 0 9 * * *", zone = "Europe/Istanbul")
+    @Transactional
     public void sendTomorrowReminders() {
+        if (!advisoryLock.tryAcquire(REMINDER_LOCK_KEY)) {
+            log.info("Randevu hatirlatma kilidi baska bir instance'da -- atlaniyor");
+            return;
+        }
+
         Instant tomorrowStart = LocalDate.now(ISTANBUL).plusDays(1).atStartOfDay(ISTANBUL).toInstant();
         Instant tomorrowEnd = tomorrowStart.plus(1, ChronoUnit.DAYS);
 

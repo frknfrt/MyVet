@@ -2,6 +2,7 @@ package com.vetos.modules.notification.infrastructure.scheduling;
 
 import com.vetos.modules.notification.application.SendAppointmentRemindersUseCase;
 import com.vetos.modules.tenant.domain.TenantLookupPort;
+import com.vetos.platform.concurrency.AdvisoryLock;
 import com.vetos.platform.tenancy.TenantContext;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,8 +16,10 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 /**
  * Koprulme kurali (tasarim dokumani S5): arka plan isi, @TenantId'li bir
@@ -29,11 +32,13 @@ class AppointmentReminderSchedulerTest {
 
     @Mock private TenantLookupPort tenantLookupPort;
     @Mock private SendAppointmentRemindersUseCase sendAppointmentRemindersUseCase;
+    @Mock private AdvisoryLock advisoryLock;
 
     @Test
     void should_setTenantContext_forEachTenant_and_clearAfterwards() {
         AppointmentReminderScheduler scheduler =
-            new AppointmentReminderScheduler(tenantLookupPort, sendAppointmentRemindersUseCase);
+            new AppointmentReminderScheduler(tenantLookupPort, sendAppointmentRemindersUseCase, advisoryLock);
+        when(advisoryLock.tryAcquire(anyLong())).thenReturn(true);
         UUID tenantA = UUID.randomUUID();
         UUID tenantB = UUID.randomUUID();
         List<UUID> seenInsideUseCase = new ArrayList<>();
@@ -53,7 +58,8 @@ class AppointmentReminderSchedulerTest {
     @Test
     void should_clearTenantContext_evenWhenUseCaseThrows() {
         AppointmentReminderScheduler scheduler =
-            new AppointmentReminderScheduler(tenantLookupPort, sendAppointmentRemindersUseCase);
+            new AppointmentReminderScheduler(tenantLookupPort, sendAppointmentRemindersUseCase, advisoryLock);
+        when(advisoryLock.tryAcquire(anyLong())).thenReturn(true);
         UUID tenantA = UUID.randomUUID();
         when(tenantLookupPort.findActiveTenantIds()).thenReturn(List.of(tenantA));
         when(sendAppointmentRemindersUseCase.execute(eq(tenantA), any(Instant.class), any(Instant.class)))
@@ -65,5 +71,16 @@ class AppointmentReminderSchedulerTest {
         // aksi halde ThreadLocal, scheduler thread'inde SIZAR ve bir sonraki
         // is yanlis kiracinin verisini gorur.
         assertThat(TenantContext.currentOrNull()).isNull();
+    }
+
+    @Test
+    void should_skipEntirely_when_lockNotAcquired() {
+        AppointmentReminderScheduler scheduler =
+            new AppointmentReminderScheduler(tenantLookupPort, sendAppointmentRemindersUseCase, advisoryLock);
+        when(advisoryLock.tryAcquire(anyLong())).thenReturn(false);
+
+        scheduler.sendTomorrowReminders();
+
+        verifyNoInteractions(tenantLookupPort, sendAppointmentRemindersUseCase);
     }
 }

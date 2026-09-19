@@ -3,7 +3,7 @@
     allowedDependencies = {
         "modules.patient::domain", "modules.tenant::domain", "modules.appointment::domain",
         "modules.appointment::domain.event",
-        "platform::security", "platform::tenancy", "platform::event", "platform::exception"
+        "platform::security", "platform::tenancy", "platform::event", "platform::exception", "platform::concurrency"
     }
 )
 package com.vetos.modules.notification;
