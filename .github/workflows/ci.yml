@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: myvet
+          POSTGRES_USER: myvet
+          POSTGRES_PASSWORD: myvet
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd="pg_isready -U myvet"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Backend testleri
+        working-directory: backend
+        run: ./mvnw -B test
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5433
+          DB_NAME: myvet
+          DB_USER: myvet
+          DB_PASSWORD: myvet
+      - name: Docker imajini dogrula
+        working-directory: backend
+        run: docker build -t myvet-backend:ci .
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - working-directory: frontend
+        run: npm ci
+      - name: Typecheck + build
+        working-directory: frontend
+        run: npm run build
