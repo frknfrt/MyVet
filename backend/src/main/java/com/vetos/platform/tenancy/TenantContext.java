@@ -1,6 +1,7 @@
 package com.vetos.platform.tenancy;
 
 import java.util.UUID;
+import java.util.function.Supplier;
 
 /**
  * Istek bazli aktif tenant kimligi. JwtAuthenticationFilter, dogrulanan
@@ -58,5 +59,34 @@ public final class TenantContext {
 
     public static void clear() {
         CURRENT_TENANT.remove();
+    }
+
+    /**
+     * Verilen isi TenantContext GECICI OLARAK BOSALTILMIS halde (root
+     * Session, _tenantId filtresi kapali) calistirir, sonra cagirandan
+     * ONCEKI ambient degeri aynen geri yukler (varsa set(previous), yoksa
+     * clear()) -- TenantScopedTestSupport.inRootSession() ile AYNI
+     * capture/clear/finally-restore deseni, burada uretim kodu icin.
+     *
+     * Kullanim alani: staff_users.email gibi GLOBAL (tum kiracilarda
+     * essiz) bir kisitin, halihazirda bir kiracinin context'inde calisan
+     * authenticated bir istek icinde kontrol edilmesi gerektigi durumlar
+     * -- @TenantId'li StaffUser uzerindeki existsByEmail sorgusu, cagiranin
+     * KENDI context'inde calisirsa sessizce o kiraciyla filtrelenir ve
+     * baska kiracidaki cakisan bir e-postayi KACIRIR (bkz.
+     * CreateStaffUserUseCase, InviteStaffMemberUseCase).
+     */
+    public static <T> T callInRootSession(Supplier<T> work) {
+        UUID previous = currentOrNull();
+        clear();
+        try {
+            return work.get();
+        } finally {
+            if (previous != null) {
+                set(previous);
+            } else {
+                clear();
+            }
+        }
     }
 }

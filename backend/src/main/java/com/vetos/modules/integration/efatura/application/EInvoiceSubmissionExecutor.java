@@ -6,6 +6,7 @@ import com.vetos.modules.billing.domain.InvoiceLineRepository;
 import com.vetos.modules.integration.efatura.domain.*;
 import com.vetos.modules.patient.domain.OwnerLookupPort;
 import com.vetos.modules.patient.domain.OwnerSummary;
+import com.vetos.platform.tenancy.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -74,9 +75,20 @@ class EInvoiceSubmissionExecutor {
             return;
         }
 
-        List<EInvoiceLineItem> lines = invoiceLineRepository.findByInvoiceId(submission.getInvoiceId()).stream()
-            .map(this::toLineItem)
-            .toList();
+        // Koprulme kurali: bu is @Async bir executor thread'inde calisiyor, ambient
+        // TenantContext YOK. InvoiceLine (@TenantId'li) sorgusundan once context'i
+        // submission'in kendi tenantId'siyle kurmali, sonra finally'de temizlemeliyiz
+        // -- aksi halde sorgu root Session'da, yani FILTRESIZ calisir (bkz.
+        // AppointmentReminderScheduler ile ayni desen).
+        TenantContext.set(submission.getTenantId());
+        List<EInvoiceLineItem> lines;
+        try {
+            lines = invoiceLineRepository.findByInvoiceId(submission.getInvoiceId()).stream()
+                .map(this::toLineItem)
+                .toList();
+        } finally {
+            TenantContext.clear();
+        }
         String callbackUrl = callbackBaseUrl + "/api/v1/public/efatura/faturaentegrator/callback";
 
         EInvoiceSubmissionOutcome outcome = eInvoiceGatewayPort.submit(new EInvoiceSubmissionRequest(

@@ -200,6 +200,12 @@ class TenantAdminPortAdapter implements TenantAdminPort {
             .orElseThrow(() -> new SubscriptionNotFoundException(tenant.getId()));
         List<Branch> branches = branchJpaRepository.findByTenantId(tenant.getId());
         List<UUID> branchIds = branches.stream().map(Branch::getId).toList();
+        // findBillingContact'in aksine burada KOPRULME YOK -- kasitli: branchIds
+        // zaten yukarida branchJpaRepository.findByTenantId(tenant.getId()) ile
+        // TEK bir kiraciya scope'lanmis geldi, yani root Session'da (filtresiz)
+        // bu spesifik id listesi uzerinden sayim, tenant-filtreli bir sayimla
+        // AYNI sonucu verir -- baska kiracinin StaffUser'i bu branchId'lere ASLA
+        // sahip olamaz (FK). Koprulme burada sadece gereksiz karmasiklik katardi.
         long staffCount = branchIds.isEmpty() ? 0 : staffUserJpaRepository.countByBranchIdIn(branchIds);
 
         return new TenantAdminOverview(

@@ -7,6 +7,8 @@ import com.vetos.modules.billing.domain.InvoiceLineSource;
 import com.vetos.modules.integration.efatura.domain.*;
 import com.vetos.modules.patient.domain.OwnerLookupPort;
 import com.vetos.modules.patient.domain.OwnerSummary;
+import com.vetos.platform.tenancy.TenantContext;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,11 +17,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -47,9 +51,20 @@ class EInvoiceSubmissionExecutorTest {
         );
     }
 
+    @AfterEach
+    void clearAmbientContext() {
+        TenantContext.clear();
+    }
+
     private EInvoiceSubmission aQueuedSubmission(UUID invoiceId, UUID ownerId) {
         return EInvoiceSubmission.queue(
             UUID.randomUUID(), invoiceId, ownerId, EInvoiceDocumentType.E_ARSIV, new BigDecimal("120.00"), new BigDecimal("20.00")
+        );
+    }
+
+    private EInvoiceSubmission aQueuedSubmissionForTenant(UUID tenantId, UUID invoiceId, UUID ownerId) {
+        return EInvoiceSubmission.queue(
+            tenantId, invoiceId, ownerId, EInvoiceDocumentType.E_ARSIV, new BigDecimal("120.00"), new BigDecimal("20.00")
         );
     }
 
@@ -138,5 +153,53 @@ class EInvoiceSubmissionExecutorTest {
 
         verifyNoInteractions(ownerLookupPort, eInvoiceGatewayPort, invoiceLineRepository, invoiceEInvoiceUpdatePort);
         verify(eInvoiceSubmissionRepository, never()).save(any());
+    }
+
+    /**
+     * Final review bulgusu 2: attemptSubmit @Async bir executor thread'inde
+     * calisir, ambient TenantContext YOK. InvoiceLine (@TenantId'li) sorgusu
+     * koprulenmezse root Session'da (filtresiz) calisir -- AppointmentReminderScheduler
+     * ile ayni koprulme kuralini burada da dogruluyoruz: context, submission'in
+     * KENDI tenantId'siyle kurulmus olmali, sonra temizlenmis olmali.
+     */
+    @Test
+    void should_setTenantContext_toSubmissionsTenant_around_invoiceLineLookup_and_clearAfterwards() {
+        UUID submissionId = UUID.randomUUID();
+        UUID ownerId = UUID.randomUUID();
+        UUID invoiceId = UUID.randomUUID();
+        UUID tenantId = UUID.randomUUID();
+        EInvoiceSubmission submission = aQueuedSubmissionForTenant(tenantId, invoiceId, ownerId);
+        when(eInvoiceSubmissionRepository.findById(submissionId)).thenReturn(Optional.of(submission));
+        when(ownerLookupPort.findSummaryById(ownerId)).thenReturn(ownerWithName(ownerId, "hale yilmaz"));
+        List<UUID> seenDuringLookup = new ArrayList<>();
+        when(invoiceLineRepository.findByInvoiceId(invoiceId)).thenAnswer(invocation -> {
+            seenDuringLookup.add(TenantContext.currentOrNull());
+            return List.of();
+        });
+        when(eInvoiceGatewayPort.submit(any())).thenReturn(EInvoiceSubmissionOutcome.pending("232420", "isleniyor"));
+
+        executor.attemptSubmit(submissionId);
+
+        assertThat(seenDuringLookup).containsExactly(tenantId);
+        assertThat(TenantContext.currentOrNull()).isNull();
+    }
+
+    @Test
+    void should_clearTenantContext_evenWhenInvoiceLineLookupThrows() {
+        UUID submissionId = UUID.randomUUID();
+        UUID ownerId = UUID.randomUUID();
+        UUID invoiceId = UUID.randomUUID();
+        UUID tenantId = UUID.randomUUID();
+        EInvoiceSubmission submission = aQueuedSubmissionForTenant(tenantId, invoiceId, ownerId);
+        when(eInvoiceSubmissionRepository.findById(submissionId)).thenReturn(Optional.of(submission));
+        when(ownerLookupPort.findSummaryById(ownerId)).thenReturn(ownerWithName(ownerId, "hale yilmaz"));
+        when(invoiceLineRepository.findByInvoiceId(invoiceId)).thenThrow(new RuntimeException("db patladi"));
+
+        assertThatThrownBy(() -> executor.attemptSubmit(submissionId)).isInstanceOf(RuntimeException.class);
+
+        // finally bloğu, istisna firlasa bile ThreadLocal'i temizlemis olmali --
+        // aksi halde @Async executor thread'i havuzda tekrar kullanildiginda
+        // yanlis kiracinin verisiyle SIZAR.
+        assertThat(TenantContext.currentOrNull()).isNull();
     }
 }

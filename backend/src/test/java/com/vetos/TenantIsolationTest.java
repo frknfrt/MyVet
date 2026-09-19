@@ -195,7 +195,7 @@ class TenantIsolationTest extends TenantScopedTestSupport {
                 "DELETE FROM owners WHERE tenant_id = :t",
                 "DELETE FROM cash_register_sessions WHERE branch_id IN " + b,
                 "DELETE FROM inventory_items WHERE branch_id IN " + b,
-                "DELETE FROM staff_users WHERE branch_id IN " + b,
+                "DELETE FROM staff_users WHERE tenant_id = :t",
                 "DELETE FROM branches WHERE tenant_id = :t",
                 "DELETE FROM tenants WHERE id = :t"
             );
