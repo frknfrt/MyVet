@@ -6,6 +6,7 @@ import com.vetos.modules.notification.domain.NotificationType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,5 +29,10 @@ class NotificationLogRepositoryAdapter implements NotificationLogRepository {
     @Override
     public boolean existsByRelatedEntityIdAndNotificationType(UUID relatedEntityId, NotificationType notificationType) {
         return jpaRepository.existsByRelatedEntityIdAndNotificationType(relatedEntityId, notificationType);
+    }
+
+    @Override
+    public List<NotificationLog> claimDueForRetry(Instant now, int limit) {
+        return jpaRepository.claimDueForRetry(now, limit);
     }
 }

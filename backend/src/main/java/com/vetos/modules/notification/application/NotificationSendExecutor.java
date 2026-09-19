@@ -8,6 +8,8 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -25,6 +27,18 @@ class NotificationSendExecutor {
     private final NotificationLogRepository notificationLogRepository;
     private final NotificationSendPort notificationSendPort;
     private final TenantLookupPort tenantLookupPort;
+
+    private static final Duration[] RETRY_BACKOFF = {
+        Duration.ofMinutes(2), Duration.ofMinutes(10), Duration.ofHours(1), Duration.ofHours(6)
+    };
+    // attemptCount 1..4 -> otomatik retry planlanir; 5. denemede (attemptCount==5) nextRetryAt=null,
+    // yani en fazla 4 otomatik retry (toplam 5 deneme), sonrasinda sadece manuel "Tekrar Dene".
+
+    Instant computeNextRetryAt(int attemptCountAfterThisFailure) {
+        int index = attemptCountAfterThisFailure - 1;
+        if (index >= RETRY_BACKOFF.length) return null;
+        return Instant.now().plus(RETRY_BACKOFF[index]);
+    }
 
     @Async
     @Transactional
@@ -53,7 +67,7 @@ class NotificationSendExecutor {
         if (outcome.success()) {
             notificationLog.markSent();
         } else {
-            notificationLog.markFailed(null);
+            notificationLog.markFailed(computeNextRetryAt(notificationLog.getAttemptCount() + 1));
             log.warn("Bildirim gonderimi basarisiz: logId={}, sebep={}", logId, outcome.message());
         }
         notificationLogRepository.save(notificationLog);
