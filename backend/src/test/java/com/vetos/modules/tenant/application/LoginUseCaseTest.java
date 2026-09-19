@@ -32,7 +32,7 @@ class LoginUseCaseTest {
     void should_throwTenantSuspendedForbiddenException_when_tenantIsSuspended() {
         UUID branchId = UUID.randomUUID();
         UUID tenantId = UUID.randomUUID();
-        StaffUser staffUser = StaffUser.register(branchId, "Dr. Test", "test@example.com", "hash", StaffRole.VET);
+        StaffUser staffUser = StaffUser.register(tenantId, branchId, "Dr. Test", "test@example.com", "hash", StaffRole.VET);
         Branch branch = Branch.create(tenantId, "Merkez");
         Tenant tenant = Tenant.register("Test Klinik", "1234567890");
         tenant.suspend();
@@ -52,7 +52,7 @@ class LoginUseCaseTest {
     void should_succeed_when_tenantIsActive() {
         UUID branchId = UUID.randomUUID();
         UUID tenantId = UUID.randomUUID();
-        StaffUser staffUser = StaffUser.register(branchId, "Dr. Test", "test@example.com", "hash", StaffRole.VET);
+        StaffUser staffUser = StaffUser.register(tenantId, branchId, "Dr. Test", "test@example.com", "hash", StaffRole.VET);
         Branch branch = Branch.create(tenantId, "Merkez");
         ReflectionTestUtils.setField(branch, "id", branchId);
         Tenant tenant = Tenant.register("Test Klinik", "1234567890");
@@ -72,7 +72,7 @@ class LoginUseCaseTest {
 
     @Test
     void should_throwInvalidCredentials_when_passwordDoesNotMatch() {
-        StaffUser staffUser = StaffUser.register(UUID.randomUUID(), "Dr. Test", "test@example.com", "hash", StaffRole.VET);
+        StaffUser staffUser = StaffUser.register(UUID.randomUUID(), UUID.randomUUID(), "Dr. Test", "test@example.com", "hash", StaffRole.VET);
         when(staffUserRepository.findByEmail("test@example.com")).thenReturn(Optional.of(staffUser));
         when(passwordEncoder.matches("wrong", "hash")).thenReturn(false);
 

@@ -18,6 +18,10 @@ public class StaffUser {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @org.hibernate.annotations.TenantId
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
+
     @Column(name = "branch_id", nullable = false)
     private UUID branchId;
 
@@ -52,8 +56,11 @@ public class StaffUser {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
-    public static StaffUser register(UUID branchId, String fullName, String email, String passwordHash, StaffRole role) {
+    public static StaffUser register(
+        UUID tenantId, UUID branchId, String fullName, String email, String passwordHash, StaffRole role
+    ) {
         StaffUser staffUser = new StaffUser();
+        staffUser.tenantId = tenantId;
         staffUser.branchId = branchId;
         staffUser.fullName = fullName;
         staffUser.email = email;

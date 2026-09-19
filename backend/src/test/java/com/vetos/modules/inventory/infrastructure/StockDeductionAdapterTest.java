@@ -33,7 +33,7 @@ class StockDeductionAdapterTest {
         adapter = new StockDeductionAdapter(inventoryItemRepository, recordStockMovementUseCase);
         UUID itemId = UUID.randomUUID();
         InventoryItem item = InventoryItem.create(
-            UUID.randomUUID(), "Mama", "Gida", null, 2, 1, null, null, BigDecimal.TEN
+            UUID.randomUUID(), UUID.randomUUID(), "Mama", "Gida", null, 2, 1, null, null, BigDecimal.TEN
         );
         when(inventoryItemRepository.findById(itemId)).thenReturn(Optional.of(item));
 
@@ -52,7 +52,7 @@ class StockDeductionAdapterTest {
         UUID itemId = UUID.randomUUID();
         UUID invoiceId = UUID.randomUUID();
         InventoryItem item = InventoryItem.create(
-            UUID.randomUUID(), "Mama", "Gida", null, 10, 1, null, null, BigDecimal.TEN
+            UUID.randomUUID(), UUID.randomUUID(), "Mama", "Gida", null, 10, 1, null, null, BigDecimal.TEN
         );
         when(inventoryItemRepository.findById(itemId)).thenReturn(Optional.of(item));
 

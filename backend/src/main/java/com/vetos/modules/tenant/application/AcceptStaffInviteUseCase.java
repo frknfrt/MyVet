@@ -33,7 +33,7 @@ public class AcceptStaffInviteUseCase {
         }
 
         StaffUser staffUser = StaffUser.register(
-            invite.getBranchId(), invite.getFullName(), invite.getEmail(),
+            invite.getTenantId(), invite.getBranchId(), invite.getFullName(), invite.getEmail(),
             passwordEncoder.encode(command.password()), invite.getRole()
         );
         staffUserRepository.save(staffUser);

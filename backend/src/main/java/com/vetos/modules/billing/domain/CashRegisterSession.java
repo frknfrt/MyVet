@@ -26,6 +26,10 @@ public class CashRegisterSession {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @org.hibernate.annotations.TenantId
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
+
     @Column(name = "branch_id", nullable = false)
     private UUID branchId;
 
@@ -53,8 +57,11 @@ public class CashRegisterSession {
 
     private String notes;
 
-    public static CashRegisterSession open(UUID branchId, UUID staffId, BigDecimal openingBalance, String notes) {
+    public static CashRegisterSession open(
+        UUID tenantId, UUID branchId, UUID staffId, BigDecimal openingBalance, String notes
+    ) {
         CashRegisterSession session = new CashRegisterSession();
+        session.tenantId = tenantId;
         session.branchId = branchId;
         session.openedByStaffId = staffId;
         session.openingBalance = openingBalance;

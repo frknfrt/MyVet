@@ -9,8 +9,15 @@ import com.vetos.modules.patient.domain.Patient;
 import com.vetos.modules.patient.domain.PatientRepository;
 import com.vetos.modules.patient.domain.Sex;
 import com.vetos.modules.patient.domain.SpeciesRepository;
+import com.vetos.modules.billing.domain.CashRegisterSession;
+import com.vetos.modules.billing.domain.CashRegisterSessionRepository;
+import com.vetos.modules.inventory.domain.InventoryItem;
+import com.vetos.modules.inventory.domain.InventoryItemRepository;
 import com.vetos.modules.tenant.domain.Branch;
 import com.vetos.modules.tenant.domain.BranchRepository;
+import com.vetos.modules.tenant.domain.StaffRole;
+import com.vetos.modules.tenant.domain.StaffUser;
+import com.vetos.modules.tenant.domain.StaffUserRepository;
 import com.vetos.modules.tenant.domain.Tenant;
 import com.vetos.modules.tenant.domain.TenantRepository;
 import jakarta.persistence.EntityManager;
@@ -20,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -56,13 +64,16 @@ class TenantIsolationTest extends TenantScopedTestSupport {
     @Autowired private SpeciesRepository speciesRepository;
     @Autowired private PatientRepository patientRepository;
     @Autowired private ConsentRecordRepository consentRecordRepository;
+    @Autowired private StaffUserRepository staffUserRepository;
+    @Autowired private InventoryItemRepository inventoryItemRepository;
+    @Autowired private CashRegisterSessionRepository cashRegisterSessionRepository;
 
     @PersistenceContext private EntityManager entityManager;
 
     private final List<UUID> createdTenantIds = new ArrayList<>();
 
     /** Bir kiraci ve onun altindaki ortak ust kayitlar. */
-    private record TenantFixture(UUID tenantId, UUID branchId, UUID ownerId) {}
+    private record TenantFixture(UUID tenantId, UUID branchId, UUID ownerId, UUID staffUserId) {}
 
     private TenantFixture createTenantFixture(String label) {
         UUID tenantId = inRootSession(() -> tenantRepository.save(Tenant.register(label, null)).getId());
@@ -71,7 +82,11 @@ class TenantIsolationTest extends TenantScopedTestSupport {
         UUID ownerId = asTenant(tenantId, () -> ownerRepository.save(
             Owner.register(tenantId, label + " Sahip", "05551234567", null, null)
         ).getId());
-        return new TenantFixture(tenantId, branchId, ownerId);
+        // staff_users.email GLOBAL unique -- her fixture benzersiz bir e-posta almali.
+        UUID staffUserId = asTenant(tenantId, () -> staffUserRepository.save(StaffUser.register(
+            tenantId, branchId, "Dr. " + label, "izolasyon-" + UUID.randomUUID() + "@test.local", "hash", StaffRole.VET
+        )).getId());
+        return new TenantFixture(tenantId, branchId, ownerId, staffUserId);
     }
 
     private UUID anySpeciesId() {
@@ -211,5 +226,52 @@ class TenantIsolationTest extends TenantScopedTestSupport {
         )))
             .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class)
             .hasMessageContaining("assigned tenant id differs from current tenant id");
+    }
+
+    // --- Task 2 ---
+
+    @Test
+    void staffUser_isIsolatedAcrossTenants() {
+        TenantFixture a = createTenantFixture("Izolasyon A");
+        TenantFixture b = createTenantFixture("Izolasyon B");
+
+        assertThat(asTenant(a.tenantId(), () -> staffUserRepository.findById(b.staffUserId()))).isEmpty();
+        assertThat(asTenant(b.tenantId(), () -> staffUserRepository.findById(b.staffUserId()))).isPresent();
+    }
+
+    @Test
+    void staffUser_isVisibleToRootSession_soLoginKeepsWorking() {
+        // LoginUseCase.findByEmail, tenant HENUZ BILINMEDEN calisir -- koprulme
+        // imkansiz. Bu yuzden root Session'da StaffUser gorunur kalmali.
+        TenantFixture b = createTenantFixture("Izolasyon B");
+        String email = inRootSession(() -> staffUserRepository.findById(b.staffUserId()).orElseThrow().getEmail());
+
+        assertThat(inRootSession(() -> staffUserRepository.findByEmail(email))).isPresent();
+    }
+
+    @Test
+    void inventoryItem_isIsolatedAcrossTenants() {
+        TenantFixture a = createTenantFixture("Izolasyon A");
+        TenantFixture b = createTenantFixture("Izolasyon B");
+
+        UUID itemBId = asTenant(b.tenantId(), () -> inventoryItemRepository.save(InventoryItem.create(
+            b.tenantId(), b.branchId(), "Mama", "Gida", null, 10, 1, null, null, BigDecimal.TEN
+        )).getId());
+
+        assertThat(asTenant(a.tenantId(), () -> inventoryItemRepository.findById(itemBId))).isEmpty();
+        assertThat(asTenant(b.tenantId(), () -> inventoryItemRepository.findById(itemBId))).isPresent();
+    }
+
+    @Test
+    void cashRegisterSession_isIsolatedAcrossTenants() {
+        TenantFixture a = createTenantFixture("Izolasyon A");
+        TenantFixture b = createTenantFixture("Izolasyon B");
+
+        UUID sessionBId = asTenant(b.tenantId(), () -> cashRegisterSessionRepository.save(
+            CashRegisterSession.open(b.tenantId(), b.branchId(), b.staffUserId(), BigDecimal.valueOf(100), null)
+        ).getId());
+
+        assertThat(asTenant(a.tenantId(), () -> cashRegisterSessionRepository.findById(sessionBId))).isEmpty();
+        assertThat(asTenant(b.tenantId(), () -> cashRegisterSessionRepository.findById(sessionBId))).isPresent();
     }
 }

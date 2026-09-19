@@ -128,7 +128,7 @@ class TenantAdminPortAdapter implements TenantAdminPort {
 
         String passwordHash = passwordEncoder.encode(adminPassword);
         StaffUser admin = staffUserJpaRepository.save(
-            StaffUser.register(branch.getId(), adminFullName, adminEmail, passwordHash, StaffRole.ADMIN)
+            StaffUser.register(tenant.getId(), branch.getId(), adminFullName, adminEmail, passwordHash, StaffRole.ADMIN)
         );
 
         eventPublisher.publish(new ClinicRegisteredEvent(tenant.getId(), branch.getId(), admin.getId()));

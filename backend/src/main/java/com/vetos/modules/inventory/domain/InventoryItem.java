@@ -19,6 +19,10 @@ public class InventoryItem {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @org.hibernate.annotations.TenantId
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
+
     @Column(name = "branch_id", nullable = false)
     private UUID branchId;
 
@@ -46,10 +50,11 @@ public class InventoryItem {
     private BigDecimal unitCost;
 
     public static InventoryItem create(
-        UUID branchId, String name, String category, String skuBarcode,
+        UUID tenantId, UUID branchId, String name, String category, String skuBarcode,
         int initialQuantity, int reorderThreshold, LocalDate expiryDate, String lotNumber, BigDecimal unitCost
     ) {
         InventoryItem item = new InventoryItem();
+        item.tenantId = tenantId;
         item.branchId = branchId;
         item.name = name;
         item.category = category;
