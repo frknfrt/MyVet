@@ -5,6 +5,7 @@ import com.vetos.modules.integration.tarbil.domain.TarbilSyncLogRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,4 +27,9 @@ class TarbilSyncLogRepositoryAdapter implements TarbilSyncLogRepository {
 
     @Override
     public List<TarbilSyncLog> findByPatientId(UUID patientId) { return jpaRepository.findByPatientId(patientId); }
+
+    @Override
+    public List<TarbilSyncLog> claimDueForRetry(Instant now, int limit) {
+        return jpaRepository.claimDueForRetry(now, limit);
+    }
 }
