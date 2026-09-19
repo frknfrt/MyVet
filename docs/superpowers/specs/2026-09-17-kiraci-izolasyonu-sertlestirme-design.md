@@ -191,3 +191,9 @@ Başka bir kiracının kaydı, mevcut `NotificationLogNotFoundException` (404) i
 ## 9. Açık Sorular
 
 Yok — tasarım kullanıcı onayından geçti. İmplementasyon sırasında doğrulanacak/taranacak maddeler (Hibernate config detayları, diğer cross-tenant erişim yolları, tüm native sorgu listesi) yukarıda ilgili bölümlerde açıkça işaretlendi.
+
+## 10. Düzeltme (implementasyon planı yazılırken bulundu, 2026-09-19)
+
+Hibernate 6.6.53.Final bytecode'u bağımsız olarak incelendi (`javap` ile `CurrentTenantIdentifierResolver`, `TenantIdBinder`, `TenantIdGeneration`, `AbstractSharedSessionContract.setUpMultitenancy` doğrulandı). Sonuç: **§3'teki resolver'ın "TenantContext boşken `IllegalStateException` fırlat" tasarımı uygulanabilir değil** — Hibernate resolver'ı entity `@TenantId`'li olsun olmasın **her Session açılışında** çağırıyor. Birebir uygulanırsa: login, tüm `/api/v1/public/**` uçları, platform-admin uçları, `@Scheduled` işler ve `@Async` executor'lar dahil **uygulamanın tamamı** ilk `@TenantId`'li entity eklenir eklenmez kilitlenir.
+
+**Düzeltme:** `CurrentTenantIdentifierResolver<T>`'ın `default boolean isRoot(T)` metodu (Hibernate'in kendi, bu senaryo için var olan mekanizması) kullanılır. `TenantContext` boşken resolver bir `ROOT_TENANT_ID` sentinel'i döner; `isRoot(...)` bunu `true` işaretler; Hibernate o Session için `_tenantId` filtresini hiç etkinleştirmez — yani TenantContext'siz yollar bugünkü (filtresiz) davranışını korur, sadece kimlik doğrulanmış istekler (ispatlanmış açıkların bulunduğu yüzey) otomatik filtrelenir. Tam gerekçe ve kod: implementasyon planı `docs/superpowers/plans/2026-09-19-kiraci-izolasyonu-sertlestirme.md`, Task 1 ve "Hibernate 6.6 doğrulaması" bölümü.
