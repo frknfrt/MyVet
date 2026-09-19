@@ -19,12 +19,12 @@ Bu doküman, bu üç deseni **tekrar tasarlamak yerine, zaten onaylanmış çöz
 ## 2. Kapsam
 
 **Bu turda yapılacak:**
-- `TarbilSyncLog` ve `EInvoiceSubmission` için, Bildirim dokümanındaki `attempt_count`/`next_retry_at` + `FOR UPDATE SKIP LOCKED` süpürme deseninin **aynısı** (§3).
+- `TarbilSyncLog` ve `EInvoiceSubmission` için, Bildirim dokümanındaki `attempt_count`/`next_retry_at` + `FOR UPDATE SKIP LOCKED` süpürme deseninin **aynısı** (§3.1, §3.2).
+- Sıkışan `PROCESSING` kayıtları için, mevcut `ApplyEInvoiceCallbackUseCase`'i yeniden kullanan bir uzlaştırma (reconciliation) işi (§3.3).
 - `RetryTarbilSyncUseCase` ve `RetryEInvoiceSubmissionUseCase`'e, Kiracı İzolasyonu dokümanındaki `RetryNotificationUseCase` düzeltmesiyle **aynı şekilde** tenant kontrolü (§4).
 - `PlatformBillingScheduler.runDailyBilling()`'i, Kiracı İzolasyonu dokümanındaki `AdvisoryLock` bileşenini (yeniden kullanarak, yeni bir kilit anahtarıyla) sarmalamak (§5).
 
 **Kapsam dışı (bilinçli olarak):**
-- **e-Fatura'nın `PROCESSING` durumunun "sıkışıp kalması"** — sağlayıcıya iletildi ama GIB callback'i hiç gelmezse, bu submission süresiz `PROCESSING`'de kalır; ne otomatik retry (doğru, mükerrer fatura riski) ne de bir zaman aşımı/uzlaştırma (reconciliation) mekanizması var. Bu, retry'dan farklı bir problem (kayıp callback izleme) — ayrı bir tur, bu dokümanın dışında, sadece not düşülüyor.
 - **Thread havuzu** — zaten çözülmüş (yukarıda açıklandı), tekrar ele alınmıyor.
 
 ## 3. Otomatik Retry + Backoff
@@ -37,12 +37,51 @@ Bildirim dokümanının §4'ündeki desenin (migration şekli, backoff sabitleri
 - `TarbilSyncLogRepository.claimDueForRetry(Instant now, int limit)` — aynı native `FOR UPDATE SKIP LOCKED` sorgusu, `status = 'FAILED'` filtresiyle.
 - `RetryDueTarbilSyncsUseCase` + `TarbilRetryScheduler` (`@Scheduled(fixedDelay = 120_000)`) — `RetryDueNotificationsUseCase`/`NotificationRetryScheduler` ile birebir aynı iskelet.
 
-### 3.2 `EInvoiceSubmission`
-- Migration: `e_invoice_submission`'a `attempt_count`/`next_retry_at`.
+### 3.2 `EInvoiceSubmission` (tablo adı: `efatura_submission`)
+- Migration: `efatura_submission`'a `attempt_count`/`next_retry_at`.
 - **Fark:** claim sorgusu `status = 'FAILED'` filtresini korur — **`PROCESSING` durumundaki kayıtlar asla otomatik süpürmeye girmez** (`RetryEInvoiceSubmissionUseCase`'in zaten `EInvoiceSubmissionAlreadyProcessingException` ile koruduğu aynı kural, otomatik yolda da geçerli — mükerrer GIB gönderimi riskine karşı).
 - `RetryDueEInvoiceSubmissionsUseCase` + `EInvoiceRetryScheduler` — aynı iskelet.
 
 Backoff sabitleri (2dk/10dk/1sa/6sa, 5 deneme) Bildirim dokümanıyla **aynı** kalıyor — tutarlılık için, üç modülde farklı sayılar kullanmanın bir gerekçesi yok.
+
+### 3.3 Sıkışan `PROCESSING` Kayıtları İçin Uzlaştırma
+
+**Problem:** e-Fatura sağlayıcısına (faturaentegrator) iletilen ama GIB resmileşme callback'i hiç gelmeyen bir kayıt, süresiz `PROCESSING`'de kalır. Otomatik retry buna kasıtlı olarak dokunmuyor (§3.2, mükerrer gönderim riski) — ama şu an bunu **çözecek** hiçbir mekanizma da yok, sadece webhook'un gelmesine güveniliyor.
+
+**Çözüm — yeni kod değil, mevcut mekanizmanın tekrar kullanımı:** `EInvoiceGatewayPort.fetchStatus(providerReference)` zaten gerçek adaptörde (`FaturaEntegratorEInvoiceGatewayAdapter`) tam implemente — sağlayıcının `/invoices/{id}` uç noktasını sorguluyor. `ApplyEInvoiceCallbackUseCase` da zaten bunu çağırıp sonucu idempotent şekilde işliyor (zaten `SUBMITTED`/`FAILED` olan kayda dokunmuyor, hâlâ işleniyorsa durumu değiştirmeden bırakıyor). Webhook, bu use-case'i tetikleyen tek yol değil — **aynı use-case'i bir zamanlayıcıdan da çağırabiliriz**, yeni bir çözümleme mantığı yazmadan:
+
+```java
+// EInvoiceSubmissionRepository — yeni port metodu
+List<String> findProviderReferencesByStatusAndAttemptedAtBefore(EInvoiceSubmissionStatus status, Instant threshold);
+
+// application/ReconcileStuckEInvoiceSubmissionsUseCase.java — yeni, kucuk
+@Service
+@RequiredArgsConstructor
+public class ReconcileStuckEInvoiceSubmissionsUseCase {
+    private static final Duration STALE_THRESHOLD = Duration.ofHours(1);
+
+    private final EInvoiceSubmissionRepository eInvoiceSubmissionRepository;
+    private final ApplyEInvoiceCallbackUseCase applyEInvoiceCallbackUseCase;
+
+    public int execute() {
+        List<String> stale = eInvoiceSubmissionRepository.findProviderReferencesByStatusAndAttemptedAtBefore(
+            EInvoiceSubmissionStatus.PROCESSING, Instant.now().minus(STALE_THRESHOLD)
+        );
+        stale.forEach(applyEInvoiceCallbackUseCase::execute);
+        return stale.size();
+    }
+}
+
+// infrastructure/scheduling/EInvoiceReconciliationScheduler.java
+@Scheduled(fixedDelay = 3_600_000) // saatte bir -- FAILED retry'lerden (2dk) cok daha seyrek,
+                                    // aciliyeti yok, saglayici API'sini gereksiz yormasin
+public void reconcile() {
+    int resolved = reconcileStuckEInvoiceSubmissionsUseCase.execute();
+    if (resolved > 0) log.info("e-Fatura uzlastirmasi tetiklendi: adet={}", resolved);
+}
+```
+
+`FOR UPDATE SKIP LOCKED`'a burada gerek yok: `ApplyEInvoiceCallbackUseCase` zaten idempotent (aynı kayda iki instance aynı anda dokunsa bile aynı sonuca varır, zarar yok) — bu, §3.1/§3.2'deki "claim et, hemen PENDING'e çek" deseninden daha basit, çünkü mutasyon zaten güvenli bir use-case'e devrediliyor. `attemptedAt`, `ApplyEInvoiceCallbackUseCase`'in "hâlâ işleniyor" dalında güncellenmiyor — yani gerçekten sıkışmış bir kayıt her saat başı yeniden kontrol edilecek (istenen davranış, sağlayıcıyı yormayacak kadar seyrek).
 
 ## 4. Manuel Retry Endpoint'lerine Tenant Kontrolü
 
@@ -98,7 +137,9 @@ Bu iş `TenantContext`'e ihtiyaç duymuyor (platform admin kapsamında, `Platfor
 - `claimDueForRetry` + backoff hesaplama birim testleri (her modül için).
 - `RetryTarbilSyncUseCase`/`RetryEInvoiceSubmissionUseCase` — yabancı `tenantId` ile çağrıldığında `NotFoundException` fırlattığını doğrulayan testler.
 - `PlatformBillingScheduler` — kilit alınamadığında hiçbir use-case'in çağrılmadığını doğrulayan mock testi.
-- **e-Fatura'ya özel ek test:** `claimDueForRetry`'nin `PROCESSING` durumundaki bir kaydı asla döndürmediğini doğrulayan test — bu modülün en kritik davranış garantisi (mükerrer resmi fatura riski).
+- **e-Fatura'ya özel ek testler:**
+  - `claimDueForRetry`'nin `PROCESSING` durumundaki bir kaydı asla döndürmediğini doğrulayan test — bu modülün en kritik davranış garantisi (mükerrer resmi fatura riski).
+  - `ReconcileStuckEInvoiceSubmissionsUseCase` — mock `ApplyEInvoiceCallbackUseCase` ile: eşik altındaki (henüz taze) `PROCESSING` kayıtların çağrılmadığını, eşik üstündekilerin `providerReference`'ıyla çağrıldığını doğrulayan birim test.
 
 ## 7. Açık Sorular
 
