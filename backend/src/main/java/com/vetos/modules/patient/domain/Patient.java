@@ -20,6 +20,10 @@ public class Patient {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @org.hibernate.annotations.TenantId
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
+
     @Column(name = "owner_id", nullable = false)
     private UUID ownerId;
 
@@ -87,8 +91,11 @@ public class Patient {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
-    public static Patient register(UUID ownerId, UUID speciesId, UUID breedId, String name, Sex sex, LocalDate birthDate) {
+    public static Patient register(
+        UUID tenantId, UUID ownerId, UUID speciesId, UUID breedId, String name, Sex sex, LocalDate birthDate
+    ) {
         Patient patient = new Patient();
+        patient.tenantId = tenantId;
         patient.ownerId = ownerId;
         patient.speciesId = speciesId;
         patient.breedId = breedId;

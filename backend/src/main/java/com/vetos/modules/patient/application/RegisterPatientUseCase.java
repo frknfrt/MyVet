@@ -28,7 +28,8 @@ public class RegisterPatientUseCase {
             .orElseThrow(() -> new OwnerNotFoundException(command.ownerId()));
 
         Patient patient = Patient.register(
-            owner.getId(), command.speciesId(), command.breedId(), command.name(), command.sex(), command.birthDate()
+            owner.getTenantId(), owner.getId(), command.speciesId(), command.breedId(),
+            command.name(), command.sex(), command.birthDate()
         );
         patient.updateDetails(
             command.color(), command.temperament(), command.distinguishingMarks(), command.aggressive(),

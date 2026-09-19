@@ -3,6 +3,7 @@ package com.vetos.modules.patient.application;
 import com.vetos.modules.patient.application.dto.RecordConsentCommand;
 import com.vetos.modules.patient.domain.ConsentRecord;
 import com.vetos.modules.patient.domain.ConsentRecordRepository;
+import com.vetos.modules.patient.domain.Owner;
 import com.vetos.modules.patient.domain.OwnerRepository;
 import com.vetos.modules.patient.domain.exception.OwnerNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -20,10 +21,12 @@ public class RecordConsentUseCase {
 
     @Transactional
     public UUID execute(RecordConsentCommand command) {
-        ownerRepository.findById(command.ownerId())
+        Owner owner = ownerRepository.findById(command.ownerId())
             .orElseThrow(() -> new OwnerNotFoundException(command.ownerId()));
 
-        ConsentRecord record = ConsentRecord.grant(command.ownerId(), command.consentType(), command.ipAddress());
+        ConsentRecord record = ConsentRecord.grant(
+            owner.getTenantId(), command.ownerId(), command.consentType(), command.ipAddress()
+        );
         return consentRecordRepository.save(record).getId();
     }
 }

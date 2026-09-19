@@ -18,6 +18,10 @@ public class ConsentRecord {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @org.hibernate.annotations.TenantId
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
+
     @Column(name = "owner_id", nullable = false)
     private UUID ownerId;
 
@@ -37,8 +41,9 @@ public class ConsentRecord {
     @Column(name = "revoked_at")
     private Instant revokedAt;
 
-    public static ConsentRecord grant(UUID ownerId, ConsentType consentType, String ipAddress) {
+    public static ConsentRecord grant(UUID tenantId, UUID ownerId, ConsentType consentType, String ipAddress) {
         ConsentRecord record = new ConsentRecord();
+        record.tenantId = tenantId;
         record.ownerId = ownerId;
         record.consentType = consentType;
         record.granted = true;

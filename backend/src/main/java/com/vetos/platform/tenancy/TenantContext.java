@@ -28,6 +28,16 @@ public final class TenantContext {
         return tenantId;
     }
 
+    /**
+     * current() ile ayni degeri doner ama context bossa firlatmak yerine null
+     * doner. SADECE "kiraci var mi?" sorusunu sormasi gereken altyapi kodu
+     * icin (TenantContextIdentifierResolver, koprulme birim testleri) --
+     * use-case katmani her zaman current() kullanmalidir.
+     */
+    public static UUID currentOrNull() {
+        return CURRENT_TENANT.get();
+    }
+
     public static void clear() {
         CURRENT_TENANT.remove();
     }
