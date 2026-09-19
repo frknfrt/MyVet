@@ -24,6 +24,15 @@ spring:
       max-file-size: 15MB
       max-request-size: 15MB
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
 app:
   # Davet e-postasindaki kabul linki gibi frontend'e donen URL'ler icin.
   # Prod'da FRONTEND_BASE_URL env degiskeniyle mutlaka override edilmeli.
