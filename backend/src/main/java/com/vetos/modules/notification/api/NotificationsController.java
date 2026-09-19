@@ -65,7 +65,7 @@ public class NotificationsController {
 
     @PostMapping("/logs/{id}/retry")
     public void retry(@PathVariable UUID id) {
-        retryNotificationUseCase.execute(id);
+        retryNotificationUseCase.execute(TenantContext.current(), id);
     }
 
     @PostMapping("/campaigns/send")

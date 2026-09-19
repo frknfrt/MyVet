@@ -18,9 +18,16 @@ public class RetryNotificationUseCase {
     private final NotificationLogRepository notificationLogRepository;
     private final NotificationSendExecutor notificationSendExecutor;
 
+    /**
+     * NotificationLog @TenantId DISINDA tutuluyor (tasarim dokumani S6) --
+     * bu yuzden kiraci kontrolu ELLE yapilir. Baska kiracinin kaydi,
+     * mevcut NotificationLogNotFoundException (404) ile "yok" gibi gorunur;
+     * var oldugu bile sizdirilmaz.
+     */
     @Transactional
-    public void execute(UUID logId) {
+    public void execute(UUID tenantId, UUID logId) {
         NotificationLog log = notificationLogRepository.findById(logId)
+            .filter(l -> l.getTenantId().equals(tenantId))
             .orElseThrow(() -> new NotificationLogNotFoundException(logId));
         log.markRetrying();
         notificationLogRepository.save(log);
