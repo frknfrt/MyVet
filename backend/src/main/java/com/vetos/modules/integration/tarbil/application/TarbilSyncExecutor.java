@@ -39,7 +39,7 @@ class TarbilSyncExecutor {
         if (outcome.success()) {
             syncLog.markSynced();
         } else {
-            syncLog.markFailed();
+            syncLog.markFailed(null);
             log.warn("TARBIL senkronu basarisiz: logId={}, sebep={}", logId, outcome.message());
         }
         tarbilSyncLogRepository.save(syncLog);

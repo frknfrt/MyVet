@@ -3,6 +3,7 @@ package com.vetos.modules.integration.tarbil.application;
 import com.vetos.modules.integration.tarbil.domain.TarbilSyncLog;
 import com.vetos.modules.integration.tarbil.domain.TarbilSyncLogRepository;
 import com.vetos.modules.integration.tarbil.domain.TarbilSyncType;
+import com.vetos.platform.tenancy.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +21,10 @@ public class QueueTarbilSyncUseCase {
 
     @Transactional
     public UUID execute(UUID patientId, TarbilSyncType syncType, String payload) {
-        TarbilSyncLog log = tarbilSyncLogRepository.save(TarbilSyncLog.queue(patientId, syncType, payload));
+        // Cagiranlar (PatientIdentificationUpdatedEventListener, VaccinationRecordedEventListener)
+        // her zaman authenticate edilmis bir HTTP istegi icindeki senkron @EventListener'lardan
+        // cagriliyor -- TenantContext zaten kurulu.
+        TarbilSyncLog log = tarbilSyncLogRepository.save(TarbilSyncLog.queue(TenantContext.current(), patientId, syncType, payload));
         UUID logId = log.getId();
 
         // Cagiran kod (patient/encounter event listener'lari) genelde bir ust

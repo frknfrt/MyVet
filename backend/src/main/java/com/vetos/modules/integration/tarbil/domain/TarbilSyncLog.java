@@ -18,6 +18,9 @@ public class TarbilSyncLog {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(name = "tenant_id", nullable = false)
+    private UUID tenantId;
+
     @Column(name = "patient_id", nullable = false)
     private UUID patientId;
 
@@ -35,8 +38,15 @@ public class TarbilSyncLog {
     @Column(name = "attempted_at", nullable = false)
     private Instant attemptedAt;
 
-    public static TarbilSyncLog queue(UUID patientId, TarbilSyncType syncType, String payload) {
+    @Column(name = "attempt_count", nullable = false)
+    private int attemptCount;
+
+    @Column(name = "next_retry_at")
+    private Instant nextRetryAt;
+
+    public static TarbilSyncLog queue(UUID tenantId, UUID patientId, TarbilSyncType syncType, String payload) {
         TarbilSyncLog log = new TarbilSyncLog();
+        log.tenantId = tenantId;
         log.patientId = patientId;
         log.syncType = syncType;
         log.payload = payload;
@@ -50,13 +60,16 @@ public class TarbilSyncLog {
         this.attemptedAt = Instant.now();
     }
 
-    public void markFailed() {
+    public void markFailed(Instant nextRetryAt) {
         this.status = TarbilSyncStatus.FAILED;
         this.attemptedAt = Instant.now();
+        this.attemptCount++;
+        this.nextRetryAt = nextRetryAt;
     }
 
     public void markRetrying() {
         this.status = TarbilSyncStatus.PENDING;
         this.attemptedAt = Instant.now();
+        this.nextRetryAt = null;
     }
 }
