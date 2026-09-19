@@ -2,6 +2,7 @@ package com.vetos.modules.notification.infrastructure.scheduling;
 
 import com.vetos.modules.notification.application.SendAppointmentRemindersUseCase;
 import com.vetos.modules.tenant.domain.TenantLookupPort;
+import com.vetos.platform.tenancy.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -35,6 +36,11 @@ class AppointmentReminderScheduler {
         Instant tomorrowEnd = tomorrowStart.plus(1, ChronoUnit.DAYS);
 
         for (UUID tenantId : tenantLookupPort.findActiveTenantIds()) {
+            // Koprulme kurali: bu is bir HTTP istegi icinde calismiyor, ama
+            // tenantId elimizde. @TenantId'li entity'lere (Patient, Encounter...)
+            // dokunmadan once TenantContext kurulmali -- aksi halde sorgu root
+            // Session'da, yani FILTRESIZ calisir.
+            TenantContext.set(tenantId);
             try {
                 int queued = sendAppointmentRemindersUseCase.execute(tenantId, tomorrowStart, tomorrowEnd);
                 if (queued > 0) {
@@ -42,6 +48,8 @@ class AppointmentReminderScheduler {
                 }
             } catch (Exception e) {
                 log.error("Randevu hatirlatma isi basarisiz: tenantId={}", tenantId, e);
+            } finally {
+                TenantContext.clear();
             }
         }
     }

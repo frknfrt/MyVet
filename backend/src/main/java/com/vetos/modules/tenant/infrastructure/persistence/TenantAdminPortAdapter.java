@@ -18,6 +18,7 @@ import com.vetos.modules.tenant.domain.exception.EmailAlreadyRegisteredConflictE
 import com.vetos.modules.tenant.domain.exception.SubscriptionNotFoundException;
 import com.vetos.modules.tenant.domain.exception.TenantNotFoundException;
 import com.vetos.platform.event.DomainEventPublisher;
+import com.vetos.platform.tenancy.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -127,9 +128,20 @@ class TenantAdminPortAdapter implements TenantAdminPort {
         subscriptionJpaRepository.save(Subscription.startTrial(tenant.getId()));
 
         String passwordHash = passwordEncoder.encode(adminPassword);
-        StaffUser admin = staffUserJpaRepository.save(
-            StaffUser.register(tenant.getId(), branch.getId(), adminFullName, adminEmail, passwordHash, StaffRole.ADMIN)
-        );
+        // Koprulme kurali: sadece StaffUser yazimini sarar. existsByEmail
+        // yukarida, KAPSAM DISINDA kalir -- staff_users.email tum kiracilarda
+        // essiz oldugu icin o kontrol GLOBAL calismak zorunda.
+        final UUID newTenantId = tenant.getId();
+        final UUID newBranchId = branch.getId();
+        StaffUser admin;
+        TenantContext.set(newTenantId);
+        try {
+            admin = staffUserJpaRepository.save(
+                StaffUser.register(newTenantId, newBranchId, adminFullName, adminEmail, passwordHash, StaffRole.ADMIN)
+            );
+        } finally {
+            TenantContext.clear();
+        }
 
         eventPublisher.publish(new ClinicRegisteredEvent(tenant.getId(), branch.getId(), admin.getId()));
 
@@ -167,12 +179,20 @@ class TenantAdminPortAdapter implements TenantAdminPort {
             || staffInviteRepository.existsByEmailAndStatus(email, StaffInviteStatus.PENDING);
     }
 
+    // Koprulme kurali (tasarim dokumani S5): platform admin istegi, TenantContext
+    // kurulu DEGIL. StaffUser artik @TenantId'li -- filtreyi devreye sokmak icin
+    // context elle kurulur.
     private Optional<StaffUser> findBillingContact(UUID tenantId) {
         List<UUID> branchIds = branchJpaRepository.findByTenantId(tenantId).stream().map(Branch::getId).toList();
         if (branchIds.isEmpty()) {
             return Optional.empty();
         }
-        return staffUserJpaRepository.findByBranchIdInAndRole(branchIds, StaffRole.ADMIN).stream().findFirst();
+        TenantContext.set(tenantId);
+        try {
+            return staffUserJpaRepository.findByBranchIdInAndRole(branchIds, StaffRole.ADMIN).stream().findFirst();
+        } finally {
+            TenantContext.clear();
+        }
     }
 
     private TenantAdminOverview toOverview(Tenant tenant) {
