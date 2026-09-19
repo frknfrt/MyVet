@@ -18,6 +18,10 @@ public class InvoiceLine {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @org.hibernate.annotations.TenantId
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
+
     @Column(name = "invoice_id", nullable = false)
     private UUID invoiceId;
 
@@ -53,18 +57,19 @@ public class InvoiceLine {
     private InvoiceLineSource source;
 
     public static InvoiceLine create(
-        UUID invoiceId, String description, int quantity, BigDecimal unitPrice,
+        UUID tenantId, UUID invoiceId, String description, int quantity, BigDecimal unitPrice,
         UUID serviceTypeId, UUID inventoryItemId, InvoiceLineSource source
     ) {
-        return create(invoiceId, description, quantity, unitPrice, BigDecimal.ZERO, BigDecimal.ZERO, serviceTypeId, inventoryItemId, source);
+        return create(tenantId, invoiceId, description, quantity, unitPrice, BigDecimal.ZERO, BigDecimal.ZERO, serviceTypeId, inventoryItemId, source);
     }
 
     public static InvoiceLine create(
-        UUID invoiceId, String description, int quantity, BigDecimal unitPrice,
+        UUID tenantId, UUID invoiceId, String description, int quantity, BigDecimal unitPrice,
         BigDecimal discountAmount, BigDecimal vatRate,
         UUID serviceTypeId, UUID inventoryItemId, InvoiceLineSource source
     ) {
         InvoiceLine line = new InvoiceLine();
+        line.tenantId = tenantId;
         line.invoiceId = invoiceId;
         line.description = description;
         line.quantity = quantity;

@@ -96,7 +96,7 @@ class EInvoiceSubmissionExecutorTest {
         when(eInvoiceSubmissionRepository.findById(submissionId)).thenReturn(Optional.of(submission));
         when(ownerLookupPort.findSummaryById(ownerId)).thenReturn(ownerWithName(ownerId, "hale yilmaz"));
         InvoiceLine line = InvoiceLine.create(
-            invoiceId, "muayene", 1, new BigDecimal("100.00"), BigDecimal.ZERO, new BigDecimal("20"), null, null, InvoiceLineSource.MANUAL
+            UUID.randomUUID(), invoiceId, "muayene", 1, new BigDecimal("100.00"), BigDecimal.ZERO, new BigDecimal("20"), null, null, InvoiceLineSource.MANUAL
         );
         // InvoiceLine.id gercek Hibernate persist'inde uretilir (@GeneratedValue) --
         // burada gercek bir persistence context olmadigi icin elle veriliyor,

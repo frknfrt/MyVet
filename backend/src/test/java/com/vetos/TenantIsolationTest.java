@@ -11,6 +11,14 @@ import com.vetos.modules.patient.domain.Sex;
 import com.vetos.modules.patient.domain.SpeciesRepository;
 import com.vetos.modules.billing.domain.CashRegisterSession;
 import com.vetos.modules.billing.domain.CashRegisterSessionRepository;
+import com.vetos.modules.billing.domain.Invoice;
+import com.vetos.modules.billing.domain.InvoiceRepository;
+import com.vetos.modules.billing.domain.InvoiceLine;
+import com.vetos.modules.billing.domain.InvoiceLineRepository;
+import com.vetos.modules.billing.domain.InvoiceLineSource;
+import com.vetos.modules.billing.domain.Payment;
+import com.vetos.modules.billing.domain.PaymentRepository;
+import com.vetos.modules.billing.domain.PaymentMethod;
 import com.vetos.modules.inventory.domain.InventoryItem;
 import com.vetos.modules.inventory.domain.InventoryItemRepository;
 import com.vetos.modules.tenant.domain.Branch;
@@ -67,6 +75,9 @@ class TenantIsolationTest extends TenantScopedTestSupport {
     @Autowired private StaffUserRepository staffUserRepository;
     @Autowired private InventoryItemRepository inventoryItemRepository;
     @Autowired private CashRegisterSessionRepository cashRegisterSessionRepository;
+    @Autowired private InvoiceRepository invoiceRepository;
+    @Autowired private InvoiceLineRepository invoiceLineRepository;
+    @Autowired private PaymentRepository paymentRepository;
 
     @PersistenceContext private EntityManager entityManager;
 
@@ -273,5 +284,44 @@ class TenantIsolationTest extends TenantScopedTestSupport {
 
         assertThat(asTenant(a.tenantId(), () -> cashRegisterSessionRepository.findById(sessionBId))).isEmpty();
         assertThat(asTenant(b.tenantId(), () -> cashRegisterSessionRepository.findById(sessionBId))).isPresent();
+    }
+
+    // --- Task 3 ---
+
+    private UUID createInvoice(TenantFixture f) {
+        return asTenant(f.tenantId(), () -> invoiceRepository.save(
+            Invoice.createDraft(f.tenantId(), f.branchId(), f.ownerId(), null, f.staffUserId())
+        ).getId());
+    }
+
+    @Test
+    void invoiceLine_isIsolatedAcrossTenants() {
+        TenantFixture a = createTenantFixture("Izolasyon A");
+        TenantFixture b = createTenantFixture("Izolasyon B");
+        UUID invoiceBId = createInvoice(b);
+
+        asTenantVoid(b.tenantId(), () -> invoiceLineRepository.save(InvoiceLine.create(
+            b.tenantId(), invoiceBId, "Muayene", 1, BigDecimal.valueOf(500), null, null, InvoiceLineSource.MANUAL
+        )));
+
+        // InvoiceLineRepository'de findById yok -- mevcut turetilmis sorgu
+        // (findByInvoiceId) uzerinden dogrulanir; @TenantId turetilmis
+        // sorgulara da uygulanir.
+        assertThat(asTenant(a.tenantId(), () -> invoiceLineRepository.findByInvoiceId(invoiceBId))).isEmpty();
+        assertThat(asTenant(b.tenantId(), () -> invoiceLineRepository.findByInvoiceId(invoiceBId))).hasSize(1);
+    }
+
+    @Test
+    void payment_isIsolatedAcrossTenants() {
+        TenantFixture a = createTenantFixture("Izolasyon A");
+        TenantFixture b = createTenantFixture("Izolasyon B");
+        UUID invoiceBId = createInvoice(b);
+
+        asTenantVoid(b.tenantId(), () -> paymentRepository.save(Payment.record(
+            b.tenantId(), invoiceBId, PaymentMethod.CASH, BigDecimal.valueOf(500), null
+        )));
+
+        assertThat(asTenant(a.tenantId(), () -> paymentRepository.findByInvoiceId(invoiceBId))).isEmpty();
+        assertThat(asTenant(b.tenantId(), () -> paymentRepository.findByInvoiceId(invoiceBId))).hasSize(1);
     }
 }

@@ -41,7 +41,7 @@ public class AutoCaptureEncounterChargeUseCase {
             Invoice.createDraft(TenantContext.current(), staff.branchId(), patient.ownerId(), encounterId, staffUserId)
         );
         invoiceLineRepository.save(InvoiceLine.create(
-            invoice.getId(), "Muayene ucreti (tutari guncelleyin)", 1, BigDecimal.ZERO,
+            invoice.getTenantId(), invoice.getId(), "Muayene ucreti (tutari guncelleyin)", 1, BigDecimal.ZERO,
             null, null, InvoiceLineSource.AUTO_CHARGE_CAPTURE
         ));
         return invoice.getId();

@@ -42,7 +42,7 @@ public class CreateBoardingStayInvoiceUseCase {
         BigDecimal unitPrice = dailyRate != null ? dailyRate : BigDecimal.ZERO;
 
         InvoiceLine line = invoiceLineRepository.save(InvoiceLine.create(
-            invoice.getId(), "Konaklama Bedeli (" + roomLabel + ")", (int) nights, unitPrice,
+            invoice.getTenantId(), invoice.getId(), "Konaklama Bedeli (" + roomLabel + ")", (int) nights, unitPrice,
             null, null, InvoiceLineSource.AUTO_CHARGE_CAPTURE
         ));
         invoice.recalculateTotal(line.getLineTotal());

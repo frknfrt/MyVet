@@ -19,6 +19,10 @@ public class Payment {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @org.hibernate.annotations.TenantId
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
+
     @Column(name = "invoice_id", nullable = false)
     private UUID invoiceId;
 
@@ -35,8 +39,9 @@ public class Payment {
     @Column(name = "paid_at", nullable = false)
     private Instant paidAt;
 
-    public static Payment record(UUID invoiceId, PaymentMethod method, BigDecimal amount, String pspRef) {
+    public static Payment record(UUID tenantId, UUID invoiceId, PaymentMethod method, BigDecimal amount, String pspRef) {
         Payment payment = new Payment();
+        payment.tenantId = tenantId;
         payment.invoiceId = invoiceId;
         payment.method = method;
         payment.amount = amount;

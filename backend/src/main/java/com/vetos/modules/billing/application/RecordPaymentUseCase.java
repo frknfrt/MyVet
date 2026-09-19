@@ -23,7 +23,7 @@ public class RecordPaymentUseCase {
             .orElseThrow(() -> new InvoiceNotFoundException(command.invoiceId()));
 
         Payment payment = paymentRepository.save(Payment.record(
-            invoice.getId(), command.method(), command.amount(), command.pspRef()
+            invoice.getTenantId(), invoice.getId(), command.method(), command.amount(), command.pspRef()
         ));
 
         BigDecimal totalPaid = paymentRepository.findByInvoiceId(invoice.getId()).stream()

@@ -29,7 +29,7 @@ public class AddInvoiceLineUseCase {
         }
 
         InvoiceLine line = invoiceLineRepository.save(InvoiceLine.create(
-            invoice.getId(), command.description(), command.quantity(), command.unitPrice(),
+            invoice.getTenantId(), invoice.getId(), command.description(), command.quantity(), command.unitPrice(),
             command.discountAmount(), command.vatRate(),
             command.serviceTypeId(), command.inventoryItemId(), InvoiceLineSource.MANUAL
         ));
