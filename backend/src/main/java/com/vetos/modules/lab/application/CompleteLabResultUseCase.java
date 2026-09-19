@@ -27,7 +27,10 @@ public class CompleteLabResultUseCase {
 
         labResultItemRepository.deleteByLabResultId(result.getId());
         command.items().forEach(item -> labResultItemRepository.save(
-            LabResultItem.create(result.getId(), item.parameterName(), item.value(), item.unit(), item.referenceRange(), item.flag())
+            LabResultItem.create(
+                result.getTenantId(), result.getId(), item.parameterName(), item.value(),
+                item.unit(), item.referenceRange(), item.flag()
+            )
         ));
     }
 }

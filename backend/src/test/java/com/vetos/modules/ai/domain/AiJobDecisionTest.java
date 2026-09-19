@@ -15,7 +15,7 @@ class AiJobDecisionTest {
     @Test
     void should_recordDecision_when_decidedFirstTime() {
         UUID staffUserId = UUID.randomUUID();
-        AiJobDecision decision = AiJobDecision.createPending(UUID.randomUUID());
+        AiJobDecision decision = AiJobDecision.createPending(UUID.randomUUID(), UUID.randomUUID());
 
         decision.decide(DecisionStatus.ACCEPTED_AS_IS, null, staffUserId);
 
@@ -27,7 +27,7 @@ class AiJobDecisionTest {
 
     @Test
     void should_storeAppliedContent_when_acceptedWithEdits() {
-        AiJobDecision decision = AiJobDecision.createPending(UUID.randomUUID());
+        AiJobDecision decision = AiJobDecision.createPending(UUID.randomUUID(), UUID.randomUUID());
 
         decision.decide(DecisionStatus.ACCEPTED_WITH_EDITS, "Duzenlenmis tedavi plani", UUID.randomUUID());
 
@@ -37,7 +37,7 @@ class AiJobDecisionTest {
 
     @Test
     void should_throwAlreadyRecorded_when_decidingTwice() {
-        AiJobDecision decision = AiJobDecision.createPending(UUID.randomUUID());
+        AiJobDecision decision = AiJobDecision.createPending(UUID.randomUUID(), UUID.randomUUID());
         decision.decide(DecisionStatus.REJECTED, null, UUID.randomUUID());
 
         assertThatThrownBy(() -> decision.decide(DecisionStatus.ACCEPTED_AS_IS, null, UUID.randomUUID()))
@@ -46,7 +46,7 @@ class AiJobDecisionTest {
 
     @Test
     void should_recordFeedback_when_decisionAlreadyMade() {
-        AiJobDecision decision = AiJobDecision.createPending(UUID.randomUUID());
+        AiJobDecision decision = AiJobDecision.createPending(UUID.randomUUID(), UUID.randomUUID());
         decision.decide(DecisionStatus.ACCEPTED_AS_IS, null, UUID.randomUUID());
 
         decision.recordFeedback(AccuracyFeedback.ACCURATE);
@@ -57,7 +57,7 @@ class AiJobDecisionTest {
 
     @Test
     void should_throwNotYetMade_when_recordingFeedbackBeforeDecision() {
-        AiJobDecision decision = AiJobDecision.createPending(UUID.randomUUID());
+        AiJobDecision decision = AiJobDecision.createPending(UUID.randomUUID(), UUID.randomUUID());
 
         assertThatThrownBy(() -> decision.recordFeedback(AccuracyFeedback.ACCURATE))
             .isInstanceOf(AiDecisionNotYetMadeException.class);
@@ -65,7 +65,7 @@ class AiJobDecisionTest {
 
     @Test
     void should_throwAlreadyRecorded_when_recordingFeedbackTwice() {
-        AiJobDecision decision = AiJobDecision.createPending(UUID.randomUUID());
+        AiJobDecision decision = AiJobDecision.createPending(UUID.randomUUID(), UUID.randomUUID());
         decision.decide(DecisionStatus.ACCEPTED_AS_IS, null, UUID.randomUUID());
         decision.recordFeedback(AccuracyFeedback.INACCURATE);
 
@@ -75,7 +75,7 @@ class AiJobDecisionTest {
 
     @Test
     void should_throwMissingAppliedContent_when_acceptedWithEditsHasBlankContent() {
-        AiJobDecision decision = AiJobDecision.createPending(UUID.randomUUID());
+        AiJobDecision decision = AiJobDecision.createPending(UUID.randomUUID(), UUID.randomUUID());
 
         assertThatThrownBy(() -> decision.decide(DecisionStatus.ACCEPTED_WITH_EDITS, "   ", UUID.randomUUID()))
             .isInstanceOf(AiDecisionMissingAppliedContentException.class);

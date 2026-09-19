@@ -79,7 +79,7 @@ class RecordAiJobDecisionUseCaseTest {
     void should_throwAlreadyRecorded_when_decisionAlreadyMade() {
         UUID tenantId = UUID.randomUUID();
         UUID aiJobId = UUID.randomUUID();
-        AiJobDecision existing = AiJobDecision.createPending(aiJobId);
+        AiJobDecision existing = AiJobDecision.createPending(UUID.randomUUID(), aiJobId);
         existing.decide(DecisionStatus.ACCEPTED_AS_IS, null, UUID.randomUUID());
         when(aiJobRepository.findById(aiJobId)).thenReturn(Optional.of(anAiJob(tenantId)));
         when(aiJobDecisionRepository.findByAiJobId(aiJobId)).thenReturn(Optional.of(existing));

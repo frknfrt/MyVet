@@ -18,6 +18,10 @@ public class ImagingRecordFile {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @org.hibernate.annotations.TenantId
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
+
     @Column(name = "imaging_record_id", nullable = false)
     private UUID imagingRecordId;
 
@@ -36,8 +40,9 @@ public class ImagingRecordFile {
     @Column(name = "uploaded_at", nullable = false)
     private Instant uploadedAt;
 
-    public static ImagingRecordFile create(UUID imagingRecordId, String fileName, String contentType, byte[] content) {
+    public static ImagingRecordFile create(UUID tenantId, UUID imagingRecordId, String fileName, String contentType, byte[] content) {
         ImagingRecordFile file = new ImagingRecordFile();
+        file.tenantId = tenantId;
         file.imagingRecordId = imagingRecordId;
         file.fileName = fileName;
         file.contentType = contentType;

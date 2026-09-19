@@ -22,7 +22,7 @@ public class RecordAiJobDecisionUseCase {
             .orElseThrow(() -> new AiJobNotFoundException(command.aiJobId()));
 
         AiJobDecision decision = aiJobDecisionRepository.findByAiJobId(command.aiJobId())
-            .orElseGet(() -> AiJobDecision.createPending(command.aiJobId()));
+            .orElseGet(() -> AiJobDecision.createPending(command.tenantId(), command.aiJobId()));
 
         decision.decide(command.status(), command.appliedContent(), command.decidedByStaffUserId());
         aiJobDecisionRepository.save(decision);

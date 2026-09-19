@@ -18,6 +18,10 @@ public class LabResultFile {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @org.hibernate.annotations.TenantId
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
+
     @Column(name = "lab_result_id", nullable = false)
     private UUID labResultId;
 
@@ -36,8 +40,9 @@ public class LabResultFile {
     @Column(name = "uploaded_at", nullable = false)
     private Instant uploadedAt;
 
-    public static LabResultFile create(UUID labResultId, String fileName, String contentType, byte[] content) {
+    public static LabResultFile create(UUID tenantId, UUID labResultId, String fileName, String contentType, byte[] content) {
         LabResultFile file = new LabResultFile();
+        file.tenantId = tenantId;
         file.labResultId = labResultId;
         file.fileName = fileName;
         file.contentType = contentType;

@@ -17,6 +17,10 @@ public class LabResultItem {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @org.hibernate.annotations.TenantId
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
+
     @Column(name = "lab_result_id", nullable = false)
     private UUID labResultId;
 
@@ -34,8 +38,9 @@ public class LabResultItem {
     @Enumerated(EnumType.STRING)
     private LabValueFlag flag;
 
-    public static LabResultItem create(UUID labResultId, String parameterName, String value, String unit, String referenceRange, LabValueFlag flag) {
+    public static LabResultItem create(UUID tenantId, UUID labResultId, String parameterName, String value, String unit, String referenceRange, LabValueFlag flag) {
         LabResultItem item = new LabResultItem();
+        item.tenantId = tenantId;
         item.labResultId = labResultId;
         item.parameterName = parameterName;
         item.value = value;

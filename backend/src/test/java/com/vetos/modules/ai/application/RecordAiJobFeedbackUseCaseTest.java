@@ -31,7 +31,7 @@ class RecordAiJobFeedbackUseCaseTest {
     @Test
     void should_saveFeedback_when_decisionAlreadyMade() {
         UUID aiJobId = UUID.randomUUID();
-        AiJobDecision decision = AiJobDecision.createPending(aiJobId);
+        AiJobDecision decision = AiJobDecision.createPending(UUID.randomUUID(), aiJobId);
         decision.decide(DecisionStatus.ACCEPTED_AS_IS, null, UUID.randomUUID());
         when(aiJobDecisionRepository.findByAiJobId(aiJobId)).thenReturn(Optional.of(decision));
 
@@ -53,7 +53,7 @@ class RecordAiJobFeedbackUseCaseTest {
     @Test
     void should_throwNotYetMade_when_decisionIsPending() {
         UUID aiJobId = UUID.randomUUID();
-        AiJobDecision pending = AiJobDecision.createPending(aiJobId);
+        AiJobDecision pending = AiJobDecision.createPending(UUID.randomUUID(), aiJobId);
         when(aiJobDecisionRepository.findByAiJobId(aiJobId)).thenReturn(Optional.of(pending));
 
         assertThatThrownBy(() -> useCase.execute(new RecordAiJobFeedbackCommand(aiJobId, AccuracyFeedback.ACCURATE)))

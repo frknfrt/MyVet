@@ -28,6 +28,25 @@ import com.vetos.modules.tenant.domain.StaffUser;
 import com.vetos.modules.tenant.domain.StaffUserRepository;
 import com.vetos.modules.tenant.domain.Tenant;
 import com.vetos.modules.tenant.domain.TenantRepository;
+import com.vetos.modules.imaging.domain.ImagingModality;
+import com.vetos.modules.imaging.domain.ImagingRecord;
+import com.vetos.modules.imaging.domain.ImagingRecordFile;
+import com.vetos.modules.imaging.domain.ImagingRecordFileRepository;
+import com.vetos.modules.imaging.domain.ImagingRecordRepository;
+import com.vetos.modules.lab.domain.LabResult;
+import com.vetos.modules.lab.domain.LabResultFile;
+import com.vetos.modules.lab.domain.LabResultFileRepository;
+import com.vetos.modules.lab.domain.LabResultItem;
+import com.vetos.modules.lab.domain.LabResultItemRepository;
+import com.vetos.modules.lab.domain.LabResultRepository;
+import com.vetos.modules.lab.domain.LabValueFlag;
+import com.vetos.modules.ai.domain.AiJob;
+import com.vetos.modules.ai.domain.AiJobDecision;
+import com.vetos.modules.ai.domain.AiJobDecisionRepository;
+import com.vetos.modules.ai.domain.AiJobRepository;
+import com.vetos.modules.ai.domain.AiTaskType;
+import com.vetos.modules.encounter.domain.Encounter;
+import com.vetos.modules.encounter.domain.EncounterRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.AfterEach;
@@ -78,6 +97,14 @@ class TenantIsolationTest extends TenantScopedTestSupport {
     @Autowired private InvoiceRepository invoiceRepository;
     @Autowired private InvoiceLineRepository invoiceLineRepository;
     @Autowired private PaymentRepository paymentRepository;
+    @Autowired private ImagingRecordRepository imagingRecordRepository;
+    @Autowired private ImagingRecordFileRepository imagingRecordFileRepository;
+    @Autowired private LabResultRepository labResultRepository;
+    @Autowired private LabResultFileRepository labResultFileRepository;
+    @Autowired private LabResultItemRepository labResultItemRepository;
+    @Autowired private AiJobRepository aiJobRepository;
+    @Autowired private AiJobDecisionRepository aiJobDecisionRepository;
+    @Autowired private EncounterRepository encounterRepository;
 
     @PersistenceContext private EntityManager entityManager;
 
@@ -323,5 +350,100 @@ class TenantIsolationTest extends TenantScopedTestSupport {
 
         assertThat(asTenant(a.tenantId(), () -> paymentRepository.findByInvoiceId(invoiceBId))).isEmpty();
         assertThat(asTenant(b.tenantId(), () -> paymentRepository.findByInvoiceId(invoiceBId))).hasSize(1);
+    }
+
+    // --- Task 4 ---
+
+    private UUID createPatient(TenantFixture f) {
+        UUID speciesId = anySpeciesId();
+        return asTenant(f.tenantId(), () -> patientRepository.save(
+            Patient.register(f.tenantId(), f.ownerId(), speciesId, null, "Tekir", Sex.FEMALE, null)
+        ).getId());
+    }
+
+    // NOT: Encounter Task 5'te @TenantId aliyor -- o task bu cagriyi
+    // Encounter.start(tenantId, ...) olarak gunceller.
+    private UUID createEncounter(TenantFixture f, UUID patientId) {
+        return asTenant(f.tenantId(), () -> encounterRepository.save(
+            Encounter.start(patientId, f.staffUserId(), null, null)
+        ).getId());
+    }
+
+    @Test
+    void imagingRecordFile_isIsolatedAcrossTenants() {
+        TenantFixture a = createTenantFixture("Izolasyon A");
+        TenantFixture b = createTenantFixture("Izolasyon B");
+        UUID patientBId = createPatient(b);
+
+        UUID fileBId = asTenant(b.tenantId(), () -> {
+            ImagingRecord record = imagingRecordRepository.save(ImagingRecord.request(
+                b.tenantId(), patientBId, b.staffUserId(), ImagingModality.XRAY, "Toraks", null
+            ));
+            return imagingRecordFileRepository.save(ImagingRecordFile.create(
+                b.tenantId(), record.getId(), "film.png", "image/png", new byte[] {1, 2, 3}
+            )).getId();
+        });
+
+        assertThat(asTenant(a.tenantId(), () -> imagingRecordFileRepository.findById(fileBId))).isEmpty();
+        assertThat(asTenant(b.tenantId(), () -> imagingRecordFileRepository.findById(fileBId))).isPresent();
+    }
+
+    @Test
+    void labResultFile_isIsolatedAcrossTenants() {
+        TenantFixture a = createTenantFixture("Izolasyon A");
+        TenantFixture b = createTenantFixture("Izolasyon B");
+        UUID patientBId = createPatient(b);
+
+        UUID fileBId = asTenant(b.tenantId(), () -> {
+            LabResult result = labResultRepository.save(LabResult.request(
+                b.tenantId(), patientBId, b.staffUserId(), "Hemogram", null
+            ));
+            return labResultFileRepository.save(LabResultFile.create(
+                b.tenantId(), result.getId(), "sonuc.pdf", "application/pdf", new byte[] {1, 2, 3}
+            )).getId();
+        });
+
+        assertThat(asTenant(a.tenantId(), () -> labResultFileRepository.findById(fileBId))).isEmpty();
+        assertThat(asTenant(b.tenantId(), () -> labResultFileRepository.findById(fileBId))).isPresent();
+    }
+
+    @Test
+    void labResultItem_isIsolatedAcrossTenants() {
+        TenantFixture a = createTenantFixture("Izolasyon A");
+        TenantFixture b = createTenantFixture("Izolasyon B");
+        UUID patientBId = createPatient(b);
+
+        UUID labResultBId = asTenant(b.tenantId(), () -> {
+            LabResult result = labResultRepository.save(LabResult.request(
+                b.tenantId(), patientBId, b.staffUserId(), "Hemogram", null
+            ));
+            labResultItemRepository.save(LabResultItem.create(
+                b.tenantId(), result.getId(), "WBC", "12.3", "10^3/uL", "6-17", LabValueFlag.NORMAL
+            ));
+            return result.getId();
+        });
+
+        assertThat(asTenant(a.tenantId(), () -> labResultItemRepository.findByLabResultId(labResultBId))).isEmpty();
+        assertThat(asTenant(b.tenantId(), () -> labResultItemRepository.findByLabResultId(labResultBId))).hasSize(1);
+    }
+
+    @Test
+    void aiJobDecision_isIsolatedAcrossTenants() {
+        TenantFixture a = createTenantFixture("Izolasyon A");
+        TenantFixture b = createTenantFixture("Izolasyon B");
+        UUID patientBId = createPatient(b);
+        UUID encounterBId = createEncounter(b, patientBId);
+
+        UUID aiJobBId = asTenant(b.tenantId(), () -> {
+            AiJob job = aiJobRepository.save(AiJob.create(
+                b.tenantId(), AiTaskType.DIAGNOSIS_SUGGESTION, encounterBId,
+                "oneri metni", "test-model", "v1", b.staffUserId()
+            ));
+            aiJobDecisionRepository.save(AiJobDecision.createPending(b.tenantId(), job.getId()));
+            return job.getId();
+        });
+
+        assertThat(asTenant(a.tenantId(), () -> aiJobDecisionRepository.findByAiJobId(aiJobBId))).isEmpty();
+        assertThat(asTenant(b.tenantId(), () -> aiJobDecisionRepository.findByAiJobId(aiJobBId))).isPresent();
     }
 }

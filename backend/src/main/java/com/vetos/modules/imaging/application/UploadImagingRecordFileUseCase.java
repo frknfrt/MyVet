@@ -1,5 +1,6 @@
 package com.vetos.modules.imaging.application;
 
+import com.vetos.modules.imaging.domain.ImagingRecord;
 import com.vetos.modules.imaging.domain.ImagingRecordFile;
 import com.vetos.modules.imaging.domain.ImagingRecordFileRepository;
 import com.vetos.modules.imaging.domain.ImagingRecordRepository;
@@ -19,10 +20,12 @@ public class UploadImagingRecordFileUseCase {
 
     @Transactional
     public UUID execute(UUID imagingRecordId, String fileName, String contentType, byte[] content) {
-        imagingRecordRepository.findById(imagingRecordId)
+        ImagingRecord record = imagingRecordRepository.findById(imagingRecordId)
             .orElseThrow(() -> new ImagingRecordNotFoundException(imagingRecordId));
 
-        ImagingRecordFile file = ImagingRecordFile.create(imagingRecordId, fileName, contentType, content);
+        ImagingRecordFile file = ImagingRecordFile.create(
+            record.getTenantId(), imagingRecordId, fileName, contentType, content
+        );
         return imagingRecordFileRepository.save(file).getId();
     }
 }

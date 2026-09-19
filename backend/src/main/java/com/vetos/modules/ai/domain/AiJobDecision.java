@@ -21,6 +21,10 @@ public class AiJobDecision {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @org.hibernate.annotations.TenantId
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
+
     @Column(nullable = false, unique = true)
     private UUID aiJobId;
 
@@ -37,8 +41,9 @@ public class AiJobDecision {
     private AccuracyFeedback accuracyFeedback;
     private Instant feedbackAt;
 
-    public static AiJobDecision createPending(UUID aiJobId) {
+    public static AiJobDecision createPending(UUID tenantId, UUID aiJobId) {
         AiJobDecision d = new AiJobDecision();
+        d.tenantId = tenantId;
         d.aiJobId = aiJobId;
         return d;
     }

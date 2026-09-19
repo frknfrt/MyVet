@@ -1,5 +1,6 @@
 package com.vetos.modules.lab.application;
 
+import com.vetos.modules.lab.domain.LabResult;
 import com.vetos.modules.lab.domain.LabResultFile;
 import com.vetos.modules.lab.domain.LabResultFileRepository;
 import com.vetos.modules.lab.domain.LabResultRepository;
@@ -19,10 +20,12 @@ public class UploadLabResultFileUseCase {
 
     @Transactional
     public UUID execute(UUID labResultId, String fileName, String contentType, byte[] content) {
-        labResultRepository.findById(labResultId)
+        LabResult result = labResultRepository.findById(labResultId)
             .orElseThrow(() -> new LabResultNotFoundException(labResultId));
 
-        LabResultFile file = LabResultFile.create(labResultId, fileName, contentType, content);
+        LabResultFile file = LabResultFile.create(
+            result.getTenantId(), labResultId, fileName, contentType, content
+        );
         return labResultFileRepository.save(file).getId();
     }
 }
