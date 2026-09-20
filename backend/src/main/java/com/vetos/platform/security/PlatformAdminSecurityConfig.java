@@ -1,5 +1,6 @@
 package com.vetos.platform.security;
 
+import com.vetos.platform.web.RequestIdFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -54,7 +55,16 @@ public class PlatformAdminSecurityConfig {
                 .requestMatchers("/api/v1/platform-admin/auth/**").permitAll()
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(new PlatformAdminAuthenticationFilter(platformAdminJwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
+            // RequestIdFilter, PlatformAdminAuthenticationFilter'dan SONRA eklenmeli --
+            // Spring Security'nin FilterOrderRegistration'i, ozel bir filtre sinifini
+            // ancak once addFilterBefore/After/At ile eklendikten sonra "bilinen" sayar.
+            // Sira degisirse (RequestIdFilter, henuz bilinmeyen
+            // PlatformAdminAuthenticationFilter.class'a ankorlanirsa) context boot'ta
+            // "does not have a registered order" hatasiyla patlar -- calisma zamanindaki
+            // filtre SIRASI (RequestIdFilter -> PlatformAdminAuthenticationFilter -> ...)
+            // bu swap'tan etkilenmez, sadece KAYIT cagri sirasi degisti.
+            .addFilterBefore(new PlatformAdminAuthenticationFilter(platformAdminJwtTokenProvider), UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(new RequestIdFilter(), PlatformAdminAuthenticationFilter.class);
 
         return http.build();
     }

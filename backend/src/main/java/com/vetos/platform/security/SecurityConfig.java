@@ -50,6 +50,12 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers("/api/v1/public/**").permitAll()
                 .requestMatchers("/actuator/health").permitAll()
+                // metrics/prometheus, tenant'lar arasi operasyonel bilgi sizdiriyor (tum
+                // endpoint envanteri, tum kiracilarin gecikme/hata sayilari, JVM ici bilgi)
+                // -- herhangi bir personel hesabiyla degil, ayri bir scrape kimlik
+                // bilgisiyle korunmali (henuz tasarlanmadi, bkz. takip notu). Su an icin
+                // tamamen kapali.
+                .requestMatchers("/actuator/prometheus", "/actuator/metrics/**").denyAll()
                 .anyRequest().authenticated()
             )
             // RateLimitFilter, JwtAuthenticationFilter'dan SONRA eklenmeli -- Spring Security'nin
