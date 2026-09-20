@@ -29,3 +29,7 @@ platform-admin:
 app:
   frontend-base-url: ${FRONTEND_BASE_URL}
   vetly-site-origin: ${VETLY_SITE_ORIGIN}
+
+logging:
+  level:
+    com.vetos: info
