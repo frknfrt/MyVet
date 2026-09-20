@@ -49,6 +49,13 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/health").permitAll()
                 .anyRequest().authenticated()
             )
+            // RateLimitFilter, JwtAuthenticationFilter'dan SONRA eklenmeli -- Spring Security'nin
+            // FilterOrderRegistration'i, ozel bir filtre sinifini ancak once addFilterBefore/After/At
+            // ile eklendikten sonra "bilinen" sayar. Sira degisirse (RateLimitFilter, henuz
+            // bilinmeyen JwtAuthenticationFilter.class'a ankorlanirsa) context boot'ta
+            // "does not have a registered order" hatasiyla patlar -- calisma zamanindaki
+            // filtre SIRASI (RateLimitFilter -> JwtAuthenticationFilter -> ...) bu swap'tan
+            // etkilenmez, sadece KAYIT cagri sirasi degisti.
             .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(new RateLimitFilter(), JwtAuthenticationFilter.class);
 
