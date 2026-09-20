@@ -21,8 +21,9 @@ public class RetryEInvoiceSubmissionUseCase {
     private final EInvoiceSubmissionExecutor eInvoiceSubmissionExecutor;
 
     @Transactional
-    public void execute(UUID submissionId) {
+    public void execute(UUID tenantId, UUID submissionId) {
         EInvoiceSubmission submission = eInvoiceSubmissionRepository.findById(submissionId)
+            .filter(s -> s.getTenantId().equals(tenantId))
             .orElseThrow(() -> new EInvoiceSubmissionNotFoundException(submissionId));
 
         // PROCESSING: saglayici istegi zaten kabul etti, GIB resmilesme

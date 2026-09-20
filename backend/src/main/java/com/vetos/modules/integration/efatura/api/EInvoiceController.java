@@ -38,6 +38,6 @@ public class EInvoiceController {
 
     @PostMapping("/submissions/{id}/retry")
     public void retry(@PathVariable UUID id) {
-        retryEInvoiceSubmissionUseCase.execute(id);
+        retryEInvoiceSubmissionUseCase.execute(TenantContext.current(), id);
     }
 }
