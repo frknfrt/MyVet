@@ -5,7 +5,7 @@
 CREATE TABLE stored_files (
     id UUID PRIMARY KEY,
     content BYTEA NOT NULL,
-    content_type VARCHAR(255),
+    content_type TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
