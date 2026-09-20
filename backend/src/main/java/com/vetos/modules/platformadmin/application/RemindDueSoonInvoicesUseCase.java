@@ -9,6 +9,7 @@ import com.vetos.modules.tenant.domain.TenantAdminOverview;
 import com.vetos.modules.tenant.domain.TenantAdminPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -24,7 +25,9 @@ public class RemindDueSoonInvoicesUseCase {
     private final PlatformBillingEmailPort platformBillingEmailPort;
     private final PlatformBillingSmsPort platformBillingSmsPort;
 
-    @Transactional
+    // REQUIRES_NEW: disi transaction PLATFORM_FATURALAMA_KILIDI'ni tutuyor -- bagimsiz transaction olmazsa,
+    // ucden biri patlarsa gunun butun faturalama isi (digerleri dahil) sessizce geri alinir.
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void execute(LocalDate today) {
         LocalDate targetDueDate = today.plusDays(REMINDER_DAYS_BEFORE_DUE);
         for (PlatformInvoice invoice : platformInvoiceRepository.findByStatusAndDueDate(PlatformInvoiceStatus.ISSUED, targetDueDate)) {

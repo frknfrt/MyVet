@@ -12,6 +12,7 @@ import com.vetos.modules.tenant.domain.TenantAdminPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -28,7 +29,9 @@ public class GenerateDueInvoicesUseCase {
     private final PlatformBillingEmailPort platformBillingEmailPort;
     private final PlatformBillingSmsPort platformBillingSmsPort;
 
-    @Transactional
+    // REQUIRES_NEW: disi transaction PLATFORM_FATURALAMA_KILIDI'ni tutuyor -- bagimsiz transaction olmazsa,
+    // ucden biri patlarsa gunun butun faturalama isi (digerleri dahil) sessizce geri alinir.
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void execute(LocalDate today) {
         for (BillableSubscription subscription : tenantAdminPort.listSubscriptionsDueOnOrBefore(today)) {
             if (platformInvoiceRepository.findByTenantIdAndPeriodStart(subscription.tenantId(), subscription.renewsAt()).isPresent()) {
