@@ -395,7 +395,7 @@ class TenantIsolationTest extends TenantScopedTestSupport {
                 b.tenantId(), patientBId, b.staffUserId(), ImagingModality.XRAY, "Toraks", null
             ));
             return imagingRecordFileRepository.save(ImagingRecordFile.create(
-                b.tenantId(), record.getId(), "film.png", "image/png", new byte[] {1, 2, 3}
+                b.tenantId(), record.getId(), "film.png", "image/png", 3L, "test-storage-ref"
             )).getId();
         });
 

@@ -34,20 +34,22 @@ public class ImagingRecordFile {
     @Column(name = "file_size", nullable = false)
     private long fileSize;
 
-    @Column(nullable = false, columnDefinition = "bytea")
-    private byte[] content;
+    @Column(name = "storage_ref", nullable = false)
+    private String storageRef;
 
     @Column(name = "uploaded_at", nullable = false)
     private Instant uploadedAt;
 
-    public static ImagingRecordFile create(UUID tenantId, UUID imagingRecordId, String fileName, String contentType, byte[] content) {
+    public static ImagingRecordFile create(
+        UUID tenantId, UUID imagingRecordId, String fileName, String contentType, long fileSize, String storageRef
+    ) {
         ImagingRecordFile file = new ImagingRecordFile();
         file.tenantId = tenantId;
         file.imagingRecordId = imagingRecordId;
         file.fileName = fileName;
         file.contentType = contentType;
-        file.fileSize = content.length;
-        file.content = content;
+        file.fileSize = fileSize;
+        file.storageRef = storageRef;
         file.uploadedAt = Instant.now();
         return file;
     }
