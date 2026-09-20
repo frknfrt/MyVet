@@ -2,6 +2,7 @@ package com.vetos.modules.integration.efatura.infrastructure.persistence;
 
 import com.vetos.modules.integration.efatura.domain.EInvoiceSubmission;
 import com.vetos.modules.integration.efatura.domain.EInvoiceSubmissionRepository;
+import com.vetos.modules.integration.efatura.domain.EInvoiceSubmissionStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -33,5 +34,10 @@ class EInvoiceSubmissionRepositoryAdapter implements EInvoiceSubmissionRepositor
     @Override
     public List<EInvoiceSubmission> claimDueForRetry(Instant now, int limit) {
         return jpaRepository.claimDueForRetry(now, limit);
+    }
+
+    @Override
+    public List<String> findProviderReferencesByStatusAndAttemptedAtBefore(EInvoiceSubmissionStatus status, Instant threshold) {
+        return jpaRepository.findProviderReferencesByStatusAndAttemptedAtBefore(status, threshold);
     }
 }

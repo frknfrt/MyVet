@@ -11,4 +11,5 @@ public interface EInvoiceSubmissionRepository {
     List<EInvoiceSubmission> findByTenantId(UUID tenantId);
     Optional<EInvoiceSubmission> findByProviderReference(String providerReference);
     List<EInvoiceSubmission> claimDueForRetry(Instant now, int limit);
+    List<String> findProviderReferencesByStatusAndAttemptedAtBefore(EInvoiceSubmissionStatus status, Instant threshold);
 }

@@ -23,4 +23,10 @@ interface EInvoiceSubmissionJpaRepository extends JpaRepository<EInvoiceSubmissi
         FOR UPDATE SKIP LOCKED
         """, nativeQuery = true)
     List<EInvoiceSubmission> claimDueForRetry(@Param("now") Instant now, @Param("limit") int limit);
+
+    @Query("SELECT s.providerReference FROM EInvoiceSubmission s WHERE s.status = :status AND s.attemptedAt < :threshold")
+    List<String> findProviderReferencesByStatusAndAttemptedAtBefore(
+        @Param("status") com.vetos.modules.integration.efatura.domain.EInvoiceSubmissionStatus status,
+        @Param("threshold") Instant threshold
+    );
 }
