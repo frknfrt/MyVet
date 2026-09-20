@@ -133,6 +133,65 @@ class RateLimitFilterTest {
     }
 
     @Test
+    void should_allowRequests_withinPlatformAdminAuthLimit() throws ServletException, IOException {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        FilterChain chain = mock(FilterChain.class);
+        when(request.getRequestURI()).thenReturn("/api/v1/platform-admin/auth/login");
+        when(request.getContextPath()).thenReturn("");
+        when(request.getRemoteAddr()).thenReturn("10.0.0.40");
+
+        for (int i = 0; i < 10; i++) {
+            filter.doFilter(request, response, chain);
+        }
+
+        verify(chain, times(10)).doFilter(request, response);
+        verify(response, never()).setStatus(429);
+    }
+
+    @Test
+    void should_reject_when_platformAdminAuthLimitExceeded() throws ServletException, IOException {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        FilterChain chain = mock(FilterChain.class);
+        when(request.getRequestURI()).thenReturn("/api/v1/platform-admin/auth/login");
+        when(request.getContextPath()).thenReturn("");
+        when(request.getRemoteAddr()).thenReturn("10.0.0.41");
+        StringWriter body = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(body));
+
+        for (int i = 0; i < 10; i++) {
+            filter.doFilter(request, response, chain);
+        }
+        filter.doFilter(request, response, chain);
+
+        verify(chain, times(10)).doFilter(request, response);
+        verify(response).setStatus(429);
+        assertThat(body.toString()).contains("RATE_LIMITED");
+    }
+
+    @Test
+    void should_trackAuthAndPlatformAdminAuthBuckets_independently_forSameIp() throws ServletException, IOException {
+        HttpServletRequest authRequest = mock(HttpServletRequest.class);
+        HttpServletRequest platformAdminRequest = mock(HttpServletRequest.class);
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        FilterChain chain = mock(FilterChain.class);
+        when(authRequest.getRequestURI()).thenReturn("/api/v1/auth/login");
+        when(authRequest.getContextPath()).thenReturn("");
+        when(authRequest.getRemoteAddr()).thenReturn("10.0.0.42");
+        when(platformAdminRequest.getRequestURI()).thenReturn("/api/v1/platform-admin/auth/login");
+        when(platformAdminRequest.getContextPath()).thenReturn("");
+        when(platformAdminRequest.getRemoteAddr()).thenReturn("10.0.0.42");
+
+        for (int i = 0; i < 10; i++) {
+            filter.doFilter(authRequest, response, chain);
+        }
+        filter.doFilter(platformAdminRequest, response, chain);
+
+        verify(response, never()).setStatus(429);
+    }
+
+    @Test
     void should_allowMoreRequests_forPublicPath_thanAuthPath() throws ServletException, IOException {
         HttpServletRequest request = mock(HttpServletRequest.class);
         HttpServletResponse response = mock(HttpServletResponse.class);

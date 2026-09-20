@@ -27,6 +27,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private final Map<String, Bucket> authBuckets = new ConcurrentHashMap<>();
     private final Map<String, Bucket> publicBuckets = new ConcurrentHashMap<>();
+    private final Map<String, Bucket> platformAdminAuthBuckets = new ConcurrentHashMap<>();
 
     @Override
     protected void doFilterInternal(
@@ -41,6 +42,13 @@ public class RateLimitFilter extends OncePerRequestFilter {
         Bandwidth limit;
         if (path.startsWith("/api/v1/auth/")) {
             buckets = authBuckets;
+            limit = Bandwidth.builder().capacity(10).refillIntervally(10, Duration.ofMinutes(5)).build();
+        } else if (path.startsWith("/api/v1/platform-admin/auth/")) {
+            // Platform superadmin girisi -- en yuksek yetkili yuzey, normal personel
+            // girisiyle ayni siki limit (5dk'da 10) ama AYRI bir bucket havuzunda tutulur
+            // (paylasilan authBuckets kullanilsaydi, iki farkli login sistemine ayni IP'den
+            // gelen trafik birbirinin limitini etkilerdi).
+            buckets = platformAdminAuthBuckets;
             limit = Bandwidth.builder().capacity(10).refillIntervally(10, Duration.ofMinutes(5)).build();
         } else if (path.startsWith("/api/v1/public/")) {
             buckets = publicBuckets;

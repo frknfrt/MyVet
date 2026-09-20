@@ -1,11 +1,13 @@
 package com.vetos.platform.security;
 
+import com.vetos.platform.web.RateLimitFilter;
 import com.vetos.platform.web.RequestIdFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.core.env.Environment;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -15,6 +17,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -41,11 +44,11 @@ public class PlatformAdminSecurityConfig {
 
     @Bean
     @Order(1)
-    public SecurityFilterChain platformAdminSecurityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain platformAdminSecurityFilterChain(HttpSecurity http, Environment env) throws Exception {
         http
             .securityMatcher("/api/v1/platform-admin/**")
             .csrf(AbstractHttpConfigurer::disable)
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .cors(cors -> cors.configurationSource(corsConfigurationSource(env)))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .exceptionHandling(handling -> handling
                 .authenticationEntryPoint(authenticationEntryPoint)
@@ -55,23 +58,28 @@ public class PlatformAdminSecurityConfig {
                 .requestMatchers("/api/v1/platform-admin/auth/**").permitAll()
                 .anyRequest().authenticated()
             )
-            // RequestIdFilter, PlatformAdminAuthenticationFilter'dan SONRA eklenmeli --
-            // Spring Security'nin FilterOrderRegistration'i, ozel bir filtre sinifini
-            // ancak once addFilterBefore/After/At ile eklendikten sonra "bilinen" sayar.
-            // Sira degisirse (RequestIdFilter, henuz bilinmeyen
-            // PlatformAdminAuthenticationFilter.class'a ankorlanirsa) context boot'ta
-            // "does not have a registered order" hatasiyla patlar -- calisma zamanindaki
-            // filtre SIRASI (RequestIdFilter -> PlatformAdminAuthenticationFilter -> ...)
-            // bu swap'tan etkilenmez, sadece KAYIT cagri sirasi degisti.
+            // Kayit sirasi kritik -- Spring Security'nin FilterOrderRegistration'i, ozel
+            // bir filtre sinifini ancak once addFilterBefore/After/At ile eklendikten
+            // sonra "bilinen" sayar. Sira: once PlatformAdminAuthenticationFilter (bilinen
+            // UsernamePasswordAuthenticationFilter.class'a ankorlanir), sonra RateLimitFilter
+            // (artik bilinen PlatformAdminAuthenticationFilter.class'a), sonra RequestIdFilter
+            // (artik bilinen RateLimitFilter.class'a) -- calisma zamani SIRASI ana
+            // SecurityConfig ile birebir ayni: RequestIdFilter -> RateLimitFilter ->
+            // PlatformAdminAuthenticationFilter -> UsernamePasswordAuthenticationFilter.
             .addFilterBefore(new PlatformAdminAuthenticationFilter(platformAdminJwtTokenProvider), UsernamePasswordAuthenticationFilter.class)
-            .addFilterBefore(new RequestIdFilter(), PlatformAdminAuthenticationFilter.class);
+            .addFilterBefore(new RateLimitFilter(), PlatformAdminAuthenticationFilter.class)
+            .addFilterBefore(new RequestIdFilter(), RateLimitFilter.class);
 
         return http.build();
     }
 
-    private CorsConfigurationSource corsConfigurationSource() {
+    CorsConfigurationSource corsConfigurationSource(Environment env) {
+        List<String> origins = new ArrayList<>(List.of(frontendBaseUrl));
+        if (!List.of(env.getActiveProfiles()).contains("prod")) {
+            origins.add("http://localhost:*");
+        }
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("http://localhost:*", frontendBaseUrl));
+        configuration.setAllowedOriginPatterns(origins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
