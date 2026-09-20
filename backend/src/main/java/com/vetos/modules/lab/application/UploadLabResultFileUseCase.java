@@ -5,6 +5,7 @@ import com.vetos.modules.lab.domain.LabResultFile;
 import com.vetos.modules.lab.domain.LabResultFileRepository;
 import com.vetos.modules.lab.domain.LabResultRepository;
 import com.vetos.modules.lab.domain.exception.LabResultNotFoundException;
+import com.vetos.platform.storage.FileStoragePort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,14 +18,16 @@ public class UploadLabResultFileUseCase {
 
     private final LabResultRepository labResultRepository;
     private final LabResultFileRepository labResultFileRepository;
+    private final FileStoragePort fileStoragePort;
 
     @Transactional
     public UUID execute(UUID labResultId, String fileName, String contentType, byte[] content) {
         LabResult result = labResultRepository.findById(labResultId)
             .orElseThrow(() -> new LabResultNotFoundException(labResultId));
 
+        String storageRef = fileStoragePort.store(content, contentType);
         LabResultFile file = LabResultFile.create(
-            result.getTenantId(), labResultId, fileName, contentType, content
+            result.getTenantId(), labResultId, fileName, contentType, content.length, storageRef
         );
         return labResultFileRepository.save(file).getId();
     }

@@ -34,20 +34,22 @@ public class LabResultFile {
     @Column(name = "file_size", nullable = false)
     private long fileSize;
 
-    @Column(nullable = false, columnDefinition = "bytea")
-    private byte[] content;
+    @Column(name = "storage_ref", nullable = false)
+    private String storageRef;
 
     @Column(name = "uploaded_at", nullable = false)
     private Instant uploadedAt;
 
-    public static LabResultFile create(UUID tenantId, UUID labResultId, String fileName, String contentType, byte[] content) {
+    public static LabResultFile create(
+        UUID tenantId, UUID labResultId, String fileName, String contentType, long fileSize, String storageRef
+    ) {
         LabResultFile file = new LabResultFile();
         file.tenantId = tenantId;
         file.labResultId = labResultId;
         file.fileName = fileName;
         file.contentType = contentType;
-        file.fileSize = content.length;
-        file.content = content;
+        file.fileSize = fileSize;
+        file.storageRef = storageRef;
         file.uploadedAt = Instant.now();
         return file;
     }

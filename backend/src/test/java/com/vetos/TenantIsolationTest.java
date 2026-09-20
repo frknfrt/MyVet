@@ -414,7 +414,7 @@ class TenantIsolationTest extends TenantScopedTestSupport {
                 b.tenantId(), patientBId, b.staffUserId(), "Hemogram", null
             ));
             return labResultFileRepository.save(LabResultFile.create(
-                b.tenantId(), result.getId(), "sonuc.pdf", "application/pdf", new byte[] {1, 2, 3}
+                b.tenantId(), result.getId(), "sonuc.pdf", "application/pdf", 3L, "test-storage-ref"
             )).getId();
         });
 
