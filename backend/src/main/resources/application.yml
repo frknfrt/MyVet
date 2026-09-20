@@ -24,6 +24,14 @@ spring:
       max-file-size: 15MB
       max-request-size: 15MB
 
+  task:
+    scheduling:
+      pool:
+        # Varsayilan 1 -- bu dal 3 modulde 4 yeni @Scheduled is ekledi (bazilari
+        # 2 dakikada bir calisiyor), toplam 6 zamanlanmis is oldu. Tek thread'de
+        # yavas bir is digerlerini geciktirir -- havuzu buyutuyoruz.
+        size: 4
+
 management:
   endpoints:
     web:

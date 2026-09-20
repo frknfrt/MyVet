@@ -93,6 +93,7 @@ public class EInvoiceSubmission {
         this.providerReference = providerReference;
         this.failureReason = null;
         this.attemptedAt = Instant.now();
+        this.nextRetryAt = null;
     }
 
     public void markFailed(String reason, Instant nextRetryAt) {

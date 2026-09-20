@@ -43,6 +43,12 @@ class TarbilSyncExecutor {
         if (syncLog == null) {
             return;
         }
+        // Sweep ve elle "Tekrar Dene" ayni kaydi yarissa (claim commit henuz
+        // gorunmeden ikinci okuma eski durumu gorebilir), status PENDING
+        // degilse bu dispatch artik gecerli degil -- mukerrer senkronu onler.
+        if (syncLog.getStatus() != TarbilSyncStatus.PENDING) {
+            return;
+        }
 
         TarbilSyncOutcome outcome = tarbilSyncPort.sync(
             new TarbilSyncRequest(syncLog.getPatientId(), syncLog.getSyncType(), syncLog.getPayload())

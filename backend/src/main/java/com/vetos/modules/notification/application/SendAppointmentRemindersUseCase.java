@@ -41,6 +41,14 @@ public class SendAppointmentRemindersUseCase {
     // katilirsa, bir kiracinin hatasi TUM kiracilarin isini sessizce geri alir (Spring
     // globalRollbackOnParticipationFailure) -- bagimsiz transaction bunu onler, kilit disi transaction askiya
     // alinip devam ettigi icin etkilenmez.
+    // Ikinci, bagimsiz bir sebep: disi transaction'in Hibernate Session'i
+    // TenantContext.set(tenantId)'den ONCE aciliyor (kilit tutan scheduler
+    // metodu @Transactional'a girdigi anda), yani bu Session filtresiz/root
+    // kalir. REQUIRES_NEW her kiraci icin TenantContext.set SONRASI taze bir
+    // Session acar -- @TenantId filtresi bu sayede dogru kiraciya gore
+    // calisir. REQUIRES_NEW olmasa, bu use case'e ileride @TenantId'li bir
+    // entity'ye disi (filtresiz) Session uzerinden dokunan bir kod eklenirse,
+    // sessizce tum kiracilar arasinda sorgu yapardi.
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public int execute(UUID tenantId, Instant rangeStart, Instant rangeEnd) {
         int queued = 0;

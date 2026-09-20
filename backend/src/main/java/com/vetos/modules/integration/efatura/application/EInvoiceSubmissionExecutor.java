@@ -69,6 +69,13 @@ class EInvoiceSubmissionExecutor {
         if (submission == null) {
             return;
         }
+        // Sweep ve elle "Tekrar Dene" ayni kaydi yarissa (claim commit henuz
+        // gorunmeden ikinci okuma eski durumu gorebilir), status PENDING
+        // degilse bu dispatch artik gecerli degil -- mukerrer GIB gonderimini
+        // onler.
+        if (submission.getStatus() != EInvoiceSubmissionStatus.PENDING) {
+            return;
+        }
 
         OwnerSummary owner = ownerLookupPort.findSummaryById(submission.getOwnerId());
 

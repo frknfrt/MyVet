@@ -47,6 +47,13 @@ class NotificationSendExecutor {
         if (notificationLog == null) {
             return;
         }
+        // Sweep ve elle "Tekrar Dene" ayni kaydi yarissa (claim commit henuz
+        // gorunmeden ikinci okuma eski durumu gorebilir), status PENDING
+        // degilse bu dispatch artik gecerli degil -- mukerrer gonderimi
+        // onler.
+        if (notificationLog.getStatus() != NotificationStatus.PENDING) {
+            return;
+        }
 
         String outboundMessage = notificationLog.getMessage();
         if (notificationLog.getChannel() == NotificationChannel.WHATSAPP) {

@@ -40,4 +40,14 @@ class EInvoiceSubmissionRetryTest {
         assertThat(submission.getStatus()).isEqualTo(EInvoiceSubmissionStatus.PENDING);
         assertThat(submission.getNextRetryAt()).isNull();
     }
+
+    @Test
+    void should_clearNextRetryAt_when_markAcceptedByProvider() {
+        EInvoiceSubmission submission = aSubmission();
+        submission.markFailed("hata", Instant.now().plusSeconds(120));
+
+        submission.markAcceptedByProvider("provider-ref-123");
+
+        assertThat(submission.getNextRetryAt()).isNull();
+    }
 }
