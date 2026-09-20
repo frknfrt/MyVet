@@ -6,6 +6,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.MDC;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -40,6 +41,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     );
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                     TenantContext.set(principal.tenantId());
+                    MDC.put("tenantId", principal.tenantId().toString());
                 } catch (io.jsonwebtoken.JwtException | IllegalArgumentException ex) {
                     // Gecersiz/suresi dolmus token: kimlik dogrulanmamis olarak devam et,
                     // korumali endpoint'lerde Spring Security 401 doner.
@@ -48,6 +50,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
         } finally {
             TenantContext.clear();
+            MDC.remove("tenantId");
             SecurityContextHolder.clearContext();
         }
     }

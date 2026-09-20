@@ -141,6 +141,8 @@ server:
 logging:
   level:
     com.vetos: debug
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%X{requestId:-etc.}/%X{tenantId:-sistem}] %logger{36} - %msg%n"
 
 platform-billing:
   # Otomatik kart cekimi yok -- fatura e-posta/SMS bildirimlerinde gosterilen

@@ -1,6 +1,7 @@
 package com.vetos.platform.security;
 
 import com.vetos.platform.web.RateLimitFilter;
+import com.vetos.platform.web.RequestIdFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -59,7 +60,8 @@ public class SecurityConfig {
             // filtre SIRASI (RateLimitFilter -> JwtAuthenticationFilter -> ...) bu swap'tan
             // etkilenmez, sadece KAYIT cagri sirasi degisti.
             .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class)
-            .addFilterBefore(new RateLimitFilter(), JwtAuthenticationFilter.class);
+            .addFilterBefore(new RateLimitFilter(), JwtAuthenticationFilter.class)
+            .addFilterBefore(new RequestIdFilter(), RateLimitFilter.class);
 
         return http.build();
     }
