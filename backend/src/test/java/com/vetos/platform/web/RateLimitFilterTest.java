@@ -27,6 +27,7 @@ class RateLimitFilterTest {
         HttpServletResponse response = mock(HttpServletResponse.class);
         FilterChain chain = mock(FilterChain.class);
         when(request.getRequestURI()).thenReturn("/api/v1/notifications/status");
+        when(request.getContextPath()).thenReturn("");
 
         filter.doFilter(request, response, chain);
 
@@ -40,6 +41,7 @@ class RateLimitFilterTest {
         HttpServletResponse response = mock(HttpServletResponse.class);
         FilterChain chain = mock(FilterChain.class);
         when(request.getRequestURI()).thenReturn("/api/v1/auth/login");
+        when(request.getContextPath()).thenReturn("");
         when(request.getRemoteAddr()).thenReturn("10.0.0.1");
 
         for (int i = 0; i < 10; i++) {
@@ -56,6 +58,7 @@ class RateLimitFilterTest {
         HttpServletResponse response = mock(HttpServletResponse.class);
         FilterChain chain = mock(FilterChain.class);
         when(request.getRequestURI()).thenReturn("/api/v1/auth/login");
+        when(request.getContextPath()).thenReturn("");
         when(request.getRemoteAddr()).thenReturn("10.0.0.2");
         StringWriter body = new StringWriter();
         when(response.getWriter()).thenReturn(new PrintWriter(body));
@@ -72,12 +75,30 @@ class RateLimitFilterTest {
     }
 
     @Test
-    void should_useXForwardedFor_when_present() throws ServletException, IOException {
+    void should_ignoreXForwardedFor_and_useRemoteAddr() throws ServletException, IOException {
         HttpServletRequest request = mock(HttpServletRequest.class);
         HttpServletResponse response = mock(HttpServletResponse.class);
         FilterChain chain = mock(FilterChain.class);
         when(request.getRequestURI()).thenReturn("/api/v1/auth/login");
-        when(request.getHeader("X-Forwarded-For")).thenReturn("203.0.113.5, 10.0.0.1");
+        when(request.getContextPath()).thenReturn("");
+        when(request.getRemoteAddr()).thenReturn("10.0.0.99");
+        lenient().when(request.getHeader("X-Forwarded-For")).thenReturn("203.0.113.5");
+
+        filter.doFilter(request, response, chain);
+
+        verify(request).getRemoteAddr();
+        verify(chain).doFilter(request, response);
+    }
+
+    @Test
+    void should_applyRateLimit_when_authPathIsPercentEncoded() throws ServletException, IOException {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        FilterChain chain = mock(FilterChain.class);
+        // "%61" decodes to "a" -> "/api/v1/%61uth/login" decodes to "/api/v1/auth/login"
+        when(request.getRequestURI()).thenReturn("/api/v1/%61uth/login");
+        when(request.getContextPath()).thenReturn("");
+        when(request.getRemoteAddr()).thenReturn("10.0.0.50");
         StringWriter body = new StringWriter();
         lenient().when(response.getWriter()).thenReturn(new PrintWriter(body));
 
@@ -86,8 +107,8 @@ class RateLimitFilterTest {
         }
         filter.doFilter(request, response, chain);
 
+        verify(chain, times(10)).doFilter(request, response);
         verify(response).setStatus(429);
-        verify(request, never()).getRemoteAddr();
     }
 
     @Test
@@ -97,8 +118,10 @@ class RateLimitFilterTest {
         HttpServletResponse response = mock(HttpServletResponse.class);
         FilterChain chain = mock(FilterChain.class);
         when(requestA.getRequestURI()).thenReturn("/api/v1/auth/login");
+        when(requestA.getContextPath()).thenReturn("");
         when(requestA.getRemoteAddr()).thenReturn("10.0.0.10");
         when(requestB.getRequestURI()).thenReturn("/api/v1/auth/login");
+        when(requestB.getContextPath()).thenReturn("");
         when(requestB.getRemoteAddr()).thenReturn("10.0.0.20");
 
         for (int i = 0; i < 10; i++) {
@@ -115,6 +138,7 @@ class RateLimitFilterTest {
         HttpServletResponse response = mock(HttpServletResponse.class);
         FilterChain chain = mock(FilterChain.class);
         when(request.getRequestURI()).thenReturn("/api/v1/public/appointments");
+        when(request.getContextPath()).thenReturn("");
         when(request.getRemoteAddr()).thenReturn("10.0.0.30");
 
         for (int i = 0; i < 60; i++) {

@@ -7,6 +7,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.util.UrlPathHelper;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -22,6 +23,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class RateLimitFilter extends OncePerRequestFilter {
 
+    private static final UrlPathHelper PATH_HELPER = new UrlPathHelper();
+
     private final Map<String, Bucket> authBuckets = new ConcurrentHashMap<>();
     private final Map<String, Bucket> publicBuckets = new ConcurrentHashMap<>();
 
@@ -29,7 +32,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
     protected void doFilterInternal(
         HttpServletRequest request, HttpServletResponse response, FilterChain filterChain
     ) throws ServletException, IOException {
-        String path = request.getRequestURI();
+        // getRequestURI() ham (decode edilmemis) degeri dondurur; Spring Security/MVC ise
+        // decode edilmis path uzerinden eslesme yapar. Percent-encoding ile (orn. "/api/v1/%61uth/login")
+        // bu filtreyi bypass edip gercek handler'a ulasmayi engellemek icin decode edilmis,
+        // uygulama-goreli path kullanilir.
+        String path = PATH_HELPER.getPathWithinApplication(request);
         Map<String, Bucket> buckets;
         Bandwidth limit;
         if (path.startsWith("/api/v1/auth/")) {
@@ -43,7 +50,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
             return;
         }
 
-        String clientIp = clientIp(request);
+        // X-Forwarded-For KASITLI OLARAK kullanilmiyor -- bu dagitimda dogrulanmis/guvenilir bir ters proxy
+        // konfigurasyonu (server.forward-headers-strategy) yok, bu yuzden bu header istemci tarafindan serbestce
+        // sahteleitilebilir (rate limit'i tamamen bypass eder + sinirsiz bellek buyumesi). Guvenilir bir proxy
+        // netlestiginde (bkz. prod platform karari) buraya donulup dogru sekilde eklenebilir.
+        String clientIp = request.getRemoteAddr();
         Bucket bucket = buckets.computeIfAbsent(clientIp, ip -> Bucket.builder().addLimit(limit).build());
         if (bucket.tryConsume(1)) {
             filterChain.doFilter(request, response);
@@ -52,14 +63,5 @@ public class RateLimitFilter extends OncePerRequestFilter {
             response.setContentType("application/json");
             response.getWriter().write("{\"errorCode\":\"RATE_LIMITED\",\"message\":\"Cok fazla istek, lutfen biraz sonra tekrar deneyin\"}");
         }
-    }
-
-    /** Render gibi ters proxy arkasindaki platformlarda gercek istemci IP'si X-Forwarded-For'da gelir. */
-    private String clientIp(HttpServletRequest request) {
-        String forwardedFor = request.getHeader("X-Forwarded-For");
-        if (forwardedFor != null && !forwardedFor.isBlank()) {
-            return forwardedFor.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
     }
 }
