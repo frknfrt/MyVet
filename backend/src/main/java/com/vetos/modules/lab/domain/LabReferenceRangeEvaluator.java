@@ -32,33 +32,48 @@ public final class LabReferenceRangeEvaluator {
         Double numericValue = parseLeadingNumber(value);
         if (numericValue == null) return null;
 
+        LabValueFlag rangeResult = evaluateAgainstRange(numericValue, referenceRange);
+        if (rangeResult != null) return rangeResult;
+
+        LabValueFlag maxOnlyResult = evaluateAgainstMaxOnly(numericValue, referenceRange);
+        if (maxOnlyResult != null) return maxOnlyResult;
+
+        return evaluateAgainstMinOnly(numericValue, referenceRange);
+    }
+
+    /** "min-max" bicimindeki referans araligina karsi degerlendirir; format eslesmezse null doner. */
+    private static LabValueFlag evaluateAgainstRange(double numericValue, String referenceRange) {
         Matcher rangeMatcher = RANGE.matcher(referenceRange);
-        if (rangeMatcher.matches()) {
-            double min = parseStrict(rangeMatcher.group(1));
-            double max = parseStrict(rangeMatcher.group(2));
-            if (min > max) {
-                double tmp = min;
-                min = max;
-                max = tmp;
-            }
-            if (numericValue < min) return LabValueFlag.LOW;
-            if (numericValue > max) return LabValueFlag.HIGH;
-            return LabValueFlag.NORMAL;
-        }
+        if (!rangeMatcher.matches()) return null;
 
+        double min = parseStrict(rangeMatcher.group(1));
+        double max = parseStrict(rangeMatcher.group(2));
+        if (min > max) {
+            double tmp = min;
+            min = max;
+            max = tmp;
+        }
+        if (numericValue < min) return LabValueFlag.LOW;
+        if (numericValue > max) return LabValueFlag.HIGH;
+        return LabValueFlag.NORMAL;
+    }
+
+    /** "<=max" bicimindeki (sadece ust sinir) referans araligina karsi degerlendirir; format eslesmezse null doner. */
+    private static LabValueFlag evaluateAgainstMaxOnly(double numericValue, String referenceRange) {
         Matcher maxMatcher = MAX_ONLY.matcher(referenceRange);
-        if (maxMatcher.matches()) {
-            double max = parseStrict(maxMatcher.group(1));
-            return numericValue > max ? LabValueFlag.HIGH : LabValueFlag.NORMAL;
-        }
+        if (!maxMatcher.matches()) return null;
 
+        double max = parseStrict(maxMatcher.group(1));
+        return numericValue > max ? LabValueFlag.HIGH : LabValueFlag.NORMAL;
+    }
+
+    /** ">=min" bicimindeki (sadece alt sinir) referans araligina karsi degerlendirir; format eslesmezse null doner. */
+    private static LabValueFlag evaluateAgainstMinOnly(double numericValue, String referenceRange) {
         Matcher minMatcher = MIN_ONLY.matcher(referenceRange);
-        if (minMatcher.matches()) {
-            double min = parseStrict(minMatcher.group(1));
-            return numericValue < min ? LabValueFlag.LOW : LabValueFlag.NORMAL;
-        }
+        if (!minMatcher.matches()) return null;
 
-        return null;
+        double min = parseStrict(minMatcher.group(1));
+        return numericValue < min ? LabValueFlag.LOW : LabValueFlag.NORMAL;
     }
 
     private static double parseStrict(String raw) {

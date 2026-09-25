@@ -47,6 +47,10 @@ public class PlatformAdminSecurityConfig {
     public SecurityFilterChain platformAdminSecurityFilterChain(HttpSecurity http, Environment env) throws Exception {
         http
             .securityMatcher("/api/v1/platform-admin/**")
+            // CSRF korumasi kasitli olarak kapali -- ayni gerekce SecurityConfig.java'daki
+            // ile birebir ayni: STATELESS oturum + Authorization header'indaki JWT,
+            // tarayicinin otomatik ekleyecegi bir ambient kimlik bilgisi (cookie/oturum)
+            // birakmiyor, CSRF'in istismar edecegi bir sey yok.
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource(env)))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

@@ -24,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -67,10 +68,14 @@ class InitiateInvoiceCheckoutUseCaseTest {
         when(platformInvoiceRepository.findById(invoice.getId())).thenReturn(Optional.of(invoice));
         when(tenantAdminPort.getOverview(tenantId)).thenReturn(overview(tenantId));
         when(tenantAdminPort.findBillingContactEmail(tenantId)).thenReturn(Optional.empty());
+        CheckoutSession expectedSession = new CheckoutSession("https://sandbox.iyzipay.com/pay/abc", "abc");
         when(paymentGatewayPort.initializeCheckout(eq(invoice.getId().toString()), any(), any(), eq("destek@myvet.app")))
-            .thenReturn(new CheckoutSession("https://sandbox.iyzipay.com/pay/abc", "abc"));
+            .thenReturn(expectedSession);
 
-        useCase.execute(tenantId, invoice.getId());
+        CheckoutSession result = useCase.execute(tenantId, invoice.getId());
+
+        assertThat(result).isEqualTo(expectedSession);
+        verify(paymentGatewayPort).initializeCheckout(invoice.getId().toString(), invoice.getAmount(), "Test Klinik", "destek@myvet.app");
     }
 
     @Test

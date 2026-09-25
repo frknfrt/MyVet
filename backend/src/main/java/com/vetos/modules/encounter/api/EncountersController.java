@@ -97,7 +97,7 @@ public class EncountersController {
 
     @PostMapping("/{id}/finalize")
     @PreAuthorize("hasAnyRole('VET', 'ADMIN')")
-    public void finalize(@PathVariable UUID id) {
+    public void finalizeEncounter(@PathVariable UUID id) {
         finalizeEncounterUseCase.execute(id);
     }
 

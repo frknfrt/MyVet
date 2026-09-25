@@ -44,6 +44,15 @@ class ClaudeSoapGenerationAdapter implements SoapGenerationPort {
     private static final String ANTHROPIC_VERSION = "2023-06-01";
     private static final String TOOL_NAME = "structure_soap_note";
 
+    // SOAP alan adlari + JSON semasinda tekrar eden "string" tip literali --
+    // hem input_schema'yi kurarken hem de Claude'un yanitini okurken kullanilir,
+    // tek yerden degistirilebilsin diye sabitlendi.
+    private static final String FIELD_SUBJECTIVE = "subjective";
+    private static final String FIELD_OBJECTIVE = "objective";
+    private static final String FIELD_ASSESSMENT = "assessment";
+    private static final String FIELD_PLAN = "plan";
+    private static final String JSON_TYPE_STRING = "string";
+
     private final String apiKey;
     private final String model;
     private final RestClient restClient;
@@ -95,12 +104,12 @@ class ClaudeSoapGenerationAdapter implements SoapGenerationPort {
         Map<String, Object> inputSchema = Map.of(
             "type", "object",
             "properties", Map.of(
-                "subjective", Map.of("type", "string"),
-                "objective", Map.of("type", "string"),
-                "assessment", Map.of("type", "string"),
-                "plan", Map.of("type", "string")
+                FIELD_SUBJECTIVE, Map.of("type", JSON_TYPE_STRING),
+                FIELD_OBJECTIVE, Map.of("type", JSON_TYPE_STRING),
+                FIELD_ASSESSMENT, Map.of("type", JSON_TYPE_STRING),
+                FIELD_PLAN, Map.of("type", JSON_TYPE_STRING)
             ),
-            "required", List.of("subjective", "objective", "assessment", "plan")
+            "required", List.of(FIELD_SUBJECTIVE, FIELD_OBJECTIVE, FIELD_ASSESSMENT, FIELD_PLAN)
         );
         Map<String, Object> tool = Map.of(
             "name", TOOL_NAME,
@@ -137,10 +146,10 @@ class ClaudeSoapGenerationAdapter implements SoapGenerationPort {
         }
 
         return new SoapDraft(
-            fields.path("subjective").asText(""),
-            fields.path("objective").asText(""),
-            fields.path("assessment").asText(""),
-            fields.path("plan").asText(""),
+            fields.path(FIELD_SUBJECTIVE).asText(""),
+            fields.path(FIELD_OBJECTIVE).asText(""),
+            fields.path(FIELD_ASSESSMENT).asText(""),
+            fields.path(FIELD_PLAN).asText(""),
             true
         );
     }

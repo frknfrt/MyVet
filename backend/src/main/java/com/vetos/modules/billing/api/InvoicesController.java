@@ -41,6 +41,12 @@ import java.util.UUID;
 @PreAuthorize("hasAnyRole('RECEPTIONIST', 'ADMIN')")
 public class InvoicesController {
 
+    // CSV disa aktarim uc noktalarinin (4 rapor) hepsinde ayni content-type;
+    // rapor basliklarindaki "Toplam Ciro" da 3 rapor arasinda tekrar ediyor --
+    // tek yerden degistirilebilsin diye sabitlendi.
+    private static final String CSV_CONTENT_TYPE = "text/csv; charset=UTF-8";
+    private static final String HEADER_TOPLAM_CIRO = "Toplam Ciro";
+
     private final ListInvoicesUseCase listInvoicesUseCase;
     private final GetInvoiceUseCase getInvoiceUseCase;
     private final GetInvoiceByBoardingStayUseCase getInvoiceByBoardingStayUseCase;
@@ -120,7 +126,7 @@ public class InvoicesController {
         );
         return ResponseEntity.ok()
             .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=ciro-raporu.csv")
-            .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+            .contentType(MediaType.parseMediaType(CSV_CONTENT_TYPE))
             .body(csv);
     }
 
@@ -147,13 +153,13 @@ public class InvoicesController {
         Instant[] range = resolveRange(from, to);
         List<ProductSalesLine> lines = getProductSalesReportUseCase.execute(TenantContext.current(), range[0], range[1], branchId, status);
         String csv = CsvWriter.toCsv(
-            List.of("Ürün / Hizmet", "Adet", "Toplam Ciro"),
+            List.of("Ürün / Hizmet", "Adet", HEADER_TOPLAM_CIRO),
             lines,
             List.of(ProductSalesLine::description, l -> String.valueOf(l.totalQuantity()), l -> l.totalRevenue().toPlainString())
         );
         return ResponseEntity.ok()
             .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=urun-hizmet-satis-raporu.csv")
-            .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+            .contentType(MediaType.parseMediaType(CSV_CONTENT_TYPE))
             .body(csv);
     }
 
@@ -180,7 +186,7 @@ public class InvoicesController {
         Instant[] range = resolveRange(from, to);
         List<StaffPerformanceLine> lines = getStaffPerformanceReportUseCase.execute(TenantContext.current(), range[0], range[1], branchId, status);
         String csv = CsvWriter.toCsv(
-            List.of("Hekim", "Fatura Sayısı", "Toplam Ciro", "Ort. Fatura Tutarı"),
+            List.of("Hekim", "Fatura Sayısı", HEADER_TOPLAM_CIRO, "Ort. Fatura Tutarı"),
             lines,
             List.of(
                 StaffPerformanceLine::staffName,
@@ -191,7 +197,7 @@ public class InvoicesController {
         );
         return ResponseEntity.ok()
             .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=hekim-performans-raporu.csv")
-            .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+            .contentType(MediaType.parseMediaType(CSV_CONTENT_TYPE))
             .body(csv);
     }
 
@@ -216,7 +222,7 @@ public class InvoicesController {
         Instant[] range = resolveRange(from, to);
         List<BranchComparisonLine> lines = getBranchComparisonReportUseCase.execute(TenantContext.current(), range[0], range[1], status);
         String csv = CsvWriter.toCsv(
-            List.of("Şube", "Fatura Sayısı", "Toplam Ciro", "Tahsil Edilen"),
+            List.of("Şube", "Fatura Sayısı", HEADER_TOPLAM_CIRO, "Tahsil Edilen"),
             lines,
             List.of(
                 BranchComparisonLine::branchName,
@@ -227,7 +233,7 @@ public class InvoicesController {
         );
         return ResponseEntity.ok()
             .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=sube-karsilastirma-raporu.csv")
-            .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+            .contentType(MediaType.parseMediaType(CSV_CONTENT_TYPE))
             .body(csv);
     }
 

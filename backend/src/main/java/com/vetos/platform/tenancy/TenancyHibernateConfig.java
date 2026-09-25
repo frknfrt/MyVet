@@ -18,6 +18,6 @@ class TenancyHibernateConfig {
 
     @Bean
     HibernatePropertiesCustomizer tenantIdentifierResolverCustomizer(TenantContextIdentifierResolver resolver) {
-        return props -> props.put(org.hibernate.cfg.AvailableSettings.MULTI_TENANT_IDENTIFIER_RESOLVER, resolver);
+        return props -> props.put(org.hibernate.cfg.MultiTenancySettings.MULTI_TENANT_IDENTIFIER_RESOLVER, resolver);
     }
 }

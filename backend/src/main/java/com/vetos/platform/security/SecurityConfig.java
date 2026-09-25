@@ -39,6 +39,13 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, Environment env) throws Exception {
         http
+            // CSRF korumasi kasitli olarak kapali: CSRF saldirilari, tarayicinin
+            // cross-site istege otomatik ekledigi cookie/oturum kimlik bilgisine
+            // dayanir. Bu API STATELESS (asagida) ve kimlik dogrulamasi Authorization
+            // header'indaki JWT ile yapiliyor -- tarayici bunu otomatik eklemez,
+            // saldirganin sayfasi bunu okuyup elle eklemeden CSRF'in istismar edecegi
+            // bir ambient kimlik bilgisi yok. Cookie-tabanli oturum eklenirse bu karar
+            // yeniden degerlendirilmeli.
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource(env)))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
