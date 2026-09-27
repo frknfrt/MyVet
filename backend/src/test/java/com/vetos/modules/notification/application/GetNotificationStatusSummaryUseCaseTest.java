@@ -19,7 +19,7 @@ import static org.mockito.Mockito.when;
  * Ayarlar > SMS/WhatsApp ekranindaki rozetler daha once tek bir "connected"
  * bayragina dayaniyordu (en az bir kanal gercekse true) -- bu yuzden SMS
  * (Ileti Merkezi) gercekten baglandiktan sonra bile arayuz hala "SMS mock"
- * diyordu, cunku WhatsApp (Twilio) zaten gercekti ve tek bayrak zaten true'ydu.
+ * diyordu, cunku WhatsApp (Meta) zaten gercekti ve tek bayrak zaten true'ydu.
  * Bu test iki kanalin BAGIMSIZ raporlandigini dogrular.
  */
 @ExtendWith(MockitoExtension.class)

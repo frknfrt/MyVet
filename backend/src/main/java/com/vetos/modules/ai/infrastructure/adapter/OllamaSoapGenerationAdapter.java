@@ -17,7 +17,7 @@ import java.util.Map;
 
 /**
  * Lokal Ollama uzerinden gercek LLM cagrisi (OLLAMA_BASE_URL bos ise eski
- * mock davranisina duser -- TwilioNotificationAdapter'daki "kimlik bilgisi/URL
+ * mock davranisina duser -- NotificationProviderAdapter'daki "kimlik bilgisi/URL
  * yoksa simule et" ile ayni desen, bkz. implementation-plan.md). Ollama disinda
  * bulut tabanli bir saglayici (orn. Anthropic) eklenmek istendiginde,
  * SoapGenerationPort sozlesmesi ve cagiran kod (GenerateSoapDraftUseCase) hic

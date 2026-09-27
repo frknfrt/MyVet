@@ -57,8 +57,8 @@ class NotificationSendExecutor {
 
         String outboundMessage = notificationLog.getMessage();
         if (notificationLog.getChannel() == NotificationChannel.WHATSAPP) {
-            // WhatsApp'ta gercek gonderim onayli bir Content Template uzerinden yapilir
-            // (bkz. TwilioNotificationAdapter) ve sablonun tek degiskeni butun mesaji
+            // WhatsApp'ta gercek gonderim onayli bir Message Template uzerinden yapilir
+            // (bkz. NotificationProviderAdapter) ve sablonun tek degiskeni butun mesaji
             // tasir. Musterinin hangi klinikten yazildigini gorebilmesi icin klinigin
             // adini gonderilecek metnin basina ekliyoruz. NotificationLog'daki mesaj
             // (klinigin duzenledigi sablon metni) burada degistirilmez, sadece iletim

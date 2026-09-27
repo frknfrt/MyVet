@@ -96,27 +96,28 @@ efatura:
     callback-base-url: ${EFATURA_FATURAENTEGRATOR_CALLBACK_BASE_URL:http://localhost:8080}
 
 notification:
-  twilio:
-    # WhatsApp Sandbox icin: TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN bos
-    # birakilirsa gonderim simule edilir (bkz. TwilioNotificationAdapter).
-    # TWILIO_AUTH_SID: API Key kullaniliyorsa (SK... ile baslayan), Account
-    # SID'den (AC...) FARKLI bir Basic Auth kullanici adi gerekir -- bos
-    # birakilirsa TWILIO_ACCOUNT_SID kullanilir (klasik Account SID + Auth
-    # Token modu).
-    account-sid: ${TWILIO_ACCOUNT_SID:}
-    auth-sid: ${TWILIO_AUTH_SID:}
-    auth-token: ${TWILIO_AUTH_TOKEN:}
-    whatsapp-from: ${TWILIO_WHATSAPP_FROM:whatsapp:+14155238886}
-    # Onayli WhatsApp Content Template SID'i (HX... ile baslar). Bos birakilirsa
-    # serbest metin ("Body") gonderilir -- bu YALNIZCA aliciyla acik bir 24 saatlik
-    # "musteri hizmeti penceresi" varken calisir (ornegin sandbox'a "join" mesaji
-    # atildiktan sonraki 24 saat icinde). Pencere kapaliysa Twilio 21654 hatasi
-    # ("ContentSid Required") doner -- bunu kalici cozmek icin Twilio Content
-    # Template Builder'da bir sablon onaylatip SID'ini buraya verin.
-    whatsapp-content-sid: ${TWILIO_WHATSAPP_CONTENT_SID:}
+  meta:
+    # Meta WhatsApp Cloud API (Graph API). META_WHATSAPP_ACCESS_TOKEN/
+    # META_WHATSAPP_PHONE_NUMBER_ID bos birakilirsa gonderim simule edilir
+    # (bkz. NotificationProviderAdapter). access-token, WhatsApp Business
+    # hesabina "whatsapp_business_messaging" izniyle baglanmis bir System
+    # User'in kalici tokeni olmali (App Dashboard'daki gecici test tokeni
+    # ~24 saatte suresi doluyor, sadece yerel gelistirme/test icin uygundur).
+    access-token: ${META_WHATSAPP_ACCESS_TOKEN:}
+    phone-number-id: ${META_WHATSAPP_PHONE_NUMBER_ID:}
+    api-version: ${META_WHATSAPP_API_VERSION:v25.0}
+    # Onayli bir WhatsApp Message Template adi. Bos birakilirsa serbest metin
+    # ("text") gonderilir -- bu YALNIZCA aliciyla acik bir 24 saatlik "musteri
+    # hizmeti penceresi" varken calisir (alicinin business numarasina son 24
+    # saat icinde bir mesaj atmis olmasi gerekir). Pencere kapaliysa Meta
+    # 131047 hatasi ("re-engagement message") doner -- bunu kalici cozmek
+    # icin Meta Business Manager'da tek degiskenli (orn. "Bildirim: {{1}}")
+    # bir sablon onaylatip adini buraya verin.
+    template-name: ${META_WHATSAPP_TEMPLATE_NAME:}
+    template-language: ${META_WHATSAPP_TEMPLATE_LANGUAGE:en_US}
   ileti-merkezi:
     # SMS gonderimi icin. Bos birakilirsa (varsayilan) SMS gonderimi simule
-    # edilir (bkz. TwilioNotificationAdapter.sendSmsViaIletiMerkezi). Ayni
+    # edilir (bkz. NotificationProviderAdapter.sendSmsViaIletiMerkezi). Ayni
     # ILETI_MERKEZI_* env degiskenleri platform-billing.ileti-merkezi
     # tarafindan da kullanilir -- tek hesap, iki izole istemci (bkz.
     # PlatformBillingSmsPort'un "paralel altyapi" javadoc'u).

@@ -28,7 +28,7 @@ import java.util.UUID;
 /**
  * iyzico Checkout Form (hosted odeme sayfasi) entegrasyonu. Gercek bir iyzico
  * sandbox hesabi bu ortamda henuz yok -- IYZICO_API_KEY/IYZICO_SECRET_KEY bos
- * ise tum cagrilar simule edilir (TwilioNotificationAdapter'daki ayni desen,
+ * ise tum cagrilar simule edilir (NotificationProviderAdapter'daki ayni desen,
  * bkz. isConfigured()). GERCEK MOD HTTP cagrilari iyzico'nun genel REST API
  * dokumantasyonuna (Checkout Form v2, IYZWSv2 HMAC-SHA256 imzalama) gore
  * yazildi ama canli bir sandbox'a karsi hic test edilmedi -- gercek

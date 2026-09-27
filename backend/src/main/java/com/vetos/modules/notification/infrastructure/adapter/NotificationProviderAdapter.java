@@ -11,22 +11,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
-import java.util.Base64;
-import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * WhatsApp: Twilio WhatsApp Sandbox uzerinden gercek API cagrisi. SMS: Ileti
+ * WhatsApp: Meta WhatsApp Cloud API (Graph API) uzerinden gercek API cagrisi. SMS: Ileti
  * Merkezi'nin send-sms/json REST API'si uzerinden gercek gonderim (api anahtari
  * + hash ile kimlik dogrulama, bkz. https://www.iletimerkezi.com/docs/api/send-sms).
- * Her iki saglayici da kendi kimlik bilgisi grubu bos oldugunda (accountSid/authToken
+ * Her iki saglayici da kendi kimlik bilgisi grubu bos oldugunda (accessToken/phoneNumberId
  * ya da iletiMerkeziApiKey/iletiMerkeziHash) o kanal icin simule edilir -- kimlik
  * bilgisi tanimlanmamis ortamlarda (CI, yerel gelistirme) uygulama hata vermeden
  * calismaya devam eder. isConfigured() en az bir kanal gercek bir saglayiciya
@@ -38,67 +34,64 @@ import java.util.Map;
  */
 @Component
 @Slf4j
-class TwilioNotificationAdapter implements NotificationSendPort {
+class NotificationProviderAdapter implements NotificationSendPort {
 
     private static final double SIMULATED_FAILURE_RATE = 0.1;
 
-    private final String accountSid;
-    private final String authSid;
-    private final String authToken;
-    private final String whatsappFrom;
-    private final String whatsappContentSid;
+    private final String metaAccessToken;
+    private final String metaPhoneNumberId;
+    private final String metaTemplateName;
+    private final String metaTemplateLanguage;
+    private final String metaApiVersion;
     private final String iletiMerkeziApiKey;
     private final String iletiMerkeziHash;
     private final String iletiMerkeziSender;
-    private final String twilioMessagesUrl;
+    private final String metaGraphApiBaseUrl;
     private final String iletiMerkeziSendUrl;
     private final RestClient restClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
-    TwilioNotificationAdapter(
-        @Value("${notification.twilio.account-sid:}") String accountSid,
-        @Value("${notification.twilio.auth-sid:}") String authSid,
-        @Value("${notification.twilio.auth-token:}") String authToken,
-        @Value("${notification.twilio.whatsapp-from:whatsapp:+14155238886}") String whatsappFrom,
-        @Value("${notification.twilio.whatsapp-content-sid:}") String whatsappContentSid,
+    NotificationProviderAdapter(
+        @Value("${notification.meta.access-token:}") String metaAccessToken,
+        @Value("${notification.meta.phone-number-id:}") String metaPhoneNumberId,
+        @Value("${notification.meta.template-name:}") String metaTemplateName,
+        @Value("${notification.meta.template-language:en_US}") String metaTemplateLanguage,
+        @Value("${notification.meta.api-version:v25.0}") String metaApiVersion,
         @Value("${notification.ileti-merkezi.api-key:}") String iletiMerkeziApiKey,
         @Value("${notification.ileti-merkezi.hash:}") String iletiMerkeziHash,
         @Value("${notification.ileti-merkezi.sender:vetly}") String iletiMerkeziSender
     ) {
         this(
-            accountSid, authSid, authToken, whatsappFrom, whatsappContentSid, iletiMerkeziApiKey, iletiMerkeziHash, iletiMerkeziSender,
-            "https://api.twilio.com/2010-04-01/Accounts/{accountSid}/Messages.json",
+            metaAccessToken, metaPhoneNumberId, metaTemplateName, metaTemplateLanguage, metaApiVersion,
+            iletiMerkeziApiKey, iletiMerkeziHash, iletiMerkeziSender,
+            "https://graph.facebook.com",
             "https://api.iletimerkezi.com/v1/send-sms/json"
         );
     }
 
     // paket-ozel: testler yerel sahte sunuculara yonlendirmek icin kullanir
-    TwilioNotificationAdapter(
-        String accountSid, String authSid, String authToken, String whatsappFrom, String whatsappContentSid,
+    NotificationProviderAdapter(
+        String metaAccessToken, String metaPhoneNumberId, String metaTemplateName, String metaTemplateLanguage, String metaApiVersion,
         String iletiMerkeziApiKey, String iletiMerkeziHash, String iletiMerkeziSender,
-        String twilioMessagesUrl, String iletiMerkeziSendUrl
+        String metaGraphApiBaseUrl, String iletiMerkeziSendUrl
     ) {
-        this.accountSid = accountSid;
-        // Twilio, Basic Auth kullanici adi olarak ya gercek Account SID'i (AC...)
-        // ya da ayri bir API Key SID'i (SK...) kabul eder -- API Key kullanilan
-        // hesaplarda bu ikisi FARKLI degerlerdir. authSid bos ise (klasik
-        // Account SID + Auth Token modu) accountSid'e geri duser.
-        this.authSid = authSid.isBlank() ? accountSid : authSid;
-        this.authToken = authToken;
-        this.whatsappFrom = whatsappFrom;
-        this.whatsappContentSid = whatsappContentSid;
+        this.metaAccessToken = metaAccessToken;
+        this.metaPhoneNumberId = metaPhoneNumberId;
+        this.metaTemplateName = metaTemplateName;
+        this.metaTemplateLanguage = metaTemplateLanguage;
+        this.metaApiVersion = metaApiVersion;
         this.iletiMerkeziApiKey = iletiMerkeziApiKey;
         this.iletiMerkeziHash = iletiMerkeziHash;
         this.iletiMerkeziSender = iletiMerkeziSender;
-        this.twilioMessagesUrl = twilioMessagesUrl;
+        this.metaGraphApiBaseUrl = metaGraphApiBaseUrl;
         this.iletiMerkeziSendUrl = iletiMerkeziSendUrl;
         this.restClient = RestClient.create();
     }
 
     @Override
     public boolean isConfigured() {
-        return twilioConfigured() || iletiMerkeziConfigured();
+        return metaConfigured() || iletiMerkeziConfigured();
     }
 
     @Override
@@ -108,11 +101,11 @@ class TwilioNotificationAdapter implements NotificationSendPort {
 
     @Override
     public boolean isWhatsappConfigured() {
-        return twilioConfigured();
+        return metaConfigured();
     }
 
-    private boolean twilioConfigured() {
-        return !accountSid.isBlank() && !authToken.isBlank();
+    private boolean metaConfigured() {
+        return !metaAccessToken.isBlank() && !metaPhoneNumberId.isBlank();
     }
 
     private boolean iletiMerkeziConfigured() {
@@ -121,8 +114,8 @@ class TwilioNotificationAdapter implements NotificationSendPort {
 
     @Override
     public NotificationSendOutcome send(NotificationSendRequest request) {
-        if (request.channel() == NotificationChannel.WHATSAPP && twilioConfigured()) {
-            return sendWhatsAppViaTwilio(request);
+        if (request.channel() == NotificationChannel.WHATSAPP && metaConfigured()) {
+            return sendWhatsAppViaMeta(request);
         }
         if (request.channel() == NotificationChannel.SMS && iletiMerkeziConfigured()) {
             return sendSmsViaIletiMerkezi(request);
@@ -130,52 +123,43 @@ class TwilioNotificationAdapter implements NotificationSendPort {
         return sendSimulated(request);
     }
 
-    private NotificationSendOutcome sendWhatsAppViaTwilio(NotificationSendRequest request) {
-        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
-        form.add("To", "whatsapp:" + toE164(request.recipientContact()));
-        form.add("From", whatsappFrom);
+    private NotificationSendOutcome sendWhatsAppViaMeta(NotificationSendRequest request) {
+        String to = toMsisdn(request.recipientContact());
 
-        if (whatsappContentSid.isBlank()) {
-            // Onayli bir Content Template tanimli degil: serbest metin ("Body") gonderilir.
-            // WhatsApp Is Politikasi geregi bu, YALNIZCA aliciyla acik bir "musteri hizmeti
-            // penceresi" varken (aliciden son 24 saat icinde gelen bir mesaj -- ornegin
-            // sandbox "join" mesaji) calisir. Pencere kapaliysa Twilio 21654 hatasi
-            // ("ContentSid Required") ile reddeder -- bu durumda notification.twilio.
-            // whatsapp-content-sid'i onayli bir sablonun SID'i (HX...) ile doldurun.
-            form.add("Body", request.message());
-        } else {
-            // Onayli sablon ile gonderim: pencere acik olsun olmasin her zaman calisir.
-            // Sablon govdesi tek bir degisken icerir (ornek: "Bildirim: {{1}}") -- klinik
-            // markasina ozel sabit metin BILEREK yok, cunku {{1}}'in icine giren mesaj
-            // NotificationSendExecutor tarafindan zaten "<Klinik Adi>: <mesaj>" seklinde
-            // hazirlaniyor (bkz. o sinifin attemptSend metodu).
-            Map<String, Object> contentVariables = new LinkedHashMap<>();
-            contentVariables.put("1", request.message());
-            form.add("ContentSid", whatsappContentSid);
-            form.add("ContentVariables", toJson(contentVariables));
-        }
+        // Onayli bir sablon adi tanimli degilse serbest metin ("text") gonderilir.
+        // WhatsApp Is Politikasi geregi bu, YALNIZCA aliciyla acik bir "musteri hizmeti
+        // penceresi" varken (aliciden son 24 saat icinde gelen bir mesaj) calisir.
+        // Pencere kapaliysa Meta 131047 hatasi ("re-engagement message") ile reddeder --
+        // bu durumda notification.meta.template-name'i onayli bir sablonun adiyla doldurun.
+        // Sablon govdesi tek bir degisken icerir (ornek: "Bildirim: {{1}}") -- klinik
+        // markasina ozel sabit metin BILEREK yok, cunku degiskenin icine giren mesaj
+        // NotificationSendExecutor tarafindan zaten "<Klinik Adi>: <mesaj>" seklinde
+        // hazirlaniyor (bkz. o sinifin attemptSend metodu).
+        Map<String, Object> body = metaTemplateName.isBlank()
+            ? metaTextRequestBody(to, request.message())
+            : metaTemplateRequestBody(to, metaTemplateName, metaTemplateLanguage, request.message());
 
-        String credentials = Base64.getEncoder().encodeToString((authSid + ":" + authToken).getBytes(StandardCharsets.UTF_8));
+        String url = metaGraphApiBaseUrl + "/" + metaApiVersion + "/" + metaPhoneNumberId + "/messages";
 
         try {
             String responseBody = restClient.post()
-                .uri(twilioMessagesUrl, accountSid)
-                .header("Authorization", "Basic " + credentials)
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .body(form)
+                .uri(url)
+                .header("Authorization", "Bearer " + metaAccessToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(toJson(body))
                 .retrieve()
                 .body(String.class);
 
-            log.info("WhatsApp gonderimi (Twilio): alici={}, yanit={}", request.recipientContact(), responseBody);
-            return NotificationSendOutcome.success("Twilio'ya iletildi");
+            log.info("WhatsApp gonderimi (Meta): alici={}, yanit={}", request.recipientContact(), responseBody);
+            return NotificationSendOutcome.success("Meta WhatsApp Cloud API'ye iletildi");
         } catch (RestClientResponseException e) {
             log.warn(
-                "Twilio WhatsApp gonderimi basarisiz: alici={}, durum={}, govde={}",
+                "Meta WhatsApp gonderimi basarisiz: alici={}, durum={}, govde={}",
                 request.recipientContact(), e.getStatusCode(), e.getResponseBodyAsString()
             );
-            return NotificationSendOutcome.failure("Twilio hatasi (" + e.getStatusCode() + "): " + e.getResponseBodyAsString());
+            return NotificationSendOutcome.failure("Meta hatasi (" + e.getStatusCode() + "): " + e.getResponseBodyAsString());
         } catch (Exception e) {
-            log.warn("Twilio WhatsApp gonderimi basarisiz: alici={}, hata={}", request.recipientContact(), e.getMessage());
+            log.warn("Meta WhatsApp gonderimi basarisiz: alici={}, hata={}", request.recipientContact(), e.getMessage());
             return NotificationSendOutcome.failure("Saglayiciya ulasilamadi: " + e.getMessage());
         }
     }
@@ -237,7 +221,52 @@ class TwilioNotificationAdapter implements NotificationSendPort {
         return "+90" + digits;
     }
 
+    /** Meta Cloud API "to" alani basinda "+" beklemez (bkz. Graph API ornek istekleri). */
+    private static String toMsisdn(String rawPhone) {
+        String e164 = toE164(rawPhone);
+        return e164.startsWith("+") ? e164.substring(1) : e164;
+    }
+
     // paket-ozel: JSON kacislama testi dogrudan cagirir
+    static Map<String, Object> metaTextRequestBody(String to, String messageText) {
+        Map<String, Object> text = new LinkedHashMap<>();
+        text.put("body", messageText);
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("messaging_product", "whatsapp");
+        body.put("to", to);
+        body.put("type", "text");
+        body.put("text", text);
+        return body;
+    }
+
+    // paket-ozel: JSON kacislama testi dogrudan cagirir
+    static Map<String, Object> metaTemplateRequestBody(String to, String templateName, String templateLanguage, String messageText) {
+        Map<String, Object> parameter = new LinkedHashMap<>();
+        parameter.put("type", "text");
+        parameter.put("text", messageText);
+
+        Map<String, Object> bodyComponent = new LinkedHashMap<>();
+        bodyComponent.put("type", "body");
+        bodyComponent.put("parameters", List.of(parameter));
+
+        Map<String, Object> language = new LinkedHashMap<>();
+        language.put("code", templateLanguage);
+
+        Map<String, Object> template = new LinkedHashMap<>();
+        template.put("name", templateName);
+        template.put("language", language);
+        template.put("components", List.of(bodyComponent));
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("messaging_product", "whatsapp");
+        body.put("to", to);
+        body.put("type", "template");
+        body.put("template", template);
+        return body;
+    }
+
+    // paket-ozel: testler yerel sahte sunuculara yonlendirmek icin kullanir
     static Map<String, Object> iletiMerkeziRequestBody(
         String apiKey, String hash, String sender, String messageText, String recipientE164
     ) {
@@ -272,7 +301,7 @@ class TwilioNotificationAdapter implements NotificationSendPort {
         try {
             return objectMapper.writeValueAsString(body);
         } catch (JsonProcessingException e) {
-            throw new IllegalStateException("Ileti Merkezi istek govdesi olusturulamadi", e);
+            throw new IllegalStateException("Bildirim istek govdesi olusturulamadi", e);
         }
     }
 }

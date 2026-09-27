@@ -19,7 +19,7 @@ import java.util.Map;
 
 /**
  * Platform fatura SMS bildirimlerini Ileti Merkezi'nin send-sms/json REST
- * API'si uzerinden gonderir (ayni saglayici, notification.TwilioNotificationAdapter'in
+ * API'si uzerinden gonderir (ayni saglayici, notification.NotificationProviderAdapter'in
  * SMS dali ile ayni API -- ama PlatformBillingSmsPort'un javadoc'unda
  * aciklanan "paralel altyapi" felsefesiyle tutarli sekilde bilerek AYRI, izole
  * bir istemci). ILETI_MERKEZI_API_KEY/ILETI_MERKEZI_HASH bos ise (varsayilan)

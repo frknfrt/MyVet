@@ -3,7 +3,7 @@ import { notificationApi, NotificationStatus } from '../../api/notificationApi';
 import { Badge } from '../../components/ui/Badge';
 import styles from './SettingsTab.module.css';
 
-// Her kanalin (SMS: Ileti Merkezi, WhatsApp: Twilio) gercekten baglanip
+// Her kanalin (SMS: Ileti Merkezi, WhatsApp: Meta WhatsApp Cloud API) gercekten baglanip
 // baglanmadigi birbirinden bagimsiz -- daha once burada tek bir "connected"
 // bayragi vardi ve metin sabit kodlanmisti ("WhatsApp gercek, SMS mock"),
 // bu yuzden SMS gercekten baglandiktan sonra bile ekran hala "simule
@@ -23,7 +23,7 @@ export function SettingsTab() {
           <div className={styles.desc}>
             {status && (
               <>
-                WhatsApp {status.whatsappConfigured ? 'Twilio üzerinden gerçek gönderim yapıyor.' : 'henüz sağlayıcıya bağlı değil, simüle ediliyor.'}{' '}
+                WhatsApp {status.whatsappConfigured ? 'Meta WhatsApp Cloud API üzerinden gerçek gönderim yapıyor.' : 'henüz sağlayıcıya bağlı değil, simüle ediliyor.'}{' '}
                 SMS {status.smsConfigured ? 'İleti Merkezi üzerinden gerçek gönderim yapıyor.' : 'henüz sağlayıcıya bağlı değil, simüle ediliyor.'}
               </>
             )}
@@ -32,7 +32,7 @@ export function SettingsTab() {
         {status ? (
           <div className={styles.badgeGroup}>
             <Badge tone={status.smsConfigured ? 'success' : 'warning'}>SMS: {status.smsConfigured ? 'İleti Merkezi (gerçek)' : 'Mock'}</Badge>
-            <Badge tone={status.whatsappConfigured ? 'success' : 'warning'}>WhatsApp: {status.whatsappConfigured ? 'Twilio (gerçek)' : 'Mock'}</Badge>
+            <Badge tone={status.whatsappConfigured ? 'success' : 'warning'}>WhatsApp: {status.whatsappConfigured ? 'Meta (gerçek)' : 'Mock'}</Badge>
           </div>
         ) : (
           <Badge tone="neutral">Yükleniyor...</Badge>

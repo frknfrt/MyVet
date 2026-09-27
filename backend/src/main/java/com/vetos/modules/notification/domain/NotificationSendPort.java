@@ -2,7 +2,7 @@ package com.vetos.modules.notification.domain;
 
 /**
  * @docs/architecture.md Bolum 3 (Open/Closed) -- yeni bir saglayici
- * (Twilio, Netgsm, WhatsApp Business API...) eklemek icin tek yapilan: bu
+ * (Meta WhatsApp Cloud API, Netgsm...) eklemek icin tek yapilan: bu
  * arayuzu implemente eden yeni bir @Component yazmak. Gercek saglayici
  * hesabi/API anahtari gelene kadar MockNotificationAdapter kullanilir
  * (@docs/architecture.md TARBIL/MockTarbilAdapter ile ayni desen).
@@ -25,7 +25,7 @@ public interface NotificationSendPort {
         return false;
     }
 
-    /** WhatsApp kanali gercek bir saglayiciya (Twilio) bagli mi -- Ayarlar > SMS/WhatsApp ekraninda ayri gosterilir. */
+    /** WhatsApp kanali gercek bir saglayiciya (Meta WhatsApp Cloud API) bagli mi -- Ayarlar > SMS/WhatsApp ekraninda ayri gosterilir. */
     default boolean isWhatsappConfigured() {
         return false;
     }
