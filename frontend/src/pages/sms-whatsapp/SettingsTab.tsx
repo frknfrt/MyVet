@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { notificationApi, NotificationStatus } from '../../api/notificationApi';
+import { notificationApi, NotificationChannel, NotificationStatus } from '../../api/notificationApi';
 import { Badge } from '../../components/ui/Badge';
+import { FieldWrap, Select } from '../../components/ui/Field';
 import styles from './SettingsTab.module.css';
 
 // Her kanalin (SMS: Ileti Merkezi, WhatsApp: Meta WhatsApp Cloud API) gercekten baglanip
@@ -10,10 +11,24 @@ import styles from './SettingsTab.module.css';
 // ediliyor" diyordu. Artik ikisi ayri ayri gosteriliyor.
 export function SettingsTab() {
   const [status, setStatus] = useState<NotificationStatus | null>(null);
+  const [appointmentChannel, setAppointmentChannel] = useState<NotificationChannel | null>(null);
+  const [savingChannel, setSavingChannel] = useState(false);
 
   useEffect(() => {
     notificationApi.status().then(setStatus);
+    notificationApi.settings().then((s) => setAppointmentChannel(s.appointmentChannel));
   }, []);
+
+  async function handleChannelChange(next: NotificationChannel) {
+    setAppointmentChannel(next);
+    setSavingChannel(true);
+    try {
+      const saved = await notificationApi.updateSettings(next);
+      setAppointmentChannel(saved.appointmentChannel);
+    } finally {
+      setSavingChannel(false);
+    }
+  }
 
   return (
     <div className={styles.card}>
@@ -60,6 +75,22 @@ export function SettingsTab() {
           </div>
         </>
       )}
+
+      <div className={styles.channelPreference}>
+        <FieldWrap label="Randevu onayı ve hatırlatma mesajları hangi kanaldan gönderilsin?">
+          <Select
+            value={appointmentChannel ?? 'SMS'}
+            disabled={appointmentChannel === null || savingChannel}
+            onChange={(e) => handleChannelChange(e.target.value as NotificationChannel)}
+          >
+            <option value="SMS">SMS</option>
+            <option value="WHATSAPP">WhatsApp</option>
+          </Select>
+        </FieldWrap>
+        <div className={styles.desc}>
+          WhatsApp seçilse bile, WhatsApp iznini (izinler/onay sekmesinden) vermemiş sahiplere yine SMS gönderilir.
+        </div>
+      </div>
     </div>
   );
 }

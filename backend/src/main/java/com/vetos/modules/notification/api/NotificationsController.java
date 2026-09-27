@@ -3,12 +3,16 @@ package com.vetos.modules.notification.api;
 import com.vetos.modules.notification.api.dto.CampaignRecipientRequest;
 import com.vetos.modules.notification.api.dto.CampaignSendSummaryResponse;
 import com.vetos.modules.notification.api.dto.NotificationLogResponse;
+import com.vetos.modules.notification.api.dto.NotificationSettingsResponse;
 import com.vetos.modules.notification.api.dto.NotificationStatusResponse;
 import com.vetos.modules.notification.api.dto.SendCampaignRequest;
+import com.vetos.modules.notification.api.dto.UpdateNotificationSettingsRequest;
+import com.vetos.modules.notification.application.GetNotificationSettingsUseCase;
 import com.vetos.modules.notification.application.GetNotificationStatusSummaryUseCase;
 import com.vetos.modules.notification.application.ListNotificationLogsUseCase;
 import com.vetos.modules.notification.application.RetryNotificationUseCase;
 import com.vetos.modules.notification.application.SendCampaignUseCase;
+import com.vetos.modules.notification.application.UpdateNotificationSettingsUseCase;
 import com.vetos.modules.notification.application.dto.CampaignRecipient;
 import com.vetos.modules.notification.domain.NotificationChannel;
 import com.vetos.modules.notification.domain.NotificationStatus;
@@ -40,6 +44,8 @@ public class NotificationsController {
     private final ListNotificationLogsUseCase listNotificationLogsUseCase;
     private final RetryNotificationUseCase retryNotificationUseCase;
     private final SendCampaignUseCase sendCampaignUseCase;
+    private final GetNotificationSettingsUseCase getNotificationSettingsUseCase;
+    private final UpdateNotificationSettingsUseCase updateNotificationSettingsUseCase;
 
     @GetMapping("/status")
     public NotificationStatusResponse status() {
@@ -75,6 +81,20 @@ public class NotificationsController {
             .toList();
         var summary = sendCampaignUseCase.execute(TenantContext.current(), request.channel(), request.messageBody(), recipients);
         return CampaignSendSummaryResponse.from(summary);
+    }
+
+    // Randevu onayi/hatirlatmasi mesajlarinin hangi kanaldan (SMS/WhatsApp)
+    // gonderilecegi kiraci bazinda ayarlanabiliyor -- bkz. SettingsTab.tsx,
+    // SendAppointmentRemindersUseCase, AppointmentScheduledEventListener.
+    @GetMapping("/settings")
+    public NotificationSettingsResponse settings() {
+        return NotificationSettingsResponse.from(getNotificationSettingsUseCase.execute(TenantContext.current()));
+    }
+
+    @PutMapping("/settings")
+    public NotificationSettingsResponse updateSettings(@RequestBody @Valid UpdateNotificationSettingsRequest request) {
+        updateNotificationSettingsUseCase.execute(TenantContext.current(), request.appointmentChannel());
+        return NotificationSettingsResponse.from(getNotificationSettingsUseCase.execute(TenantContext.current()));
     }
 
     private static CampaignRecipient toRecipient(CampaignRecipientRequest r) {

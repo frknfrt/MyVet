@@ -4,8 +4,10 @@ import com.vetos.modules.appointment.domain.AppointmentLookupPort;
 import com.vetos.modules.appointment.domain.AppointmentReminderCandidate;
 import com.vetos.modules.notification.domain.NotificationChannel;
 import com.vetos.modules.notification.domain.NotificationLogRepository;
+import com.vetos.modules.notification.domain.NotificationSettingsRepository;
 import com.vetos.modules.notification.domain.NotificationType;
 import com.vetos.modules.patient.domain.OwnerLookupPort;
+import com.vetos.modules.patient.domain.OwnerSummary;
 import com.vetos.modules.patient.domain.PatientLookupPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -36,6 +38,7 @@ public class SendAppointmentRemindersUseCase {
     private final QueueNotificationUseCase queueNotificationUseCase;
     private final OwnerLookupPort ownerLookupPort;
     private final PatientLookupPort patientLookupPort;
+    private final NotificationSettingsRepository notificationSettingsRepository;
 
     // REQUIRES_NEW: bu metot RANDEVU_HATIRLATMA_KILIDI'ni tutan disi transaction'a (AppointmentReminderScheduler)
     // katilirsa, bir kiracinin hatasi TUM kiracilarin isini sessizce geri alir (Spring
@@ -46,11 +49,12 @@ public class SendAppointmentRemindersUseCase {
     // metodu @Transactional'a girdigi anda), yani bu Session filtresiz/root
     // kalir. REQUIRES_NEW her kiraci icin TenantContext.set SONRASI taze bir
     // Session acar -- @TenantId filtresi bu sayede dogru kiraciya gore
-    // calisir. REQUIRES_NEW olmasa, bu use case'e ileride @TenantId'li bir
+    // calisir. REQUIRES_NEW olmasa, bu use case'e ileride bir @TenantId'li bir
     // entity'ye disi (filtresiz) Session uzerinden dokunan bir kod eklenirse,
     // sessizce tum kiracilar arasinda sorgu yapardi.
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public int execute(UUID tenantId, Instant rangeStart, Instant rangeEnd) {
+        NotificationChannel preferredChannel = resolvePreferredChannel(tenantId);
         int queued = 0;
         for (AppointmentReminderCandidate candidate : appointmentLookupPort.findConfirmedBetween(tenantId, rangeStart, rangeEnd)) {
             if (notificationLogRepository.existsByRelatedEntityIdAndNotificationType(candidate.appointmentId(), NotificationType.APPOINTMENT_REMINDER)) {
@@ -67,11 +71,27 @@ public class SendAppointmentRemindersUseCase {
             );
 
             queueNotificationUseCase.execute(
-                tenantId, candidate.ownerId(), candidate.patientId(), NotificationChannel.SMS,
+                tenantId, candidate.ownerId(), candidate.patientId(), channelFor(preferredChannel, owner),
                 NotificationType.APPOINTMENT_REMINDER, owner.phone(), message, candidate.appointmentId(), null
             );
             queued++;
         }
         return queued;
+    }
+
+    private NotificationChannel resolvePreferredChannel(UUID tenantId) {
+        return notificationSettingsRepository.findByTenantId(tenantId)
+            .map(s -> s.getAppointmentChannel())
+            .orElse(NotificationChannel.SMS);
+    }
+
+    // Klinik WhatsApp'i tercih etse bile, sahip WhatsApp'a acikca izin vermediyse
+    // (owner.whatsappConsent() == false) SMS'e dusuyoruz -- ayni kural
+    // SendCampaignUseCase'de de var, burada da bozmuyoruz.
+    private static NotificationChannel channelFor(NotificationChannel preferredChannel, OwnerSummary owner) {
+        if (preferredChannel == NotificationChannel.WHATSAPP && owner.whatsappConsent()) {
+            return NotificationChannel.WHATSAPP;
+        }
+        return NotificationChannel.SMS;
     }
 }

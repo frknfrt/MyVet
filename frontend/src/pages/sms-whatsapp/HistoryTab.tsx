@@ -17,7 +17,7 @@ function errorMessageOf(err: unknown): string {
 
 const CHANNEL_OPTIONS: NotificationChannel[] = ['SMS', 'WHATSAPP'];
 const STATUS_OPTIONS: NotificationLogStatus[] = ['PENDING', 'SENT', 'FAILED'];
-const TYPE_OPTIONS: NotificationType[] = ['APPOINTMENT_CONFIRMATION', 'APPOINTMENT_REMINDER', 'CAMPAIGN_MESSAGE'];
+const TYPE_OPTIONS: NotificationType[] = ['APPOINTMENT_CONFIRMATION', 'APPOINTMENT_REMINDER', 'CAMPAIGN_MESSAGE', 'VACCINATION_REMINDER'];
 
 export function HistoryTab() {
   const [logs, setLogs] = useState<NotificationLog[]>([]);

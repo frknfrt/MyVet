@@ -1,7 +1,7 @@
 import { apiClient } from './client';
 
 export type NotificationChannel = 'SMS' | 'WHATSAPP';
-export type NotificationType = 'APPOINTMENT_CONFIRMATION' | 'APPOINTMENT_REMINDER' | 'CAMPAIGN_MESSAGE';
+export type NotificationType = 'APPOINTMENT_CONFIRMATION' | 'APPOINTMENT_REMINDER' | 'CAMPAIGN_MESSAGE' | 'VACCINATION_REMINDER';
 export type NotificationLogStatus = 'PENDING' | 'SENT' | 'FAILED';
 
 export interface NotificationStatus {
@@ -11,6 +11,10 @@ export interface NotificationStatus {
   lastSentAt: string | null;
   smsConfigured: boolean;
   whatsappConfigured: boolean;
+}
+
+export interface NotificationSettings {
+  appointmentChannel: NotificationChannel;
 }
 
 export interface NotificationLog {
@@ -49,4 +53,7 @@ export const notificationApi = {
   status: () => apiClient.get<NotificationStatus>('/api/v1/notifications/status'),
   logs: (filters: NotificationLogFilters = {}) => apiClient.get<NotificationLog[]>(`/api/v1/notifications/logs${buildQuery(filters)}`),
   retry: (id: string) => apiClient.post<void>(`/api/v1/notifications/logs/${id}/retry`),
+  settings: () => apiClient.get<NotificationSettings>('/api/v1/notifications/settings'),
+  updateSettings: (appointmentChannel: NotificationChannel) =>
+    apiClient.put<NotificationSettings>('/api/v1/notifications/settings', { appointmentChannel }),
 };
