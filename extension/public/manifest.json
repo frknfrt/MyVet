@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Vetly TARBİL Yardımcısı",
+  "version": "0.1.0",
+  "description": "Vetly'deki aşı kayıtlarını TARBİL'e aktarmanıza yardım eder. Kaydet'e her zaman siz basarsınız.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnVkvZr4VqOu6O+uOWCU/5Dza4DjeD6/NCW5uextmEI8zzZHsHriKEnjmMq9giDMc2wR8a3tzRaSgzuoVxN0DMor3pG25IG3LibnSK3e/r3njiql4ULn29JswRmaeAgHe1VfibDv3P+iBg9LqxOPrLtAE2bczRIQFHL3OzN84Qq8CjD9gVbAcxhM86TkMiRMrk+0t/0JL4YOu/yH4EO1Rkb8OPQAeqDZabolqf60HuQpf3d5NOxzP3ktkr8ixoEQxzz6lu4h2HYqhkGtSujWRXEGiWU93gjllz02tB/LSoAgNcnLR6mXiMSv1BnYDwbxkOsNUvSXAT2s4fjHGGZKaYQIDAQAB",
+  "permissions": ["storage", "sidePanel", "scripting", "alarms"],
+  "host_permissions": [
+    "https://uygulama.vetly.com.tr/*",
+    "https://hbsapp.tarbil.gov.tr/*",
+    "http://localhost:8080/*"
+  ],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "side_panel": { "default_path": "sidepanel.html" },
+  "action": { "default_title": "Vetly TARBİL" },
+  "externally_connectable": {
+    "matches": ["https://uygulama.vetly.com.tr/*", "http://localhost:5173/*"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://hbsapp.tarbil.gov.tr/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
