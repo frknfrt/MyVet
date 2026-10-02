@@ -21,4 +21,9 @@ class StaffUserLookupAdapter implements StaffUserLookupPort {
             .orElseThrow(() -> new StaffUserNotFoundException(staffUserId));
         return new StaffSummary(staffUser.getId(), staffUser.getFullName(), staffUser.getRole(), staffUser.getBranchId());
     }
+
+    @Override
+    public boolean isActive(UUID staffUserId) {
+        return jpaRepository.findById(staffUserId).map(StaffUser::isActive).orElse(false);
+    }
 }

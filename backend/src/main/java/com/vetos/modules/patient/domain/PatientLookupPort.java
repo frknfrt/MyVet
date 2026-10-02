@@ -1,5 +1,6 @@
 package com.vetos.modules.patient.domain;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -8,4 +9,7 @@ import java.util.UUID;
  */
 public interface PatientLookupPort {
     PatientSummary findSummaryById(UUID patientId);
+
+    /** Hasta yoksa (veya aktif kiracinin @TenantId filtresine takiliyorsa) bos doner -- firlatmaz. */
+    Optional<PatientTarbilProfile> findTarbilProfile(UUID patientId);
 }

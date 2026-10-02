@@ -8,4 +8,7 @@ import java.util.UUID;
  */
 public interface StaffUserLookupPort {
     StaffSummary findSummaryById(UUID staffUserId);
+
+    /** Kayit yoksa false -- eklenti anahtari dogrulamasi pasif personeli reddetmek icin kullanir. */
+    boolean isActive(UUID staffUserId);
 }
