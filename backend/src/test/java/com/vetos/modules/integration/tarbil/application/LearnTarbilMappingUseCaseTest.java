@@ -35,14 +35,14 @@ class LearnTarbilMappingUseCaseTest {
 
     @Test
     void should_createWithNormalizedKey_when_vaccineMappingNew() {
-        when(repository.findByTenantIdAndKindAndVetlyKey(tenantId, TarbilMappingKind.VACCINE, "kuduz aşısı"))
+        when(repository.findByTenantIdAndKindAndVetlyKey(tenantId, TarbilMappingKind.VACCINE, "kuduz aşisi"))
             .thenReturn(Optional.empty());
 
         useCase().execute(tenantId, staffId, TarbilMappingKind.VACCINE, " Kuduz  Aşısı", "{\"vaccine\":{\"value\":\"g1\",\"text\":\"Rabisin\"}}");
 
         ArgumentCaptor<TarbilValueMapping> captor = ArgumentCaptor.forClass(TarbilValueMapping.class);
         verify(repository).save(captor.capture());
-        assertThat(captor.getValue().getVetlyKey()).isEqualTo("kuduz aşısı");
+        assertThat(captor.getValue().getVetlyKey()).isEqualTo("kuduz aşisi");
         assertThat(captor.getValue().getTenantId()).isEqualTo(tenantId);
         assertThat(captor.getValue().getLearnedByStaffId()).isEqualTo(staffId);
     }
@@ -50,8 +50,8 @@ class LearnTarbilMappingUseCaseTest {
     @Test
     void should_overwriteFields_when_mappingExists() {
         TarbilValueMapping existing = TarbilValueMapping.create(
-            tenantId, TarbilMappingKind.VACCINE, "kuduz aşısı", "{\"old\":1}", UUID.randomUUID(), Instant.now());
-        when(repository.findByTenantIdAndKindAndVetlyKey(tenantId, TarbilMappingKind.VACCINE, "kuduz aşısı"))
+            tenantId, TarbilMappingKind.VACCINE, "kuduz aşisi", "{\"old\":1}", UUID.randomUUID(), Instant.now());
+        when(repository.findByTenantIdAndKindAndVetlyKey(tenantId, TarbilMappingKind.VACCINE, "kuduz aşisi"))
             .thenReturn(Optional.of(existing));
 
         useCase().execute(tenantId, staffId, TarbilMappingKind.VACCINE, "Kuduz Aşısı", "{\"new\":2}");

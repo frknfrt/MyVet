@@ -24,6 +24,11 @@ class TenantLookupAdapter implements TenantLookupPort {
     }
 
     @Override
+    public boolean isOperational(UUID tenantId) {
+        return jpaRepository.findById(tenantId).map(t -> t.getStatus() != TenantStatus.SUSPENDED).orElse(false);
+    }
+
+    @Override
     public Optional<String> findTenantName(UUID tenantId) {
         return jpaRepository.findById(tenantId).map(Tenant::getName);
     }

@@ -1,11 +1,15 @@
 package com.vetos;
 
+import com.vetos.modules.encounter.domain.VaccinationRecord;
+import com.vetos.modules.encounter.domain.VaccinationRecordRepository;
+import com.vetos.modules.encounter.domain.VaccinationStatus;
 import com.vetos.modules.integration.tarbil.application.CreatePairingCodeUseCase;
 import com.vetos.modules.integration.tarbil.application.ListExtensionTokensUseCase;
 import com.vetos.modules.integration.tarbil.application.PairExtensionUseCase;
 import com.vetos.modules.integration.tarbil.application.RevokeExtensionTokenUseCase;
 import com.vetos.modules.integration.tarbil.domain.TarbilSyncLog;
 import com.vetos.modules.integration.tarbil.domain.TarbilSyncLogRepository;
+import com.vetos.modules.integration.tarbil.domain.TarbilSyncStatus;
 import com.vetos.modules.patient.domain.Owner;
 import com.vetos.modules.patient.domain.OwnerRepository;
 import com.vetos.modules.patient.domain.Patient;
@@ -29,10 +33,14 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -54,6 +62,7 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
     @Autowired private PatientRepository patientRepository;
     @Autowired private SpeciesRepository speciesRepository;
     @Autowired private TarbilSyncLogRepository tarbilSyncLogRepository;
+    @Autowired private VaccinationRecordRepository vaccinationRecordRepository;
     @Autowired private CreatePairingCodeUseCase createPairingCodeUseCase;
     @Autowired private PairExtensionUseCase pairExtensionUseCase;
     @Autowired private RevokeExtensionTokenUseCase revokeExtensionTokenUseCase;
@@ -93,6 +102,8 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
         for (UUID t : List.of(tenantA, tenantB)) {
             jdbcTemplate.update("DELETE FROM tarbil_sync_log WHERE tenant_id = ?", t);
             jdbcTemplate.update("DELETE FROM tarbil_extension_token WHERE tenant_id = ?", t);
+            jdbcTemplate.update("DELETE FROM tarbil_value_mapping WHERE tenant_id = ?", t);
+            jdbcTemplate.update("DELETE FROM vaccination_records WHERE tenant_id = ?", t);
             jdbcTemplate.update("DELETE FROM patients WHERE owner_id IN (SELECT id FROM owners WHERE tenant_id = ?)", t);
             jdbcTemplate.update("DELETE FROM owners WHERE tenant_id = ?", t);
             jdbcTemplate.update("DELETE FROM staff_users WHERE tenant_id = ?", t);
@@ -128,17 +139,74 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
             .andExpect(status().isUnauthorized());
     }
 
-    @Test
-    void tokenCannotSeeAnotherTenantsSubmission() throws Exception {
+    /** B kiracisinda GERCEK asiyla bekleyen satir -- kiraci filtresi silinirse A'nin anahtari gorebilmeli (bos-dogru degil). */
+    private UUID foreignPendingSubmission() {
+        UUID staffB = createStaff(tenantB);
         UUID speciesId = inRootSession(() -> speciesRepository.findAll().get(0).getId());
         UUID ownerB = asTenant(tenantB, () -> ownerRepository.save(
             Owner.register(tenantB, "B Sahip", "05551234567", null, null)).getId());
         UUID patientB = asTenant(tenantB, () -> patientRepository.save(
             Patient.register(tenantB, ownerB, speciesId, null, "Tekir", Sex.FEMALE, null)).getId());
-        UUID foreignLogId = asTenant(tenantB, () -> tarbilSyncLogRepository.save(
-            TarbilSyncLog.queueVaccination(tenantB, patientB, UUID.randomUUID())).getId());
+        UUID vaccinationB = asTenant(tenantB, () -> vaccinationRecordRepository.save(VaccinationRecord.record(
+            tenantB, patientB, null, "Kuduz", null, LocalDate.now(), null, staffB, VaccinationStatus.ADMINISTERED, null)).getId());
+        return asTenant(tenantB, () -> tarbilSyncLogRepository.save(
+            TarbilSyncLog.queueVaccination(tenantB, patientB, vaccinationB)).getId());
+    }
 
+    private String tokenFor(UUID tenantId) {
+        UUID staff = createStaff(tenantId);
+        return pairExtensionUseCase.execute(createPairingCodeUseCase.execute(tenantId, staff).code(), "B PC");
+    }
+
+    @Test
+    void tokenCannotSeeAnotherTenantsSubmission() throws Exception {
+        UUID foreignLogId = foreignPendingSubmission();
+
+        // Kontrol: ayni satir kendi kiracisinin anahtariyla gorunur -- 404 yalniz kiraci filtresinden gelir.
+        mockMvc.perform(get("/api/v1/tarbil-extension/submissions/" + foreignLogId).header("Authorization", "Bearer " + tokenFor(tenantB)))
+            .andExpect(status().isOk());
         mockMvc.perform(get("/api/v1/tarbil-extension/submissions/" + foreignLogId).header("Authorization", "Bearer " + tokenA))
             .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void tokenCannotMarkOrDismissAnotherTenantsSubmission() throws Exception {
+        UUID foreignLogId = foreignPendingSubmission();
+
+        mockMvc.perform(post("/api/v1/tarbil-extension/submissions/" + foreignLogId + "/submitted")
+                .header("Authorization", "Bearer " + tokenA).contentType("application/json").content("{\"method\":\"MANUAL\"}"))
+            .andExpect(status().isNotFound());
+        mockMvc.perform(post("/api/v1/tarbil-extension/submissions/" + foreignLogId + "/dismiss")
+                .header("Authorization", "Bearer " + tokenA).contentType("application/json").content("{\"reason\":\"x\"}"))
+            .andExpect(status().isNotFound());
+
+        TarbilSyncStatus statusAfter = asTenant(tenantB, () -> tarbilSyncLogRepository.findById(foreignLogId).orElseThrow().getStatus());
+        assertThat(statusAfter).isEqualTo(TarbilSyncStatus.PENDING);
+    }
+
+    @Test
+    void learnsMappingForVaccineNameContainingSlash() throws Exception {
+        // "DHPPi/L" gibi adlar URL yolunda %2F ister ve StrictHttpFirewall reddeder -- anahtar govdede tasinir.
+        mockMvc.perform(put("/api/v1/tarbil-extension/mappings/VACCINE")
+                .header("Authorization", "Bearer " + tokenA).contentType("application/json")
+                .content("{\"key\":\"Eurican DHPPi/L\",\"fields\":{\"productId\":\"42\"}}"))
+            .andExpect(status().isNoContent());
+
+        Integer count = jdbcTemplate.queryForObject(
+            "SELECT count(*) FROM tarbil_value_mapping WHERE tenant_id = ? AND vetly_key = ?", Integer.class,
+            tenantA, "eurican dhppi/l");
+        assertThat(count).isEqualTo(1);
+    }
+
+    @Test
+    void tokenOfSuspendedTenantIsRejected() throws Exception {
+        inRootSession(() -> {
+            Tenant t = tenantRepository.findById(tenantA).orElseThrow();
+            t.suspend();
+            return tenantRepository.save(t);
+        });
+
+        mockMvc.perform(get("/api/v1/tarbil-extension/pending").header("Authorization", "Bearer " + tokenA))
+            .andExpect(status().isUnauthorized());
     }
 }

@@ -10,9 +10,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
-/** Idempotent: eklentinin cevrimdisi kuyrugu ayni onayi birden fazla gonderebilir. */
+/**
+ * Idempotent: eklentinin cevrimdisi kuyrugu ayni onayi birden fazla gonderebilir.
+ * Asi bu arada iptal edildiyse de SUBMITTED kalici olur (TARBIL kaydi gercek); o durumda gorunum bos doner.
+ */
 @Service
 @RequiredArgsConstructor
 public class MarkSubmittedUseCase {
@@ -21,7 +25,7 @@ public class MarkSubmittedUseCase {
     private final TarbilSubmissionAssembler assembler;
 
     @Transactional
-    public TarbilSubmissionView execute(UUID tenantId, UUID staffId, UUID submissionId,
+    public Optional<TarbilSubmissionView> execute(UUID tenantId, UUID staffId, UUID submissionId,
                                         TarbilConfirmationMethod method, String tarbilReference) {
         TarbilSyncLog log = syncLogRepository.findById(submissionId)
             .filter(l -> l.getTenantId().equals(tenantId))
@@ -30,6 +34,6 @@ public class MarkSubmittedUseCase {
         if (log.markSubmitted(staffId, method, reference, Instant.now())) {
             syncLogRepository.save(log);
         }
-        return assembler.assemble(log).orElseThrow(() -> new TarbilSubmissionNotFoundException(submissionId));
+        return assembler.assemble(log);
     }
 }

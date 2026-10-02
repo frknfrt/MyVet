@@ -21,4 +21,9 @@ public interface TenantLookupPort {
     default Optional<String> findTenantName(UUID tenantId) {
         return Optional.empty();
     }
+
+    /** ACTIVE ya da TRIAL (askiya alinmamis) -- surekli gecerli kimlik bilgileri (eklenti anahtari) icin. */
+    default boolean isOperational(UUID tenantId) {
+        return findActiveTenantIds().contains(tenantId);
+    }
 }

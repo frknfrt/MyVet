@@ -18,10 +18,13 @@ import java.util.UUID;
 public class GetTarbilStatusSummaryUseCase {
 
     private final TarbilSyncLogRepository tarbilSyncLogRepository;
+    private final TarbilSubmissionAssembler assembler;
 
     @Transactional(readOnly = true)
     public TarbilStatusSummary execute(UUID tenantId) {
-        List<TarbilSyncLog> logs = tarbilSyncLogRepository.findByTenantId(tenantId);
+        List<TarbilSyncLog> logs = tarbilSyncLogRepository.findByTenantId(tenantId).stream()
+            .filter(assembler::isVisible)
+            .toList();
         long pending = logs.stream().filter(l -> l.getStatus() == TarbilSyncStatus.PENDING).count();
         long submitted = logs.stream().filter(l -> l.getStatus() == TarbilSyncStatus.SUBMITTED).count();
         long dismissed = logs.stream().filter(l -> l.getStatus() == TarbilSyncStatus.DISMISSED).count();

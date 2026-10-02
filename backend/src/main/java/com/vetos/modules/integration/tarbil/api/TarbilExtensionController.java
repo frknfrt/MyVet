@@ -1,8 +1,8 @@
 package com.vetos.modules.integration.tarbil.api;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.vetos.modules.integration.tarbil.api.dto.DismissRequest;
 import com.vetos.modules.integration.tarbil.api.dto.ExtensionProfileResponse;
+import com.vetos.modules.integration.tarbil.api.dto.LearnMappingRequest;
 import com.vetos.modules.integration.tarbil.api.dto.MarkSubmittedRequest;
 import com.vetos.modules.integration.tarbil.api.dto.PairRequest;
 import com.vetos.modules.integration.tarbil.api.dto.PairResponse;
@@ -20,6 +20,7 @@ import com.vetos.platform.tenancy.TenantContext;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -66,10 +67,12 @@ public class TarbilExtensionController {
     }
 
     @PostMapping("/submissions/{id}/submitted")
-    public TarbilSubmissionResponse submitted(@PathVariable UUID id, @Valid @RequestBody MarkSubmittedRequest request,
-                                              @AuthenticationPrincipal AuthenticatedStaffUser user) {
-        return TarbilSubmissionResponse.from(markSubmittedUseCase.execute(
-            TenantContext.current(), user.staffUserId(), id, request.method(), request.tarbilReference()));
+    public ResponseEntity<TarbilSubmissionResponse> submitted(@PathVariable UUID id, @Valid @RequestBody MarkSubmittedRequest request,
+                                                              @AuthenticationPrincipal AuthenticatedStaffUser user) {
+        // 204: kaydedildi ama asi Vetly'de artik gosterilemiyor (iptal edilmis).
+        return markSubmittedUseCase.execute(TenantContext.current(), user.staffUserId(), id, request.method(), request.tarbilReference())
+            .map(view -> ResponseEntity.ok(TarbilSubmissionResponse.from(view)))
+            .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
     @PostMapping("/submissions/{id}/dismiss")
@@ -79,10 +82,10 @@ public class TarbilExtensionController {
         dismissSubmissionUseCase.execute(TenantContext.current(), user.staffUserId(), id, request.reason());
     }
 
-    @PutMapping("/mappings/{kind}/{key}")
+    @PutMapping("/mappings/{kind}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void learnMapping(@PathVariable TarbilMappingKind kind, @PathVariable String key, @RequestBody JsonNode fields,
+    public void learnMapping(@PathVariable TarbilMappingKind kind, @Valid @RequestBody LearnMappingRequest request,
                              @AuthenticationPrincipal AuthenticatedStaffUser user) {
-        learnTarbilMappingUseCase.execute(TenantContext.current(), user.staffUserId(), kind, key, fields.toString());
+        learnTarbilMappingUseCase.execute(TenantContext.current(), user.staffUserId(), kind, request.key(), request.fields().toString());
     }
 }

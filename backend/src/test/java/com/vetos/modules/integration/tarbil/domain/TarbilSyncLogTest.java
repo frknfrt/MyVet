@@ -56,12 +56,15 @@ class TarbilSyncLogTest {
     }
 
     @Test
-    void should_throwConflict_when_markSubmittedWhileDismissed() {
+    void should_recordSubmission_when_markSubmittedWhileDismissed() {
+        // TARBIL'e gercekten kaydedildiyse "bildirilmeyecek" niyeti olgunun onune gecemez.
         TarbilSyncLog log = aLog();
         log.dismiss(staffId, "Bildirim gerekmiyor", now);
 
-        assertThatThrownBy(() -> log.markSubmitted(staffId, TarbilConfirmationMethod.MANUAL, null, now))
-            .isInstanceOf(TarbilSubmissionStateConflictException.class);
+        assertThat(log.markSubmitted(staffId, TarbilConfirmationMethod.MANUAL, null, now)).isTrue();
+
+        assertThat(log.getStatus()).isEqualTo(TarbilSyncStatus.SUBMITTED);
+        assertThat(log.getDismissedReason()).isNull();
     }
 
     @Test

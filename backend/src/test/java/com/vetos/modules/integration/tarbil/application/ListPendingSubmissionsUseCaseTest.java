@@ -56,8 +56,8 @@ class ListPendingSubmissionsUseCaseTest {
         when(patientLookupPort.findTarbilProfile(patientId)).thenReturn(Optional.of(new PatientTarbilProfile(
             patientId, "Pamuk", null, speciesId, "Kedi", null, Sex.FEMALE, null)));
         TarbilValueMapping vaccineMapping = TarbilValueMapping.create(
-            tenantId, TarbilMappingKind.VACCINE, "kuduz aşısı", "{\"vaccine\":{}}", UUID.randomUUID(), Instant.now());
-        when(mappingRepository.findByTenantIdAndKindAndVetlyKey(tenantId, TarbilMappingKind.VACCINE, "kuduz aşısı"))
+            tenantId, TarbilMappingKind.VACCINE, "kuduz aşisi", "{\"vaccine\":{}}", UUID.randomUUID(), Instant.now());
+        when(mappingRepository.findByTenantIdAndKindAndVetlyKey(tenantId, TarbilMappingKind.VACCINE, "kuduz aşisi"))
             .thenReturn(Optional.of(vaccineMapping));
         when(mappingRepository.findByTenantIdAndKindAndVetlyKey(eq(tenantId), eq(TarbilMappingKind.SPECIES), any()))
             .thenReturn(Optional.empty());
@@ -69,7 +69,7 @@ class ListPendingSubmissionsUseCaseTest {
         assertThat(view.patientName()).isEqualTo("Pamuk");
         assertThat(view.microchipNumber()).isNull();
         assertThat(view.sex()).isEqualTo("FEMALE");
-        assertThat(view.vaccineKey()).isEqualTo("kuduz aşısı");
+        assertThat(view.vaccineKey()).isEqualTo("kuduz aşisi");
         assertThat(view.vaccineMappingJson()).isEqualTo("{\"vaccine\":{}}");
         assertThat(view.speciesMappingJson()).isNull();
     }

@@ -36,6 +36,38 @@ describe('router', () => {
     expect(await session.get('activeSubmissionId')).toBe('sub-for-v1');
   });
 
+  it('should_reportUnpaired_when_meIsUnauthorized', async () => {
+    // Anahtar iptal edildi / personel pasif: panel "Yükleniyor…"da takilmamali, eslestirmeye donmeli.
+    const tokens = createTokenStore(memoryStore());
+    await tokens.set('vtx_revoked');
+    const api = {
+      me: async () => {
+        await tokens.clear();
+        throw new ApiError('UNAUTHORIZED', 'iptal');
+      },
+    } as never;
+    const router = createRouter({ api, tokens, outbox: createConfirmationOutbox(memoryStore(), api), session: memoryStore() });
+
+    const res = await router.handle({ type: 'GET_STATE' });
+
+    expect(res).toEqual({ ok: true, data: { paired: false, profile: null, pendingConfirmations: 0 } });
+  });
+
+  it('keeps paired state without profile when me fails unexpectedly', async () => {
+    const tokens = createTokenStore(memoryStore());
+    await tokens.set('vtx_abc');
+    const api = {
+      me: async () => {
+        throw new ApiError('UNKNOWN', '500');
+      },
+    } as never;
+    const router = createRouter({ api, tokens, outbox: createConfirmationOutbox(memoryStore(), api), session: memoryStore() });
+
+    const res = await router.handle({ type: 'GET_STATE' });
+
+    expect(res).toEqual({ ok: true, data: { paired: true, profile: null, pendingConfirmations: 0 } });
+  });
+
   it('answers ping', async () => {
     const { router } = setup(async () => ({}));
     expect(await router.handleExternal({ type: 'PING' })).toEqual({ ok: true, data: { version: '0.1.0' } });

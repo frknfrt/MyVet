@@ -74,4 +74,20 @@ class MarkSubmittedUseCaseTest {
         assertThat(log.getTarbilReference()).isEqualTo("TRB-1");
         verify(syncLogRepository, never()).save(any());
     }
+
+    @Test
+    void should_persistSubmitted_when_vaccinationCancelledMeanwhile() {
+        // Cevrimdisi kuyruktan gelen onay: asi bu arada Vetly'de iptal edilmis. TARBIL kaydi gercek -- kaybolmamali.
+        UUID id = UUID.randomUUID();
+        UUID vaccinationId = UUID.randomUUID();
+        TarbilSyncLog log = TarbilSyncLog.queueVaccination(tenantId, UUID.randomUUID(), vaccinationId);
+        when(syncLogRepository.findById(id)).thenReturn(Optional.of(log));
+        when(vaccinationLookupPort.findForTarbil(vaccinationId)).thenReturn(Optional.of(new VaccinationTarbilView(
+            vaccinationId, tenantId, log.getPatientId(), "Kuduz", null, LocalDate.now(), VaccinationStatus.CANCELLED)));
+
+        assertThat(useCase().execute(tenantId, staffId, id, TarbilConfirmationMethod.MANUAL, null)).isEmpty();
+
+        assertThat(log.getStatus()).isEqualTo(TarbilSyncStatus.SUBMITTED);
+        verify(syncLogRepository).save(log);
+    }
 }

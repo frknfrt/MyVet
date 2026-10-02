@@ -25,8 +25,8 @@ export function createRouter({ api, tokens, outbox, session }: Deps) {
     if (paired) {
       try {
         profile = await api.me();
-      } catch (e) {
-        if (!(e instanceof ApiError) || e.code !== 'OFFLINE') throw e;
+      } catch {
+        // 401'de api anahtari zaten sildi -> asagida paired:false; cevrimdisi/5xx'te bagli kalinir, profil bos.
       }
     }
     return { paired: (await tokens.get()) !== null, profile, pendingConfirmations: await outbox.size() };

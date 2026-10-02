@@ -19,38 +19,50 @@ export function createConfirmationOutbox(store: KeyValueStore, api: Pick<VetlyAp
     return (await store.get<OutboxEntry[]>(KEY)) ?? [];
   }
 
-  return {
-    async enqueue(entry: OutboxEntry) {
-      const entries = await read();
-      if (!entries.some((e) => e.id === entry.id)) {
-        await store.set(KEY, [...entries, entry]);
+  // Okuma-degistirme-yazma adimlari sirayla: flush suren bir ag istegini beklerken gelen enqueue
+  // ya da ust uste binen flush'lar (alarm, LIST_PENDING, onStartup) birbirinin yazdigini silmesin.
+  let tail: Promise<unknown> = Promise.resolve();
+  function exclusive<T>(op: () => Promise<T>): Promise<T> {
+    const run = tail.then(op, op);
+    tail = run.catch(() => undefined);
+    return run;
+  }
+
+  async function flushNow(): Promise<number> {
+    const entries = await read();
+    const remaining: OutboxEntry[] = [];
+    let sent = 0;
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i];
+      try {
+        await api.markSubmitted(entry.id, entry.method, entry.tarbilReference);
+        sent++;
+      } catch (e) {
+        const code = e instanceof ApiError ? e.code : 'UNKNOWN';
+        if (code === 'NOT_FOUND' || code === 'CONFLICT') continue;
+        remaining.push(entry);
+        if (code === 'UNAUTHORIZED') {
+          remaining.push(...entries.slice(i + 1));
+          break;
+        }
       }
-    },
+    }
+    await store.set(KEY, remaining);
+    return sent;
+  }
+
+  return {
+    enqueue: (entry: OutboxEntry) =>
+      exclusive(async () => {
+        const entries = await read();
+        if (!entries.some((e) => e.id === entry.id)) {
+          await store.set(KEY, [...entries, entry]);
+        }
+      }),
     async size() {
       return (await read()).length;
     },
-    async flush(): Promise<number> {
-      const entries = await read();
-      const remaining: OutboxEntry[] = [];
-      let sent = 0;
-      for (let i = 0; i < entries.length; i++) {
-        const entry = entries[i];
-        try {
-          await api.markSubmitted(entry.id, entry.method, entry.tarbilReference);
-          sent++;
-        } catch (e) {
-          const code = e instanceof ApiError ? e.code : 'UNKNOWN';
-          if (code === 'NOT_FOUND' || code === 'CONFLICT') continue;
-          remaining.push(entry);
-          if (code === 'UNAUTHORIZED') {
-            remaining.push(...entries.slice(i + 1));
-            break;
-          }
-        }
-      }
-      await store.set(KEY, remaining);
-      return sent;
-    },
+    flush: (): Promise<number> => exclusive(flushNow),
   };
 }
 

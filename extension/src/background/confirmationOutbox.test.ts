@@ -45,6 +45,35 @@ describe('confirmationOutbox', () => {
     expect(await outbox.size()).toBe(1);
   });
 
+  it('should_keepEntry_when_enqueuedDuringFlush', async () => {
+    // Yavas bir gonderim surerken hekim ikinci asiyi isaretler: flush sonu yazimi onu silmemeli.
+    let release!: () => void;
+    const api = {
+      markSubmitted: () => new Promise<never>((resolve) => (release = () => resolve({} as never))),
+    };
+    const outbox = createConfirmationOutbox(memoryStore(), api);
+    await outbox.enqueue({ id: 'a', method: 'AUTO', tarbilReference: null });
+
+    const flushing = outbox.flush();
+    await new Promise((r) => setTimeout(r, 0));
+    const enqueuing = outbox.enqueue({ id: 'b', method: 'MANUAL', tarbilReference: null });
+    release();
+    await flushing;
+    await enqueuing;
+
+    expect(await outbox.size()).toBe(1);
+  });
+
+  it('does not send the same entry twice when flushes overlap', async () => {
+    const api = apiThat([]);
+    const outbox = createConfirmationOutbox(memoryStore(), api);
+    await outbox.enqueue({ id: 'a', method: 'AUTO', tarbilReference: null });
+
+    await Promise.all([outbox.flush(), outbox.flush()]);
+
+    expect(api.calls).toEqual(['a']);
+  });
+
   it('stops on UNAUTHORIZED and keeps remaining', async () => {
     const api = apiThat(['UNAUTHORIZED']);
     const outbox = createConfirmationOutbox(memoryStore(), api);

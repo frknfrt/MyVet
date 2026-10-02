@@ -82,9 +82,10 @@ public class TarbilSyncLog {
         if (status == TarbilSyncStatus.SUBMITTED) {
             return false;
         }
-        if (status == TarbilSyncStatus.DISMISSED) {
-            throw new TarbilSubmissionStateConflictException(status, "gonderildi isaretlemesi");
-        }
+        // DISMISSED'tan da gecilir: TARBIL'e gercekten kaydedildiyse "bildirilmeyecek" niyeti olgunun onune gecemez.
+        this.dismissedReason = null;
+        this.dismissedByStaffId = null;
+        this.dismissedAt = null;
         this.status = TarbilSyncStatus.SUBMITTED;
         this.submittedByStaffId = staffId;
         this.confirmationMethod = method;

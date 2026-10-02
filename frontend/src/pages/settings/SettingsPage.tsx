@@ -38,8 +38,8 @@ const SETTINGS_TABS: SettingsTabConfig[] = [
   { path: 'roller', label: 'Rol & Yetki' },
   // SubscriptionsController: GET /subscriptions/current ADMIN-only.
   { path: 'abonelik', label: 'Abonelik', roles: ['ADMIN'] },
-  // TarbilController tamamı ADMIN-only.
-  { path: 'entegrasyonlar', label: 'Entegrasyonlar', roles: ['ADMIN'] },
+  // TarbilController ADMIN+VET: hekim eklentiyi kendisi bağlar (eşleştirme kodu kişiye özel).
+  { path: 'entegrasyonlar', label: 'Entegrasyonlar', roles: ['ADMIN', 'VET'] },
   // SpeciesController: POST (tür/ırk ekleme) ADMIN-only.
   { path: 'tur-irk', label: 'Tür & Irk', roles: ['ADMIN'] },
   // ServiceTypesController: POST (hizmet ekleme) ADMIN-only.
@@ -59,6 +59,7 @@ export function SettingsPage() {
   const hasAccess = (t: SettingsTabConfig) => hasRoles(t.roles);
   const visibleTabs = SETTINGS_TABS.filter(hasAccess);
   const canViewSmsWhatsapp = hasRoles(['ADMIN', 'RECEPTIONIST']);
+  const canViewIntegrations = hasRoles(['ADMIN', 'VET']);
   const forbidden = <div className={styles.errorBanner}>Bu bölümü görüntüleme yetkiniz yok</div>;
 
   return (
@@ -86,7 +87,7 @@ export function SettingsPage() {
         <Route path="calisma-saatleri" element={isAdmin ? <WorkingHoursPanel /> : forbidden} />
         <Route path="roller" element={<RolePermissionsPanel />} />
         <Route path="abonelik" element={isAdmin ? <SubscriptionPanel /> : forbidden} />
-        <Route path="entegrasyonlar" element={isAdmin ? <IntegrationsPanel /> : forbidden} />
+        <Route path="entegrasyonlar" element={canViewIntegrations ? <IntegrationsPanel /> : forbidden} />
         <Route path="tur-irk" element={isAdmin ? <SpeciesBreedsPanel /> : forbidden} />
         <Route path="hizmetler" element={isAdmin ? <ServiceTypesPanel /> : forbidden} />
         <Route path="ilac-katalogu" element={isAdmin ? <DrugCatalogPanel /> : forbidden} />

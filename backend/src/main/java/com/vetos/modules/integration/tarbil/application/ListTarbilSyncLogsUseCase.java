@@ -1,6 +1,5 @@
 package com.vetos.modules.integration.tarbil.application;
 
-import com.vetos.modules.encounter.domain.VaccinationLookupPort;
 import com.vetos.modules.encounter.domain.VaccinationTarbilView;
 import com.vetos.modules.integration.tarbil.application.dto.TarbilSyncLogSummary;
 import com.vetos.modules.integration.tarbil.domain.TarbilSyncLogRepository;
@@ -20,13 +19,14 @@ public class ListTarbilSyncLogsUseCase {
 
     private final TarbilSyncLogRepository tarbilSyncLogRepository;
     private final PatientLookupPort patientLookupPort;
-    private final VaccinationLookupPort vaccinationLookupPort;
+    private final TarbilSubmissionAssembler assembler;
 
     @Transactional(readOnly = true)
     public List<TarbilSyncLogSummary> execute(UUID tenantId) {
         return tarbilSyncLogRepository.findByTenantId(tenantId).stream()
+            .filter(assembler::isVisible)
             .map(log -> {
-                var vaccination = vaccinationLookupPort.findForTarbil(log.getVaccinationRecordId());
+                var vaccination = assembler.liveVaccination(log);
                 return new TarbilSyncLogSummary(
                     log.getId(), log.getPatientId(),
                     patientLookupPort.findTarbilProfile(log.getPatientId()).map(PatientTarbilProfile::name).orElse("—"),
