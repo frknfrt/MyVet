@@ -91,7 +91,8 @@ Her istekte JWT'den çözülen `tenantId`, `TenantContext` (ThreadLocal) üzerin
 | `/invoices/**`, `/payments/**` | ❌ | ❌ | ✅ | ✅ |
 | `/inventory/**` (yazma) | ❌ | ✅ | ❌ | ✅ |
 | `/settings/**`, `/users/**` | ❌ | ❌ | ❌ | ✅ |
-| `/tarbil/**` (senkron tetikleme) | ❌ | ❌ | ❌ | ✅ |
+| `/tarbil/**` (durum, bildirilmeyecek/geri al, eklenti bağlama, eşleştirmeler) | ✅ | ❌ | ❌ | ✅ |
+| `/tarbil-extension/**` (yalnız eklenti anahtarı; `/pair` herkese açık + hız sınırlı) | eklenti | eklenti | eklenti | eklenti |
 | `/encounters/**` (okuma: SOAP, malzeme listesi) | ✅ | ✅ | ❌ | ✅ |
 | `/message-templates/**`, `/notifications/**` (SMS/WhatsApp) | ❌ | ❌ | ✅ | ✅ |
 | `**/campaign-candidates` (SMS/WhatsApp kampanya adayı listeleri) | ✅ | ❌ | ✅ | ✅ |

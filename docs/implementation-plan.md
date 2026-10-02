@@ -54,6 +54,7 @@ Referanslar: @docs/requirements.md · @docs/architecture.md · @docs/er-diagram.
 
 ## 7. TARBİL Entegrasyonu
 - [x] `integration/tarbil` modülü, `TarbilSyncPort` arayüzü + adapter — *(gerçek Bakanlık API kimlik bilgisi/dokümanı olmadığı için `MockTarbilAdapter` stub; port/adapter deseni sayesinde gerçek HTTP client'e geçiş tek sınıf değişikliği.)*
+  **Güncelleme (2026-10):** `MockTarbilAdapter` ve retry altyapısı kaldırıldı; resmi API olmadığından aktarım hekimin tarayıcısındaki Vetly TARBİL eklentisiyle yapılıyor (Faz 1: eşleştirme, bekleyenler, elle "gönderildi"; Faz 2: TARBİL formunu otomatik doldurma). Bkz. `docs/superpowers/specs/2026-10-02-tarbil-eklenti-design.md`.
 - [x] Aşı/kimliklendirme kayıtlarının asenkron bildirimi (mesaj kuyruğu ile) — *(RabbitMQ/Kafka Faz 1'de kurulu değildi; aynı asenkron/tekrar-denenebilir davranış Spring `@Async` + `TarbilSyncLog` outbox kaydıyla sağlandı — bu implementation-detail seçimi olduğu için kullanıcıya sorulmadı.)*
 - [x] Frontend: Ayarlar > Entegrasyonlar sekmesinde durum gösterimi
 

@@ -93,6 +93,20 @@ Düzenleme: `sudo nano /etc/vetly/backend.env`, ardından `sudo systemctl restar
 - **iyzico:** `IYZICO_API_KEY`/`IYZICO_SECRET_KEY` boşken `/api/v1/public/payments/iyzico/callback?token=SIMULATED-<id>` herhangi bir faturayı ödenmiş işaretleyebiliyor. Bu yüzden Nginx bu yolu `403` ile kapatıyor. Anahtarlar tanımlanınca (`IYZICO_BASE_URL=https://api.iyzipay.com` ile birlikte) Nginx'teki `location /api/v1/public/payments/iyzico/` bloğu kaldırılmalı.
 - Nginx `X-Forwarded-For`'u `$remote_addr` ile **üzerine yazar** — istemcinin gönderdiği sahte header backend'e ulaşmaz.
 
+## TARBİL eklentisi
+
+Kaynak: `extension/` (tasarım: `docs/superpowers/specs/2026-10-02-tarbil-eklenti-design.md`).
+
+```powershell
+cd <repo>\extension
+npm ci
+npm run build          # dist/ — prod API: https://uygulama.vetly.com.tr
+```
+Kurulum (her klinik bilgisayarında, şimdilik paketlenmemiş): Chrome > `chrome://extensions` > Geliştirici modu > "Paketlenmemiş öğe yükle" > `extension\dist`. Güncellemede aynı klasörün içeriği değiştirilip eklenti kartında "Yeniden yükle".
+
+- Eklenti kimliği manifest'teki `key` alanından türetilir ve sabittir (`npm run extension-id`); frontend'de `VITE_TARBIL_EXTENSION_ID` aynı değerdir. `extension/key.pem` repoda DEĞİLDİR, güvenli yedekte saklanır (Web Store'a geçişte gerekir).
+- Hekim eklentiyi Vetly > Ayarlar > Entegrasyonlar > "Eklentiyi bağla" ile bağlar; bağlantılar aynı ekrandan iptal edilir.
+
 ## Bilinen açık işler
 
 - [ ] Otomatik günlük veritabanı yedeği + sunucu dışına kopyalama

@@ -174,6 +174,10 @@ void onEncounterFinalized(EncounterFinalizedEvent event) {
 
 **Kiracı yaratma (2026-08):** Self-servis klinik kaydı (`/kayit`) kaldırıldı — yeni klinikler artık SADECE platform admin panelinden, `TenantAdminPort.createTenant(...)` üzerinden oluşturulur. Bu, port'un "değiştirebilme" yetkisinin doğal bir uzantısı: platform admin zaten bir kiracıyı askıya alabiliyor/planını değiştirebiliyorsa, kiracıyı ilk baştan yaratabilmesi de aynı sorumluluk alanına girer.
 
+### 6.2 Kenar durum: TARBİL eklentisi kimlik doğrulaması (2026-10)
+
+- **Üçüncü SecurityFilterChain — TARBİL eklentisi (`TarbilExtensionSecurityConfig`, `@Order(2)`):** yalnız `/api/v1/tarbil-extension/**`. `vtx_` önekli anahtar `platform/security/ExtensionTokenAuthenticator` portuyla doğrulanır; portun uygulaması `integration/tarbil` modülünde (platform bir modüle bağımlı olamaz). JWT bu zincirde, eklenti anahtarı ana zincirde geçersizdir.
+
 ## 7. Sonraki Adım Önerisi
 
 Bu mimari iskeletini artık somut koda dökebiliriz — örneğin `patient` ve `encounter` modüllerini örnek olarak tam paket yapısıyla (entity, port, use-case, adapter, controller) yazıp bir başlangıç şablonu (boilerplate) çıkarabiliriz, ya da önce Spring Modulith testiyle bu sınırları doğrulayan bir iskelet proje (skeleton repo yapısı) kurabiliriz.
