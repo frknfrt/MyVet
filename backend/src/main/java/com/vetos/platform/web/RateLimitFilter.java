@@ -28,6 +28,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final Map<String, Bucket> authBuckets = new ConcurrentHashMap<>();
     private final Map<String, Bucket> publicBuckets = new ConcurrentHashMap<>();
     private final Map<String, Bucket> platformAdminAuthBuckets = new ConcurrentHashMap<>();
+    private final Map<String, Bucket> extensionPairBuckets = new ConcurrentHashMap<>();
 
     @Override
     protected void doFilterInternal(
@@ -49,6 +50,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
             // (paylasilan authBuckets kullanilsaydi, iki farkli login sistemine ayni IP'den
             // gelen trafik birbirinin limitini etkilerdi).
             buckets = platformAdminAuthBuckets;
+            limit = Bandwidth.builder().capacity(10).refillIntervally(10, Duration.ofMinutes(5)).build();
+        } else if (path.equals("/api/v1/tarbil-extension/pair")) {
+            // TARBIL eklentisi eslestirme kodu deneme saldirisina karsi -- personel girisi
+            // kadar siki (5dk'da 10), ayri havuzda.
+            buckets = extensionPairBuckets;
             limit = Bandwidth.builder().capacity(10).refillIntervally(10, Duration.ofMinutes(5)).build();
         } else if (path.startsWith("/api/v1/public/")) {
             buckets = publicBuckets;
