@@ -1,16 +1,15 @@
 import { Badge, BadgeTone } from '../../components/ui/Badge';
-import { TarbilSyncStatus, TarbilSyncType } from '../../api/tarbilApi';
+import { TarbilConfirmationMethod, TarbilSyncStatus } from '../../api/tarbilApi';
 
 const STATUS_CONFIG: Record<TarbilSyncStatus, { label: string; tone: BadgeTone }> = {
-  PENDING: { label: 'Bekliyor', tone: 'neutral' },
-  SYNCED: { label: 'Senkronize', tone: 'success' },
-  FAILED: { label: 'Başarısız', tone: 'danger' },
+  PENDING: { label: 'Bekliyor', tone: 'warning' },
+  SUBMITTED: { label: 'Gönderildi', tone: 'success' },
+  DISMISSED: { label: 'Bildirilmeyecek', tone: 'neutral' },
 };
 
-const TYPE_LABELS: Record<TarbilSyncType, string> = {
-  VACCINATION: 'Aşı',
-  IDENTIFICATION: 'Kimliklendirme',
-  TREATMENT: 'Tedavi',
+const METHOD_LABELS: Record<TarbilConfirmationMethod, string> = {
+  AUTO: 'Eklenti doğruladı',
+  MANUAL: 'Elle işaretlendi',
 };
 
 export function TarbilSyncStatusBadge({ status }: { status: TarbilSyncStatus }) {
@@ -18,6 +17,6 @@ export function TarbilSyncStatusBadge({ status }: { status: TarbilSyncStatus }) 
   return <Badge tone={tone}>{label}</Badge>;
 }
 
-export function tarbilTypeLabel(type: TarbilSyncType) {
-  return TYPE_LABELS[type];
+export function confirmationMethodLabel(method: TarbilConfirmationMethod | null) {
+  return method ? METHOD_LABELS[method] : '';
 }

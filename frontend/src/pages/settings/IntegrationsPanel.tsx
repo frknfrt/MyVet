@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { tarbilApi, TarbilStatus, TarbilSyncLog } from '../../api/tarbilApi';
-import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
-import { TarbilSyncStatusBadge, tarbilTypeLabel } from './tarbilStatus';
+import { confirmationMethodLabel, TarbilSyncStatusBadge } from './tarbilStatus';
+import { TarbilExtensionCard } from './TarbilExtensionCard';
+import { TarbilMappingsCard } from './TarbilMappingsCard';
 import styles from './SettingsPage.module.css';
 
 export function IntegrationsPanel() {
@@ -19,10 +20,10 @@ export function IntegrationsPanel() {
     reload();
   }, []);
 
-  async function handleRetry(id: string) {
+  async function run(id: string, action: () => Promise<void>) {
     setBusyId(id);
     try {
-      await tarbilApi.retry(id);
+      await action();
       reload();
     } finally {
       setBusyId(null);
@@ -36,10 +37,10 @@ export function IntegrationsPanel() {
           <div>
             <div className={styles.integrationName}>TARBİL</div>
             <div className={styles.integrationDesc}>
-              T.C. Tarım ve Orman Bakanlığı — aşı ve kimliklendirme bildirimleri
+              Aşı bildirimleri TARBİL'e hekim tarafından girilir; Vetly yalnızca gerçekten bildirilenleri "Gönderildi"
+              gösterir.
             </div>
           </div>
-          {status?.connected ? <Badge tone="success">Bağlı</Badge> : <Badge tone="neutral">Yükleniyor...</Badge>}
         </div>
 
         {status && (
@@ -50,26 +51,28 @@ export function IntegrationsPanel() {
                 <div className={styles.statValue}>{status.pendingCount}</div>
               </div>
               <div className={styles.statCard}>
-                <div className={styles.statLabel}>Senkronize</div>
-                <div className={styles.statValue}>{status.syncedCount}</div>
+                <div className={styles.statLabel}>Gönderildi</div>
+                <div className={styles.statValue}>{status.submittedCount}</div>
               </div>
               <div className={styles.statCard}>
-                <div className={styles.statLabel}>Başarısız</div>
-                <div className={styles.statValue}>{status.failedCount}</div>
+                <div className={styles.statLabel}>Bildirilmeyecek</div>
+                <div className={styles.statValue}>{status.dismissedCount}</div>
               </div>
             </div>
             <div className={styles.lastSynced}>
-              Son senkronizasyon:{' '}
-              {status.lastSyncedAt ? new Date(status.lastSyncedAt).toLocaleString('tr-TR') : 'Henüz yok'}
+              Son bildirim:{' '}
+              {status.lastSubmittedAt ? new Date(status.lastSubmittedAt).toLocaleString('tr-TR') : 'Henüz yok'}
             </div>
           </>
         )}
       </div>
 
+      <TarbilExtensionCard />
+
       <div className={styles.tableCard}>
         <div className={styles.tableHead}>
           <div>Hasta</div>
-          <div>Tür</div>
+          <div>Aşı</div>
           <div>Durum</div>
           <div>Zaman</div>
           <div></div>
@@ -80,15 +83,40 @@ export function IntegrationsPanel() {
           logs.map((log) => (
             <div key={log.id} className={styles.row}>
               <div>{log.patientName}</div>
-              <div className={styles.muted}>{tarbilTypeLabel(log.syncType)}</div>
+              <div className={styles.muted}>
+                {log.vaccineName}
+                {log.administeredDate && ` · ${new Date(log.administeredDate).toLocaleDateString('tr-TR')}`}
+              </div>
               <div>
                 <TarbilSyncStatusBadge status={log.status} />
+                {log.status === 'SUBMITTED' && (
+                  <div className={styles.muted}>
+                    {confirmationMethodLabel(log.confirmationMethod)}
+                    {log.tarbilReference && ` · No: ${log.tarbilReference}`}
+                  </div>
+                )}
+                {log.status === 'DISMISSED' && log.dismissedReason && (
+                  <div className={styles.muted}>{log.dismissedReason}</div>
+                )}
               </div>
-              <div className={styles.muted}>{new Date(log.attemptedAt).toLocaleString('tr-TR')}</div>
+              <div className={styles.muted}>{new Date(log.submittedAt ?? log.queuedAt).toLocaleString('tr-TR')}</div>
               <div>
-                {log.status === 'FAILED' && (
-                  <Button variant="secondary" onClick={() => handleRetry(log.id)} disabled={busyId === log.id}>
-                    {busyId === log.id ? '...' : 'Tekrar Dene'}
+                {log.status === 'PENDING' && (
+                  <Button
+                    variant="tertiary"
+                    disabled={busyId === log.id}
+                    onClick={() => run(log.id, () => tarbilApi.dismiss(log.id, 'Bildirim gerekmiyor'))}
+                  >
+                    Bildirilmeyecek
+                  </Button>
+                )}
+                {log.status === 'DISMISSED' && (
+                  <Button
+                    variant="tertiary"
+                    disabled={busyId === log.id}
+                    onClick={() => run(log.id, () => tarbilApi.restore(log.id))}
+                  >
+                    Geri al
                   </Button>
                 )}
               </div>
@@ -96,6 +124,8 @@ export function IntegrationsPanel() {
           ))
         )}
       </div>
+
+      <TarbilMappingsCard />
     </div>
   );
 }
