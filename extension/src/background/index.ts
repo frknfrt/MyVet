@@ -1,1 +1,37 @@
-export {};
+import { VETLY_API_BASE, VETLY_APP_ORIGIN } from '../shared/config';
+import type { BackgroundRequest, ExternalRequest } from '../shared/messages';
+import { chromeLocalStore, chromeSessionStore, createTokenStore } from './chromeStorage';
+import { createConfirmationOutbox } from './confirmationOutbox';
+import { createRouter } from './router';
+import { createVetlyApi } from './vetlyApi';
+
+const tokens = createTokenStore(chromeLocalStore());
+const api = createVetlyApi({ baseUrl: VETLY_API_BASE, tokens });
+const outbox = createConfirmationOutbox(chromeLocalStore(), api);
+const router = createRouter({ api, tokens, outbox, session: chromeSessionStore() });
+
+// Arac cubugu simgesine tiklamak yan paneli acar (kullanici hareketi gerektiren tek yol).
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => undefined);
+
+chrome.runtime.onMessage.addListener((req: BackgroundRequest, _sender, sendResponse) => {
+  router.handle(req).then(sendResponse);
+  return true;
+});
+
+chrome.runtime.onMessageExternal.addListener((req: ExternalRequest, sender, sendResponse) => {
+  // Tam esitlik: startsWith "https://uygulama.vetly.com.tr.baska-alan" gibi kokenleri de kabul ederdi.
+  if (sender.origin !== VETLY_APP_ORIGIN) {
+    sendResponse({ ok: false, error: 'İzin verilmeyen kaynak', code: 'UNKNOWN' });
+    return false;
+  }
+  router.handleExternal(req).then(sendResponse);
+  return true;
+});
+
+chrome.alarms.create('flush-confirmations', { periodInMinutes: 1 });
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'flush-confirmations') outbox.flush().catch(() => undefined);
+});
+chrome.runtime.onStartup.addListener(() => {
+  outbox.flush().catch(() => undefined);
+});
