@@ -1,0 +1,27 @@
+/* Degerler frontend/src/styles/tokens.css'ten birebir; eklenti ayri paket oldugu icin burada yeniden tanimlanir. */
+:root {
+  --color-paper: #ffffff;
+  --color-cream: #fbfaf8;
+  --color-border: #e9e5ef;
+  --color-text-ink: #1b1229;
+  --color-text-muted: #6e6579;
+  --color-brand-700: #4a2a78;
+  --color-warning-700: #a65022;
+  --color-warning-100: #f1e0d2;
+  --color-success-700: #146245;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+}
+body { margin: 0; font: 14px/1.4 system-ui, sans-serif; color: var(--color-text-ink); background: var(--color-cream); }
+.panel { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid var(--color-border); padding-bottom: 8px; }
+.muted { color: var(--color-text-muted); font-size: 12px; }
+.card { background: var(--color-paper); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+.warning { color: var(--color-warning-700); font-size: 12px; }
+.success { color: var(--color-success-700); }
+.row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+button { border: 1px solid var(--color-border); background: var(--color-paper); color: var(--color-text-ink); border-radius: var(--radius-sm); padding: 6px 10px; cursor: pointer; }
+button.primary { background: var(--color-brand-700); color: var(--color-paper); border-color: var(--color-brand-700); }
+button:disabled { opacity: 0.5; cursor: default; }
+input { border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 6px 8px; width: 100%; box-sizing: border-box; }
+.banner { background: var(--color-warning-100); border: 1px solid var(--color-warning-700); border-radius: var(--radius-sm); padding: 6px 8px; font-size: 12px; }
