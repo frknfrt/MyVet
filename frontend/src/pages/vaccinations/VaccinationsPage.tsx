@@ -5,6 +5,7 @@ import { AppShell } from '../../components/layout/AppShell';
 import { ApiError } from '../../api/client';
 import { Button } from '../../components/ui/Button';
 import { vaccinationApi, VaccinationScheduleItem } from '../../api/vaccinationApi';
+import { selectForTarbil, TARBIL_VACCINE_URL } from '../../lib/tarbilExtension';
 import { VaccinationStatusBadge } from './vaccinationStatus';
 import styles from './VaccinationsPage.module.css';
 
@@ -40,6 +41,27 @@ export function VaccinationsPage() {
   const [patientFilter, setPatientFilter] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tarbilNotice, setTarbilNotice] = useState<string | null>(null);
+  // Planlananlarda Yapildi/Iptal, yapilanlarda TARBIL'e aktar -- baslik ve satirlar ayni grid'i kullansin.
+  const showActions = canWrite;
+
+  async function handleSendToTarbil(vaccinationId: string) {
+    const result = await selectForTarbil(vaccinationId);
+    if (result.ok) {
+      window.open(TARBIL_VACCINE_URL, '_blank', 'noopener');
+      setTarbilNotice('TARBİL yeni sekmede açıldı; aşı bilgisi sayfadaki Vetly kartında.');
+      return;
+    }
+    setTarbilNotice(
+      result.reason === 'NOT_INSTALLED'
+        ? 'Vetly TARBİL eklentisi bu tarayıcıda yüklü değil. Kurulum: Ayarlar > Entegrasyonlar.'
+        : result.reason === 'NOT_PAIRED'
+          ? 'Eklenti Vetly\'ye bağlı değil. Ayarlar > Entegrasyonlar > "Eklentiyi bağla".'
+          : result.reason === 'NOT_FOUND'
+            ? 'Bu aşı TARBİL kuyruğunda yok (iptal edilmiş ya da henüz uygulanmamış olabilir).'
+            : 'Eklentiyle iletişim kurulamadı.',
+    );
+  }
 
   function load() {
     setLoading(true);
@@ -208,6 +230,7 @@ export function VaccinationsPage() {
       </div>
 
       {error && <div className={styles.errorBanner}>{error}</div>}
+      {tarbilNotice && <div className={styles.muted}>{tarbilNotice}</div>}
 
       <div className={styles.tabs}>
         <div className={`${styles.tab} ${tab === 'planlanan' ? styles.tabActive : ''}`} onClick={() => setTab('planlanan')}>
@@ -219,13 +242,13 @@ export function VaccinationsPage() {
       </div>
 
       <div className={styles.tableCard}>
-        <div className={`${styles.tableHead} ${tab === 'planlanan' && canWrite ? styles.rowWithActions : styles.rowPlain}`}>
+        <div className={`${styles.tableHead} ${showActions ? styles.rowWithActions : styles.rowPlain}`}>
           <div>Hasta</div>
           <div>Sahip</div>
           <div>Aşı</div>
           <div>Tarih</div>
           <div>Durum</div>
-          {tab === 'planlanan' && canWrite && <div>İşlem</div>}
+          {showActions && <div>İşlem</div>}
         </div>
         {loading ? (
           <div className={styles.empty}>Yükleniyor...</div>
@@ -244,7 +267,7 @@ export function VaccinationsPage() {
           filtered.map((v) => (
             <div
               key={v.id}
-              className={`${styles.row} ${tab === 'planlanan' && canWrite ? styles.rowWithActions : styles.rowPlain}`}
+              className={`${styles.row} ${showActions ? styles.rowWithActions : styles.rowPlain}`}
               onClick={() => navigate(`/hastalar/${v.patientId}`)}
             >
               <div className={styles.patientName}>{v.patientName}</div>
@@ -272,6 +295,15 @@ export function VaccinationsPage() {
                   >
                     İptal
                   </button>
+                </div>
+              )}
+              {tab === 'yapilan' && canWrite && (
+                <div className={styles.actionsCell} onClick={(e) => e.stopPropagation()}>
+                  {v.status === 'ADMINISTERED' && (
+                    <button type="button" className={styles.actionBtn} onClick={() => handleSendToTarbil(v.id)}>
+                      TARBİL'e aktar
+                    </button>
+                  )}
                 </div>
               )}
             </div>

@@ -21,6 +21,7 @@ Thumbs.db
 # Env / secrets
 .env
 .env.local
+.env.*.local
 
 # Subagent-driven-development scratch workspace
 .superpowers/

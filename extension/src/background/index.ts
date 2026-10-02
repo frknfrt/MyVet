@@ -5,6 +5,10 @@ import { createConfirmationOutbox } from './confirmationOutbox';
 import { createRouter } from './router';
 import { createVetlyApi } from './vetlyApi';
 
+// Icerik betigi (TARBIL karti) activeSubmissionId degisikligini dinler; session varsayilan olarak ona kapali.
+// Burada yalniz aktif asi kimligi durur, anahtar chrome.storage.local'da.
+chrome.storage.session.setAccessLevel({ accessLevel: 'TRUSTED_AND_UNTRUSTED_CONTEXTS' }).catch(() => undefined);
+
 const tokens = createTokenStore(chromeLocalStore());
 const api = createVetlyApi({ baseUrl: VETLY_API_BASE, tokens });
 const outbox = createConfirmationOutbox(chromeLocalStore(), api);
