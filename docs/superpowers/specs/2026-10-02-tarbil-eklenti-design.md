@@ -1,7 +1,7 @@
 # TARBİL Chrome Eklentisi (Aşı Bildirimi) — Tasarım Dokümanı
 
 **Tarih:** 2026-10-02
-**Durum:** Tasarım onaylandı, spec incelemesi bekliyor
+**Durum:** Faz 1 uygulandı (`feature/tarbil-eklenti`). Faz 2 akışı 2026-10-03'te güncellendi (Bölüm 12), inceleme bekliyor
 **İlgili modül:** `integration/tarbil` (backend), `frontend` (Ayarlar > Entegrasyonlar, aşı kaydı), yeni `extension/` klasörü
 
 ## 1. Bağlam ve Amaç
@@ -28,7 +28,9 @@ TARBİL'in (T.C. Tarım ve Orman Bakanlığı, `hbsapp.tarbil.gov.tr`) resmi bir
 - Kimliklendirme (çip kaydı), reçete, sahip değişikliği, ölüm bildirimi — sonraki sürümler.
 - Büyükbaş/küçükbaş/ithal/küpesiz hayvan panelleri.
 - Chrome Web Store yayını — şimdilik sadece kendi kliniklerde "paketlenmemiş uzantı" olarak kurulum.
-- TARBİL'e eklentiden doğrudan HTTP isteği atmak (form postback'ini taklit etmek) — kırılgan ve kullanım koşulları açısından gri alan; eklenti sadece arayüzü doldurur ve okur.
+- TARBİL'e eklentiden doğrudan HTTP isteği atmak (form postback'ini taklit etmek) — kırılgan ve kullanım koşulları açısından gri alan; eklenti sadece arayüzü doldurur ve okur. (Tek istisna: Bölüm 12.3'teki isteğe bağlı oturum canlı tutma — veri göndermeyen, açık TARBİL sekmesinden yapılan sade sayfa isteği.)
+- e-Devlet girişini otomatikleştirmek ya da e-Devlet/TARBİL kimlik bilgisini eklentide saklamak — kişisel resmi kimlik; e-Devlet otomasyonu engelliyor. Giriş her zaman hekimin kendisi tarafından yapılır (Bölüm 12.2).
+- Kaydet'e eklentinin basması (toplu onay) — 2026-10-03 kararı: şimdilik yok; eşleştirmeler oturduktan sonra yeniden değerlendirilecek (Bölüm 12.5).
 - Sunucuda otomatik tarayıcı ile gönderim — hekimin e-Devlet/TARBİL kimlik bilgilerinin sunucuda saklanmasını gerektirir (KVKK/hukuk riski) ve "Kaydet'e hekim basar" ilkesine aykırı.
 
 ## 3. TARBİL Ekranı — Bilinenler
@@ -168,7 +170,7 @@ extension/
 |---|---|
 | Anahtar geçersiz/iptal (401) | Anahtar silinir, panel eşleştirme ekranına döner |
 | Vetly'ye ulaşılamıyor | Panel "Çevrimdışı"; `submitted` bildirimleri `confirmationOutbox`'a (`chrome.storage.local`) yazılır, bağlantı gelince otomatik gönderilir — TARBİL'e kaydedilmiş hiçbir onay kaybolmaz |
-| TARBİL oturumu kapalı | Beklenen alanlar yok → "TARBİL oturumunuz kapanmış görünüyor" |
+| TARBİL oturumu kapalı | Beklenen alanlar yok / giriş sayfası → kart "e-Devlet ile giriş yapın" + giriş sayfasını açan buton; aktif toplu aktarım korunur, girişten sonra kaldığı aşıdan devam eder (Bölüm 12.2) |
 | TARBİL ekranı değişmiş (id bulunamadı) | Doldurma hemen durur; kart hangi adımda/hangi alanda durduğunu söyler; düzeltme `selectors.ts`'te |
 | AJAX 10 sn içinde bitmedi | Doldurma o adımda durur, tamamlanan/kalan adımlar gösterilir |
 | Zaten `SUBMITTED` aşı seçildi | Kart tarihle uyarır, form doldurulmaz (mükerrer resmi kayıt önlenir) |
@@ -203,3 +205,33 @@ Kişisel veriler (TC, ad, adres, telefon, çip) `***` ile maskelenerek; çerez/o
 4. **Aşı ürünü seçimi akışı:** ürün tablosu nasıl doluyor, seri/lot numarası nereye giriliyor (ekran görüntüsü yeterli).
 5. **Konum filtresi testi:** farklı mahallede kayıtlı bir hayvan çip numarasıyla bulunabiliyor mu?
 6. **Köpek arama penceresinin kaynağı** (`AnimalType=D`, `Ctrl+U`).
+7. **e-Devlet girişinden sonra dönülen TARBİL sayfasının adresi** (yalnız adres; oturum/token parametreleri silinerek) ve aşı sayfasına menüden nasıl gidildiği.
+8. **Oturum süresi:** TARBİL 20–30 dk boş bırakılınca oturum kapanıyor mu, kapanınca ne görünüyor (giriş sayfası adresi / mesaj).
+9. **Asistan yetkilendirme:** TARBİL'de hekim adına teknisyen/asistan yetkilendirme seçeneği var mı.
+
+## 12. Faz 2 Akışı: "Günde 1 giriş, aşı başına 1 tık" (2026-10-03 kararı)
+
+**Gerekçe:** TARBİL'e yalnız e-Devlet ile giriliyor. Giriş otomatikleştirilemez (Bölüm 2), ama hekimin eforu girişin sıklığı ve aşı başına tıklama sayısıyla belirlenir. Hedef: girişi günde bir kereye, her aşıyı tek tıka (Kaydet) indirmek. Bölüm 7'deki 3 ve 5 numaralı akışların yerini alır; diğer akışlar geçerli.
+
+### 12.1 Toplu aktarım ("Hepsini aktar")
+- Vetly'de bekleyen aşı varken görünür bant: "N aşı TARBİL'e aktarılmayı bekliyor → Hepsini aktar". Yan panelde de aynı buton.
+- Toplu aktarım, bekleyen aşıların sıralı listesini aktif kuyruk olarak `chrome.storage.session`'a yazar (Faz 1'deki tek "aktif aşı"nın genellemesi) ve TARBİL'i açar.
+- Kuyruk tek tek işlenir: doldur → hekim Kaydet → başarı yakalanır → `POST /submitted {AUTO}` → sıradaki aşı kendiliğinden yüklenir. Hekim Vetly'ye dönüp işaretleme yapmaz.
+- Kart her an "Bu aşıyı atla" (kuyrukta sona alır), "Bildirilmeyecek" ve "Aktarımı durdur" sunar. Kuyruk bitince özet: "5 aşı kaydedildi, 1 atlandı".
+
+### 12.2 Giriş ve dönüş
+- Eklenti TARBİL'i açtığında oturum açıksa doğrudan aşı sayfasına gider.
+- Oturum kapalıysa (giriş sayfası ya da beklenen alanlar yok) kart: "e-Devlet ile giriş yapın" + giriş sayfasını açan buton. Kimlik bilgisi eklentide tutulmaz; hekim isterse Chrome'un şifre yöneticisini kullanır.
+- e-Devlet hekimi TARBİL'e döndürdüğünde içerik betiği aktif kuyruk olduğunu görür ve aşı sayfasına kendisi geçer; kuyruk kaldığı yerden sürer. (Dönüş sayfasının adresi: Bölüm 11 madde 7.)
+
+### 12.3 Oturumu canlı tutma (isteğe bağlı, varsayılan açık, panelden kapatılabilir)
+- Yalnız açık bir TARBİL sekmesi varken, içerik betiği o sekmeden periyodik olarak aynı kökene veri göndermeyen sade bir sayfa isteği (GET) atar; böylece sunucu tarafı oturum zaman aşımına uğramaz.
+- Aralık, Bölüm 11 madde 8'de öğrenilecek zaman aşımının yarısından kısa seçilir. TARBİL sekmesi yoksa hiçbir istek atılmaz; tarayıcı kapanınca biter.
+- Bu bir form postback'i değildir ve hiçbir veri değiştirmez (Bölüm 2'deki istisna).
+
+### 12.4 Hekimin tıklaması yalnız Kaydet
+- Bölüm 7.3'teki "hekim Transfer Et'e basar" adımı değişti: arama sonucu **çipi birebir eşleşen tek satır** ise eklenti satırı işaretleyip "Transfer Et"e kendisi basar (bu adım resmi kayıt oluşturmaz, yalnız hayvanı forma ekler). Sıfır ya da birden fazla sonuçta hiçbir şey otomatik yapılmaz, karar hekime kalır.
+- Kaydet her zaman hekimde (karar A). Eşleştirmesi bilinmeyen alanlar kartta listelenir; hekim onları TARBİL'de seçip Kaydet'e basar, eklenti öğrenir (Bölüm 7.4).
+
+### 12.5 Ertelenen: toplu onayla eklentinin Kaydet'e basması (karar B)
+Hekimin günde bir kez "N aşıyı kaydet" onayı vermesi ve eklentinin Kaydet'e basması şimdilik yapılmıyor (yanlış eşleştirmenin birden çok resmi kayda yayılma riski; hukuki sorumluluğun netliği). Eşleştirmeler birkaç hafta sorunsuz çalıştıktan sonra, yalnız eşleştirmesi öğrenilmiş aşılar için açılabilen bir ayar olarak yeniden değerlendirilir; hiç görülmemiş aşı her zaman 12.4 ile ilerler.
