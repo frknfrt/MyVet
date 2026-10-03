@@ -16,3 +16,15 @@ Chrome > `chrome://extensions` > Geliştirici modu > "Paketlenmemiş öğe yükl
 
 `npm run extension-id` — çıktı, frontend'deki `VITE_TARBIL_EXTENSION_ID` değeridir. Kimlik `public/manifest.json`'daki
 `key` alanından türetilir; `key.pem` repoda tutulmaz (Web Store'a geçişte gerekir, güvenli yedekte saklanır).
+
+## TARBİL'de otomatik doldurma (Faz 2a)
+
+1. Vetly'de aşının yanındaki **TARBİL'e aktar**'a basın (ya da yan panelde **TARBİL'de doldur**). TARBİL "Aşı Uygulama Belgesi Ekle" sayfası açılır.
+2. TARBİL oturumu kapalıysa e-Devlet ile giriş yapın; giriş sonrası eklenti aşı sayfasına kendisi geçer.
+3. Eklenti uygulama tarihini ve türü (kedi/köpek) girer, **PetVet'ten Hayvan Ara ve Ekle** penceresinde çip numarasıyla arar; çipi birebir eşleşen tek ve `CANLI` hayvanı forma aktarır.
+4. Siz **Ürün Ekle**'den aşıyı stoktan seçip kontrol eder ve **Onayla**'ya basarsınız. Eklenti Onayla'ya asla basmaz.
+5. TARBİL kaydı onaylayınca eklenti aşıyı Vetly'de "gönderildi" olarak işaretler. Yakalayamazsa kartta **Kaydedildi olarak işaretle** her zaman var.
+
+**Açılır pencere izni:** Arama penceresi açılmazsa Chrome adres çubuğundaki engellenen pencere simgesinden `hbsapp.tarbil.gov.tr` için açılır pencerelere izin verin.
+
+Teknik not: `page.js` sayfanın kendi dünyasında (`world: "MAIN"`) çalışır ve yalnız Telerik bileşenlerini tetikler; Vetly API'sine ve eklenti anahtarına erişimi yoktur. TARBİL'e özgü tüm id'ler `src/tarbil/selectors.ts`'tedir.

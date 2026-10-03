@@ -165,12 +165,16 @@ extension/
     │                tokenStore.ts (chrome.storage.local), confirmationOutbox.ts
     ├── sidepanel/   App.tsx, PairingView.tsx, PendingList.tsx, SubmissionCard.tsx
     └── tarbil/
-        ├── content.ts          izole dünya: arka plan ↔ sayfa köprüsü, sayfa içi "Vetly kartı"
-        └── page/               MAIN dünya
-            ├── selectors.ts    TARBİL'e özgü TÜM id'ler/metinler (tek dosya)
-            ├── telerik.ts      setText, selectCombo, click, waitForAjax
-            ├── vaccinePage.ts  formu doldur, seçili değerleri oku, başarıyı yakala
-            └── animalSearch.ts çip yaz, Ara, eşleşen satırı işaretle
+        ├── content.ts          izole dünya: sayfa türüne göre yönlendirme
+        ├── selectors.ts        TARBİL'e özgü TÜM id'ler/yollar/değerler (tek dosya)
+        ├── bridge.ts           izole ↔ MAIN postMessage köprüsü
+        ├── receiptFlow.ts      aşı sayfası: tarih, tür, PetVet, çip doğrulama, başarı yakalama
+        ├── searchFlow.ts       arama penceresi: çiple ara, tek+CANLI satırı aktar
+        ├── animalRows.ts / species.ts / home.ts / card.ts / views.ts
+        └── page/               MAIN dünya (page.js)
+            ├── telerik.ts      $find, postback bekleme, tarih/combobox/buton
+            ├── ops.ts          köprü komutları (Onayla/Ürün Ekle/çıkış komutu YOK)
+            └── main.ts
 ```
 
 - **Arka plan:** Vetly API'yi yalnız bu katman çağırır; anahtar başka parçaya verilmez. Vetly API taban adresi derleme moduna göre (prod: `https://uygulama.vetly.com.tr`, dev: `http://localhost:8080`).
@@ -267,3 +271,4 @@ Hekimin günde bir kez "N aşıyı kaydet" onayı vermesi ve eklentinin Kaydet'e
 İlk sürümde eklenti **Ürün Ekle / stok seçimine dokunmaz**. Eklentinin yaptığı: Uygulama Tarihi → Tür (Kedi/Köpek, postback beklenir) → "PetVet'ten Hayvan Ara ve Ekle" → çiple arama → tek ve `CANLI` eşleşmede satırı işaretleyip "Transfer Et" → forma eklenen satırdaki çipin Vetly'deki çiple aynı olduğunu doğrulama. Kartta "Aşıyı (ürünü) stoktan ekleyip Onayla'ya basın" yönlendirmesi ve Vetly'deki aşı adı + lot numarası gösterilir (hekim doğru stok kalemini seçsin diye). Başarı (Onayla sonrası bildirim paneli) yakalanınca `POST /submitted {AUTO}` gider.
 - Bu yüzden Bölüm 11 madde 4 ve 11 (ürün/stok akışı) Faz 2a için gerekli değil; Faz 2b'ye kalır. Bölüm 7.4'teki aşı alanı eşleştirme/öğrenme de ürün detay alanlarına bağlı olduğundan Faz 2b'ye kalır.
 - Faz 2a için hâlâ gerekli: başarılı bir Onayla'nın yanıtı (madde 2; gerçek bir aşı kaydında, test kaydı açılmadan), madde 7 ve 8.
+- **Uygulama (2026-10-03):** `docs/superpowers/plans/2026-10-03-tarbil-eklenti-faz2a.md`. Ana sayfa ile arama penceresi `chrome.storage.session`'daki `tarbilFlow` durumu (`armed → filling → searching → transferred|needsVet → awaitingConfirm → done`) üzerinden haberleşir. Başarı yalnız hekimin Onayla tıklamasından sonraki 120 sn içinde görünen başarı paneliyle sayılır.

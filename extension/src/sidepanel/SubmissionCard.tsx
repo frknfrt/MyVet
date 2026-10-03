@@ -27,7 +27,7 @@ export function SubmissionCard({ submission: s, onDone }: { submission: Submissi
 
   async function setActive() {
     await sendToBackground({ type: 'SET_ACTIVE', id: s.id });
-    setNote('Bu aşı TARBİL sekmesindeki Vetly kartında gösterilecek.');
+    setNote("TARBİL'de \"Aşı Uygulama Belgesi Ekle\" sayfası açıksa form hemen doldurulur; değilse o sayfayı açın.");
   }
 
   if (s.status === 'SUBMITTED') {
@@ -56,7 +56,7 @@ export function SubmissionCard({ submission: s, onDone }: { submission: Submissi
       </div>
       {!s.vaccineMapping && <div className="muted">İlk kez aktarılıyor: aşı ürününü ve hastalığı TARBİL'de siz seçeceksiniz.</div>}
       <div className="row">
-        <button onClick={setActive} disabled={busy}>TARBİL kartında göster</button>
+        <button onClick={setActive} disabled={busy}>TARBİL'de doldur</button>
         <button className="primary" onClick={markSubmitted} disabled={busy}>Gönderildi olarak işaretle</button>
         <button onClick={dismiss} disabled={busy}>Bildirilmeyecek</button>
       </div>
