@@ -3,7 +3,7 @@
 type Reply = { ok: true; data: unknown } | { ok: false; error: string; code: string };
 
 const EXTENSION_ID = import.meta.env.VITE_TARBIL_EXTENSION_ID;
-export const TARBIL_VACCINE_URL = import.meta.env.VITE_TARBIL_VACCINE_URL ?? 'https://hbsapp.tarbil.gov.tr/';
+export const TARBIL_VACCINE_URL = import.meta.env.VITE_TARBIL_VACCINE_URL ?? 'https://hbsapp.tarbil.gov.tr/Modules/RECEIPT/Pages/ATS/VaccineReceipt/VaccineReceiptPage.aspx?type=1';
 
 declare const chrome: {
   runtime?: { sendMessage: (id: string, msg: unknown, cb: (reply: Reply | undefined) => void) => void; lastError?: unknown };
