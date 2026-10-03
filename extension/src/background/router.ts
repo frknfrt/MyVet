@@ -1,6 +1,7 @@
 import type { BackgroundRequest, BackgroundResponse, ExtensionState, ExternalRequest } from '../shared/messages';
 import type { KeyValueStore, TokenStore } from './chromeStorage';
 import type { ConfirmationOutbox } from './confirmationOutbox';
+import { createFlowStore } from '../shared/flowStore';
 import { ApiError, type VetlyApi } from './vetlyApi';
 
 const ACTIVE_KEY = 'activeSubmissionId';
@@ -19,6 +20,7 @@ function fail(e: unknown): BackgroundResponse<never> {
 }
 
 export function createRouter({ api, tokens, outbox, session }: Deps) {
+  const flow = createFlowStore(session);
   async function state(): Promise<ExtensionState> {
     const paired = (await tokens.get()) !== null;
     let profile = null;
@@ -50,6 +52,7 @@ export function createRouter({ api, tokens, outbox, session }: Deps) {
           case 'GET_SUBMISSION':
             return { ok: true, data: await api.getSubmission(req.id) };
           case 'SET_ACTIVE':
+            await flow.arm(req.id);
             await session.set(ACTIVE_KEY, req.id);
             return { ok: true, data: null };
           case 'GET_ACTIVE': {
@@ -82,6 +85,7 @@ export function createRouter({ api, tokens, outbox, session }: Deps) {
             return { ok: true, data: { version: VERSION } };
           case 'SELECT_SUBMISSION': {
             const submission = await api.getByVaccination(req.vaccinationRecordId);
+            await flow.arm(submission.id);
             await session.set(ACTIVE_KEY, submission.id);
             return { ok: true, data: { submissionId: submission.id } };
           }

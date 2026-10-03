@@ -68,6 +68,23 @@ describe('router', () => {
     expect(res).toEqual({ ok: true, data: { paired: true, profile: null, pendingConfirmations: 0 } });
   });
 
+  it('arms the TARBIL flow when Vetly selects a submission', async () => {
+    const { router, session } = setup(async () => ({}));
+
+    await router.handleExternal({ type: 'SELECT_SUBMISSION', vaccinationRecordId: 'v1' });
+
+    expect(await session.get('tarbilFlow')).toMatchObject({ submissionId: 'sub-for-v1', step: 'armed' });
+  });
+
+  it('arms the TARBIL flow when the side panel sets the active submission', async () => {
+    const { router, session } = setup(async () => ({}));
+
+    await router.handle({ type: 'SET_ACTIVE', id: 's9' });
+
+    expect(await session.get('tarbilFlow')).toMatchObject({ submissionId: 's9', step: 'armed' });
+    expect(await session.get('activeSubmissionId')).toBe('s9');
+  });
+
   it('answers ping', async () => {
     const { router } = setup(async () => ({}));
     expect(await router.handleExternal({ type: 'PING' })).toEqual({ ok: true, data: { version: '0.1.0' } });
