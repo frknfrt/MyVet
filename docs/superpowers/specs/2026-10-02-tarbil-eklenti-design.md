@@ -47,6 +47,17 @@ Sayfalar ASP.NET WebForms + Telerik RadControls 2012.3 + jQuery 1.7.2. Form alan
 - Enter tuşu iptal edilmiş; arama `btnSearch` tıklamasıyla, sonuç `radGridAnimal` tablosunda (sütunlar: NAME, CHIPNO, PASSPORTNO, SPECIES, BREEDNAME, SEX, COLOR, BIRTHDATE, STATUS, ANIMALOWNER, MOTHERCHIPNO; satır başı onay kutusu).
 - Seçim: onay kutusu + `btnAddBulkAnimal` ("Transfer Et") → sunucu `runReceiptUpdateParentAnimal(param)` → `window.opener.runToParentUpdateAnimal(param)` → pencere kapanır. Hayvanın TARBİL iç ID'sini sunucu üretir; eklentinin bilmesine gerek yoktur.
 
+**Ana aşı sayfası kaynağından öğrenilenler (2026-10-03, kişisel veriler kayda geçirilmedi):**
+- Adres: `/Modules/RECEIPT/Pages/ATS/VaccineReceipt/VaccineReceiptPage.aspx?type=1` (menü: Aşı Uygulama Belgesi > Ekle; `type=2` rapel belgesi). Modül ana sayfası `/Modules/RECEIPT/Pages/VaccineDefault.aspx`, sistem ana sayfası `/Default.aspx`, uygulama seçimi `/SelectApplication.aspx`.
+- **Form aşamalı:** ilk yüklemede yalnız `dpApplicationDate` (bugünle dolu, `autoPostBack: true`) ve `cbxAnimalType` (seçimde postback) var. `cbxVaccineValue`, `cbxDiseaseValue`, `cbxVacPurpose`, `cbxApplicationType`, `cbxDosageUnitValue`, `cbxOtherAnimalSex`, `cbxProvince`, `RadGridProduct` ancak tür seçildikten sonraki postback ile oluşuyor. Doldurma sırası buna göre: tarih → tür → (postback bitişi) → diğer alanlar.
+- `cbxAnimalType` değerleri: Kedi = `245f5f71-2cfd-4a04-9072-640069e3268e`, Köpek = `3eea84e6-b2d8-494f-a01c-89e739bb004d` (bunlar `SPECIES` eşleştirmesinin varsayılanı olabilir; öğrenme yine geçerli).
+- **Kaydet butonunun adı "Onayla"** (`btnInsert` üstte, `btnInsert2` altta). Uyarı varsa sayfa `confirmButton` ile `window.confirm("Uyarılara Rağmen Kaydetmek İstediğinizden Emin Misiniz?")` sorabiliyor; bu onay da hekimde kalır.
+- **Aşı ürünü stoktan seçiliyor:** `openProductWindow(satır)` → `/Modules/RECEIPT/Pages/ModalPages/UcVaccineStockSearchModalPage.aspx?animalid=<türGUID>&date=dd/MM/yyyy` popup'ı → seçim `window.opener.runToParentPageMethod("<ürünId>,...")` → `hiddenSelectedProductId` doldurulur → gizli `updaRadgridField` butonu tıklanır. Yani `VACCINE` eşleştirmesi Vetly aşı adını kliniğin **TARBİL stoğundaki** bir kaleme bağlar; aşı TARBİL stoğunda yoksa aktarım yapılamaz (kart bunu söylemeli).
+- Hayvan ekleme: arama popup'ı `runToParentUpdateAnimal("OtherAnimal")` ile döner → gizli `updateOtherAnimal` butonu → `ReceiptAddOtherAnimal` paneli yenilenir.
+- **Başarı/hata bildirimi yerleri:** `bodyCPH_ContentPlaceHolder1_UCVACCINENotification_pnlNotifiSuccess` / `_pnlNotifiError` / `_pnlNotifiWarning` / `_pnlNotifiInfo` (içlerinde `.Onecolumn`) ve sayfa altında aynı yapıda `UCNotification1`; ayrıca Telerik `RadNotificationOkDefault` / `ErrorDefault` açılır pencereleri ve `TBSErrorHandler` (`İşlem Hatası` / `Sistem Hatası`). Başarı yakalama bu panellerin içeriğinin değişmesini izleyecek; kesin metin hâlâ gerekli (Bölüm 11 madde 2).
+- **Oturum:** sayfadaki `SessionTimeoutControl` uyarıyı 215.940.000 ms sonra gösteriyor (yani istemci tarafı zaman aşımı ≈ 60 saat; 60 sn kala "Oturuma devam etmek için tıklayınız" çıkar ve `notification.update()` ile oturumu kendisi uzatır). Async postback zaman aşımı 360 sn. Gerçek sunucu süresi gözlemle doğrulanmalı (Bölüm 11 madde 8); 60 saat doğruysa Bölüm 12.3'teki canlı tutma gereksiz kalabilir.
+- Dikkat: sayfa fonksiyonlarında `debugger;` satırları var (geliştirici araçları açıkken akış durur); sağ tık kapalı; `window.alert` → `radalert`. Çıkış `__doPostBack('Exit_Click')` — eklenti asla tetiklememeli.
+
 **Açık sorular** (uygulama planından önce kullanıcıdan alınacak, bkz. Bölüm 11): başarı mesajının biçimi, aşı ürünü tablosunun (`RadGridProduct`) davranışı, `runToParentUpdateAnimal` sonrası tablo, konum filtresinin çip aramasını kısıtlayıp kısıtlamadığı, köpek ırk listesi.
 
 ## 4. Bileşenler ve Sınırlar
@@ -199,10 +210,10 @@ extension/
 
 ## 11. Uygulama Öncesi Kullanıcıdan Alınacak Bilgiler
 Kişisel veriler (TC, ad, adres, telefon, çip) `***` ile maskelenerek; çerez/oturum başlıkları hiçbir zaman paylaşılmadan:
-1. **Ana aşı sayfasının kaynağı** (`Ctrl+U`, dosya olarak) — `cbxVaccineValue`/`cbxDiseaseValue` vb. seçenekleri, `runToParentUpdateAnimal`, `RadGridProduct`.
+1. ~~Ana aşı sayfasının kaynağı~~ — alındı (2026-10-03, ilk yükleme hâli; Bölüm 3). **Eksik:** tür olarak Kedi seçildikten sonraki hâlinin kaynağı (aşı/hastalık/amaç/doz alanları ve `RadGridProduct` o zaman oluşuyor).
 2. **Başarılı bir kayıttan sonra** ekranda görünen mesajın ekran görüntüsü + o isteğin Network yanıtı.
 3. **"Transfer Et" isteğinin Network yanıtı** (`runReceiptUpdateParentAnimal(` geçen satır).
-4. **Aşı ürünü seçimi akışı:** ürün tablosu nasıl doluyor, seri/lot numarası nereye giriliyor (ekran görüntüsü yeterli).
+4. **Aşı ürünü seçimi akışı:** `UcVaccineStockSearchModalPage.aspx` stok popup'ının kaynağı ve seri/lot numarasının nereden geldiği (stok kaleminde mi, ayrıca mı giriliyor).
 5. **Konum filtresi testi:** farklı mahallede kayıtlı bir hayvan çip numarasıyla bulunabiliyor mu?
 6. **Köpek arama penceresinin kaynağı** (`AnimalType=D`, `Ctrl+U`).
 7. **e-Devlet girişinden sonra dönülen TARBİL sayfasının adresi** (yalnız adres; oturum/token parametreleri silinerek) ve aşı sayfasına menüden nasıl gidildiği.
