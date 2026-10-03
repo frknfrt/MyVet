@@ -35,13 +35,26 @@ export function createReceiptFlow(d: ReceiptDeps) {
   let sub: Submission | null = null;
   let stopObserving: (() => void) | null = null;
   let finishing = false;
+  let starting: Promise<void> | null = null;
+  // Degerlendirmeler sirayla: postback yaniti bir mutasyon yagmuru uretir; ust uste MARK_SUBMITTED gitmesin.
+  let evaluating: Promise<void> = Promise.resolve();
+  // Onayla'ya basildigi anda sayfada zaten olan basari panelleri (onceki islemlerden kalma) sayilmaz.
+  const staleSuccess = new WeakSet<Element>();
 
   async function current(): Promise<FlowState | null> {
     const st = await d.flow.get();
     return st && sub && st.submissionId === sub.id ? st : null;
   }
 
-  async function start(): Promise<void> {
+  /** Ayni anda tek baslatma: hem aktif kimlik hem akis degisikligi tetikleyebilir. */
+  function start(): Promise<void> {
+    starting ??= run().finally(() => {
+      starting = null;
+    });
+    return starting;
+  }
+
+  async function run(): Promise<void> {
     stopObserving?.();
     stopObserving = null;
     finishing = false;
@@ -75,11 +88,14 @@ export function createReceiptFlow(d: ReceiptDeps) {
     const s = sub!;
     const chip = normalizeChip(s.microchipNumber);
     const animalType = resolveAnimalType(s);
+    // Doldurulamiyorsa akis "armed" birakilmaz (yoksa TARBIL ana sayfasi tekrar tekrar yonlendirilir).
     if (!chip) {
+      await d.flow.update(s.id, { step: 'error', message: 'NO_CHIP' });
       d.card.show(views.noChip(s));
       return;
     }
     if (!animalType) {
+      await d.flow.update(s.id, { step: 'error', message: 'UNSUPPORTED_SPECIES' });
       d.card.show(views.unsupportedSpecies(s));
       return;
     }
@@ -103,6 +119,8 @@ export function createReceiptFlow(d: ReceiptDeps) {
     await d.flow.update(s.id, { step: 'searching' });
     d.card.show(views.progress(s, 'PetVet arama penceresinde çip numarasıyla aranıyor…'));
     await d.bridge.call('clickPetVet');
+    // Otomatik akista kullanici hareketi yok; Chrome pencereyi engelleyebilir. Buton hemen sunulur.
+    d.card.show(views.searching(s));
     d.setTimer(() => {
       void (async () => {
         const st = await current();
@@ -119,8 +137,13 @@ export function createReceiptFlow(d: ReceiptDeps) {
 
   function watch(): void {
     if (stopObserving) return;
-    stopObserving = d.observe(() => void evaluate());
-    void evaluate();
+    stopObserving = d.observe(() => void scheduleEvaluate());
+    void scheduleEvaluate();
+  }
+
+  function scheduleEvaluate(): Promise<void> {
+    evaluating = evaluating.then(evaluate, evaluate);
+    return evaluating;
   }
 
   async function evaluate(): Promise<void> {
@@ -130,7 +153,8 @@ export function createReceiptFlow(d: ReceiptDeps) {
     if (!st) return;
     if (st.step === 'awaitingConfirm') {
       const clickedRecently = st.insertClickedAt !== undefined && d.now() - st.insertClickedAt <= SUCCESS_WINDOW_MS;
-      if (clickedRecently && d.doc.querySelector(bySuffix(RECEIPT.successPanel))) await confirm(s);
+      const freshSuccess = Array.from(d.doc.querySelectorAll(bySuffix(RECEIPT.successPanel))).some((el) => !staleSuccess.has(el));
+      if (clickedRecently && freshSuccess) await confirm(s);
       return;
     }
     if (!WAITING_FOR_ANIMAL.includes(st.step)) return;
@@ -163,6 +187,7 @@ export function createReceiptFlow(d: ReceiptDeps) {
     (e) => {
       const target = e.target as Element | null;
       if (!target?.closest || !RECEIPT.insertButtons.some((suffix) => target.closest(bySuffix(suffix)))) return;
+      d.doc.querySelectorAll(bySuffix(RECEIPT.successPanel)).forEach((el) => staleSuccess.add(el));
       void (async () => {
         const st = await current();
         if (st?.step === 'awaitingConfirm') await d.flow.update(st.submissionId, { insertClickedAt: d.now() });
@@ -178,7 +203,7 @@ export function createReceiptFlow(d: ReceiptDeps) {
       switch (id) {
         case 'fill':
           await d.flow.arm(s.id);
-          await fill();
+          await start();
           return;
         case 'petvet':
           try {
@@ -211,6 +236,11 @@ export function createReceiptFlow(d: ReceiptDeps) {
     flowChanged(state: FlowState | null): void {
       const s = sub;
       if (!s || !state || state.submissionId !== s.id) return;
+      // Yan panelden ayni asi yeniden "TARBIL'de doldur": aktif kimlik degismez, yalniz akis yeniden "armed" olur.
+      if (state.step === 'armed') {
+        void start();
+        return;
+      }
       if (state.step === 'needsVet') d.card.show(views.needsVet(s, state.message ?? ''));
       else if (state.step === 'transferred') d.card.show(views.progress(s, 'Hayvan forma aktarılıyor…'));
       if (WAITING_FOR_ANIMAL.includes(state.step)) watch();

@@ -32,8 +32,19 @@ describe('page ops', () => {
     expect(log).toEqual(['chip:900000000000001', 'search']);
   });
 
+  it('refuses to click anything that is not a search-result checkbox', async () => {
+    document.body.innerHTML = '<a id="ctl00_X_cntVACCINEBodyContent_btnInsert"><input id="ins" type="button"></a>';
+    let clicked = false;
+    document.getElementById('ctl00_X_cntVACCINEBodyContent_btnInsert')!.addEventListener('click', () => { clicked = true; });
+    const env: TelerikEnv = { doc: document, find: () => null, prm: () => instantPrm(), isReady: () => true };
+
+    await expect(createPageOps(env).checkRow({ checkboxId: 'ctl00_X_cntVACCINEBodyContent_btnInsert' })).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    expect(clicked).toBe(false);
+  });
+
   it('checks a result row by clicking its checkbox and waits for the postback', async () => {
-    document.body.innerHTML = '<input type="checkbox" id="cb1">';
+    document.body.innerHTML =
+      '<table id="ctl00_X_UCVaccineKKBSAnimalSearch_radGridAnimal_ctl00"><tbody><tr><td><input type="checkbox" id="cb1"></td></tr></tbody></table>';
     const prm = instantPrm();
     document.getElementById('cb1')!.addEventListener('click', () => prm.fire());
     const env: TelerikEnv = { doc: document, find: () => null, prm: () => prm, isReady: () => true };

@@ -40,6 +40,11 @@ export const views = {
   unsupportedSpecies: (s: Submission): CardView =>
     view(s, `Otomatik doldurma yalnız kedi ve köpek için (${s.speciesName ?? 'tür bilinmiyor'}). Formu kendiniz doldurun.`, 'warn'),
   progress: (s: Submission, text: string): CardView => view(s, text, 'muted'),
+  searching: (s: Submission): CardView =>
+    view(s, 'PetVet arama penceresinde çip numarasıyla aranıyor… Pencere açılmadıysa aşağıdaki butona basın.', 'muted', [
+      { id: 'petvet', label: 'Arama penceresini aç' },
+      ...FALLBACK,
+    ]),
   popupBlocked: (s: Submission): CardView =>
     view(
       s,

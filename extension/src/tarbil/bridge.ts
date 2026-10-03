@@ -33,6 +33,8 @@ export interface PageBridge {
 
 export function installPageHandler(win: Window, handlers: Record<string, PageHandler>): () => void {
   const listener = async (event: MessageEvent) => {
+    // Yalniz ayni pencereden (izole dunyadaki content.js) gelen komutlar; opener/popup/cerceve gonderemez.
+    if (event.source !== win) return;
     const m = event.data as CommandMessage | null;
     if (!m || m.__vetly !== 'cmd' || typeof m.id !== 'string') return;
     const reply = (r: Omit<ResponseMessage, '__vetly' | 'id'>) => win.postMessage({ __vetly: 'res', id: m.id, ...r }, '*');
@@ -55,6 +57,7 @@ export function installPageHandler(win: Window, handlers: Record<string, PageHan
 export function createPageBridge(win: Window): PageBridge {
   const pending = new Map<string, { resolve: (v: unknown) => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> }>();
   win.addEventListener('message', (event: MessageEvent) => {
+    if (event.source !== win) return;
     const m = event.data as ResponseMessage | null;
     if (!m || m.__vetly !== 'res') return;
     const p = pending.get(m.id);

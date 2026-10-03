@@ -1,6 +1,6 @@
 import type { PageHandler } from '../bridge';
-import { RECEIPT, SEARCH } from '../selectors';
-import { clickButton, clickElement, selectComboValue, setDate, setText, waitUntil, type TelerikEnv } from './telerik';
+import { RECEIPT, SEARCH, bySuffix } from '../selectors';
+import { PageError, clickButton, clickElement, selectComboValue, setDate, setText, waitUntil, type TelerikEnv } from './telerik';
 
 /**
  * Koprudan cagrilan komutlar. Bilerek eksik: Onayla (btnInsert), Urun Ekle, sahip alanlari ve cikis icin
@@ -16,7 +16,14 @@ export function createPageOps(env: TelerikEnv): Record<string, PageHandler> {
       setText(env, SEARCH.chip, chip);
       await clickButton(env, SEARCH.search);
     },
-    checkRow: ({ checkboxId }: { checkboxId: string }) => clickElement(env, checkboxId),
+    // Yalniz arama tablosundaki satir kutulari: id ile herhangi bir oge (ornegin Onayla) tiklanamaz.
+    checkRow: ({ checkboxId }: { checkboxId: string }) => {
+      const box = env.doc.getElementById(checkboxId);
+      if (!box || !box.matches(`table${bySuffix(SEARCH.grid)} input[type="checkbox"]`)) {
+        return Promise.reject(new PageError('NOT_FOUND', 'Arama sonucunda böyle bir satır kutusu yok'));
+      }
+      return clickElement(env, checkboxId);
+    },
     transfer: () => clickButton(env, SEARCH.transfer),
   };
 }

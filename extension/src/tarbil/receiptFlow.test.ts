@@ -200,6 +200,71 @@ describe('receiptFlow', () => {
     await vi.waitFor(() => expect(shown.at(-1)?.actions.map((a) => a.id)).toContain('petvet'));
   });
 
+  it('ignores a success panel that was already on the page before Onayla', async () => {
+    page();
+    showSuccess();
+    const { receipt, sent, flow, mutate } = await setup({}, 'awaitingConfirm');
+    await receipt.start();
+
+    (document.getElementById(`${P}btnInsert_input`) as HTMLInputElement).click();
+    await vi.waitFor(async () => expect((await flow.get())?.insertClickedAt).toBeDefined());
+    mutate();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(sent.some((r) => r.type === 'MARK_SUBMITTED')).toBe(false);
+
+    document.getElementById('bodyCPH_ContentPlaceHolder1_UCVACCINENotification_pnlNotifiSuccess')!.remove();
+    showSuccess();
+    mutate();
+    await vi.waitFor(() => expect(sent.some((r) => r.type === 'MARK_SUBMITTED')).toBe(true));
+  });
+
+  it('marks submitted only once under a burst of page mutations', async () => {
+    page();
+    const { receipt, sent, flow, mutate } = await setup({}, 'awaitingConfirm');
+    await receipt.start();
+
+    (document.getElementById(`${P}btnInsert_input`) as HTMLInputElement).click();
+    await vi.waitFor(async () => expect((await flow.get())?.insertClickedAt).toBeDefined());
+    showSuccess();
+    mutate();
+    mutate();
+    mutate();
+
+    await vi.waitFor(async () => expect((await flow.get())?.step).toBe('done'));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(sent.filter((r) => r.type === 'MARK_SUBMITTED')).toHaveLength(1);
+  });
+
+  it('starts filling when the same vaccination is armed again from the side panel', async () => {
+    page();
+    const { receipt, flow, calls } = await setup({}, null);
+    await receipt.start();
+    expect(calls).toEqual([]);
+
+    await flow.arm('s1');
+    receipt.flowChanged(await flow.get());
+
+    await vi.waitFor(() => expect(calls.map((c) => c.op)).toContain('clickPetVet'));
+  });
+
+  it('offers the search-window button right after asking PetVet to open', async () => {
+    page();
+    const { receipt, shown } = await setup();
+
+    await receipt.start();
+
+    expect(shown.at(-1)?.actions.map((a) => a.id)).toContain('petvet');
+  });
+
+  it('does not leave the flow armed when it cannot fill', async () => {
+    page();
+    const { receipt, flow } = await setup({ microchipNumber: null });
+
+    await receipt.start();
+
+    expect((await flow.get())?.step).toBe('error');
+  });
+
   it('stops and reports when a page step fails', async () => {
     page();
     const flow = createFlowStore(memoryStore(), () => 100_000);
