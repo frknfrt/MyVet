@@ -1,5 +1,7 @@
 import { apiClient, ApiError } from './client';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
+
 export type EncounterStatus = 'DRAFT' | 'FINALIZED' | 'AMENDED';
 
 export type ExamBodySystem =
@@ -92,4 +94,6 @@ export const encounterApi = {
   addMaterial: (id: string, payload: { inventoryItemId: string; quantity: number }) =>
     apiClient.post<void>(`/api/v1/encounters/${id}/materials`, payload),
   listMaterials: (id: string) => apiClient.get<InventoryUsage[]>(`/api/v1/encounters/${id}/materials`),
+  reportUrl: (id: string) => `${API_BASE_URL}/api/v1/encounters/${id}/report`,
+  authHeader: () => apiClient.authHeader(),
 };

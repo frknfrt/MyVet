@@ -6,7 +6,10 @@ import com.vetos.modules.encounter.application.dto.RecordVitalsCommand;
 import com.vetos.modules.encounter.application.dto.StartEncounterCommand;
 import com.vetos.modules.encounter.application.dto.UpdateEncounterSoapCommand;
 import com.vetos.modules.encounter.application.dto.UpdatePhysicalExamCommand;
+import com.vetos.modules.encounter.infrastructure.pdf.EncounterReportPdfRenderer;
 import com.vetos.platform.security.AuthenticatedStaffUser;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -40,6 +43,8 @@ public class EncountersController {
     private final FindEncounterByAppointmentUseCase findEncounterByAppointmentUseCase;
     private final RecordInventoryUsageUseCase recordInventoryUsageUseCase;
     private final ListInventoryUsageUseCase listInventoryUsageUseCase;
+    private final GenerateEncounterReportUseCase generateEncounterReportUseCase;
+    private final EncounterReportPdfRenderer encounterReportPdfRenderer;
 
     @PostMapping
     @PreAuthorize("hasAnyRole('VET', 'ADMIN')")
@@ -112,5 +117,16 @@ public class EncountersController {
     @PreAuthorize("hasAnyRole('VET', 'TECHNICIAN', 'ADMIN')")
     public List<InventoryUsageResponse> listMaterials(@PathVariable UUID id) {
         return listInventoryUsageUseCase.execute(id).stream().map(InventoryUsageResponse::from).toList();
+    }
+
+    /** Tek muayeneyi hasta sahibine yonelik, indirilebilir/yazdirilabilir PDF rapor olarak sunar. */
+    @GetMapping("/{id}/report")
+    @PreAuthorize("hasAnyRole('VET', 'TECHNICIAN', 'ADMIN')")
+    public ResponseEntity<byte[]> report(@PathVariable UUID id) {
+        byte[] pdf = encounterReportPdfRenderer.render(generateEncounterReportUseCase.execute(id));
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=muayene-raporu-" + id + ".pdf")
+            .contentType(MediaType.APPLICATION_PDF)
+            .body(pdf);
     }
 }

@@ -1,4 +1,5 @@
-import { EncounterDetail } from '../../api/encounterApi';
+import { useState } from 'react';
+import { encounterApi, EncounterDetail } from '../../api/encounterApi';
 import { PatientProfile } from '../../api/patientApi';
 import { Button } from '../../components/ui/Button';
 import { colorFor, initialsOf } from '../dashboard/avatarColor';
@@ -23,6 +24,27 @@ interface PatientHeaderBarProps {
 export function PatientHeaderBar({ profile, encounter, onBack }: PatientHeaderBarProps) {
   const age = ageLabelFrom(profile.birthDate);
   const dob = formatDate(profile.birthDate);
+  const [downloadingReport, setDownloadingReport] = useState(false);
+
+  async function handleDownloadReport() {
+    if (downloadingReport) return;
+    setDownloadingReport(true);
+    try {
+      const res = await fetch(encounterApi.reportUrl(encounter.id), { headers: encounterApi.authHeader() });
+      if (!res.ok) throw new Error('Rapor indirilemedi');
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = `muayene-raporu-${profile.name.replace(/\s+/g, '-')}.pdf`;
+      a.click();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      window.alert('Rapor indirilemedi, lütfen tekrar deneyin.');
+    } finally {
+      setDownloadingReport(false);
+    }
+  }
 
   return (
     <div className={styles.wrap}>
@@ -51,6 +73,9 @@ export function PatientHeaderBar({ profile, encounter, onBack }: PatientHeaderBa
 
         <div className={styles.rightActions}>
           <EncounterStatusBadge status={encounter.status} />
+          <Button variant="secondary" onClick={handleDownloadReport} disabled={downloadingReport}>
+            {downloadingReport ? 'Hazırlanıyor...' : 'Rapor İndir (PDF)'}
+          </Button>
           <Button variant="secondary" onClick={onBack}>
             Hastalara Dön
           </Button>
