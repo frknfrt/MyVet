@@ -54,12 +54,12 @@ export function AppointmentsPage() {
 
   function appointmentsForDay(day: Date) {
     const dayIso = isoDate(day);
-    return sortByStart(filteredAppointments.filter((a) => a.scheduledStart.slice(0, 10) === dayIso));
+    return sortByStart(filteredAppointments.filter((a) => isoDate(a.scheduledStart) === dayIso));
   }
 
   function appointmentsForDoctor(doctorId: string) {
     return sortByStart(
-      appointments.filter((a) => a.assignedStaffId === doctorId && a.scheduledStart.slice(0, 10) === cursorIso)
+      appointments.filter((a) => a.assignedStaffId === doctorId && isoDate(a.scheduledStart) === cursorIso)
     );
   }
 

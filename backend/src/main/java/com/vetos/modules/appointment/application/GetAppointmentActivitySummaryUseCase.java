@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.YearMonth;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,9 +24,11 @@ public class GetAppointmentActivitySummaryUseCase {
 
     private final AppointmentRepository appointmentRepository;
 
+    private static final ZoneId ISTANBUL = ZoneId.of("Europe/Istanbul");
+
     @Transactional(readOnly = true)
     public AppointmentActivitySummary execute(UUID tenantId) {
-        YearMonth currentMonth = YearMonth.now();
+        YearMonth currentMonth = YearMonth.now(ISTANBUL);
         YearMonth previousMonth = currentMonth.minusMonths(1);
 
         List<Appointment> currentMonthAppointments = appointmentRepository.findByTenantIdAndDateRange(
@@ -49,6 +51,6 @@ public class GetAppointmentActivitySummaryUseCase {
     }
 
     private java.time.Instant startOf(YearMonth month) {
-        return month.atDay(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+        return month.atDay(1).atStartOfDay(ISTANBUL).toInstant();
     }
 }

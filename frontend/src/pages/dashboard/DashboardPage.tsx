@@ -53,7 +53,7 @@ export function DashboardPage() {
     setLoading(true);
     appointmentApi
       .weeklyCalendar(todayIso)
-      .then((list) => setAppointments(list.filter((a) => a.scheduledStart.slice(0, 10) === todayIso)))
+      .then((list) => setAppointments(list.filter((a) => isoDate(a.scheduledStart) === todayIso)))
       .finally(() => setLoading(false));
     billingApi.todaySalesSummary().then(setTodaySales).catch(() => setTodaySales(null));
   }
