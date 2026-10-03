@@ -3,7 +3,9 @@ package com.vetos.modules.notification.infrastructure.event;
 import com.vetos.modules.appointment.domain.event.AppointmentScheduledEvent;
 import com.vetos.modules.notification.application.QueueNotificationUseCase;
 import com.vetos.modules.notification.domain.NotificationChannel;
+import com.vetos.modules.notification.domain.NotificationMessageTemplateRepository;
 import com.vetos.modules.notification.domain.NotificationSettingsRepository;
+import com.vetos.modules.notification.domain.NotificationTemplateDefaults;
 import com.vetos.modules.notification.domain.NotificationType;
 import com.vetos.modules.patient.domain.OwnerLookupPort;
 import com.vetos.modules.patient.domain.OwnerSummary;
@@ -14,6 +16,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
 import java.util.UUID;
 
 @Component
@@ -26,6 +29,7 @@ class AppointmentScheduledEventListener {
     private final OwnerLookupPort ownerLookupPort;
     private final PatientLookupPort patientLookupPort;
     private final NotificationSettingsRepository notificationSettingsRepository;
+    private final NotificationMessageTemplateRepository notificationMessageTemplateRepository;
 
     @EventListener
     void onAppointmentScheduled(AppointmentScheduledEvent event) {
@@ -35,9 +39,16 @@ class AppointmentScheduledEventListener {
         }
         var patient = patientLookupPort.findSummaryById(event.patientId());
 
-        String message = "Sayin %s, %s icin %s tarihli randevunuz olusturuldu.".formatted(
-            owner.fullName(), patient.name(), FORMAT.format(event.scheduledStart())
-        );
+        String template = notificationMessageTemplateRepository
+            .findByTenantIdAndNotificationType(event.tenantId(), NotificationType.APPOINTMENT_CONFIRMATION)
+            .map(com.vetos.modules.notification.domain.NotificationMessageTemplate::getTemplateText)
+            .orElse(NotificationTemplateDefaults.defaultTextFor(NotificationType.APPOINTMENT_CONFIRMATION));
+
+        String message = NotificationTemplateDefaults.render(template, Map.of(
+            "sahipAdi", owner.fullName(),
+            "hastaAdi", patient.name(),
+            "tarihSaat", FORMAT.format(event.scheduledStart())
+        ));
 
         NotificationChannel channel = channelFor(resolvePreferredChannel(event.tenantId()), owner);
 

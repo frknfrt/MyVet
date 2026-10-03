@@ -5,14 +5,18 @@ import com.vetos.modules.notification.api.dto.CampaignSendSummaryResponse;
 import com.vetos.modules.notification.api.dto.NotificationLogResponse;
 import com.vetos.modules.notification.api.dto.NotificationSettingsResponse;
 import com.vetos.modules.notification.api.dto.NotificationStatusResponse;
+import com.vetos.modules.notification.api.dto.NotificationTemplateResponse;
 import com.vetos.modules.notification.api.dto.SendCampaignRequest;
 import com.vetos.modules.notification.api.dto.UpdateNotificationSettingsRequest;
+import com.vetos.modules.notification.api.dto.UpdateNotificationTemplateRequest;
 import com.vetos.modules.notification.application.GetNotificationSettingsUseCase;
 import com.vetos.modules.notification.application.GetNotificationStatusSummaryUseCase;
+import com.vetos.modules.notification.application.GetNotificationTemplatesUseCase;
 import com.vetos.modules.notification.application.ListNotificationLogsUseCase;
 import com.vetos.modules.notification.application.RetryNotificationUseCase;
 import com.vetos.modules.notification.application.SendCampaignUseCase;
 import com.vetos.modules.notification.application.UpdateNotificationSettingsUseCase;
+import com.vetos.modules.notification.application.UpdateNotificationTemplateUseCase;
 import com.vetos.modules.notification.application.dto.CampaignRecipient;
 import com.vetos.modules.notification.domain.NotificationChannel;
 import com.vetos.modules.notification.domain.NotificationStatus;
@@ -46,6 +50,8 @@ public class NotificationsController {
     private final SendCampaignUseCase sendCampaignUseCase;
     private final GetNotificationSettingsUseCase getNotificationSettingsUseCase;
     private final UpdateNotificationSettingsUseCase updateNotificationSettingsUseCase;
+    private final GetNotificationTemplatesUseCase getNotificationTemplatesUseCase;
+    private final UpdateNotificationTemplateUseCase updateNotificationTemplateUseCase;
 
     @GetMapping("/status")
     public NotificationStatusResponse status() {
@@ -95,6 +101,26 @@ public class NotificationsController {
     public NotificationSettingsResponse updateSettings(@RequestBody @Valid UpdateNotificationSettingsRequest request) {
         updateNotificationSettingsUseCase.execute(TenantContext.current(), request.appointmentChannel());
         return NotificationSettingsResponse.from(getNotificationSettingsUseCase.execute(TenantContext.current()));
+    }
+
+    // Otomatik bildirim mesaj metinleri (randevu onayi/hatirlatmasi, asi
+    // hatirlatmasi) kiraci bazinda ozellestirilebiliyor -- bkz. SettingsTab.tsx,
+    // NotificationTemplateDefaults. CAMPAIGN_MESSAGE burada YOK, bkz.
+    // /campaigns/send ve MessageTemplatesController (elle secilen sablonlar).
+    @GetMapping("/templates")
+    public List<NotificationTemplateResponse> templates() {
+        return getNotificationTemplatesUseCase.execute(TenantContext.current()).stream()
+            .map(NotificationTemplateResponse::from)
+            .toList();
+    }
+
+    @PutMapping("/templates/{notificationType}")
+    public List<NotificationTemplateResponse> updateTemplate(
+        @PathVariable NotificationType notificationType,
+        @RequestBody UpdateNotificationTemplateRequest request
+    ) {
+        updateNotificationTemplateUseCase.execute(TenantContext.current(), notificationType, request.templateText());
+        return templates();
     }
 
     private static CampaignRecipient toRecipient(CampaignRecipientRequest r) {

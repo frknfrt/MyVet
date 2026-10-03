@@ -17,6 +17,17 @@ export interface NotificationSettings {
   appointmentChannel: NotificationChannel;
 }
 
+// Otomatik bildirimlerin (randevu onayi/hatirlatmasi, asi hatirlatmasi) mesaj
+// metni kiraci bazinda ozellestirilebilir -- bkz. NotificationTemplateDefaults
+// (backend). CAMPAIGN_MESSAGE bu listede DONMEZ, o zaten her gonderimde elle
+// yaziliyor (bkz. CampaignTab).
+export interface NotificationTemplate {
+  notificationType: NotificationType;
+  templateText: string;
+  customized: boolean;
+  placeholders: string[];
+}
+
 export interface NotificationLog {
   id: string;
   ownerName: string;
@@ -56,4 +67,7 @@ export const notificationApi = {
   settings: () => apiClient.get<NotificationSettings>('/api/v1/notifications/settings'),
   updateSettings: (appointmentChannel: NotificationChannel) =>
     apiClient.put<NotificationSettings>('/api/v1/notifications/settings', { appointmentChannel }),
+  templates: () => apiClient.get<NotificationTemplate[]>('/api/v1/notifications/templates'),
+  updateTemplate: (notificationType: NotificationType, templateText: string) =>
+    apiClient.put<NotificationTemplate[]>(`/api/v1/notifications/templates/${notificationType}`, { templateText }),
 };

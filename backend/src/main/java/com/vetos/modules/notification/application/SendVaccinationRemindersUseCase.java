@@ -4,7 +4,9 @@ import com.vetos.modules.encounter.domain.VaccinationLookupPort;
 import com.vetos.modules.encounter.domain.VaccinationReminderCandidate;
 import com.vetos.modules.notification.domain.NotificationChannel;
 import com.vetos.modules.notification.domain.NotificationLogRepository;
+import com.vetos.modules.notification.domain.NotificationMessageTemplateRepository;
 import com.vetos.modules.notification.domain.NotificationSettingsRepository;
+import com.vetos.modules.notification.domain.NotificationTemplateDefaults;
 import com.vetos.modules.notification.domain.NotificationType;
 import com.vetos.modules.patient.domain.OwnerLookupPort;
 import com.vetos.modules.patient.domain.OwnerSummary;
@@ -17,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -42,6 +45,7 @@ public class SendVaccinationRemindersUseCase {
     private final OwnerLookupPort ownerLookupPort;
     private final PatientLookupPort patientLookupPort;
     private final NotificationSettingsRepository notificationSettingsRepository;
+    private final NotificationMessageTemplateRepository notificationMessageTemplateRepository;
 
     // REQUIRES_NEW: SendAppointmentRemindersUseCase'deki ayni iki sebep burada da
     // gecerli (kilit tutan disi transaction'a katilmama + TenantContext sonrasi
@@ -49,6 +53,10 @@ public class SendVaccinationRemindersUseCase {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public int execute(UUID tenantId, LocalDate dueDate) {
         NotificationChannel preferredChannel = resolvePreferredChannel(tenantId);
+        String template = notificationMessageTemplateRepository
+            .findByTenantIdAndNotificationType(tenantId, NotificationType.VACCINATION_REMINDER)
+            .map(com.vetos.modules.notification.domain.NotificationMessageTemplate::getTemplateText)
+            .orElse(NotificationTemplateDefaults.defaultTextFor(NotificationType.VACCINATION_REMINDER));
         int queued = 0;
         for (VaccinationReminderCandidate candidate : vaccinationLookupPort.findDueForReminder(tenantId, dueDate)) {
             if (notificationLogRepository.existsByRelatedEntityIdAndNotificationType(candidate.recordId(), NotificationType.VACCINATION_REMINDER)) {
@@ -60,9 +68,12 @@ public class SendVaccinationRemindersUseCase {
                 continue;
             }
 
-            String message = "Sayin %s, %s icin %s asisinin zamani geldi (%s). Klinigimizle iletisime gecebilirsiniz.".formatted(
-                owner.fullName(), patient.name(), candidate.vaccineName(), FORMAT.format(candidate.nextDueDate())
-            );
+            String message = NotificationTemplateDefaults.render(template, Map.of(
+                "sahipAdi", owner.fullName(),
+                "hastaAdi", patient.name(),
+                "asiAdi", candidate.vaccineName(),
+                "tarih", FORMAT.format(candidate.nextDueDate())
+            ));
 
             queueNotificationUseCase.execute(
                 tenantId, patient.ownerId(), candidate.patientId(), channelFor(preferredChannel, owner),

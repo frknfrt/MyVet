@@ -59,3 +59,54 @@
   border-top: 1px solid var(--color-border);
   max-width: 320px;
 }
+.templatesSection {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+.sectionTitle {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+.sectionDesc {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-bottom: 12px;
+}
+.templateRow {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: #fbfaf8;
+}
+.templateRowHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.templateRowTitle {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 13px;
+}
+.templatePlaceholders {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: 6px;
+}
+.templatePreview {
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+  font-style: italic;
+}
+.templateActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
