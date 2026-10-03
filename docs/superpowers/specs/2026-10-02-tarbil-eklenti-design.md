@@ -230,7 +230,7 @@ Kişisel veriler (TC, ad, adres, telefon, çip) `***` ile maskelenerek; çerez/o
 4. **Aşı ürünü seçimi akışı:** `UcVaccineStockSearchModalPage.aspx` stok popup'ının kaynağı ve seri/lot numarasının nereden geldiği (stok kaleminde mi, ayrıca mı giriliyor).
 5. ~~Konum filtresi testi~~ — kısıtlamıyor (2026-10-03).
 6. **Köpek arama penceresinin kaynağı** (`AnimalType=D`, `Ctrl+U`).
-7. **e-Devlet girişinden sonra dönülen TARBİL sayfasının adresi** (yalnız adres; oturum/token parametreleri silinerek) ve aşı sayfasına menüden nasıl gidildiği.
+7. ~~e-Devlet dönüş adresi~~ — `https://hbsapp.tarbil.gov.tr/` (kök, 2026-10-03). Eklenti oradan aşı sayfasına menüyü kullanmadan doğrudan `/Modules/RECEIPT/Pages/ATS/VaccineReceipt/VaccineReceiptPage.aspx?type=1` adresiyle geçer.
 8. **Oturum süresi:** TARBİL 20–30 dk boş bırakılınca oturum kapanıyor mu, kapanınca ne görünüyor (giriş sayfası adresi / mesaj).
 10. ~~Hayvan ekleme butonu~~ — "PetVet'ten Hayvan Ara ve Ekle" (aynı KKBS arama popup'ı). **Eksik:** popup'ta çiple "Ara" yanıtı (sonuç satırının yapısı) ve "Transfer Et" sonrası ana sayfanın async yanıtı (tablo satırı + sahip alanları).
 11. **Ürün Ekle** tıklandıktan sonraki async yanıt ve stok popup'ı (`UcVaccineStockSearchModalPage.aspx`) kaynağı.
