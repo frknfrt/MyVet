@@ -41,7 +41,8 @@ public class ListVaccinationsByPatientUseCase {
         return new VaccinationScheduleItem(
             record.getId(), record.getPatientId(), patientName, owner.id(), owner.fullName(),
             record.getVaccineName(), record.getLotNumber(), record.getAdministeredDate(), record.getNextDueDate(),
-            record.getStatus(), record.getNotes(), staffName
+            record.getStatus(), record.getNotes(), staffName,
+            record.getSeriesId(), record.getDoseNumber(), record.getDoseTotal()
         );
     }
 }

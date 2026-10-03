@@ -18,13 +18,17 @@ public record VaccinationScheduleItemResponse(
     LocalDate nextDueDate,
     VaccinationStatus status,
     String notes,
-    String administeredByStaffName
+    String administeredByStaffName,
+    UUID seriesId,
+    Integer doseNumber,
+    Integer doseTotal
 ) {
     public static VaccinationScheduleItemResponse from(VaccinationScheduleItem i) {
         return new VaccinationScheduleItemResponse(
             i.id(), i.patientId(), i.patientName(), i.ownerId(), i.ownerFullName(),
             i.vaccineName(), i.lotNumber(), i.administeredDate(), i.nextDueDate(),
-            i.status(), i.notes(), i.administeredByStaffName()
+            i.status(), i.notes(), i.administeredByStaffName(),
+            i.seriesId(), i.doseNumber(), i.doseTotal()
         );
     }
 }

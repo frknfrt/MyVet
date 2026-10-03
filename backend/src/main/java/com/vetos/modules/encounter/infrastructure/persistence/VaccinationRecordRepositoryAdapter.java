@@ -19,6 +19,9 @@ class VaccinationRecordRepositoryAdapter implements VaccinationRecordRepository 
     public VaccinationRecord save(VaccinationRecord record) { return jpaRepository.save(record); }
 
     @Override
+    public List<VaccinationRecord> saveAll(List<VaccinationRecord> records) { return jpaRepository.saveAll(records); }
+
+    @Override
     public Optional<VaccinationRecord> findById(UUID id) { return jpaRepository.findById(id); }
 
     @Override
@@ -26,4 +29,7 @@ class VaccinationRecordRepositoryAdapter implements VaccinationRecordRepository 
 
     @Override
     public List<VaccinationRecord> findByTenantId(UUID tenantId) { return jpaRepository.findByTenantId(tenantId); }
+
+    @Override
+    public List<VaccinationRecord> findBySeriesId(UUID seriesId) { return jpaRepository.findBySeriesId(seriesId); }
 }

@@ -126,6 +126,21 @@ export function VaccinationsPage() {
     }
   }
 
+  async function handleCancelRemainingSeries(seriesId: string) {
+    if (busyId) return;
+    if (!window.confirm('Bu aşı serisinin henüz yapılmamış kalan dozları iptal edilecek. Emin misiniz?')) return;
+    setBusyId(seriesId);
+    setError(null);
+    try {
+      await vaccinationApi.cancelRemainingSeries(seriesId);
+      load();
+    } catch (err) {
+      setError(errorMessageOf(err));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   return (
     <AppShell>
       <div className={styles.topbar}>
@@ -249,7 +264,10 @@ export function VaccinationsPage() {
             >
               <div className={styles.patientName}>{v.patientName}</div>
               <div className={styles.muted}>{v.ownerFullName}</div>
-              <div>{v.vaccineName}</div>
+              <div>
+                {v.vaccineName}
+                {v.doseNumber && v.doseTotal ? <span className={styles.doseBadge}>Doz {v.doseNumber}/{v.doseTotal}</span> : null}
+              </div>
               <div className={styles.muted}>{new Date(v.administeredDate).toLocaleDateString('tr-TR')}</div>
               <div>
                 <VaccinationStatusBadge status={v.status} />
@@ -272,6 +290,17 @@ export function VaccinationsPage() {
                   >
                     İptal
                   </button>
+                  {v.seriesId && (
+                    <button
+                      type="button"
+                      className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
+                      disabled={busyId === v.seriesId}
+                      onClick={() => handleCancelRemainingSeries(v.seriesId as string)}
+                      title="Bu serinin henüz yapılmamış kalan dozlarını iptal eder"
+                    >
+                      Serinin Kalanını İptal Et
+                    </button>
+                  )}
                 </div>
               )}
             </div>

@@ -48,6 +48,9 @@ export function NewVaccinationPage() {
   const [vaccinationDate, setVaccinationDate] = useState(isoDate(new Date()));
   const [nextDueDate, setNextDueDate] = useState('');
   const [status, setStatus] = useState<VaccinationStatus>('SCHEDULED');
+  const [periodic, setPeriodic] = useState(false);
+  const [intervalDays, setIntervalDays] = useState('60');
+  const [doseCount, setDoseCount] = useState('10');
   const [notesOpen, setNotesOpen] = useState(false);
   const [notes, setNotes] = useState('');
 
@@ -109,25 +112,43 @@ export function NewVaccinationPage() {
     setNotesOpen(false);
     setStatus('SCHEDULED');
     setVaccinationDate(isoDate(new Date()));
+    setPeriodic(false);
+    setIntervalDays('60');
+    setDoseCount('10');
   }
 
   async function submit(andPlanAnother: boolean) {
-    if (busy || !patientId || !vaccineName.trim()) return;
+    if (busy || !patientId || !vaccineName.trim() || !periodicValid) return;
     setBusy(true);
     setError(null);
     setSuccessMsg(null);
     try {
-      await vaccinationApi.record({
-        patientId,
-        vaccineName: vaccineName.trim(),
-        administeredDate: vaccinationDate,
-        nextDueDate: nextDueDate || undefined,
-        status,
-        notes: notes || undefined,
-      });
+      if (periodic) {
+        await vaccinationApi.recordSeries({
+          patientId,
+          vaccineName: vaccineName.trim(),
+          startDate: vaccinationDate,
+          intervalDays: Number(intervalDays),
+          doseCount: Number(doseCount),
+          firstDoseStatus: status,
+          notes: notes || undefined,
+        });
+      } else {
+        await vaccinationApi.record({
+          patientId,
+          vaccineName: vaccineName.trim(),
+          administeredDate: vaccinationDate,
+          nextDueDate: nextDueDate || undefined,
+          status,
+          notes: notes || undefined,
+        });
+      }
       if (andPlanAnother) {
+        const msg = periodic
+          ? `${doseCount} dozluk aşı serisi oluşturuldu. Yeni bir aşı planlayabilirsiniz.`
+          : 'Aşı kaydı oluşturuldu. Yeni bir aşı planlayabilirsiniz.';
         resetVaccineFields();
-        setSuccessMsg('Aşı kaydı oluşturuldu. Yeni bir aşı planlayabilirsiniz.');
+        setSuccessMsg(msg);
       } else {
         navigate('/asi-takvimi');
       }
@@ -142,6 +163,17 @@ export function NewVaccinationPage() {
     e.preventDefault();
     submit(false);
   }
+
+  const intervalDaysNum = Number(intervalDays);
+  const doseCountNum = Number(doseCount);
+  const periodicValid =
+    !periodic || (Number.isFinite(intervalDaysNum) && intervalDaysNum >= 1 && Number.isFinite(doseCountNum) && doseCountNum >= 2 && doseCountNum <= 30);
+  const lastDoseLabel =
+    periodic && vaccinationDate && Number.isFinite(intervalDaysNum) && Number.isFinite(doseCountNum) && doseCountNum >= 2
+      ? new Date(new Date(`${vaccinationDate}T00:00:00`).getTime() + intervalDaysNum * (doseCountNum - 1) * 86400000).toLocaleDateString(
+          'tr-TR'
+        )
+      : '';
 
   return (
     <AppShell>
@@ -266,9 +298,48 @@ export function NewVaccinationPage() {
             </label>
           </div>
 
-          <FieldWrap label="Sonraki aşı tarihi (opsiyonel)">
-            <Input type="date" value={nextDueDate} onChange={(e) => setNextDueDate(e.target.value)} />
-          </FieldWrap>
+          <label className={styles.periodicToggle}>
+            <input type="checkbox" checked={periodic} onChange={(e) => setPeriodic(e.target.checked)} />
+            Periyodik seri (belirli aralıklarla tekrar eden aşı planı, örn. 60 günde 10 doz)
+          </label>
+
+          {periodic ? (
+            <>
+              <div className={styles.row2}>
+                <FieldWrap label="Tekrar aralığı (gün)*">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={3650}
+                    value={intervalDays}
+                    onChange={(e) => setIntervalDays(e.target.value)}
+                    required
+                  />
+                </FieldWrap>
+                <FieldWrap label="Toplam doz sayısı*">
+                  <Input
+                    type="number"
+                    min={2}
+                    max={30}
+                    value={doseCount}
+                    onChange={(e) => setDoseCount(e.target.value)}
+                    required
+                  />
+                </FieldWrap>
+              </div>
+              <p className={styles.periodicHint}>
+                İlk doz {vaccinationDate ? new Date(`${vaccinationDate}T00:00:00`).toLocaleDateString('tr-TR') : ''}{' '}
+                tarihinde {status === 'ADMINISTERED' ? 'yapılmış olarak' : 'ileri tarihli randevu olarak'} kaydedilecek;
+                kalan {Math.max(Number(doseCount) - 1, 0)} doz her {intervalDays || '?'} günde bir otomatik planlanacak
+                {lastDoseLabel ? ` (son doz: ${lastDoseLabel})` : ''}. Her doz için sahibe bir gün önceden otomatik
+                hatırlatma (SMS/WhatsApp) gönderilir.
+              </p>
+            </>
+          ) : (
+            <FieldWrap label="Sonraki aşı tarihi (opsiyonel)">
+              <Input type="date" value={nextDueDate} onChange={(e) => setNextDueDate(e.target.value)} />
+            </FieldWrap>
+          )}
 
           {notesOpen ? (
             <FieldWrap label="İşlem notları">
@@ -281,13 +352,13 @@ export function NewVaccinationPage() {
           )}
 
           <div className={styles.actions}>
-            <Button type="submit" variant="primary" disabled={busy || !patientId || !vaccineName.trim()}>
-              {busy ? 'Kaydediliyor...' : 'Aşı Kaydı Oluştur'}
+            <Button type="submit" variant="primary" disabled={busy || !patientId || !vaccineName.trim() || !periodicValid}>
+              {busy ? 'Kaydediliyor...' : periodic ? 'Aşı Serisi Oluştur' : 'Aşı Kaydı Oluştur'}
             </Button>
             <Button
               type="button"
               variant="secondary"
-              disabled={busy || !patientId || !vaccineName.trim()}
+              disabled={busy || !patientId || !vaccineName.trim() || !periodicValid}
               onClick={() => submit(true)}
             >
               + Kaydet ve Yeni Aşı Planla

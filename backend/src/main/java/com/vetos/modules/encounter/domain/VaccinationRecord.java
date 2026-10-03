@@ -51,10 +51,33 @@ public class VaccinationRecord {
     @Column(name = "reminder_sent", nullable = false)
     private boolean reminderSent;
 
+    /** Periyodik asi serisinin parcasiysa bu seriye ait tum kayitlarda aynidir; tekil kayitlarda null. */
+    @Column(name = "series_id")
+    private UUID seriesId;
+
+    /** Seri icindeki sirasi (1'den baslar). Tekil kayitlarda null. */
+    @Column(name = "dose_number")
+    private Integer doseNumber;
+
+    /** Serideki toplam doz sayisi. Tekil kayitlarda null. */
+    @Column(name = "dose_total")
+    private Integer doseTotal;
+
     public static VaccinationRecord record(
         UUID tenantId, UUID patientId, UUID encounterId, String vaccineName, String lotNumber,
         LocalDate administeredDate, LocalDate nextDueDate, UUID administeredByStaffId,
         VaccinationStatus status, String notes
+    ) {
+        return record(
+            tenantId, patientId, encounterId, vaccineName, lotNumber, administeredDate, nextDueDate,
+            administeredByStaffId, status, notes, null, null, null
+        );
+    }
+
+    public static VaccinationRecord record(
+        UUID tenantId, UUID patientId, UUID encounterId, String vaccineName, String lotNumber,
+        LocalDate administeredDate, LocalDate nextDueDate, UUID administeredByStaffId,
+        VaccinationStatus status, String notes, UUID seriesId, Integer doseNumber, Integer doseTotal
     ) {
         VaccinationRecord record = new VaccinationRecord();
         record.tenantId = tenantId;
@@ -68,6 +91,9 @@ public class VaccinationRecord {
         record.status = status;
         record.notes = notes;
         record.reminderSent = false;
+        record.seriesId = seriesId;
+        record.doseNumber = doseNumber;
+        record.doseTotal = doseTotal;
         return record;
     }
 

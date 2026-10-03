@@ -260,3 +260,14 @@
 .actionBtnDanger:hover {
   background: var(--color-danger-100);
 }
+
+.doseBadge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--color-neutral-100, #f5f3ee);
+  color: var(--color-text-muted);
+  font-size: 10.5px;
+  font-weight: 700;
+}
