@@ -1,0 +1,40 @@
+package com.vetos.modules.platformadmin.api;
+
+import com.vetos.modules.platformadmin.api.dto.FailedEInvoiceResponse;
+import com.vetos.modules.platformadmin.api.dto.FailedNotificationResponse;
+import com.vetos.modules.platformadmin.application.ListPlatformSystemHealthUseCase;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+/**
+ * Platform admin "Sistem Sagligi" paneli -- tum kiracilardaki basarisiz
+ * bildirim ve e-Fatura gonderimlerini goruntuler (bkz. SS101 kontrol
+ * listesi: operasyonel gorunurluk).
+ */
+@RestController
+@RequestMapping("/api/v1/platform-admin/system-health")
+@RequiredArgsConstructor
+@PreAuthorize("hasRole('PLATFORM_ADMIN')")
+public class PlatformSystemHealthController {
+
+    private final ListPlatformSystemHealthUseCase listPlatformSystemHealthUseCase;
+
+    @GetMapping("/notifications")
+    public List<FailedNotificationResponse> failedNotifications() {
+        return listPlatformSystemHealthUseCase.failedNotifications().stream()
+            .map(FailedNotificationResponse::from)
+            .toList();
+    }
+
+    @GetMapping("/efatura")
+    public List<FailedEInvoiceResponse> failedEInvoices() {
+        return listPlatformSystemHealthUseCase.failedEInvoices().stream()
+            .map(FailedEInvoiceResponse::from)
+            .toList();
+    }
+}

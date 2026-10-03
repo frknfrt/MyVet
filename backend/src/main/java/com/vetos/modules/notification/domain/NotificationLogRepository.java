@@ -11,4 +11,5 @@ public interface NotificationLogRepository {
     List<NotificationLog> findByTenantId(UUID tenantId);
     boolean existsByRelatedEntityIdAndNotificationType(UUID relatedEntityId, NotificationType notificationType);
     List<NotificationLog> claimDueForRetry(Instant now, int limit);
+    List<NotificationLog> findRecentByStatus(NotificationStatus status, int limit);
 }

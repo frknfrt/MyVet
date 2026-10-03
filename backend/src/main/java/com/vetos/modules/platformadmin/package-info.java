@@ -1,7 +1,7 @@
 @org.springframework.modulith.ApplicationModule(
     displayName = "Platform Admin",
     allowedDependencies = {
-        "modules.tenant::domain",
+        "modules.tenant::domain", "modules.notification::domain", "modules.integration.efatura::domain",
         "platform::security", "platform::exception", "platform::tenancy", "platform::concurrency"
     }
 )

@@ -86,6 +86,36 @@ export interface RecordPlatformPaymentPayload {
   notes?: string;
 }
 
+export type NotificationChannel = 'SMS' | 'WHATSAPP';
+export type NotificationType =
+  | 'APPOINTMENT_CONFIRMATION' | 'APPOINTMENT_REMINDER' | 'CAMPAIGN_MESSAGE' | 'VACCINATION_REMINDER';
+
+export interface FailedNotification {
+  tenantId: string;
+  tenantName: string;
+  recipientLabel: string | null;
+  recipientContact: string;
+  channel: NotificationChannel;
+  notificationType: NotificationType;
+  failureReason: string | null;
+  attemptCount: number;
+  attemptedAt: string;
+  nextRetryAt: string | null;
+}
+
+export type EInvoiceDocumentType = 'E_FATURA' | 'E_ARSIV';
+
+export interface FailedEInvoice {
+  tenantId: string;
+  tenantName: string;
+  invoiceId: string;
+  documentType: EInvoiceDocumentType;
+  totalAmount: number;
+  failureReason: string | null;
+  attemptCount: number;
+  attemptedAt: string;
+}
+
 export const platformAdminApi = {
   login: (payload: PlatformAdminLoginPayload) =>
     platformAdminClient.post<PlatformAdminSession>('/api/v1/platform-admin/auth/login', payload),
@@ -109,4 +139,8 @@ export const platformAdminApi = {
     platformAdminClient.post<void>(`/api/v1/platform-admin/tenants/${tenantId}/invoices/${invoiceId}/payments`, payload),
   voidInvoice: (tenantId: string, invoiceId: string) =>
     platformAdminClient.post<void>(`/api/v1/platform-admin/tenants/${tenantId}/invoices/${invoiceId}/void`),
+  listFailedNotifications: () =>
+    platformAdminClient.get<FailedNotification[]>('/api/v1/platform-admin/system-health/notifications'),
+  listFailedEInvoices: () =>
+    platformAdminClient.get<FailedEInvoice[]>('/api/v1/platform-admin/system-health/efatura'),
 };

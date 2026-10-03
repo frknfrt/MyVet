@@ -2,6 +2,7 @@ package com.vetos.modules.notification.infrastructure.persistence;
 
 import com.vetos.modules.notification.domain.NotificationLog;
 import com.vetos.modules.notification.domain.NotificationLogRepository;
+import com.vetos.modules.notification.domain.NotificationStatus;
 import com.vetos.modules.notification.domain.NotificationType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -34,5 +35,10 @@ class NotificationLogRepositoryAdapter implements NotificationLogRepository {
     @Override
     public List<NotificationLog> claimDueForRetry(Instant now, int limit) {
         return jpaRepository.claimDueForRetry(now, limit);
+    }
+
+    @Override
+    public List<NotificationLog> findRecentByStatus(NotificationStatus status, int limit) {
+        return jpaRepository.findTop200ByStatusOrderByAttemptedAtDesc(status).stream().limit(limit).toList();
     }
 }

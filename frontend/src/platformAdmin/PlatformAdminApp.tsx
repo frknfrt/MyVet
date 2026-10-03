@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { PlanManagementPage } from '../pages/platform-admin/PlanManagementPage';
 import { PlatformAdminLoginPage } from '../pages/platform-admin/PlatformAdminLoginPage';
 import { PlatformBillingPage } from '../pages/platform-admin/PlatformBillingPage';
+import { SystemHealthPage } from '../pages/platform-admin/SystemHealthPage';
 import { TenantDetailPage } from '../pages/platform-admin/TenantDetailPage';
 import { TenantListPage } from '../pages/platform-admin/TenantListPage';
 import { PlatformAdminAuthProvider } from './PlatformAdminAuthContext';
@@ -24,6 +25,7 @@ export function PlatformAdminApp() {
                   <Route path="tenants/:tenantId" element={<TenantDetailPage />} />
                   <Route path="plans" element={<PlanManagementPage />} />
                   <Route path="billing" element={<PlatformBillingPage />} />
+                  <Route path="system-health" element={<SystemHealthPage />} />
                 </Routes>
               </PlatformAdminShell>
             </RequirePlatformAdminAuth>
