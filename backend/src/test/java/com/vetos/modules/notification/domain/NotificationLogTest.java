@@ -21,19 +21,20 @@ class NotificationLogTest {
         NotificationLog log = aLog();
         Instant nextRetry = Instant.now().plusSeconds(120);
 
-        log.markFailed(nextRetry);
+        log.markFailed("saglayici hatasi", nextRetry);
 
         assertThat(log.getStatus()).isEqualTo(NotificationStatus.FAILED);
         assertThat(log.getAttemptCount()).isEqualTo(1);
         assertThat(log.getNextRetryAt()).isEqualTo(nextRetry);
+        assertThat(log.getFailureReason()).isEqualTo("saglayici hatasi");
     }
 
     @Test
     void should_accumulateAttemptCount_across_multipleFailures() {
         NotificationLog log = aLog();
 
-        log.markFailed(Instant.now().plusSeconds(120));
-        log.markFailed(Instant.now().plusSeconds(600));
+        log.markFailed("hata 1", Instant.now().plusSeconds(120));
+        log.markFailed("hata 2", Instant.now().plusSeconds(600));
 
         assertThat(log.getAttemptCount()).isEqualTo(2);
     }
@@ -42,7 +43,7 @@ class NotificationLogTest {
     void should_allowNullNextRetryAt_when_automaticRetriesExhausted() {
         NotificationLog log = aLog();
 
-        log.markFailed(null);
+        log.markFailed("deneme hakki tukendi", null);
 
         assertThat(log.getNextRetryAt()).isNull();
         assertThat(log.getAttemptCount()).isEqualTo(1);
@@ -51,11 +52,12 @@ class NotificationLogTest {
     @Test
     void should_clearNextRetryAt_when_markRetrying() {
         NotificationLog log = aLog();
-        log.markFailed(Instant.now().plusSeconds(120));
+        log.markFailed("hata", Instant.now().plusSeconds(120));
 
         log.markRetrying();
 
         assertThat(log.getStatus()).isEqualTo(NotificationStatus.PENDING);
         assertThat(log.getNextRetryAt()).isNull();
+        assertThat(log.getFailureReason()).isNull();
     }
 }

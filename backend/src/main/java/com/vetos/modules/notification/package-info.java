@@ -2,7 +2,7 @@
     displayName = "Bildirimler (SMS/WhatsApp)",
     allowedDependencies = {
         "modules.patient::domain", "modules.tenant::domain", "modules.appointment::domain",
-        "modules.appointment::domain.event",
+        "modules.appointment::domain.event", "modules.encounter::domain",
         "platform::security", "platform::tenancy", "platform::event", "platform::exception", "platform::concurrency"
     }
 )
