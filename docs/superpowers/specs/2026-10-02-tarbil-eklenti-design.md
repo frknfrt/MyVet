@@ -262,3 +262,8 @@ Kişisel veriler (TC, ad, adres, telefon, çip) `***` ile maskelenerek; çerez/o
 
 ### 12.5 Ertelenen: toplu onayla eklentinin Kaydet'e basması (karar B)
 Hekimin günde bir kez "N aşıyı kaydet" onayı vermesi ve eklentinin Kaydet'e basması şimdilik yapılmıyor (yanlış eşleştirmenin birden çok resmi kayda yayılma riski; hukuki sorumluluğun netliği). Eşleştirmeler birkaç hafta sorunsuz çalıştıktan sonra, yalnız eşleştirmesi öğrenilmiş aşılar için açılabilen bir ayar olarak yeniden değerlendirilir; hiç görülmemiş aşı her zaman 12.4 ile ilerler.
+
+### 12.6 Faz 2a kapsamı: ürün adımı hekimde (2026-10-03 kararı)
+İlk sürümde eklenti **Ürün Ekle / stok seçimine dokunmaz**. Eklentinin yaptığı: Uygulama Tarihi → Tür (Kedi/Köpek, postback beklenir) → "PetVet'ten Hayvan Ara ve Ekle" → çiple arama → tek ve `CANLI` eşleşmede satırı işaretleyip "Transfer Et" → forma eklenen satırdaki çipin Vetly'deki çiple aynı olduğunu doğrulama. Kartta "Aşıyı (ürünü) stoktan ekleyip Onayla'ya basın" yönlendirmesi ve Vetly'deki aşı adı + lot numarası gösterilir (hekim doğru stok kalemini seçsin diye). Başarı (Onayla sonrası bildirim paneli) yakalanınca `POST /submitted {AUTO}` gider.
+- Bu yüzden Bölüm 11 madde 4 ve 11 (ürün/stok akışı) Faz 2a için gerekli değil; Faz 2b'ye kalır. Bölüm 7.4'teki aşı alanı eşleştirme/öğrenme de ürün detay alanlarına bağlı olduğundan Faz 2b'ye kalır.
+- Faz 2a için hâlâ gerekli: başarılı bir Onayla'nın yanıtı (madde 2; gerçek bir aşı kaydında, test kaydı açılmadan), madde 7 ve 8.
