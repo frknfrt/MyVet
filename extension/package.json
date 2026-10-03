@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "build": "tsc --noEmit && vite build && vite build --config vite.content.config.ts",
-    "build:dev": "tsc --noEmit && vite build --mode development && vite build --mode development --config vite.content.config.ts",
+    "build": "tsc --noEmit && vite build && vite build --config vite.content.config.ts && vite build --config vite.page.config.ts",
+    "build:dev": "tsc --noEmit && vite build --mode development && vite build --mode development --config vite.content.config.ts && vite build --mode development --config vite.page.config.ts",
     "test": "vitest run",
     "extension-id": "node scripts/extension-id.mjs"
   },
@@ -19,6 +19,7 @@
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
+    "jsdom": "^25.0.1",
     "typescript": "^5.5.4",
     "vite": "^5.4.1",
     "vitest": "^2.1.0"
