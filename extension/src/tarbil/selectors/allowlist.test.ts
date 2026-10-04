@@ -22,4 +22,10 @@ describe('button allowlist', () => {
     expect(allowedButtonSuffix('nope', 'petVet')).toBeNull();
     expect(allowedButtonSuffix('vaccineReceipt', 'toString')).toBeNull();
   });
+
+  it('allows Ürün Ekle and the stock popup search but never the product row Kaydet', () => {
+    expect(allowedButtonSuffix('vaccineReceipt', 'addProduct')).toBe('_RadGridProduct_ctl00_ctl02_ctl00_InitInsertButton');
+    expect(allowedButtonSuffix('vaccineStockPopup', 'search')).toBe('_UcVaccineStockSearch_btnSearch');
+    expect(FORBIDDEN_BUTTON_PATTERNS.some((re) => re.test('RadGridProduct_ctl00_ctl02_ctl03_PerformInsertButton'))).toBe(true);
+  });
 });

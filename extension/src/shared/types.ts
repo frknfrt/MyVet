@@ -15,6 +15,8 @@ export interface Submission {
   birthDate: string | null;
   vaccineName: string;
   lotNumber: string | null;
+  /** Stoktan secilen asinin TARBIL urun adi (spec 2026-10-04 P2); stok baglantisi yoksa null. */
+  tarbilProductName: string | null;
   administeredDate: string;
   submittedAt: string | null;
   confirmationMethod: ConfirmationMethod | null;

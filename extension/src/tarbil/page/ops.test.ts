@@ -133,4 +133,46 @@ describe('page ops', () => {
 
     expect(log).toEqual(['chip:', 'passport:TR-34 AB12', 'search']);
   });
+
+  it('searches the stock popup by serial', async () => {
+    const P = 'ctl00_ctl00_ContentPlaceHolder1_ContentPlaceHolderBody_UcVaccineStockSearch_';
+    document.body.innerHTML = `<input id="${P}txtSerialNo"><a id="${P}btnSearch"></a>`;
+    const prm = instantPrm();
+    const log: string[] = [];
+    const comps: Record<string, Record<string, unknown>> = {
+      [`${P}txtSerialNo`]: { set_value: (v: string) => log.push(`serial:${v}`) },
+      [`${P}btnSearch`]: { click: () => { log.push('ara'); prm.fire(); } },
+    };
+    const env: TelerikEnv = { doc: document, find: (id) => comps[id] ?? null, prm: () => prm, isReady: () => true };
+
+    await createPageOps(env).searchSerial({ serial: '665932' });
+
+    expect(log).toEqual(['serial:665932', 'ara']);
+  });
+
+  it('clicks Seç only inside the stock popup grid', async () => {
+    const G = 'ctl00_ctl00_ContentPlaceHolder1_ContentPlaceHolderBody_UcVaccineStockSearch_radGridStock_ctl00';
+    document.body.innerHTML = `<table id="${G}"><tbody><tr><td><a id="${G}_ctl04_SelectlinkButton">Seç</a></td></tr></tbody></table>
+      <a id="other_SelectlinkButton">Seç</a>`;
+    let clicked = 0;
+    document.getElementById(`${G}_ctl04_SelectlinkButton`)!.addEventListener('click', () => clicked++);
+    const env: TelerikEnv = { doc: document, find: () => null, prm: () => null, isReady: () => true };
+    const ops = createPageOps(env);
+
+    await ops.selectStockRow({ linkId: `${G}_ctl04_SelectlinkButton` });
+    await expect(ops.selectStockRow({ linkId: 'other_SelectlinkButton' })).rejects.toMatchObject({ code: 'NOT_FOUND' });
+
+    expect(clicked).toBe(1);
+  });
+
+  it('types the dose count into the product row quantity box', async () => {
+    const Q = 'ctl00_ctl00_ctl00_bodyCPH_ContentPlaceHolder1_cntVACCINEBodyContent_RadGridProduct_ctl00_ctl02_ctl03_txtQuantity';
+    document.body.innerHTML = `<input id="${Q}">`;
+    const log: string[] = [];
+    const env: TelerikEnv = { doc: document, find: (id) => (id === Q ? { set_value: (v: string) => log.push(v) } : null), prm: () => null, isReady: () => true };
+
+    await createPageOps(env).setProductQuantity({ quantity: 1 });
+
+    expect(log).toEqual(['1']);
+  });
 });

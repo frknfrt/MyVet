@@ -31,7 +31,7 @@ function showSuccess() {
 const base = {
   id: 's1', vaccinationRecordId: 'v1', status: 'PENDING', patientName: 'Pamuk', microchipNumber: CHIP, passportNumber: null,
   speciesId: null, speciesName: 'Kedi', breedName: null, sex: null, birthDate: null, vaccineName: 'Kuduz Aşısı',
-  lotNumber: 'L1', administeredDate: '2026-10-03', submittedAt: null, confirmationMethod: null, tarbilReference: null,
+  lotNumber: 'L1', tarbilProductName: null, administeredDate: '2026-10-03', submittedAt: null, confirmationMethod: null, tarbilReference: null,
   vaccineKey: 'kuduz aşisi', vaccineMapping: null, speciesMapping: null,
 } satisfies Submission;
 

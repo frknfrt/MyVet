@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { bySuffix, pageKind } from './';
 
 describe('pageKind', () => {
+  it('recognizes the vaccine stock popup', () => {
+    expect(pageKind({ pathname: '/Modules/RECEIPT/Pages/ModalPages/UcVaccineStockSearchModalPage.aspx', search: '?animalid=x' })).toBe('vaccineStockPopup');
+  });
+
   it('recognizes the vaccine and medicine stock pages', () => {
     expect(pageKind({ pathname: '/Modules/RECEIPT/Pages/ATS/VaccineStock/VaccineStockSearch.aspx', search: '' })).toBe('vaccineStock');
     expect(pageKind({ pathname: '/Pages/StockSearch.aspx', search: '' })).toBe('medicineStock');

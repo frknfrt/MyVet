@@ -14,3 +14,10 @@ export const MEDICINE_STOCK = {
   grid: '_radGridStockSearch_ctl00',
   gridComponent: '_radGridStockSearch',
 } as const;
+
+/** hbsapp asi belgesi stok penceresi (UcVaccineStockSearchModalPage.aspx). "Sec" baglantisi pencereyi kapatir. */
+export const VACCINE_STOCK_POPUP = {
+  serial: '_UcVaccineStockSearch_txtSerialNo',
+  search: '_UcVaccineStockSearch_btnSearch',
+  grid: '_UcVaccineStockSearch_radGridStock_ctl00',
+} as const;

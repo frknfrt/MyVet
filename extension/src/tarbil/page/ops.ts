@@ -1,5 +1,5 @@
 import type { PageHandler } from '../core/bridge';
-import { MEDICINE_STOCK, RECEIPT, SEARCH, VACCINE_STOCK, allowedButtonSuffix, bySuffix } from '../selectors';
+import { MEDICINE_STOCK, RECEIPT, SEARCH, VACCINE_STOCK, VACCINE_STOCK_POPUP, allowedButtonSuffix, bySuffix } from '../selectors';
 import { PageError, clickButton, clickElement, selectComboValue, setDate, setText, showAllRows, waitUntil, type TelerikEnv } from './telerik';
 
 /**
@@ -43,6 +43,24 @@ export function createPageOps(env: TelerikEnv): Record<string, PageHandler> {
       if (!grid) throw new PageError('BAD_INPUT', `Stok sayfası değil: ${page}`);
       await clickButton(env, allowed(page, 'search'));
       await showAllRows(env, grid, 500);
+    },
+    // Asi stok penceresi (spec 2026-10-04 P2): seri ile ara, tek satirin "Sec" baglantisi, urun satirina adet.
+    searchSerial: async ({ serial }: { serial: string }) => {
+      setText(env, VACCINE_STOCK_POPUP.serial, serial);
+      await clickButton(env, allowed('vaccineStockPopup', 'search'));
+    },
+    // Yalniz stok tablosundaki "Sec" baglantilari; tiklama pencereyi kapatir, sonuc beklenmez.
+    selectStockRow: ({ linkId }: { linkId: string }) => {
+      const link = env.doc.getElementById(linkId);
+      if (!link || !link.matches(`table${bySuffix(VACCINE_STOCK_POPUP.grid)} a[id$="SelectlinkButton"]`)) {
+        return Promise.reject(new PageError('NOT_FOUND', 'Stok tablosunda böyle bir Seç bağlantısı yok'));
+      }
+      (link as HTMLElement).click();
+      return Promise.resolve();
+    },
+    setProductQuantity: async ({ quantity }: { quantity: number }) => {
+      if (!Number.isInteger(quantity) || quantity < 1) throw new PageError('BAD_INPUT', `Geçersiz adet: ${quantity}`);
+      setText(env, RECEIPT.productQuantity, String(quantity));
     },
   };
 }
