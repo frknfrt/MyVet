@@ -18,7 +18,7 @@ export interface TelerikEnv {
   isReady: () => boolean;
 }
 
-export type PageErrorCode = 'NOT_FOUND' | 'OPTION_NOT_FOUND' | 'AJAX_TIMEOUT' | 'AJAX_ERROR' | 'NOT_READY' | 'BAD_INPUT';
+export type PageErrorCode = 'NOT_FOUND' | 'OPTION_NOT_FOUND' | 'AJAX_TIMEOUT' | 'AJAX_ERROR' | 'NOT_READY' | 'BAD_INPUT' | 'NOT_ALLOWED';
 
 export class PageError extends Error {
   constructor(public readonly code: PageErrorCode, message: string) {

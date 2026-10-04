@@ -74,6 +74,6 @@ export async function runSearchFlow(d: SearchDeps): Promise<void> {
       d.card.show(views.popup('Vetly: hayvan forma aktarılıyor…', 'muted'));
       // Transfer Et pencereyi kapatir; yanit gelmeyebilir. Durum once yazilir, ana sayfa sonucu tablodan dogrular.
       await d.flow.update(s.id, { step: 'transferred' });
-      await d.bridge.call('transfer', undefined, 5000).catch(() => undefined);
+      await d.bridge.call('clickAllowed', { page: 'animalSearch', button: 'transfer' }, 5000).catch(() => undefined);
   }
 }

@@ -69,4 +69,29 @@ describe('page ops', () => {
     await expect(createPageOps(env).checkRow({ checkboxId: 'cb1' })).resolves.toEqual({ postback: true });
     expect((document.getElementById('cb1') as HTMLInputElement).checked).toBe(true);
   });
+
+  it('clicks an allowlisted button by page and key', async () => {
+    const ID = 'ctl00_X_ReceiptAddOtherAnimal_RadOtherAnimal_ctl00_ctl02_ctl00_bntPetVet';
+    document.body.innerHTML = `<a id="${ID}"></a>`;
+    const prm = instantPrm();
+    let clicked = 0;
+    const env: TelerikEnv = { doc: document, find: (id) => (id === ID ? { click: () => { clicked++; prm.fire(); } } : null), prm: () => prm, isReady: () => true };
+
+    await createPageOps(env).clickAllowed({ page: 'vaccineReceipt', button: 'petVet' });
+
+    expect(clicked).toBe(1);
+  });
+
+  it('refuses to click Onayla even when asked through the bridge', async () => {
+    const ID = 'ctl00_X_cntVACCINEBodyContent_btnInsert';
+    document.body.innerHTML = `<a id="${ID}"></a>`;
+    let clicked = 0;
+    const env: TelerikEnv = { doc: document, find: () => ({ click: () => { clicked++; } }), prm: () => instantPrm(), isReady: () => true };
+    const ops = createPageOps(env);
+
+    await expect(ops.clickAllowed({ page: 'vaccineReceipt', button: 'insert' })).rejects.toMatchObject({ code: 'NOT_ALLOWED' });
+    expect(ops).not.toHaveProperty('clickPetVet');
+    expect(ops).not.toHaveProperty('transfer');
+    expect(clicked).toBe(0);
+  });
 });

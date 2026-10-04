@@ -42,7 +42,8 @@ describe('runSearchFlow', () => {
 
     await runSearchFlow(deps);
 
-    expect(calls.map((c) => c.op)).toEqual(['ready', 'searchChip', 'checkRow', 'transfer']);
+    expect(calls.map((c) => c.op)).toEqual(['ready', 'searchChip', 'checkRow', 'clickAllowed']);
+    expect(calls[3].args).toEqual({ page: 'animalSearch', button: 'transfer' });
     expect(calls[1].args).toEqual({ chip: CHIP });
     expect(calls[2].args).toEqual({ checkboxId: 'cb0' });
     expect((await flow.get())?.step).toBe('transferred');

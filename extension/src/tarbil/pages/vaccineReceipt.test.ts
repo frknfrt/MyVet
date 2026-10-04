@@ -71,7 +71,8 @@ describe('receiptFlow', () => {
 
     await receipt.start();
 
-    expect(calls.map((c) => c.op)).toEqual(['ready', 'setDate', 'selectAnimalType', 'clickPetVet']);
+    expect(calls.map((c) => c.op)).toEqual(['ready', 'setDate', 'selectAnimalType', 'clickAllowed']);
+    expect(calls[3].args).toEqual({ page: 'vaccineReceipt', button: 'petVet' });
     expect(calls[1].args).toEqual({ iso: '2026-10-03' });
     expect(calls[2].args).toEqual({ value: ANIMAL_TYPE.CAT });
     expect((await flow.get())?.step).toBe('searching');
@@ -244,7 +245,7 @@ describe('receiptFlow', () => {
     await flow.arm('s1');
     receipt.flowChanged(await flow.get());
 
-    await vi.waitFor(() => expect(calls.map((c) => c.op)).toContain('clickPetVet'));
+    await vi.waitFor(() => expect(calls.map((c) => c.op)).toContain('clickAllowed'));
   });
 
   it('offers the search-window button right after asking PetVet to open', async () => {

@@ -118,7 +118,7 @@ export function createReceiptFlow(d: ReceiptDeps) {
     if (!(await current())) await d.flow.arm(s.id);
     await d.flow.update(s.id, { step: 'searching' });
     d.card.show(views.progress(s, 'PetVet arama penceresinde çip numarasıyla aranıyor…'));
-    await d.bridge.call('clickPetVet');
+    await d.bridge.call('clickAllowed', { page: 'vaccineReceipt', button: 'petVet' });
     // Otomatik akista kullanici hareketi yok; Chrome pencereyi engelleyebilir. Buton hemen sunulur.
     d.card.show(views.searching(s));
     d.setTimer(() => {
