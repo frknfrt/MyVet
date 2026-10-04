@@ -1,5 +1,6 @@
 package com.vetos.modules.integration.tarbil.application;
 
+import com.vetos.modules.integration.tarbil.domain.TarbilDocumentType;
 import com.vetos.modules.integration.tarbil.application.dto.TarbilStatusSummary;
 import com.vetos.modules.integration.tarbil.domain.TarbilSubmission;
 import com.vetos.modules.integration.tarbil.domain.TarbilSubmissionRepository;
@@ -23,6 +24,8 @@ public class GetTarbilStatusSummaryUseCase {
     @Transactional(readOnly = true)
     public TarbilStatusSummary execute(UUID tenantId) {
         List<TarbilSubmission> logs = tarbilSyncLogRepository.findByTenantId(tenantId).stream()
+            // Bu web listesi asi aktarimlarini gosterir; diger belge turleri kendi ekranlarina gelecek (P1+).
+            .filter(log -> log.getDocumentType() == TarbilDocumentType.VACCINATION)
             .filter(assembler::isVisible)
             .toList();
         long pending = logs.stream().filter(l -> l.getStatus() == TarbilSyncStatus.PENDING).count();

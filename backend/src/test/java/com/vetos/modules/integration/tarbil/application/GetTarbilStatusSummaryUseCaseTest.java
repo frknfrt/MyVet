@@ -1,5 +1,8 @@
 package com.vetos.modules.integration.tarbil.application;
 
+import java.time.Instant;
+import com.vetos.modules.integration.tarbil.domain.TarbilConfirmationMethod;
+import com.vetos.modules.integration.tarbil.domain.TarbilDocumentType;
 import com.vetos.modules.encounter.domain.VaccinationLookupPort;
 import com.vetos.modules.encounter.domain.VaccinationStatus;
 import com.vetos.modules.encounter.domain.VaccinationTarbilView;
@@ -53,5 +56,14 @@ class GetTarbilStatusSummaryUseCaseTest {
         var summary = new GetTarbilStatusSummaryUseCase(syncLogRepository, assembler()).execute(tenantId);
 
         assertThat(summary.pendingCount()).isEqualTo(1);
+    }
+
+    @Test
+    void should_countOnlyVaccinations_when_otherDocumentTypesExist() {
+        TarbilSubmission prescription = TarbilSubmission.queue(tenantId, TarbilDocumentType.PRESCRIPTION, UUID.randomUUID(), UUID.randomUUID());
+        prescription.markSubmitted(UUID.randomUUID(), TarbilConfirmationMethod.MANUAL, null, Instant.now());
+        when(syncLogRepository.findByTenantId(tenantId)).thenReturn(List.of(prescription));
+
+        assertThat(new GetTarbilStatusSummaryUseCase(syncLogRepository, assembler()).execute(tenantId).submittedCount()).isZero();
     }
 }

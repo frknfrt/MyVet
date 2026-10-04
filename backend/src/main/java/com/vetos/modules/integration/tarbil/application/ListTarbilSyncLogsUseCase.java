@@ -1,5 +1,6 @@
 package com.vetos.modules.integration.tarbil.application;
 
+import com.vetos.modules.integration.tarbil.domain.TarbilDocumentType;
 import com.vetos.modules.encounter.domain.VaccinationTarbilView;
 import com.vetos.modules.integration.tarbil.application.dto.TarbilSyncLogSummary;
 import com.vetos.modules.integration.tarbil.domain.TarbilSubmissionRepository;
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -24,12 +26,14 @@ public class ListTarbilSyncLogsUseCase {
     @Transactional(readOnly = true)
     public List<TarbilSyncLogSummary> execute(UUID tenantId) {
         return tarbilSyncLogRepository.findByTenantId(tenantId).stream()
+            // Bu web listesi asi aktarimlarini gosterir; diger belge turleri kendi ekranlarina gelecek (P1+).
+            .filter(log -> log.getDocumentType() == TarbilDocumentType.VACCINATION)
             .filter(assembler::isVisible)
             .map(log -> {
                 var vaccination = assembler.liveVaccination(log);
                 return new TarbilSyncLogSummary(
                     log.getId(), log.getPatientId(),
-                    patientLookupPort.findTarbilProfile(log.getPatientId()).map(PatientTarbilProfile::name).orElse("—"),
+                    Optional.ofNullable(log.getPatientId()).flatMap(patientLookupPort::findTarbilProfile).map(PatientTarbilProfile::name).orElse("—"),
                     vaccination.map(VaccinationTarbilView::vaccineName).orElse("—"),
                     vaccination.map(VaccinationTarbilView::administeredDate).orElse(null),
                     log.getStatus(), log.getQueuedAt(), log.getSubmittedAt(),

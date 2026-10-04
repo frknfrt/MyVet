@@ -29,7 +29,7 @@ DELETE FROM efatura_submission WHERE tenant_id IN (SELECT id FROM tmp_tenants);
 DELETE FROM consent_records WHERE owner_id IN (SELECT id FROM tmp_owners);
 DELETE FROM notification_log WHERE tenant_id IN (SELECT id FROM tmp_tenants);
 DELETE FROM prescription_items WHERE prescription_id IN (SELECT id FROM tmp_prescriptions);
-DELETE FROM tarbil_sync_log WHERE patient_id IN (SELECT id FROM tmp_patients);
+DELETE FROM tarbil_submission WHERE tenant_id IN (SELECT id FROM tmp_tenants) OR patient_id IN (SELECT id FROM tmp_patients);
 DELETE FROM staff_shift_templates WHERE staff_user_id IN (SELECT id FROM tmp_staff);
 DELETE FROM branch_working_hours WHERE branch_id IN (SELECT id FROM tmp_branches);
 DELETE FROM message_templates WHERE tenant_id IN (SELECT id FROM tmp_tenants);

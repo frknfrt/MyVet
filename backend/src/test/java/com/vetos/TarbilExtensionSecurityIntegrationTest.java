@@ -249,4 +249,23 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
         mockMvc.perform(get("/api/v1/tarbil/diseases").header("Authorization", "Bearer " + tokenA))
             .andExpect(status().isUnauthorized());
     }
+
+    @Test
+    void integrationsScreenListsVaccinationSubmissionWithSameIdAndStatus() throws Exception {
+        UUID speciesId = inRootSession(() -> speciesRepository.findAll().get(0).getId());
+        UUID ownerA = asTenant(tenantA, () -> ownerRepository.save(
+            Owner.register(tenantA, "A Sahip", "05550000001", null, null)).getId());
+        UUID patientA = asTenant(tenantA, () -> patientRepository.save(
+            Patient.register(tenantA, ownerA, speciesId, null, "Liste", Sex.MALE, null)).getId());
+        UUID vaccinationA = asTenant(tenantA, () -> vaccinationRecordRepository.save(VaccinationRecord.record(
+            tenantA, patientA, null, "Kuduz", null, LocalDate.now(), null, staffA, VaccinationStatus.ADMINISTERED, null)).getId());
+        UUID submissionId = asTenant(tenantA, () -> tarbilSyncLogRepository.save(
+            TarbilSubmission.queueVaccination(tenantA, patientA, vaccinationA)).getId());
+
+        mockMvc.perform(get("/api/v1/tarbil/sync-logs").header("Authorization", "Bearer " + jwtA))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].id").value(submissionId.toString()))
+            .andExpect(jsonPath("$[0].status").value("PENDING"))
+            .andExpect(jsonPath("$[0].vaccineName").value("Kuduz"));
+    }
 }

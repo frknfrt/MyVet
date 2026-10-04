@@ -1,5 +1,8 @@
 package com.vetos.modules.integration.tarbil.application;
 
+import java.time.Instant;
+import com.vetos.modules.integration.tarbil.domain.TarbilConfirmationMethod;
+import com.vetos.modules.integration.tarbil.domain.TarbilDocumentType;
 import com.vetos.modules.encounter.domain.VaccinationLookupPort;
 import com.vetos.modules.encounter.domain.VaccinationStatus;
 import com.vetos.modules.encounter.domain.VaccinationTarbilView;
@@ -54,5 +57,14 @@ class ListTarbilSyncLogsUseCaseTest {
         var logs = new ListTarbilSyncLogsUseCase(syncLogRepository, patientLookupPort, assembler()).execute(tenantId);
 
         assertThat(logs).hasSize(1);
+    }
+
+    @Test
+    void should_listOnlyVaccinations_when_finishedStockReceiptWithoutPatientExists() {
+        TarbilSubmission stock = TarbilSubmission.queue(tenantId, TarbilDocumentType.STOCK_RECEIPT, null, UUID.randomUUID());
+        stock.markSubmitted(UUID.randomUUID(), TarbilConfirmationMethod.AUTO, null, Instant.now());
+        when(syncLogRepository.findByTenantId(tenantId)).thenReturn(List.of(stock));
+
+        assertThat(new ListTarbilSyncLogsUseCase(syncLogRepository, patientLookupPort, assembler()).execute(tenantId)).isEmpty();
     }
 }
