@@ -27,6 +27,7 @@ const ACTION_LABELS: Record<string, string> = {
   COUPON_DEACTIVATED: 'Kupon Pasife Alındı',
   INVOICE_VOIDED: 'Fatura İptal Edildi',
   PAYMENT_RECORDED: 'Ödeme Kaydedildi',
+  ANNOUNCEMENT_SENT: 'Duyuru Gönderildi',
 };
 
 const ACTION_TONES: Record<string, BadgeTone> = {
@@ -35,6 +36,7 @@ const ACTION_TONES: Record<string, BadgeTone> = {
   PLAN_DELETED: 'danger',
   INVOICE_VOIDED: 'danger',
   COUPON_DEACTIVATED: 'neutral',
+  ANNOUNCEMENT_SENT: 'neutral',
   TENANT_ACTIVATED: 'success',
   COUPON_ACTIVATED: 'success',
   PAYMENT_RECORDED: 'success',
@@ -45,6 +47,7 @@ const TARGET_TYPE_LABELS: Record<string, string> = {
   PLAN: 'Plan',
   COUPON: 'Kupon',
   INVOICE: 'Fatura',
+  ANNOUNCEMENT: 'Duyuru',
 };
 
 export function AuditLogPage() {

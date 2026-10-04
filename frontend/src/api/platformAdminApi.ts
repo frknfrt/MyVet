@@ -44,6 +44,8 @@ export interface CreateTenantPayload {
   adminPassword: string;
 }
 
+export type PlanFeatureFlag = 'AI_ASSISTANT' | 'IMAGING' | 'LAB_INTEGRATION' | 'BOARDING' | 'INVENTORY' | 'E_FATURA';
+
 export interface Plan {
   id: string;
   code: string;
@@ -54,6 +56,7 @@ export interface Plan {
   badge: string | null;
   imageUrl: string | null;
   features: string[];
+  enabledFeatures: PlanFeatureFlag[];
   active: boolean;
 }
 
@@ -65,6 +68,7 @@ export interface UpdatePlanPayload {
   badge: string | null;
   imageUrl: string | null;
   features: string[];
+  enabledFeatures: PlanFeatureFlag[];
   active: boolean;
 }
 
@@ -203,6 +207,15 @@ export interface CreateCouponPayload {
 }
 
 
+export interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  createdByAdminEmail: string;
+  recipientCount: number;
+  createdAt: string;
+}
+
 export interface AuditLogEntry {
   id: string;
   platformAdminId: string;
@@ -273,4 +286,7 @@ export const platformAdminApi = {
   deactivateCoupon: (id: string) => platformAdminClient.post<void>(`/api/v1/platform-admin/coupons/${id}/deactivate`),
   listAuditLog: () => platformAdminClient.get<AuditLogEntry[]>('/api/v1/platform-admin/audit-log'),
   listAiUsage: () => platformAdminClient.get<AiUsageByTenant[]>('/api/v1/platform-admin/ai-usage'),
+  listAnnouncements: () => platformAdminClient.get<Announcement[]>('/api/v1/platform-admin/announcements'),
+  sendAnnouncement: (payload: { title: string; body: string }) =>
+    platformAdminClient.post<void>('/api/v1/platform-admin/announcements', payload),
 };

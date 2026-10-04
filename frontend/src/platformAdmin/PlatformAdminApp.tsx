@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AiUsagePage } from '../pages/platform-admin/AiUsagePage';
+import { AnnouncementsPage } from '../pages/platform-admin/AnnouncementsPage';
 import { AuditLogPage } from '../pages/platform-admin/AuditLogPage';
 import { CouponsPage } from '../pages/platform-admin/CouponsPage';
 import { LeadsPage } from '../pages/platform-admin/LeadsPage';
@@ -34,6 +35,7 @@ export function PlatformAdminApp() {
                   <Route path="coupons" element={<CouponsPage />} />
                   <Route path="billing" element={<PlatformBillingPage />} />
                   <Route path="ai-usage" element={<AiUsagePage />} />
+                  <Route path="announcements" element={<AnnouncementsPage />} />
                   <Route path="system-health" element={<SystemHealthPage />} />
                   <Route path="audit-log" element={<AuditLogPage />} />
                 </Routes>

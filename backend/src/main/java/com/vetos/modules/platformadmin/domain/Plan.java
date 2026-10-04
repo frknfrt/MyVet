@@ -7,7 +7,9 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -47,6 +49,13 @@ public class Plan {
     @Column(name = "feature", nullable = false)
     private List<String> features = new ArrayList<>();
 
+    /** Plan.features'tan (serbest pazarlama metni) BAGIMSIZ -- bkz. PlanFeatureFlag javadoc'u. */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "plan_feature_flags", joinColumns = @JoinColumn(name = "plan_id"))
+    @Enumerated(EnumType.STRING)
+    @Column(name = "feature", nullable = false)
+    private Set<PlanFeatureFlag> enabledFeatures = new HashSet<>();
+
     @Column(nullable = false)
     private boolean active;
 
@@ -66,7 +75,8 @@ public class Plan {
         String description,
         String badge,
         String imageUrl,
-        List<String> features
+        List<String> features,
+        Set<PlanFeatureFlag> enabledFeatures
     ) {
         this.name = name;
         this.monthlyPrice = monthlyPrice;
@@ -75,6 +85,7 @@ public class Plan {
         this.badge = badge;
         this.imageUrl = imageUrl;
         this.features = new ArrayList<>(features);
+        this.enabledFeatures = new HashSet<>(enabledFeatures);
     }
 
     public void activate() {

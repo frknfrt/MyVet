@@ -16,6 +16,7 @@ public final class AuditAction {
     public static final String COUPON_DEACTIVATED = "COUPON_DEACTIVATED";
     public static final String INVOICE_VOIDED = "INVOICE_VOIDED";
     public static final String PAYMENT_RECORDED = "PAYMENT_RECORDED";
+    public static final String ANNOUNCEMENT_SENT = "ANNOUNCEMENT_SENT";
 
     private AuditAction() {
     }

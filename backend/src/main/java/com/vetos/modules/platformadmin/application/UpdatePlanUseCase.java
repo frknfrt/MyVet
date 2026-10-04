@@ -30,7 +30,8 @@ public class UpdatePlanUseCase {
             command.description(),
             command.badge(),
             command.imageUrl(),
-            command.features()
+            command.features(),
+            command.enabledFeatures()
         );
         if (command.active()) {
             plan.activate();

@@ -55,6 +55,7 @@ public class PlanController {
             request.badge(),
             request.imageUrl(),
             request.features() == null ? List.of() : request.features(),
+            request.enabledFeatures() == null ? java.util.Set.of() : request.enabledFeatures(),
             request.active()
         ), principal.platformAdminId(), principal.email());
     }

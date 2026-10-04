@@ -12,6 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Set;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -37,7 +38,7 @@ class UpdatePlanUseCaseTest {
         UpdatePlanUseCase useCase = new UpdatePlanUseCase(planRepository, recordAuditLogUseCase);
 
         useCase.execute(new UpdatePlanCommand(
-            planId, "Pro Plan Yeni", new BigDecimal("2500.00"), null, null, null, null, List.of(), true
+            planId, "Pro Plan Yeni", new BigDecimal("2500.00"), null, null, null, null, List.of(), Set.of(), true
         ), adminId, "admin@vetly.com.tr");
 
         verify(planRepository).save(plan);
@@ -51,7 +52,7 @@ class UpdatePlanUseCaseTest {
         UpdatePlanUseCase useCase = new UpdatePlanUseCase(planRepository, recordAuditLogUseCase);
 
         assertThatThrownBy(() -> useCase.execute(new UpdatePlanCommand(
-            planId, "X", BigDecimal.ONE, null, null, null, null, List.of(), true
+            planId, "X", BigDecimal.ONE, null, null, null, null, List.of(), Set.of(), true
         ), UUID.randomUUID(), "admin@vetly.com.tr")).isInstanceOf(PlanNotFoundException.class);
         verifyNoInteractions(recordAuditLogUseCase);
     }
