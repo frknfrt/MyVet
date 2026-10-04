@@ -1,4 +1,4 @@
-import type { ConfirmationMethod, ExtensionProfile, Submission } from './types';
+import type { ConfirmationMethod, ExtensionProfile, StockSnapshotLine, StockSystem, Submission } from './types';
 
 export type BackgroundRequest =
   | { type: 'GET_STATE' }
@@ -9,6 +9,7 @@ export type BackgroundRequest =
   | { type: 'SET_ACTIVE'; id: string }
   | { type: 'GET_ACTIVE' }
   | { type: 'MARK_SUBMITTED'; id: string; method: ConfirmationMethod; tarbilReference: string | null }
+  | { type: 'UPLOAD_STOCK_SNAPSHOT'; system: StockSystem; lines: StockSnapshotLine[] }
   | { type: 'DISMISS'; id: string; reason: string };
 
 export type ErrorCode = 'UNAUTHORIZED' | 'OFFLINE' | 'NOT_FOUND' | 'CONFLICT' | 'UNKNOWN';

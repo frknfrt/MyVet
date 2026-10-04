@@ -31,3 +31,15 @@ export interface ExtensionProfile {
 }
 
 export type DocumentType = 'VACCINATION' | 'PRESCRIPTION' | 'STOCK_RECEIPT';
+
+export type StockSystem = 'HBSAPP_VACCINE' | 'VETILAC_MEDICINE';
+
+/** TARBIL stok tablosundan okunan satir (spec 2026-10-04 S13). */
+export interface StockSnapshotLine {
+  productName: string;
+  presentation: string | null;
+  lotNumber: string | null;
+  expiryDate: string | null;
+  quantity: number;
+  openedQuantity: number | null;
+}

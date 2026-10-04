@@ -104,4 +104,16 @@ describe('router', () => {
     const { router } = setup(async () => ({}));
     expect(await router.handleExternal({ type: 'PING' })).toEqual({ ok: true, data: { version: '0.1.0' } });
   });
+
+  it('uploads a TARBIL stock snapshot through the API', async () => {
+    const tokens = createTokenStore(memoryStore());
+    const uploaded: unknown[] = [];
+    const api = { uploadStockSnapshot: async (system: string, lines: unknown[]) => { uploaded.push({ system, lines }); return { snapshotId: 's1' }; } } as never;
+    const router = createRouter({ api, tokens, outbox: createConfirmationOutbox(memoryStore(), api), session: memoryStore() });
+
+    const res = await router.handle({ type: 'UPLOAD_STOCK_SNAPSHOT', system: 'HBSAPP_VACCINE', lines: [] });
+
+    expect(res).toEqual({ ok: true, data: { snapshotId: 's1' } });
+    expect(uploaded).toEqual([{ system: 'HBSAPP_VACCINE', lines: [] }]);
+  });
 });

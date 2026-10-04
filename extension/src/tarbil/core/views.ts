@@ -82,5 +82,6 @@ export const views = {
     ]),
   elsewhere: (s: Submission): CardView =>
     view(s, 'Bu aşıyı "Aşı Uygulama Belgesi Ekle" sayfasında dolduracağız.', 'muted', [{ id: 'open', label: 'Aşı sayfasını aç' }]),
+  stock: (text: string, tone?: Tone, actions: CardAction[] = []): CardView => ({ lines: [{ text: 'TARBİL stoğu', tone: 'strong' }, { text, tone }], actions }),
   popup: (text: string, tone?: Tone): CardView => ({ lines: [{ text, tone }], actions: [] }),
 };

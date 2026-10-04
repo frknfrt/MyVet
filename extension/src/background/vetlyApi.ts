@@ -1,5 +1,5 @@
 import type { ErrorCode } from '../shared/messages';
-import type { ConfirmationMethod, ExtensionProfile, Submission } from '../shared/types';
+import type { ConfirmationMethod, ExtensionProfile, StockSnapshotLine, StockSystem, Submission } from '../shared/types';
 import type { TokenStore } from './chromeStorage';
 
 export class ApiError extends Error {
@@ -61,6 +61,11 @@ export function createVetlyApi({ baseUrl, tokens, fetchFn = fetch }: Options) {
       request<void>(`/api/v1/tarbil-extension/submissions/${id}/dismiss`, {
         method: 'POST',
         body: JSON.stringify({ reason }),
+      }),
+    uploadStockSnapshot: (system: StockSystem, lines: StockSnapshotLine[]) =>
+      request<{ snapshotId: string }>('/api/v1/tarbil-extension/stock-snapshots', {
+        method: 'POST',
+        body: JSON.stringify({ system, lines }),
       }),
   };
 }

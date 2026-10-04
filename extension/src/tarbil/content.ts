@@ -11,6 +11,7 @@ import { createPageBridge } from './core/bridge';
 import { createCard } from './core/card';
 import { shouldRedirectHome } from './core/home';
 import { isKeepAliveEnabled, startKeepAlive } from './core/keepAlive';
+import { createStockSync } from './pages/stockSync';
 import { createReceiptFlow } from './pages/vaccineReceipt';
 import { runSearchFlow, type Send } from './steps/findAnimal';
 import { VACCINE_PAGE_URL, pageKind } from './selectors';
@@ -49,8 +50,16 @@ startKeepAlive({
   clearInterval: (handle) => window.clearInterval(handle as number),
 });
 
-// vetilac (Ilac Takip Sistemi) sayfalarinda simdilik yalniz oturum canli tutulur.
-if (location.origin !== 'https://vetilac.tarbil.gov.tr') routeTarbilPage();
+if (location.origin === 'https://vetilac.tarbil.gov.tr') {
+  // vetilac'ta yalniz ilac stok sayfasi; digerlerinde yalniz oturum canli tutulur.
+  if (pageKind(location) === 'medicineStock') startStockSync('medicineStock');
+} else {
+  routeTarbilPage();
+}
+
+function startStockSync(kind: 'vaccineStock' | 'medicineStock'): void {
+  createStockSync({ bridge: createPageBridge(window), send, doc: document, card, kind }).start();
+}
 
 function routeTarbilPage(): void {
 switch (pageKind(location)) {
@@ -80,6 +89,9 @@ switch (pageKind(location)) {
   }
   case 'search':
     void runSearchFlow({ bridge: createPageBridge(window), flow, send, doc: document, card, now: Date.now });
+    break;
+  case 'vaccineStock':
+    startStockSync('vaccineStock');
     break;
   case 'home':
     void home();

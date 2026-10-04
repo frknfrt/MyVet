@@ -73,6 +73,8 @@ export function createRouter({ api, tokens, outbox, session, openVaccinePage }: 
               }
               throw e;
             }
+          case 'UPLOAD_STOCK_SNAPSHOT':
+            return { ok: true, data: await api.uploadStockSnapshot(req.system, req.lines) };
           case 'DISMISS':
             await api.dismiss(req.id, req.reason);
             return { ok: true, data: null };
