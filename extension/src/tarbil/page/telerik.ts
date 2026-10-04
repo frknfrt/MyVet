@@ -158,3 +158,10 @@ export function clickElement(env: TelerikEnv, id: string): Promise<{ postback: b
   if (!el) return Promise.reject(new PageError('NOT_FOUND', `Öğe bulunamadı: ${id}`));
   return withPostback(env, () => (el as HTMLElement).click());
 }
+
+/** RadGrid'i tek sayfada gosterir (sayfa boyutu pageSize); zaten o kadar buyukse postback yapmaz. */
+export async function showAllRows(env: TelerikEnv, gridSuffix: string, pageSize: number): Promise<{ postback: boolean }> {
+  const view = component(env, gridSuffix).get_masterTableView();
+  if (typeof view.get_pageSize === 'function' && view.get_pageSize() >= pageSize) return { postback: false };
+  return withPostback(env, () => view.set_pageSize(pageSize));
+}

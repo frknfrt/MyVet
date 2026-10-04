@@ -1,4 +1,5 @@
 import { SEARCH } from './shared';
+import { MEDICINE_STOCK, VACCINE_STOCK } from './stock';
 import { RECEIPT } from './vaccineReceipt';
 
 /**
@@ -8,6 +9,8 @@ import { RECEIPT } from './vaccineReceipt';
 export const ALLOWED_BUTTONS = {
   vaccineReceipt: { petVet: RECEIPT.petVet },
   animalSearch: { search: SEARCH.search, transfer: SEARCH.transfer },
+  vaccineStock: { search: VACCINE_STOCK.search },
+  medicineStock: { search: MEDICINE_STOCK.search },
 } as const;
 
 export const FORBIDDEN_BUTTON_PATTERNS: readonly RegExp[] = [/btnInsert2?$/i, /btnApprove$/i, /btnReject$/i, /exit/i];

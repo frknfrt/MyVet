@@ -94,4 +94,26 @@ describe('page ops', () => {
     expect(ops).not.toHaveProperty('transfer');
     expect(clicked).toBe(0);
   });
+
+  it('loads the whole medicine stock table: presses Ara, then shows all rows', async () => {
+    const BTN = 'ctl00_ContentHolder_btnSearch';
+    const GRID = 'ctl00_ContentHolder_radGridStockSearch';
+    document.body.innerHTML = `<a id="${BTN}"></a><div id="${GRID}"></div>`;
+    const prm = instantPrm();
+    const log: string[] = [];
+    const comps: Record<string, Record<string, unknown>> = {
+      [BTN]: { click: () => { log.push('ara'); prm.fire(); } },
+      [GRID]: { get_masterTableView: () => ({ get_pageSize: () => 10, set_pageSize: (n: number) => { log.push(`size:${n}`); prm.fire(); } }) },
+    };
+    const env: TelerikEnv = { doc: document, find: (id) => comps[id] ?? null, prm: () => prm, isReady: () => true };
+
+    await createPageOps(env).loadStockTable({ page: 'medicineStock' });
+
+    expect(log).toEqual(['ara', 'size:500']);
+  });
+
+  it('rejects an unknown stock page', async () => {
+    const env: TelerikEnv = { doc: document, find: () => null, prm: () => instantPrm(), isReady: () => true };
+    await expect(createPageOps(env).loadStockTable({ page: 'vaccineReceipt' })).rejects.toMatchObject({ code: 'BAD_INPUT' });
+  });
 });

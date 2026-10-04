@@ -7,6 +7,8 @@ const VACCINE_PAGE_PATH = '/Modules/RECEIPT/Pages/ATS/VaccineReceipt/VaccineRece
 export const VACCINE_PAGE_URL = `${TARBIL_ORIGIN}${VACCINE_PAGE_PATH}?type=1`;
 const SEARCH_PAGE_FILE = 'vaccinekkbsanimalsearchmodalpage.aspx';
 const HOME_PATHS = ['/', '/default.aspx'];
+const VACCINE_STOCK_PATH = '/modules/receipt/pages/ats/vaccinestock/vaccinestocksearch.aspx';
+const MEDICINE_STOCK_PATH = '/pages/stocksearch.aspx';
 
 /** cbxAnimalType degerleri (spec S3). */
 export const ANIMAL_TYPE = {
@@ -24,7 +26,7 @@ export const SEARCH = {
 
 export const bySuffix = (suffix: string): string => `[id$="${suffix}"]`;
 
-export type PageKind = 'receipt' | 'search' | 'home' | 'other';
+export type PageKind = 'receipt' | 'search' | 'home' | 'vaccineStock' | 'medicineStock' | 'other';
 
 export function pageKind(loc: { pathname: string; search: string }): PageKind {
   const path = loc.pathname.toLowerCase();
@@ -32,6 +34,8 @@ export function pageKind(loc: { pathname: string; search: string }): PageKind {
     return new URLSearchParams(loc.search).get('type') === '1' ? 'receipt' : 'other';
   }
   if (path.endsWith(`/${SEARCH_PAGE_FILE}`)) return 'search';
+  if (path === VACCINE_STOCK_PATH) return 'vaccineStock';
+  if (path === MEDICINE_STOCK_PATH) return 'medicineStock';
   if (HOME_PATHS.includes(path)) return 'home';
   return 'other';
 }

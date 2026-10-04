@@ -1,6 +1,6 @@
 import type { PageHandler } from '../core/bridge';
-import { RECEIPT, SEARCH, allowedButtonSuffix, bySuffix } from '../selectors';
-import { PageError, clickButton, clickElement, selectComboValue, setDate, setText, waitUntil, type TelerikEnv } from './telerik';
+import { MEDICINE_STOCK, RECEIPT, SEARCH, VACCINE_STOCK, allowedButtonSuffix, bySuffix } from '../selectors';
+import { PageError, clickButton, clickElement, selectComboValue, setDate, setText, showAllRows, waitUntil, type TelerikEnv } from './telerik';
 
 /**
  * Koprudan cagrilan komutlar. Butonlara yalniz clickAllowed ile, selectors/allowlist.ts'teki listeden basilir;
@@ -30,6 +30,13 @@ export function createPageOps(env: TelerikEnv): Record<string, PageHandler> {
         return Promise.reject(new PageError('NOT_FOUND', 'Arama sonucunda böyle bir satır kutusu yok'));
       }
       return clickElement(env, checkboxId);
+    },
+    // Stok sayfalari: "Ara" + tum satirlari tek sayfaya al. Yalniz okuma icin (spec 2026-10-04 S13).
+    loadStockTable: async ({ page }: { page: string }) => {
+      const grid = page === 'vaccineStock' ? VACCINE_STOCK.gridComponent : page === 'medicineStock' ? MEDICINE_STOCK.gridComponent : null;
+      if (!grid) throw new PageError('BAD_INPUT', `Stok sayfası değil: ${page}`);
+      await clickButton(env, allowed(page, 'search'));
+      await showAllRows(env, grid, 500);
     },
   };
 }
