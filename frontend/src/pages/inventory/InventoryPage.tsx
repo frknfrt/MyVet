@@ -6,12 +6,15 @@ import { Button } from '../../components/ui/Button';
 import { inventoryApi, InventoryItem } from '../../api/inventoryApi';
 import { ItemDetailModal } from './ItemDetailModal';
 import { NewInventoryItemModal } from './NewInventoryItemModal';
+import { TarbilStockSyncPanel } from './TarbilStockSyncPanel';
 import styles from './InventoryPage.module.css';
 
 export function InventoryPage() {
   const { session } = useAuth();
   // InventoryItemsController yazma -- sadece TECHNICIAN/ADMIN (VET/RECEPTIONIST yok).
   const canWrite = session ? ['TECHNICIAN', 'ADMIN'].includes(session.role) : false;
+  // /tarbil/** uclari ADMIN ve VET'e acik (TARBIL'de stok isini hekim yapar).
+  const canTarbilSync = session ? ['ADMIN', 'VET'].includes(session.role) : false;
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
@@ -96,6 +99,7 @@ export function InventoryPage() {
         )}
       </div>
 
+      {canTarbilSync && <TarbilStockSyncPanel onApplied={load} />}
       <ItemDetailModal item={selected} onClose={() => setSelected(null)} onChanged={load} />
       <NewInventoryItemModal open={createOpen} onClose={() => setCreateOpen(false)} onCreated={load} />
     </AppShell>

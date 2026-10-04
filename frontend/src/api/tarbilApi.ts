@@ -48,6 +48,29 @@ export interface TarbilMapping {
   updatedAt: string;
 }
 
+export type TarbilStockSystem = 'HBSAPP_VACCINE' | 'VETILAC_MEDICINE';
+export type TarbilStockSyncStatus = 'NEW' | 'QUANTITY_DIFFERS' | 'MATCHED' | 'APPLIED';
+
+export interface TarbilStockSyncLine {
+  lineId: string;
+  productName: string;
+  presentation: string | null;
+  lotNumber: string | null;
+  expiryDate: string | null;
+  tarbilQuantity: number;
+  openedQuantity: number | null;
+  status: TarbilStockSyncStatus;
+  inventoryItemId: string | null;
+  vetlyQuantity: number | null;
+}
+
+export interface TarbilStockSync {
+  snapshotId: string | null;
+  system: TarbilStockSystem;
+  takenAt: string | null;
+  lines: TarbilStockSyncLine[];
+}
+
 export const tarbilApi = {
   status: () => apiClient.get<TarbilStatus>('/api/v1/tarbil/status'),
   syncLogs: () => apiClient.get<TarbilSyncLog[]>('/api/v1/tarbil/sync-logs'),
@@ -57,5 +80,8 @@ export const tarbilApi = {
   extensionTokens: () => apiClient.get<ExtensionToken[]>('/api/v1/tarbil/extension/tokens'),
   revokeExtensionToken: (id: string) => apiClient.delete<void>(`/api/v1/tarbil/extension/tokens/${id}`),
   mappings: () => apiClient.get<TarbilMapping[]>('/api/v1/tarbil/mappings'),
+  stockSync: (system: TarbilStockSystem) => apiClient.get<TarbilStockSync>(`/api/v1/tarbil/stock-sync?system=${system}`),
+  applyStockSync: (snapshotId: string, lineIds: string[]) =>
+    apiClient.post<{ applied: number }>(`/api/v1/tarbil/stock-sync/${snapshotId}/apply`, { lineIds }),
   deleteMapping: (id: string) => apiClient.delete<void>(`/api/v1/tarbil/mappings/${id}`),
 };
