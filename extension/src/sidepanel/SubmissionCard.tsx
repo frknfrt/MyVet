@@ -27,7 +27,7 @@ export function SubmissionCard({ submission: s, onDone }: { submission: Submissi
 
   async function setActive() {
     await sendToBackground({ type: 'SET_ACTIVE', id: s.id });
-    setNote("TARBİL'de \"Aşı Uygulama Belgesi Ekle\" sayfası açıksa form hemen doldurulur; değilse o sayfayı açın.");
+    setNote("TARBİL aşı sayfası açılıyor. Oturum kapalıysa e-Devlet ile giriş yapın; giriş sonrası form kendiliğinden doldurulur.");
   }
 
   if (s.status === 'SUBMITTED') {

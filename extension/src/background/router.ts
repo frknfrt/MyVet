@@ -12,6 +12,8 @@ interface Deps {
   tokens: TokenStore;
   outbox: ConfirmationOutbox;
   session: KeyValueStore;
+  /** Yan panelden aktarim baslatilinca TARBIL asi sayfasini one getirir (yoksa acar). */
+  openVaccinePage?: () => Promise<void>;
 }
 
 function fail(e: unknown): BackgroundResponse<never> {
@@ -19,7 +21,7 @@ function fail(e: unknown): BackgroundResponse<never> {
   return { ok: false, error: 'Beklenmeyen hata', code: 'UNKNOWN' };
 }
 
-export function createRouter({ api, tokens, outbox, session }: Deps) {
+export function createRouter({ api, tokens, outbox, session, openVaccinePage }: Deps) {
   const flow = createFlowStore(session);
   async function state(): Promise<ExtensionState> {
     const paired = (await tokens.get()) !== null;
@@ -54,6 +56,8 @@ export function createRouter({ api, tokens, outbox, session }: Deps) {
           case 'SET_ACTIVE':
             await flow.arm(req.id);
             await session.set(ACTIVE_KEY, req.id);
+            // Sekme acilamazsa aktarim yine hazir: hekim sayfayi kendisi acinca form doldurulur.
+            await openVaccinePage?.().catch(() => undefined);
             return { ok: true, data: null };
           case 'GET_ACTIVE': {
             const id = await session.get<string>(ACTIVE_KEY);

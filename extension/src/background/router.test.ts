@@ -85,6 +85,21 @@ describe('router', () => {
     expect(await session.get('activeSubmissionId')).toBe('s9');
   });
 
+  it('opens the TARBIL vaccine page when the side panel starts a transfer', async () => {
+    const tokens = createTokenStore(memoryStore());
+    const api = {} as never;
+    let opened = 0;
+    const router = createRouter({
+      api, tokens, outbox: createConfirmationOutbox(memoryStore(), api), session: memoryStore(),
+      openVaccinePage: async () => { opened++; },
+    });
+
+    const res = await router.handle({ type: 'SET_ACTIVE', id: 's9' });
+
+    expect(res.ok).toBe(true);
+    expect(opened).toBe(1);
+  });
+
   it('answers ping', async () => {
     const { router } = setup(async () => ({}));
     expect(await router.handleExternal({ type: 'PING' })).toEqual({ ok: true, data: { version: '0.1.0' } });

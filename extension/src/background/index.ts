@@ -3,6 +3,7 @@ import type { BackgroundRequest, ExternalRequest } from '../shared/messages';
 import { chromeLocalStore, chromeSessionStore, createTokenStore } from './chromeStorage';
 import { createConfirmationOutbox } from './confirmationOutbox';
 import { createRouter } from './router';
+import { openVaccinePage } from './tarbilTab';
 import { createVetlyApi } from './vetlyApi';
 
 // Icerik betigi (TARBIL karti) activeSubmissionId degisikligini dinler; session varsayilan olarak ona kapali.
@@ -12,7 +13,13 @@ chrome.storage.session.setAccessLevel({ accessLevel: 'TRUSTED_AND_UNTRUSTED_CONT
 const tokens = createTokenStore(chromeLocalStore());
 const api = createVetlyApi({ baseUrl: VETLY_API_BASE, tokens });
 const outbox = createConfirmationOutbox(chromeLocalStore(), api);
-const router = createRouter({ api, tokens, outbox, session: chromeSessionStore() });
+const router = createRouter({
+  api,
+  tokens,
+  outbox,
+  session: chromeSessionStore(),
+  openVaccinePage: () => openVaccinePage(chrome.tabs, (windowId) => chrome.windows.update(windowId, { focused: true })),
+});
 
 // Arac cubugu simgesine tiklamak yan paneli acar (kullanici hareketi gerektiren tek yol).
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => undefined);
