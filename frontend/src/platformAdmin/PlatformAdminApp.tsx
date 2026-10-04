@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { LeadsPage } from '../pages/platform-admin/LeadsPage';
 import { OverviewPage } from '../pages/platform-admin/OverviewPage';
 import { PlanManagementPage } from '../pages/platform-admin/PlanManagementPage';
 import { PlatformAdminLoginPage } from '../pages/platform-admin/PlatformAdminLoginPage';
@@ -23,6 +24,7 @@ export function PlatformAdminApp() {
                 <Routes>
                   <Route index element={<Navigate to="overview" replace />} />
                   <Route path="overview" element={<OverviewPage />} />
+                  <Route path="leads" element={<LeadsPage />} />
                   <Route path="tenants" element={<TenantListPage />} />
                   <Route path="tenants/:tenantId" element={<TenantDetailPage />} />
                   <Route path="plans" element={<PlanManagementPage />} />

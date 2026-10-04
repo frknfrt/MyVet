@@ -155,6 +155,19 @@ export interface ImpersonationSession {
   role: string;
 }
 
+export type TenantSignupRequestStatus = 'PENDING' | 'COMPLETED';
+
+export interface TenantSignupRequest {
+  id: string;
+  clinicName: string;
+  adminFullName: string;
+  adminEmail: string;
+  phone: string | null;
+  planCode: string;
+  status: TenantSignupRequestStatus;
+  createdAt: string;
+}
+
 export const platformAdminApi = {
   login: (payload: PlatformAdminLoginPayload) =>
     platformAdminClient.post<PlatformAdminSession>('/api/v1/platform-admin/auth/login', payload),
@@ -189,4 +202,5 @@ export const platformAdminApi = {
   getOverview: () => platformAdminClient.get<PlatformOverview>('/api/v1/platform-admin/overview'),
   impersonateTenant: (tenantId: string) =>
     platformAdminClient.post<ImpersonationSession>(`/api/v1/platform-admin/tenants/${tenantId}/impersonate`),
+  listSignupRequests: () => platformAdminClient.get<TenantSignupRequest[]>('/api/v1/platform-admin/signup-requests'),
 };
