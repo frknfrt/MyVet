@@ -24,7 +24,7 @@ public class RecordVaccinationUseCase {
         VaccinationRecord record = VaccinationRecord.record(
             command.tenantId(), command.patientId(), command.encounterId(), command.vaccineName(), command.lotNumber(),
             command.administeredDate(), command.nextDueDate(), command.administeredByStaffId(),
-            command.status(), command.notes()
+            command.status(), command.notes(), command.inventoryItemId()
         );
         vaccinationRecordRepository.save(record);
 
@@ -33,7 +33,7 @@ public class RecordVaccinationUseCase {
         // markAdministered() ile tamamlandiginda gonderilir.
         if (record.getStatus() == VaccinationStatus.ADMINISTERED) {
             eventPublisher.publish(new VaccinationRecordedEvent(
-                record.getId(), record.getPatientId(), record.getVaccineName(), record.getAdministeredDate()
+                record.getId(), record.getPatientId(), record.getVaccineName(), record.getAdministeredDate(), record.getInventoryItemId()
             ));
         }
         return record.getId();

@@ -15,5 +15,6 @@ public record RecordVaccinationRequest(
     @NotNull LocalDate administeredDate,
     LocalDate nextDueDate,
     @NotNull VaccinationStatus status,
-    String notes
+    String notes,
+    UUID inventoryItemId
 ) {}

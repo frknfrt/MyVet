@@ -51,10 +51,23 @@ public class VaccinationRecord {
     @Column(name = "reminder_sent", nullable = false)
     private boolean reminderSent;
 
+    /** Stoktan secilen asi (spec 2026-10-04 P2): inventory modulundeki kalem; serbest yazilmis asida null. */
+    @Column(name = "inventory_item_id")
+    private UUID inventoryItemId;
+
     public static VaccinationRecord record(
         UUID tenantId, UUID patientId, UUID encounterId, String vaccineName, String lotNumber,
         LocalDate administeredDate, LocalDate nextDueDate, UUID administeredByStaffId,
         VaccinationStatus status, String notes
+    ) {
+        return record(tenantId, patientId, encounterId, vaccineName, lotNumber, administeredDate, nextDueDate,
+            administeredByStaffId, status, notes, null);
+    }
+
+    public static VaccinationRecord record(
+        UUID tenantId, UUID patientId, UUID encounterId, String vaccineName, String lotNumber,
+        LocalDate administeredDate, LocalDate nextDueDate, UUID administeredByStaffId,
+        VaccinationStatus status, String notes, UUID inventoryItemId
     ) {
         VaccinationRecord record = new VaccinationRecord();
         record.tenantId = tenantId;
@@ -68,6 +81,7 @@ public class VaccinationRecord {
         record.status = status;
         record.notes = notes;
         record.reminderSent = false;
+        record.inventoryItemId = inventoryItemId;
         return record;
     }
 

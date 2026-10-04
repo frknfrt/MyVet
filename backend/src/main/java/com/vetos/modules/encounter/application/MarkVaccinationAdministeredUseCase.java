@@ -28,7 +28,7 @@ public class MarkVaccinationAdministeredUseCase {
         vaccinationRecordRepository.save(record);
 
         eventPublisher.publish(new VaccinationRecordedEvent(
-            record.getId(), record.getPatientId(), record.getVaccineName(), record.getAdministeredDate()
+            record.getId(), record.getPatientId(), record.getVaccineName(), record.getAdministeredDate(), record.getInventoryItemId()
         ));
     }
 }

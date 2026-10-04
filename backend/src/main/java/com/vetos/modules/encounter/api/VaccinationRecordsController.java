@@ -44,7 +44,8 @@ public class VaccinationRecordsController {
     ) {
         UUID id = recordVaccinationUseCase.execute(new RecordVaccinationCommand(
             TenantContext.current(), request.patientId(), request.encounterId(), request.vaccineName(), request.lotNumber(),
-            request.administeredDate(), request.nextDueDate(), principal.staffUserId(), request.status(), request.notes()
+            request.administeredDate(), request.nextDueDate(), principal.staffUserId(), request.status(), request.notes(),
+            request.inventoryItemId()
         ));
         return ResponseEntity.created(java.net.URI.create("/api/v1/vaccination-records/" + id)).build();
     }

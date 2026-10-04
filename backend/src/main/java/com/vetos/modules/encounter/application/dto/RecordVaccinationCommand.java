@@ -15,5 +15,6 @@ public record RecordVaccinationCommand(
     LocalDate nextDueDate,
     UUID administeredByStaffId,
     VaccinationStatus status,
-    String notes
+    String notes,
+    UUID inventoryItemId
 ) {}

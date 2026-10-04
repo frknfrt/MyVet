@@ -29,7 +29,7 @@ class VaccinationLookupAdapter implements VaccinationLookupPort {
     public Optional<VaccinationTarbilView> findForTarbil(UUID vaccinationRecordId) {
         return jpaRepository.findById(vaccinationRecordId).map(r -> new VaccinationTarbilView(
             r.getId(), r.getTenantId(), r.getPatientId(), r.getVaccineName(), r.getLotNumber(),
-            r.getAdministeredDate(), r.getStatus()
+            r.getAdministeredDate(), r.getStatus(), r.getInventoryItemId()
         ));
     }
 }
