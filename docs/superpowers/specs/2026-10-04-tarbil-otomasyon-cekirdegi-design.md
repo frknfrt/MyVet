@@ -176,6 +176,7 @@ extension/src/tarbil/
 ## 12. Alt projeler ve sıra
 Her biri ayrı plan → ayrı dal → ayrı birleştirme; her adımdan sonra ürün çalışır.
 1. **P0 Çekirdek:** `tarbil_submission` genelleştirmesi + migration; eşleştirme türleri; `TarbilDisease` referansı; eklentide aşı akışının `core/steps/pages/selectors` yapısına taşınması ve `clickAllowed` izin listesi. **Davranış değişmez**; mevcut testler yeşil kalır.
+   **Uygulandı:** `docs/superpowers/plans/2026-10-04-tarbil-otomasyon-p0.md` (V62 `tarbil_submission`, V63 `tarbil_disease`, eklentide `core/steps/pages/selectors` + izin listesi).
 2. **P1 Stok:** stok kalemi TARBİL alanları, `stock_receipt`, Mal Kabul ekranı, `vetilac` Ürün Kabul okuma + yazma; aşı kabul ekranı analizi.
 3. **P2 Aşı ürünü:** aşı ↔ stok bağlantısı, aşı stok penceresi, ürün detay alanları ve öğrenme.
 4. **P3 E-reçete:** reçete modeli eklemeleri, Vetly reçete formu (hastalık seçimi, adet/miktar, stok kalemi), `ReceiptPageNew` sayfa modülü.

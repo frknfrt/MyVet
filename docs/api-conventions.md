@@ -91,12 +91,16 @@ Her istekte JWT'den çözülen `tenantId`, `TenantContext` (ThreadLocal) üzerin
 | `/invoices/**`, `/payments/**` | ❌ | ❌ | ✅ | ✅ |
 | `/inventory/**` (yazma) | ❌ | ✅ | ❌ | ✅ |
 | `/settings/**`, `/users/**` | ❌ | ❌ | ❌ | ✅ |
-| `/tarbil/**` (durum, bildirilmeyecek/geri al, eklenti bağlama, eşleştirmeler) | ✅ | ❌ | ❌ | ✅ |
+| `/tarbil/**` (durum, bildirilmeyecek/geri al, eklenti bağlama, eşleştirmeler, `GET /tarbil/diseases` hastalık ağacı) | ✅ | ❌ | ❌ | ✅ |
 | `/tarbil-extension/**` (yalnız eklenti anahtarı; `/pair` herkese açık + hız sınırlı) | eklenti | eklenti | eklenti | eklenti |
 | `/encounters/**` (okuma: SOAP, malzeme listesi) | ✅ | ✅ | ❌ | ✅ |
 | `/message-templates/**`, `/notifications/**` (SMS/WhatsApp) | ❌ | ❌ | ✅ | ✅ |
 | `**/campaign-candidates` (SMS/WhatsApp kampanya adayı listeleri) | ✅ | ❌ | ✅ | ✅ |
 | `GET /invoices/today-summary` (istisna, aşağıya bak) | ✅ | ✅ | ✅ | ✅ |
+
+**TARBİL uçları (P0 çekirdek, 2026-10-04):**
+- `GET /api/v1/tarbil-extension/pending?type=VACCINATION|PRESCRIPTION|STOCK_RECEIPT` — `type` isteğe bağlı; yoksa tüm türler. Yanıtın her öğesinde `documentType` var (eski alanlar, `vaccinationRecordId` dahil, değişmedi).
+- `GET /api/v1/tarbil/diseases` (ADMIN, VET) — TARBİL reçete hastalık ağacı: `[{id, parentId, name, path, selectable}]`, `sort_order` sırasıyla (73 düğüm).
 
 **İstisna (Hızlı Satış turu):** `GET /invoices/today-summary`, `/invoices/**` satırını metot seviyesinde bir `@PreAuthorize` ile kasıtlı olarak geçersiz kılar ve dört role de açıktır — anasayfadaki "Bugünkü satış" KPI kartı için salt-okunur tek bir toplam döner, fatura/müşteri detayı sızdırmaz. `/invoices/**` altındaki diğer tüm uçlar RECEPTIONIST + ADMIN olarak kalır.
 
