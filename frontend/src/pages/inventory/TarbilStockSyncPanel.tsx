@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { tarbilApi, TarbilStockSync, TarbilStockSyncStatus, TarbilStockSystem } from '../../api/tarbilApi';
-import styles from './InventoryPage.module.css';
+import styles from './TarbilStockSyncPanel.module.css';
 
 const STATUS: Record<TarbilStockSyncStatus, { label: string; tone: 'success' | 'warning' | 'neutral' | 'gold' }> = {
   NEW: { label: "Vetly'de yok", tone: 'gold' },
@@ -11,6 +11,19 @@ const STATUS: Record<TarbilStockSyncStatus, { label: string; tone: 'success' | '
   APPLIED: { label: 'İşlendi', tone: 'neutral' },
 };
 
+const TABS: { system: TarbilStockSystem; label: string; where: string }[] = [
+  { system: 'VETILAC_MEDICINE', label: 'İlaç', where: 'İlaç Takip Sistemi > Stok Ara' },
+  { system: 'HBSAPP_VACCINE', label: 'Aşı', where: 'Aşı > Stok > Ara' },
+];
+
+const canSelect = (s: TarbilStockSyncStatus) => s === 'NEW' || s === 'QUANTITY_DIFFERS';
+
+/** "2027-01-31" -> "31.01.2027"; Date ile ayristirilmaz (UTC kaymasi olmasin). */
+function trDate(iso: string | null): string {
+  const m = iso ? /^(\d{4})-(\d{2})-(\d{2})/.exec(iso) : null;
+  return m ? `${m[3]}.${m[2]}.${m[1]}` : '—';
+}
+
 /**
  * TARBIL stogu (eklentinin gonderdigi son goruntu) ile Vetly stogunu karsilastirir; secilen satirlari Vetly stoguna isler.
  * Spec 2026-10-04 S13. Yalniz ADMIN ve VET (/tarbil/** kurali).
@@ -18,21 +31,32 @@ const STATUS: Record<TarbilStockSyncStatus, { label: string; tone: 'success' | '
 export function TarbilStockSyncPanel({ onApplied }: { onApplied: () => void }) {
   const [system, setSystem] = useState<TarbilStockSystem>('VETILAC_MEDICINE');
   const [data, setData] = useState<TarbilStockSync | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
 
   function load(s: TarbilStockSystem) {
     setData(null);
+    setLoadError(null);
     setSelected(new Set());
-    tarbilApi.stockSync(s).then(setData).catch((e: Error) => setMessage(e.message));
+    tarbilApi.stockSync(s).then(setData).catch((e: Error) => setLoadError(e.message));
   }
 
   useEffect(() => {
+    setMessage(null);
     load(system);
   }, [system]);
 
-  const selectable = (data?.lines ?? []).filter((l) => l.status === 'NEW' || l.status === 'QUANTITY_DIFFERS');
+  const selectable = (data?.lines ?? []).filter((l) => canSelect(l.status));
+  const allSelected = selectable.length > 0 && selected.size === selectable.length;
+
+  function toggle(lineId: string) {
+    const next = new Set(selected);
+    if (next.has(lineId)) next.delete(lineId);
+    else next.add(lineId);
+    setSelected(next);
+  }
 
   async function apply() {
     if (!data?.snapshotId || selected.size === 0) return;
@@ -40,93 +64,121 @@ export function TarbilStockSyncPanel({ onApplied }: { onApplied: () => void }) {
     setMessage(null);
     try {
       const res = await tarbilApi.applyStockSync(data.snapshotId, Array.from(selected));
-      setMessage(`${res.applied} satır Vetly stoğuna işlendi.`);
+      setMessage({ text: `${res.applied} satır Vetly stoğuna işlendi.`, error: false });
       load(system);
       onApplied();
     } catch (e) {
-      setMessage((e as Error).message);
+      setMessage({ text: (e as Error).message, error: true });
     } finally {
       setBusy(false);
     }
   }
 
+  const where = TABS.find((t) => t.system === system)!.where;
+
   return (
-    <div className={styles.tableCard} style={{ marginTop: 24, padding: 16 }}>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-        <strong>TARBİL Eşitleme</strong>
-        <Button variant={system === 'VETILAC_MEDICINE' ? 'primary' : 'secondary'} onClick={() => setSystem('VETILAC_MEDICINE')}>İlaç</Button>
-        <Button variant={system === 'HBSAPP_VACCINE' ? 'primary' : 'secondary'} onClick={() => setSystem('HBSAPP_VACCINE')}>Aşı</Button>
-        <span className={styles.muted}>
-          {data?.takenAt ? `TARBİL'den alındı: ${new Date(data.takenAt).toLocaleString('tr-TR')}` : ''}
-        </span>
-      </div>
-      {!data ? (
-        <div className={styles.empty}>Yükleniyor...</div>
-      ) : !data.snapshotId ? (
-        <div className={styles.empty}>
-          Henüz TARBİL stoğu gönderilmedi. TARBİL'de {system === 'VETILAC_MEDICINE' ? 'İlaç Takip Sistemi > Stok Ara' : 'Aşı > Stok > Ara'} sayfasında Vetly kartındaki "TARBİL stoğunu Vetly'ye gönder" butonuna basın.
+    <section className={styles.section}>
+      <div className={styles.header}>
+        <div>
+          <h2 className={styles.title}>TARBİL Eşitleme</h2>
+          <div className={styles.sub}>TARBİL'deki stoğu Vetly stoğuyla karşılaştırın, farklı olanları işleyin</div>
         </div>
-      ) : (
-        <>
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
-            <thead>
-              <tr>
-                <th>
+        {data?.takenAt && (
+          <div className={styles.takenAt}>TARBİL'den alındı: {new Date(data.takenAt).toLocaleString('tr-TR')}</div>
+        )}
+      </div>
+
+      <div className={styles.tabs}>
+        {TABS.map((t) => (
+          <button
+            key={t.system}
+            type="button"
+            className={`${styles.tab} ${system === t.system ? styles.tabActive : ''}`}
+            onClick={() => setSystem(t.system)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div className={styles.tableCard}>
+        <div className={styles.tableHead}>
+          <div>
+            <input
+              type="checkbox"
+              className={styles.check}
+              aria-label="Hepsini seç"
+              disabled={selectable.length === 0}
+              checked={allSelected}
+              onChange={() => setSelected(allSelected ? new Set() : new Set(selectable.map((l) => l.lineId)))}
+            />
+          </div>
+          <div>Ürün</div>
+          <div>Seri No</div>
+          <div>Son Kullanma</div>
+          <div className={styles.num}>TARBİL</div>
+          <div className={styles.num}>Vetly</div>
+          <div>Durum</div>
+        </div>
+
+        {loadError ? (
+          <div className={`${styles.empty} ${styles.error}`}>{loadError}</div>
+        ) : !data ? (
+          <div className={styles.empty}>Yükleniyor...</div>
+        ) : !data.snapshotId ? (
+          <div className={styles.empty}>
+            Henüz TARBİL stoğu gönderilmedi.
+            <br />
+            TARBİL'de <strong>{where}</strong> sayfasında Vetly kartındaki "TARBİL stoğunu Vetly'ye gönder" butonuna basın.
+          </div>
+        ) : data.lines.length === 0 ? (
+          <div className={styles.empty}>TARBİL stoğunda satır yok.</div>
+        ) : (
+          data.lines.map((l) => {
+            const selectableRow = canSelect(l.status);
+            return (
+              <div
+                key={l.lineId}
+                className={`${styles.row} ${selectableRow ? styles.rowSelectable : ''}`}
+                onClick={selectableRow ? () => toggle(l.lineId) : undefined}
+              >
+                <div>
                   <input
                     type="checkbox"
-                    aria-label="Hepsini seç"
-                    checked={selectable.length > 0 && selected.size === selectable.length}
-                    onChange={(e) => setSelected(e.target.checked ? new Set(selectable.map((l) => l.lineId)) : new Set())}
+                    className={styles.check}
+                    disabled={!selectableRow}
+                    checked={selected.has(l.lineId)}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={() => toggle(l.lineId)}
                   />
-                </th>
-                <th style={{ textAlign: 'left' }}>Ürün</th>
-                <th style={{ textAlign: 'left' }}>Seri No</th>
-                <th style={{ textAlign: 'left' }}>Son Kullanma</th>
-                <th>TARBİL</th>
-                <th>Vetly</th>
-                <th>Durum</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.lines.map((l) => {
-                const canSelect = l.status === 'NEW' || l.status === 'QUANTITY_DIFFERS';
-                return (
-                  <tr key={l.lineId}>
-                    <td>
-                      <input
-                        type="checkbox"
-                        disabled={!canSelect}
-                        checked={selected.has(l.lineId)}
-                        onChange={(e) => {
-                          const next = new Set(selected);
-                          if (e.target.checked) next.add(l.lineId);
-                          else next.delete(l.lineId);
-                          setSelected(next);
-                        }}
-                      />
-                    </td>
-                    <td>
-                      {l.productName}
-                      {l.presentation && <span className={styles.muted}> · {l.presentation}</span>}
-                    </td>
-                    <td>{l.lotNumber ?? '—'}</td>
-                    <td>{l.expiryDate ? new Date(l.expiryDate).toLocaleDateString('tr-TR') : '—'}</td>
-                    <td style={{ textAlign: 'center' }}>{l.tarbilQuantity}</td>
-                    <td style={{ textAlign: 'center' }}>{l.vetlyQuantity ?? '—'}</td>
-                    <td><Badge tone={STATUS[l.status].tone}>{STATUS[l.status].label}</Badge></td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 12 }}>
+                </div>
+                <div className={styles.product}>
+                  <div className={styles.productName} title={l.productName}>{l.productName}</div>
+                  {l.presentation && <div className={`${styles.muted} ${styles.small}`}>{l.presentation}</div>}
+                </div>
+                <div className={l.lotNumber ? undefined : styles.muted}>{l.lotNumber ?? '—'}</div>
+                <div className={styles.muted}>{trDate(l.expiryDate)}</div>
+                <div className={styles.num}>{l.tarbilQuantity}</div>
+                <div className={`${styles.num} ${l.vetlyQuantity === null ? styles.muted : ''}`}>{l.vetlyQuantity ?? '—'}</div>
+                <div>
+                  <Badge tone={STATUS[l.status].tone}>{STATUS[l.status].label}</Badge>
+                </div>
+              </div>
+            );
+          })
+        )}
+
+        {data?.snapshotId && data.lines.length > 0 && (
+          <div className={styles.footer}>
+            <span className={message?.error ? styles.error : styles.muted}>
+              {message?.text ?? (selectable.length === 0 ? 'Vetly stoğu TARBİL ile aynı.' : `${selected.size} / ${selectable.length} satır seçili`)}
+            </span>
             <Button variant="primary" disabled={busy || selected.size === 0} onClick={apply}>
-              Seçilenleri Vetly stoğuna işle ({selected.size})
+              Seçilenleri Vetly stoğuna işle
             </Button>
           </div>
-        </>
-      )}
-      {message && <div className={styles.muted} style={{ marginTop: 8 }}>{message}</div>}
-    </div>
+        )}
+      </div>
+    </section>
   );
 }
