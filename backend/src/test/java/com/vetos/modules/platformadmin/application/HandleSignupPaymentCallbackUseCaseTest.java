@@ -37,6 +37,7 @@ class HandleSignupPaymentCallbackUseCaseTest {
     @Mock private InviteEmailPort inviteEmailPort;
     @Mock private PlatformInvoiceRepository platformInvoiceRepository;
     @Mock private RecordPlatformPaymentUseCase recordPlatformPaymentUseCase;
+    @Mock private CouponRepository couponRepository;
 
     private HandleSignupPaymentCallbackUseCase useCase;
 
@@ -44,7 +45,7 @@ class HandleSignupPaymentCallbackUseCaseTest {
     void setUp() {
         useCase = new HandleSignupPaymentCallbackUseCase(
             paymentGatewayPort, tenantSignupRequestRepository, planRepository, tenantAdminPort,
-            inviteEmailPort, platformInvoiceRepository, recordPlatformPaymentUseCase
+            inviteEmailPort, platformInvoiceRepository, recordPlatformPaymentUseCase, couponRepository
         );
         ReflectionTestUtils.setField(useCase, "frontendBaseUrl", "http://localhost:5173");
     }
@@ -85,6 +86,44 @@ class HandleSignupPaymentCallbackUseCaseTest {
         assertThat(captor.getValue().method()).isEqualTo(PlatformPaymentMethod.CARD_ONLINE);
         assertThat(captor.getValue().recordedByAdminId()).isNull();
         assertThat(request.isCompleted()).isTrue();
+        verifyNoInteractions(couponRepository);
+    }
+
+    @Test
+    void should_chargeDiscountedAmountAndRedeemCoupon_when_signupUsedCoupon() {
+        LocalDate today = LocalDate.of(2026, 8, 30);
+        TenantSignupRequest request = TenantSignupRequest.create(
+            "Mutlu Pati", "Ayse Yilmaz", "ayse@example.com", "+905551112233", "PRO", "WELCOME10", new BigDecimal("1800.00")
+        );
+        ReflectionTestUtils.setField(request, "id", UUID.randomUUID());
+        Plan plan = Plan.create("PRO", "Pro Plan", new BigDecimal("2000.00"));
+        UUID tenantId = UUID.randomUUID();
+        UUID branchId = UUID.randomUUID();
+        StaffInvite savedInvite = StaffInvite.create(tenantId, branchId, "ayse@example.com", "Ayse Yilmaz", StaffRole.ADMIN, null);
+        PlatformInvoice savedInvoice = PlatformInvoice.issue(tenantId, "PRO", new BigDecimal("1800.00"), today, today.plusMonths(1), today);
+        ReflectionTestUtils.setField(savedInvoice, "id", UUID.randomUUID());
+        Coupon coupon = Coupon.create("WELCOME10", CouponDiscountType.PERCENTAGE, new BigDecimal("10"), null, null);
+
+        when(paymentGatewayPort.retrieveCheckoutResult("tok-5"))
+            .thenReturn(new CheckoutResult(true, request.getId().toString(), "pay_555"));
+        when(tenantSignupRequestRepository.findById(request.getId())).thenReturn(Optional.of(request));
+        when(planRepository.findByCode("PRO")).thenReturn(Optional.of(plan));
+        when(tenantAdminPort.createTenantForPaidSignup(
+            "Mutlu Pati", "-", "Mutlu Pati", "-", "-", "PRO", today.plusMonths(1)
+        )).thenReturn(new TenantSignupResult(tenantId, branchId));
+        when(tenantAdminPort.createAdminInviteForPaidSignup(tenantId, branchId, "ayse@example.com", "Ayse Yilmaz"))
+            .thenReturn(savedInvite);
+        when(platformInvoiceRepository.save(any(PlatformInvoice.class))).thenReturn(savedInvoice);
+        when(couponRepository.findByCode("WELCOME10")).thenReturn(Optional.of(coupon));
+
+        boolean result = useCase.execute("tok-5", today);
+
+        assertThat(result).isTrue();
+        ArgumentCaptor<RecordPlatformPaymentCommand> captor = ArgumentCaptor.forClass(RecordPlatformPaymentCommand.class);
+        verify(recordPlatformPaymentUseCase).execute(captor.capture());
+        assertThat(captor.getValue().amount()).isEqualByComparingTo("1800.00");
+        assertThat(coupon.getRedemptionCount()).isEqualTo(1);
+        verify(couponRepository).save(coupon);
     }
 
     @Test

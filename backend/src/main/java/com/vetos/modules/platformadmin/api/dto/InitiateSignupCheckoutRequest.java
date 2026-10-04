@@ -8,5 +8,6 @@ public record InitiateSignupCheckoutRequest(
     @NotBlank String adminFullName,
     @NotBlank @Email String adminEmail,
     String phone,
-    @NotBlank String planCode
+    @NotBlank String planCode,
+    String couponCode
 ) {}

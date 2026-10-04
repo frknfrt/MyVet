@@ -64,6 +64,16 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
+    path: 'coupons',
+    label: 'Kuponlar',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1a2 2 0 0 0 0 4v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1a2 2 0 0 0 0-4V9z" />
+        <path d="M9 7v10" strokeDasharray="2 2" />
+      </svg>
+    ),
+  },
+  {
     path: 'billing',
     label: 'Faturalama',
     icon: (

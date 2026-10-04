@@ -168,6 +168,30 @@ export interface TenantSignupRequest {
   createdAt: string;
 }
 
+
+export type CouponDiscountType = 'PERCENTAGE' | 'FIXED_AMOUNT';
+
+export interface Coupon {
+  id: string;
+  code: string;
+  discountType: CouponDiscountType;
+  discountValue: number;
+  maxRedemptions: number | null;
+  redemptionCount: number;
+  expiresAt: string | null;
+  active: boolean;
+  redeemable: boolean;
+  createdAt: string;
+}
+
+export interface CreateCouponPayload {
+  code: string;
+  discountType: CouponDiscountType;
+  discountValue: number;
+  maxRedemptions: number | null;
+  expiresAt: string | null;
+}
+
 export const platformAdminApi = {
   login: (payload: PlatformAdminLoginPayload) =>
     platformAdminClient.post<PlatformAdminSession>('/api/v1/platform-admin/auth/login', payload),
@@ -203,4 +227,9 @@ export const platformAdminApi = {
   impersonateTenant: (tenantId: string) =>
     platformAdminClient.post<ImpersonationSession>(`/api/v1/platform-admin/tenants/${tenantId}/impersonate`),
   listSignupRequests: () => platformAdminClient.get<TenantSignupRequest[]>('/api/v1/platform-admin/signup-requests'),
+  listCoupons: () => platformAdminClient.get<Coupon[]>('/api/v1/platform-admin/coupons'),
+  createCoupon: (payload: CreateCouponPayload) =>
+    platformAdminClient.post<Coupon>('/api/v1/platform-admin/coupons', payload),
+  activateCoupon: (id: string) => platformAdminClient.post<void>(`/api/v1/platform-admin/coupons/${id}/activate`),
+  deactivateCoupon: (id: string) => platformAdminClient.post<void>(`/api/v1/platform-admin/coupons/${id}/deactivate`),
 };
