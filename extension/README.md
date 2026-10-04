@@ -28,3 +28,8 @@ Chrome > `chrome://extensions` > Geliştirici modu > "Paketlenmemiş öğe yükl
 **Açılır pencere izni:** Arama penceresi açılmazsa Chrome adres çubuğundaki engellenen pencere simgesinden `hbsapp.tarbil.gov.tr` için açılır pencerelere izin verin.
 
 Teknik not: `page.js` sayfanın kendi dünyasında (`world: "MAIN"`) çalışır ve yalnız Telerik bileşenlerini tetikler; Vetly API'sine ve eklenti anahtarına erişimi yoktur. TARBİL'e özgü tüm id'ler `src/tarbil/selectors.ts`'tedir.
+
+## TARBİL oturumunu açık tutma
+
+TARBİL boş kalan oturumu kendisi kapatır (`hbs.tarbil.gov.tr/?T=TimeOut`). Eklenti, açık bir TARBİL sekmesi (`hbsapp` ya da `vetilac`) varken 4 dakikada bir aynı siteden sade bir sayfa ister (`/Default.aspx`, `vetilac`'ta `/Pages/PharmacyDefault.aspx`). Veri ya da form göndermez, hiçbir butona basmaz. Yan paneldeki **TARBİL oturumunu açık tut** kutusuyla kapatılabilir (varsayılan açık). Oturum bir kez düştüyse e-Devlet girişi yine hekimdedir.
+

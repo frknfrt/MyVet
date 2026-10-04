@@ -4,12 +4,13 @@
 //  - search : PetVet arama penceresi -> cip ile secim
 //  - home   : e-Devlet donusu -> gerekiyorsa asi sayfasina gecis
 //  - other  : bekleyen asi icin "Asi sayfasini ac" karti
-import { chromeSessionStore } from '../background/chromeStorage';
+import { chromeLocalStore, chromeSessionStore } from '../background/chromeStorage';
 import { FLOW_KEY, createFlowStore, type FlowState } from '../shared/flowStore';
 import type { Submission } from '../shared/types';
 import { createPageBridge } from './core/bridge';
 import { createCard } from './core/card';
 import { shouldRedirectHome } from './core/home';
+import { isKeepAliveEnabled, startKeepAlive } from './core/keepAlive';
 import { createReceiptFlow } from './pages/vaccineReceipt';
 import { runSearchFlow, type Send } from './steps/findAnimal';
 import { VACCINE_PAGE_URL, pageKind } from './selectors';
@@ -39,6 +40,19 @@ async function home(): Promise<void> {
   await showElsewhere();
 }
 
+// Her TARBIL sekmesinde (hbsapp ve vetilac) oturumu canli tut; ayar yan panelden kapatilabilir.
+startKeepAlive({
+  origin: location.origin,
+  enabled: () => isKeepAliveEnabled(chromeLocalStore()),
+  ping: (url) => fetch(url, { credentials: 'include', cache: 'no-store', redirect: 'manual' }),
+  setInterval: (fn, ms) => window.setInterval(fn, ms),
+  clearInterval: (handle) => window.clearInterval(handle as number),
+});
+
+// vetilac (Ilac Takip Sistemi) sayfalarinda simdilik yalniz oturum canli tutulur.
+if (location.origin !== 'https://vetilac.tarbil.gov.tr') routeTarbilPage();
+
+function routeTarbilPage(): void {
 switch (pageKind(location)) {
   case 'receipt': {
     const receipt = createReceiptFlow({
@@ -72,4 +86,5 @@ switch (pageKind(location)) {
     break;
   default:
     void showElsewhere();
+}
 }

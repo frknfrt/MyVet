@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ExtensionState } from '../shared/messages';
+import { KeepAliveToggle } from './KeepAliveToggle';
 import { PairingView } from './PairingView';
 import { PendingList } from './PendingList';
 import { sendToBackground } from './useBackground';
@@ -46,6 +47,7 @@ export function App() {
           Bağlantıyı kes
         </button>
       </div>
+      <KeepAliveToggle />
       {state.pendingConfirmations > 0 && (
         <div className="banner">{state.pendingConfirmations} onay Vetly'ye gönderilmeyi bekliyor (bağlantı gelince otomatik).</div>
       )}
