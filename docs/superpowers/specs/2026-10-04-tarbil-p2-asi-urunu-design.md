@@ -75,3 +75,5 @@ Mevcut: tarih → tür → PetVet → hayvan doğrulandı (`awaitingConfirm`). Y
 - Canlı kabul: ilk gerçek stoktan seçilmiş aşı.
 
 **Migration notu:** V67 sütun eklemesi geriye uyumludur (çalışan eski backend'i bozmaz).
+
+**Uygulandı:** `docs/superpowers/plans/2026-10-04-tarbil-p2-asi-urunu.md` (V67).

@@ -36,3 +36,7 @@ TARBİL boş kalan oturumu kendisi kapatır (`hbs.tarbil.gov.tr/?T=TimeOut`). Ek
 ## TARBİL stoğunu Vetly'ye aktarma (P1a)
 
 TARBİL'de **Aşı > Stok > Ara** (`hbsapp`) ya da **İlaç Takip Sistemi > Stok Ara** (`vetilac`) sayfasını açın; Vetly kartındaki **TARBİL stoğunu Vetly'ye gönder** butonuna basın. Eklenti yalnız "Ara"ya basar ve tabloyu tek sayfaya alır, okur ve Vetly'ye gönderir. Ardından Vetly'de **Stok** sayfasının altındaki **TARBİL Eşitleme** bölümünden farkları görüp seçtiğiniz satırları Vetly stoğuna işleyin.
+
+## Aşı ürünü (P2)
+
+Aşı Vetly'de stoktan seçildiyse eklenti hayvandan sonra **Ürün Ekle**'ye basar; açılan stok penceresinde Vetly serisini arar ve tek eşleşen satırı **Seç**er; formdaki **Ürün Adet**'i 1 yapar. Satırdaki **Kaydet** (TARBİL stoğundan düşer), Detay alanları ve **Onayla** hekimdedir. Stok penceresi açılmıyorsa TARBİL için açılır pencerelere izin verin.
