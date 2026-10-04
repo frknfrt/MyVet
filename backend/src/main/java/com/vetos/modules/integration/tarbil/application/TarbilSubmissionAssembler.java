@@ -11,6 +11,7 @@ import com.vetos.modules.integration.tarbil.domain.TarbilSyncStatus;
 import com.vetos.modules.integration.tarbil.domain.TarbilValueMapping;
 import com.vetos.modules.integration.tarbil.domain.TarbilValueMappingRepository;
 import com.vetos.modules.integration.tarbil.domain.VaccineKeyNormalizer;
+import com.vetos.modules.inventory.domain.InventoryItemLookupPort;
 import com.vetos.modules.patient.domain.PatientLookupPort;
 import com.vetos.modules.patient.domain.PatientTarbilProfile;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ class TarbilSubmissionAssembler {
     private final VaccinationLookupPort vaccinationLookupPort;
     private final PatientLookupPort patientLookupPort;
     private final TarbilValueMappingRepository mappingRepository;
+    private final InventoryItemLookupPort inventoryItemLookupPort;
 
     /** Eklenti ve web ekrani ayni kurali kullansin: ayni kiracida, iptal edilmemis asi. Asi disi satirlar burada yok sayilir. */
     Optional<VaccinationTarbilView> liveVaccination(TarbilSubmission log) {
@@ -66,7 +68,8 @@ class TarbilSubmissionAssembler {
             patient.map(PatientTarbilProfile::breedName).orElse(null),
             patient.map(PatientTarbilProfile::sex).map(Enum::name).orElse(null),
             patient.map(PatientTarbilProfile::birthDate).orElse(null),
-            v.vaccineName(), v.lotNumber(), v.administeredDate(),
+            v.vaccineName(), v.lotNumber(), inventoryItemLookupPort.findTarbilProductName(v.inventoryItemId()).orElse(null),
+            v.administeredDate(),
             log.getSubmittedAt(), log.getConfirmationMethod(), log.getTarbilReference(),
             vaccineKey, vaccineMapping, speciesMapping, log.getDocumentType()
         ));

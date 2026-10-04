@@ -1,5 +1,6 @@
 package com.vetos.modules.integration.tarbil.application;
 
+import com.vetos.modules.inventory.domain.InventoryItemLookupPort;
 import java.time.Instant;
 import com.vetos.modules.integration.tarbil.domain.TarbilConfirmationMethod;
 import com.vetos.modules.integration.tarbil.domain.TarbilDocumentType;
@@ -29,6 +30,8 @@ import static org.mockito.Mockito.when;
 class GetTarbilStatusSummaryUseCaseTest {
 
     @Mock private TarbilSubmissionRepository syncLogRepository;
+
+    @Mock private InventoryItemLookupPort inventoryItemLookupPort;
     @Mock private TarbilValueMappingRepository mappingRepository;
     @Mock private VaccinationLookupPort vaccinationLookupPort;
     @Mock private PatientLookupPort patientLookupPort;
@@ -36,7 +39,7 @@ class GetTarbilStatusSummaryUseCaseTest {
     private final UUID tenantId = UUID.randomUUID();
 
     private TarbilSubmissionAssembler assembler() {
-        return new TarbilSubmissionAssembler(vaccinationLookupPort, patientLookupPort, mappingRepository);
+        return new TarbilSubmissionAssembler(vaccinationLookupPort, patientLookupPort, mappingRepository, inventoryItemLookupPort);
     }
 
     private TarbilSubmission pendingWith(VaccinationStatus status) {

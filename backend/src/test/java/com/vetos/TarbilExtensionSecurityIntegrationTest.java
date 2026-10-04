@@ -6,6 +6,8 @@ import com.vetos.modules.encounter.domain.VaccinationRecord;
 import com.vetos.modules.encounter.domain.VaccinationRecordRepository;
 import com.vetos.modules.encounter.domain.VaccinationStatus;
 import com.vetos.modules.integration.tarbil.application.CreatePairingCodeUseCase;
+import com.vetos.modules.inventory.domain.InventoryItem;
+import com.vetos.modules.inventory.domain.InventoryItemRepository;
 import com.vetos.modules.integration.tarbil.application.ListExtensionTokensUseCase;
 import com.vetos.modules.integration.tarbil.application.PairExtensionUseCase;
 import com.vetos.modules.integration.tarbil.application.RevokeExtensionTokenUseCase;
@@ -72,6 +74,7 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
     @Autowired private ListExtensionTokensUseCase listExtensionTokensUseCase;
     @Autowired private JwtTokenProvider jwtTokenProvider;
     @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private InventoryItemRepository inventoryItemRepository;
 
     private UUID tenantA;
     private UUID staffA;
@@ -303,5 +306,31 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
             "SELECT count(*) FROM inventory_items WHERE tenant_id = ? AND lot_number = 'LOT-1' AND tarbil_system = 'VETILAC_MEDICINE'",
             Integer.class, tenantA);
         assertThat(count).isEqualTo(1);
+    }
+
+    @Test
+    void vaccinationFromStockDeductsOneAndCancellationReturnsIt() throws Exception {
+        UUID branchA = inRootSession(() -> branchRepository.save(Branch.create(tenantA, "Aşı Şubesi")).getId());
+        String jwt = jwtTokenProvider.generateToken(staffA, tenantA, List.of(branchA), "VET");
+        UUID speciesId = inRootSession(() -> speciesRepository.findAll().get(0).getId());
+        UUID owner = asTenant(tenantA, () -> ownerRepository.save(Owner.register(tenantA, "A Sahip", "05550000000", null, null)).getId());
+        UUID patient = asTenant(tenantA, () -> patientRepository.save(
+            Patient.register(tenantA, owner, speciesId, null, "Pamuk", Sex.FEMALE, null)).getId());
+        UUID item = asTenant(tenantA, () -> inventoryItemRepository.save(
+            InventoryItem.create(tenantA, branchA, "Biocan R", "Aşı", null, 18, 0, LocalDate.of(2027, 1, 31), "665932", null)).getId());
+        String body = "{\"patientId\":\"" + patient + "\",\"vaccineName\":\"Biocan R\",\"lotNumber\":\"665932\","
+            + "\"administeredDate\":\"" + LocalDate.now() + "\",\"status\":\"ADMINISTERED\",\"inventoryItemId\":\"" + item + "\"}";
+
+        String location = mockMvc.perform(post("/api/v1/vaccination-records").header("Authorization", "Bearer " + jwt)
+                .contentType("application/json").content(body))
+            .andExpect(status().isCreated())
+            .andReturn().getResponse().getHeader("Location");
+        Integer afterRecord = jdbcTemplate.queryForObject("SELECT quantity_on_hand FROM inventory_items WHERE id = ?", Integer.class, item);
+        assertThat(afterRecord).isEqualTo(17);
+
+        mockMvc.perform(post(location + "/cancel").header("Authorization", "Bearer " + jwt))
+            .andExpect(status().is2xxSuccessful());
+        Integer afterCancel = jdbcTemplate.queryForObject("SELECT quantity_on_hand FROM inventory_items WHERE id = ?", Integer.class, item);
+        assertThat(afterCancel).isEqualTo(18);
     }
 }

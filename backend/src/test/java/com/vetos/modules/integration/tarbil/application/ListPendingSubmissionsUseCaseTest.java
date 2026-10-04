@@ -1,5 +1,6 @@
 package com.vetos.modules.integration.tarbil.application;
 
+import com.vetos.modules.inventory.domain.InventoryItemLookupPort;
 import static org.mockito.Mockito.verifyNoInteractions;
 import com.vetos.modules.integration.tarbil.domain.TarbilDocumentType;
 import com.vetos.modules.encounter.domain.VaccinationLookupPort;
@@ -35,6 +36,8 @@ import static org.mockito.Mockito.when;
 class ListPendingSubmissionsUseCaseTest {
 
     @Mock private TarbilSubmissionRepository syncLogRepository;
+
+    @Mock private InventoryItemLookupPort inventoryItemLookupPort;
     @Mock private TarbilValueMappingRepository mappingRepository;
     @Mock private VaccinationLookupPort vaccinationLookupPort;
     @Mock private PatientLookupPort patientLookupPort;
@@ -43,7 +46,7 @@ class ListPendingSubmissionsUseCaseTest {
 
     private ListPendingSubmissionsUseCase useCase() {
         return new ListPendingSubmissionsUseCase(syncLogRepository,
-            new TarbilSubmissionAssembler(vaccinationLookupPort, patientLookupPort, mappingRepository));
+            new TarbilSubmissionAssembler(vaccinationLookupPort, patientLookupPort, mappingRepository, inventoryItemLookupPort));
     }
 
     @Test
@@ -53,8 +56,10 @@ class ListPendingSubmissionsUseCaseTest {
         UUID speciesId = UUID.randomUUID();
         TarbilSubmission log = TarbilSubmission.queueVaccination(tenantId, patientId, vaccinationId);
         when(syncLogRepository.findByTenantIdAndStatus(tenantId, TarbilSyncStatus.PENDING)).thenReturn(List.of(log));
+        UUID itemId = UUID.randomUUID();
         when(vaccinationLookupPort.findForTarbil(vaccinationId)).thenReturn(Optional.of(new VaccinationTarbilView(
-            vaccinationId, tenantId, patientId, "Kuduz Aşısı", "L-1", LocalDate.of(2026, 10, 1), VaccinationStatus.ADMINISTERED)));
+            vaccinationId, tenantId, patientId, "Kuduz Aşısı", "L-1", LocalDate.of(2026, 10, 1), VaccinationStatus.ADMINISTERED, itemId)));
+        when(inventoryItemLookupPort.findTarbilProductName(itemId)).thenReturn(Optional.of("Biocan R"));
         when(patientLookupPort.findTarbilProfile(patientId)).thenReturn(Optional.of(new PatientTarbilProfile(
             patientId, "Pamuk", null, "TR-34-000123", speciesId, "Kedi", null, Sex.FEMALE, null)));
         TarbilValueMapping vaccineMapping = TarbilValueMapping.create(
@@ -71,6 +76,7 @@ class ListPendingSubmissionsUseCaseTest {
         assertThat(view.patientName()).isEqualTo("Pamuk");
         assertThat(view.microchipNumber()).isNull();
         assertThat(view.passportNumber()).isEqualTo("TR-34-000123");
+        assertThat(view.tarbilProductName()).isEqualTo("Biocan R");
         assertThat(view.sex()).isEqualTo("FEMALE");
         assertThat(view.vaccineKey()).isEqualTo("kuduz aşisi");
         assertThat(view.vaccineMappingJson()).isEqualTo("{\"vaccine\":{}}");

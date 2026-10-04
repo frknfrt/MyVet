@@ -13,7 +13,7 @@ public record TarbilSubmissionView(
     UUID id, UUID vaccinationRecordId, TarbilSyncStatus status,
     String patientName, String microchipNumber, String passportNumber, UUID speciesId, String speciesName, String breedName,
     String sex, LocalDate birthDate,
-    String vaccineName, String lotNumber, LocalDate administeredDate,
+    String vaccineName, String lotNumber, String tarbilProductName, LocalDate administeredDate,
     Instant submittedAt, TarbilConfirmationMethod confirmationMethod, String tarbilReference,
     String vaccineKey, String vaccineMappingJson, String speciesMappingJson,
     TarbilDocumentType documentType

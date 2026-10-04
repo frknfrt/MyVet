@@ -1,5 +1,6 @@
 package com.vetos.modules.integration.tarbil.application;
 
+import com.vetos.modules.inventory.domain.InventoryItemLookupPort;
 import com.vetos.modules.encounter.domain.VaccinationLookupPort;
 import com.vetos.modules.encounter.domain.VaccinationStatus;
 import com.vetos.modules.encounter.domain.VaccinationTarbilView;
@@ -25,13 +26,15 @@ import static org.mockito.Mockito.when;
 class GetSubmissionUseCaseTest {
 
     @Mock private TarbilSubmissionRepository syncLogRepository;
+
+    @Mock private InventoryItemLookupPort inventoryItemLookupPort;
     @Mock private TarbilValueMappingRepository mappingRepository;
     @Mock private VaccinationLookupPort vaccinationLookupPort;
     @Mock private PatientLookupPort patientLookupPort;
 
     private GetSubmissionUseCase useCase() {
         return new GetSubmissionUseCase(syncLogRepository,
-            new TarbilSubmissionAssembler(vaccinationLookupPort, patientLookupPort, mappingRepository));
+            new TarbilSubmissionAssembler(vaccinationLookupPort, patientLookupPort, mappingRepository, inventoryItemLookupPort));
     }
 
     @Test
