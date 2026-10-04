@@ -6,7 +6,9 @@ import { OwnerSearchResult, patientApi } from '../../api/patientApi';
 import { vaccinationApi, VaccinationStatus } from '../../api/vaccinationApi';
 import { Button } from '../../components/ui/Button';
 import { FieldWrap, Input, Select, Textarea } from '../../components/ui/Field';
+import { InventoryItem } from '../../api/inventoryApi';
 import { COMMON_VACCINE_NAMES } from './vaccinationStatus';
+import { VaccineStockPicker } from './VaccineStockPicker';
 import styles from './NewVaccinationPage.module.css';
 
 function errorMessageOf(err: unknown): string {
@@ -45,6 +47,7 @@ export function NewVaccinationPage() {
   const [patientId, setPatientId] = useState('');
 
   const [vaccineName, setVaccineName] = useState('');
+  const [stockItem, setStockItem] = useState<InventoryItem | null>(null);
   const [vaccinationDate, setVaccinationDate] = useState(isoDate(new Date()));
   const [nextDueDate, setNextDueDate] = useState('');
   const [status, setStatus] = useState<VaccinationStatus>('SCHEDULED');
@@ -104,6 +107,7 @@ export function NewVaccinationPage() {
 
   function resetVaccineFields() {
     setVaccineName('');
+    setStockItem(null);
     setNextDueDate('');
     setNotes('');
     setNotesOpen(false);
@@ -119,7 +123,9 @@ export function NewVaccinationPage() {
     try {
       await vaccinationApi.record({
         patientId,
-        vaccineName: vaccineName.trim(),
+        vaccineName: stockItem ? stockItem.name : vaccineName.trim(),
+        lotNumber: stockItem?.lotNumber ?? undefined,
+        inventoryItemId: stockItem?.id,
         administeredDate: vaccinationDate,
         nextDueDate: nextDueDate || undefined,
         status,
@@ -219,18 +225,30 @@ export function NewVaccinationPage() {
 
           <div className={styles.row2}>
             <FieldWrap label="Aşı*">
-              <Input
-                list="vaccine-names"
-                value={vaccineName}
-                onChange={(e) => setVaccineName(e.target.value)}
-                placeholder="Aşı seçilmedi"
-                required
+              <VaccineStockPicker
+                value={stockItem?.id ?? null}
+                onChange={(item) => {
+                  setStockItem(item);
+                  if (item) setVaccineName(item.name);
+                }}
               />
-              <datalist id="vaccine-names">
-                {COMMON_VACCINE_NAMES.map((n) => (
-                  <option key={n} value={n} />
-                ))}
-              </datalist>
+              {!stockItem && (
+                <>
+                  <Input
+                    list="vaccine-names"
+                    value={vaccineName}
+                    onChange={(e) => setVaccineName(e.target.value)}
+                    placeholder="Aşı adı (stokta yoksa)"
+                    required
+                    style={{ marginTop: 8 }}
+                  />
+                  <datalist id="vaccine-names">
+                    {COMMON_VACCINE_NAMES.map((n) => (
+                      <option key={n} value={n} />
+                    ))}
+                  </datalist>
+                </>
+              )}
             </FieldWrap>
 
             <FieldWrap label="Aşı Tarihi*">

@@ -26,6 +26,8 @@ export interface RecordVaccinationPayload {
   nextDueDate?: string;
   status: VaccinationStatus;
   notes?: string;
+  /** Stoktan secilen asi (spec 2026-10-04 P2); verilirse vaccineName/lotNumber kalemden doldurulur. */
+  inventoryItemId?: string;
 }
 
 export const vaccinationApi = {
