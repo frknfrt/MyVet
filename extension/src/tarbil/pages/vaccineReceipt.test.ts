@@ -24,6 +24,12 @@ function addAnimalRow(chip: string) {
   document.querySelector(`#${GRID} tbody`)!.insertAdjacentHTML('beforeend', `<tr id="${GRID}__0"><td></td><td></td><td>${chip}</td></tr>`);
 }
 
+function openProductRow(serial: string) {
+  document.body.insertAdjacentHTML('beforeend', `<table id="${P}RadGridProduct_ctl00"><thead>
+    <tr><th>Detay</th><th>Detay</th><th>Ürün</th><th>Takdim Şekli</th><th>Seri Numarası</th></tr>
+    <tr class="rgEditRow"><td></td><td></td><td><input></td><td>Flakon</td><td>${serial}</td></tr></thead><tbody></tbody></table>`);
+}
+
 function showSuccess() {
   document.body.insertAdjacentHTML('beforeend', '<div id="bodyCPH_ContentPlaceHolder1_UCVACCINENotification_pnlNotifiSuccess">Kaydedildi</div>');
 }
@@ -100,7 +106,7 @@ describe('receiptFlow', () => {
 
   it('verifies a passport-only animal by the chip TARBIL showed in the search', async () => {
     page();
-    const { receipt, flow, mutate, text } = await setup({ microchipNumber: null, passportNumber: 'TR-34 AB12' }, 'transferred');
+    const { receipt, flow, mutate, text } = await setup({ microchipNumber: null, passportNumber: 'TR-34 AB12', lotNumber: null }, 'transferred');
     await flow.update('s1', { stepData: { matchedChip: CHIP } });
     await receipt.start();
 
@@ -153,7 +159,7 @@ describe('receiptFlow', () => {
 
   it('moves to awaiting confirmation when the matching animal lands on the form', async () => {
     page();
-    const { receipt, flow, mutate, text } = await setup({}, 'transferred');
+    const { receipt, flow, mutate, text } = await setup({ lotNumber: null }, 'transferred');
     await receipt.start();
 
     addAnimalRow(CHIP);
@@ -325,5 +331,85 @@ describe('receiptFlow', () => {
 
     expect(await flow.get()).toMatchObject({ step: 'error', message: 'OPTION_NOT_FOUND' });
     expect(shown.at(-1)?.actions.map((a) => a.id)).toContain('fill');
+  });
+
+  it('presses Ürün Ekle once the animal lands when the vaccine came from stock', async () => {
+    page();
+    const { receipt, flow, calls, mutate, text } = await setup({ lotNumber: '665932' }, 'transferred');
+    await receipt.start();
+
+    addAnimalRow(CHIP);
+    mutate();
+
+    await vi.waitFor(async () => expect((await flow.get())?.step).toBe('choosingProduct'));
+    expect(calls).toContainEqual({ op: 'clickAllowed', args: { page: 'vaccineReceipt', button: 'addProduct' } });
+    expect(text()).toContain('665932');
+  });
+
+  it('fills Ürün Adet when the product row with the Vetly serial lands on the form', async () => {
+    page();
+    const { receipt, flow, calls, mutate, text } = await setup({ lotNumber: '665932' }, 'choosingProduct');
+    await receipt.start();
+
+    openProductRow('665932');
+    mutate();
+
+    await vi.waitFor(async () => expect((await flow.get())?.step).toBe('productReady'));
+    expect(calls).toContainEqual({ op: 'setProductQuantity', args: { quantity: 1 } });
+    expect(text()).toContain('Kaydet');
+    expect(calls.map((c) => c.op)).not.toContain('clickAllowed');
+  });
+
+  it('warns instead of filling quantity when another serial lands on the form', async () => {
+    page();
+    const { receipt, flow, calls, mutate, text } = await setup({ lotNumber: '665932' }, 'choosingProduct');
+    await receipt.start();
+
+    openProductRow('999999');
+    mutate();
+
+    await vi.waitFor(() => expect(text()).toContain('Yanlış ürün'));
+    expect(calls.map((c) => c.op)).not.toContain('setProductQuantity');
+    expect((await flow.get())?.step).toBe('awaitingConfirm');
+  });
+
+  it('shows why the stock window could not pick the vaccine', async () => {
+    page();
+    const { receipt, flow, text } = await setup({ lotNumber: '665932' }, 'choosingProduct');
+    await receipt.start();
+
+    const next = await flow.update('s1', { step: 'awaitingConfirm', message: 'Seri 665932 TARBİL stoğunuzda bulunamadı.' });
+    receipt.flowChanged(next);
+
+    await vi.waitFor(() => expect(text()).toContain('bulunamadı'));
+  });
+
+  it('offers to reopen the stock window when it never picks up', async () => {
+    page();
+    const { receipt, timers, advance, text, mutate } = await setup({ lotNumber: '665932' }, 'transferred');
+    await receipt.start();
+    addAnimalRow(CHIP);
+    mutate();
+    await vi.waitFor(() => expect(text()).toContain('665932'));
+
+    advance(POPUP_WAIT_MS);
+    timers.forEach((t) => t());
+
+    await vi.waitFor(() => expect(text()).toContain('Stok penceresi'));
+  });
+
+  it('marks submitted when Onayla succeeds after the product row is ready', async () => {
+    page();
+    const { receipt, sent, flow, mutate } = await setup({ lotNumber: '665932' }, 'productReady');
+    await receipt.start();
+
+    (document.getElementById(`${P}btnInsert_input`) as HTMLInputElement).click();
+    await vi.waitFor(async () => expect((await flow.get())?.insertClickedAt).toBeDefined());
+    showSuccess();
+    mutate();
+
+    await vi.waitFor(() =>
+      expect(sent).toContainEqual({ type: 'MARK_SUBMITTED', id: 's1', method: 'AUTO', tarbilReference: null }),
+    );
   });
 });

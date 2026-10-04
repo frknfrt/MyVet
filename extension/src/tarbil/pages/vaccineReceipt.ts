@@ -8,6 +8,7 @@ import type { Send } from '../steps/findAnimal';
 import { RECEIPT, bySuffix } from '../selectors';
 import { resolveAnimalType } from '../steps/species';
 import { views } from '../core/views';
+import { normalizeSerial, readProductEditRow } from '../steps/productRows';
 
 export interface ReceiptDeps {
   bridge: PageBridge;
@@ -26,6 +27,8 @@ export const POPUP_WAIT_MS = 15_000;
 export const SUCCESS_WINDOW_MS = 120_000;
 
 const WAITING_FOR_ANIMAL = ['searching', 'transferred', 'needsVet'];
+/** Onayla + basari yakalamasinin gecerli oldugu adimlar (urun adimi otomatik ya da hekimde). */
+const CONFIRM_STEPS = ['awaitingConfirm', 'choosingProduct', 'productReady'];
 const code = (e: unknown) => (e as { code?: string })?.code ?? 'UNKNOWN';
 
 /**
@@ -76,13 +79,52 @@ export function createReceiptFlow(d: ReceiptDeps) {
     }
     const st = await current();
     if (st?.step === 'armed') return fill();
-    if (st && (WAITING_FOR_ANIMAL.includes(st.step) || st.step === 'awaitingConfirm')) {
-      if (st.step !== 'awaitingConfirm') d.card.show(views.progress(sub, 'Hayvanın forma eklenmesi bekleniyor…'));
-      else d.card.show(views.addProduct(sub));
+    if (st && (WAITING_FOR_ANIMAL.includes(st.step) || CONFIRM_STEPS.includes(st.step))) {
+      d.card.show(stepView(sub, st));
       watch();
       return;
     }
     d.card.show(views.idle(sub));
+  }
+
+  function stepView(s: Submission, st: FlowState) {
+    switch (st.step) {
+      case 'choosingProduct':
+        return views.choosingProduct(s);
+      case 'productReady':
+        return views.productReady(s);
+      case 'awaitingConfirm':
+        return st.message ? views.productNeedsVet(s, st.message) : views.addProduct(s);
+      default:
+        return views.progress(s, 'Hayvanın forma eklenmesi bekleniyor…');
+    }
+  }
+
+  /** Hayvan dogrulandi: seri biliniyorsa "Urun Ekle" (stok penceresi), bilinmiyorsa urun adimi hekimde. */
+  async function startProductStep(s: Submission): Promise<void> {
+    if (!s.lotNumber) {
+      await d.flow.update(s.id, { step: 'awaitingConfirm', message: undefined });
+      d.card.show(views.addProduct(s));
+      return;
+    }
+    await d.flow.update(s.id, { step: 'choosingProduct', message: undefined });
+    d.card.show(views.choosingProduct(s));
+    try {
+      await d.bridge.call('clickAllowed', { page: 'vaccineReceipt', button: 'addProduct' });
+    } catch (e) {
+      const message = `Ürün Ekle'ye basılamadı (${code(e)}).`;
+      await d.flow.update(s.id, { step: 'awaitingConfirm', message });
+      d.card.show(views.productNeedsVet(s, message));
+      return;
+    }
+    d.setTimer(() => {
+      void (async () => {
+        const st = await current();
+        if (st?.step === 'choosingProduct' && d.now() - st.updatedAt >= POPUP_WAIT_MS && !readProductEditRow(d.doc)) {
+          d.card.show(views.stockWindowBlocked(s));
+        }
+      })();
+    }, POPUP_WAIT_MS);
   }
 
   async function fill(): Promise<void> {
@@ -152,10 +194,14 @@ export function createReceiptFlow(d: ReceiptDeps) {
     if (!s || finishing) return;
     const st = await current();
     if (!st) return;
-    if (st.step === 'awaitingConfirm') {
+    if (CONFIRM_STEPS.includes(st.step)) {
       const clickedRecently = st.insertClickedAt !== undefined && d.now() - st.insertClickedAt <= SUCCESS_WINDOW_MS;
       const freshSuccess = hasFreshSuccess(d.doc, RECEIPT.successPanel, staleSuccess);
-      if (clickedRecently && freshSuccess) await confirm(s);
+      if (clickedRecently && freshSuccess) {
+        await confirm(s);
+        return;
+      }
+      if (st.step === 'choosingProduct') await checkProductRow(s);
       return;
     }
     if (!WAITING_FOR_ANIMAL.includes(st.step)) return;
@@ -163,12 +209,32 @@ export function createReceiptFlow(d: ReceiptDeps) {
     // Pasaportla bulunan hayvan: arama penceresinin TARBIL'den okudugu cip (findAnimal, stepData.matchedChip).
     const expected = normalizeChip(s.microchipNumber) || normalizeChip(st.stepData?.matchedChip as string | undefined);
     if (expected && chips.includes(expected)) {
-      await d.flow.update(s.id, { step: 'awaitingConfirm' });
-      d.card.show(views.addProduct(s));
+      await startProductStep(s);
     } else if (expected && chips.length > 0) {
       // expected yoksa (pasaportlu hasta, hayvani hekim elle ekledi) dogrulanamaz: yanlis "ayni degil" uyarisi verilmez.
       d.card.show(views.wrongAnimal(s));
     }
+  }
+
+  /** Stok penceresinden secilen urun forma geldi mi: seri Vetly serisiyse Urun Adet = 1 (satir Kaydet hekimde). */
+  async function checkProductRow(s: Submission): Promise<void> {
+    const row = readProductEditRow(d.doc);
+    if (!row || !row.serial) return;
+    if (row.serial !== normalizeSerial(s.lotNumber)) {
+      await d.flow.update(s.id, { step: 'awaitingConfirm' });
+      d.card.show(views.wrongProduct(s));
+      return;
+    }
+    try {
+      await d.bridge.call('setProductQuantity', { quantity: 1 });
+    } catch (e) {
+      const message = `Ürün Adet yazılamadı (${code(e)}).`;
+      await d.flow.update(s.id, { step: 'awaitingConfirm', message });
+      d.card.show(views.productNeedsVet(s, message));
+      return;
+    }
+    await d.flow.update(s.id, { step: 'productReady' });
+    d.card.show(views.productReady(s));
   }
 
   async function confirm(s: Submission): Promise<void> {
@@ -193,7 +259,7 @@ export function createReceiptFlow(d: ReceiptDeps) {
       markStaleSuccess(d.doc, RECEIPT.successPanel, staleSuccess);
       void (async () => {
         const st = await current();
-        if (st?.step === 'awaitingConfirm') await d.flow.update(st.submissionId, { insertClickedAt: d.now() });
+        if (st && CONFIRM_STEPS.includes(st.step)) await d.flow.update(st.submissionId, { insertClickedAt: d.now() });
       })();
     },
     true,
@@ -212,6 +278,13 @@ export function createReceiptFlow(d: ReceiptDeps) {
           try {
             await openSearch();
             watch();
+          } catch (e) {
+            await failed(e);
+          }
+          return;
+        case 'stockWindow':
+          try {
+            await d.bridge.call('clickAllowed', { page: 'vaccineReceipt', button: 'addProduct' });
           } catch (e) {
             await failed(e);
           }
@@ -242,6 +315,11 @@ export function createReceiptFlow(d: ReceiptDeps) {
       // Yan panelden ayni asi yeniden "TARBIL'de doldur": aktif kimlik degismez, yalniz akis yeniden "armed" olur.
       if (state.step === 'armed') {
         void start();
+        return;
+      }
+      // Stok penceresi secimi hekime biraktiysa nedenini goster.
+      if (state.step === 'awaitingConfirm' && state.message) {
+        d.card.show(views.productNeedsVet(s, state.message));
         return;
       }
       if (state.step === 'needsVet') d.card.show(views.needsVet(s, state.message ?? ''));

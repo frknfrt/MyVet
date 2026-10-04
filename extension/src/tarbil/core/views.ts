@@ -56,6 +56,27 @@ export const views = {
     view(s, `${message} Hayvan forma eklenince devam edeceğiz.`, 'warn'),
   wrongAnimal: (s: Submission): CardView =>
     view(s, `Forma eklenen hayvan Vetly'deki hastayla (${s.microchipNumber ? `çip ${s.microchipNumber}` : `pasaport ${s.passportNumber ?? '—'}`}) aynı değil. Yanlış satırı silip doğru hayvanı ekleyin.`, 'warn'),
+  choosingProduct: (s: Submission): CardView =>
+    view(s, `✓ Hayvan forma eklendi. Stok penceresinde seri ${s.lotNumber ?? '—'} aranıyor…`, 'muted'),
+  stockWindowBlocked: (s: Submission): CardView =>
+    view(
+      s,
+      'Stok penceresi açılmadı. Tarayıcı açılır pencereyi engellemiş olabilir: TARBİL için açılır pencerelere izin verin ya da aşağıdaki butona basın.',
+      'warn',
+      [{ id: 'stockWindow', label: 'Stok penceresini aç' }, ...FALLBACK],
+    ),
+  productReady: (s: Submission): CardView => ({
+    lines: [
+      ...header(s),
+      { text: `✓ Ürün satırı hazır: ${s.tarbilProductName ?? s.vaccineName} · Seri ${s.lotNumber ?? '—'} · 1 adet.`, tone: 'ok' },
+      { text: "Satırdaki Kaydet'e siz basın (TARBİL stoğundan düşer), Detay alanlarını kontrol edin, sonra Onayla'ya basın. Kaydı yakalayıp Vetly'ye işleyeceğiz." },
+    ],
+    actions: FALLBACK,
+  }),
+  productNeedsVet: (s: Submission, message: string): CardView =>
+    view(s, `${message} "Ürün Ekle"den aşıyı stoktan kendiniz seçin, kontrol edip Onayla'ya basın.`, 'warn'),
+  wrongProduct: (s: Submission): CardView =>
+    view(s, `Yanlış ürün seçildi: formdaki serinin Vetly'deki seriyle (${s.lotNumber ?? '—'}) aynı olması gerekir. Satırı İptal edip doğru seriyi seçin.`, 'warn'),
   addProduct: (s: Submission): CardView => ({
     lines: [
       ...header(s),
