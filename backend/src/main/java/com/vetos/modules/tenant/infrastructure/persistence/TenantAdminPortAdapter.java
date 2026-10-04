@@ -13,6 +13,7 @@ import com.vetos.modules.tenant.domain.Tenant;
 import com.vetos.modules.tenant.domain.TenantAdminOverview;
 import com.vetos.modules.tenant.domain.TenantAdminPort;
 import com.vetos.modules.tenant.domain.TenantSignupResult;
+import com.vetos.modules.tenant.domain.ImpersonationTarget;
 import com.vetos.modules.tenant.domain.event.ClinicRegisteredEvent;
 import com.vetos.modules.tenant.domain.exception.EmailAlreadyRegisteredConflictException;
 import com.vetos.modules.tenant.domain.exception.SubscriptionNotFoundException;
@@ -177,6 +178,26 @@ class TenantAdminPortAdapter implements TenantAdminPort {
     public boolean isEmailRegistered(String email) {
         return staffUserJpaRepository.existsByEmail(email)
             || staffInviteRepository.existsByEmailAndStatus(email, StaffInviteStatus.PENDING);
+    }
+
+    @Override
+    public Optional<ImpersonationTarget> findImpersonationTarget(UUID tenantId) {
+        List<UUID> branchIds = branchJpaRepository.findByTenantId(tenantId).stream().map(Branch::getId).toList();
+        if (branchIds.isEmpty()) {
+            return Optional.empty();
+        }
+        // Koprulme kurali (tasarim dokumani S5): findBillingContact ile ayni
+        // sebep -- StaffUser @TenantId'li, platform admin istegi hicbir
+        // kiraciya baglanmamis context'te calisir.
+        TenantContext.set(tenantId);
+        try {
+            return staffUserJpaRepository.findByBranchIdInAndRole(branchIds, StaffRole.ADMIN).stream()
+                .filter(StaffUser::isActive)
+                .findFirst()
+                .map(su -> new ImpersonationTarget(su.getId(), su.getBranchId(), su.getFullName(), su.getRole()));
+        } finally {
+            TenantContext.clear();
+        }
     }
 
     // Koprulme kurali (tasarim dokumani S5): platform admin istegi, TenantContext

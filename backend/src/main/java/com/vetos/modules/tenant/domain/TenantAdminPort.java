@@ -65,4 +65,11 @@ public interface TenantAdminPort {
 
     /** Odeme oncesi e-posta benzersizligini kontrol etmek icin. */
     boolean isEmailRegistered(String email);
+
+    /**
+     * Platform admin'in impersonate edecegi kiracinin ADMIN rolundeki, aktif
+     * ilk personeli -- bulunamazsa (hic ADMIN'i yoksa) bos doner, cagiran
+     * kullaniciya anlamli bir hata gosterir (bkz. StartImpersonationUseCase).
+     */
+    Optional<ImpersonationTarget> findImpersonationTarget(UUID tenantId);
 }

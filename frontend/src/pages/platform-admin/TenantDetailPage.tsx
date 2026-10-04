@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { StaffRole, storeSession } from '../../auth/session';
 import { ApiError } from '../../api/client';
 import {
   BillingStatus, Plan, PlatformInvoice, PlatformPaymentMethod, platformAdminApi, TenantAdminOverview,
@@ -33,6 +34,7 @@ export function TenantDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [impersonating, setImpersonating] = useState(false);
   const [form, setForm] = useState<SubscriptionFormState>({ planCode: '', billingStatus: 'TRIAL', renewsAt: '' });
   const [invoices, setInvoices] = useState<PlatformInvoice[]>([]);
   const [paymentInvoiceId, setPaymentInvoiceId] = useState<string | null>(null);
@@ -97,6 +99,31 @@ export function TenantDetailPage() {
       load();
     } catch (err) {
       setError(errorMessageOf(err));
+    }
+  }
+
+  async function handleImpersonate() {
+    if (!tenantId) return;
+    setError(null);
+    setImpersonating(true);
+    try {
+      const session = await platformAdminApi.impersonateTenant(tenantId);
+      storeSession({
+        token: session.token,
+        staffUserId: session.staffUserId,
+        tenantId: session.tenantId,
+        branchId: session.branchId,
+        fullName: session.fullName,
+        role: session.role as StaffRole,
+      });
+      // Kendi sekmesinde degil, yeni bir sekmede acilir -- boylece platform
+      // admin kendi oturumunu (ayri localStorage anahtari) kaybetmeden bu
+      // sayfada kalir.
+      window.open('/panel', '_blank');
+    } catch (err) {
+      setError(errorMessageOf(err));
+    } finally {
+      setImpersonating(false);
     }
   }
 
@@ -174,6 +201,9 @@ export function TenantDetailPage() {
                 <span>{tenant.staffUserCount}</span>
               </div>
               <div className={styles.modalActions}>
+                <Button variant="secondary" onClick={handleImpersonate} disabled={impersonating || tenant.status === 'SUSPENDED'}>
+                  {impersonating ? 'Giriliyor...' : 'Bu Klinik Olarak Gir'}
+                </Button>
                 <Button variant={tenant.status === 'SUSPENDED' ? 'secondary' : 'danger'} onClick={handleToggleStatus}>
                   {tenant.status === 'SUSPENDED' ? 'Aktif Et' : 'Askıya Al'}
                 </Button>

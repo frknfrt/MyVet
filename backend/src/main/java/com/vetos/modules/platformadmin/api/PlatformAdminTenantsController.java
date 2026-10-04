@@ -1,20 +1,24 @@
 package com.vetos.modules.platformadmin.api;
 
 import com.vetos.modules.platformadmin.api.dto.CreatePlatformTenantRequest;
+import com.vetos.modules.platformadmin.api.dto.ImpersonationSessionResponse;
 import com.vetos.modules.platformadmin.api.dto.TenantAdminOverviewResponse;
 import com.vetos.modules.platformadmin.api.dto.UpdateTenantSubscriptionRequest;
 import com.vetos.modules.platformadmin.application.ActivateTenantUseCase;
 import com.vetos.modules.platformadmin.application.CreatePlatformTenantUseCase;
 import com.vetos.modules.platformadmin.application.GetTenantAdminOverviewUseCase;
 import com.vetos.modules.platformadmin.application.ListTenantsForAdminUseCase;
+import com.vetos.modules.platformadmin.application.StartImpersonationUseCase;
 import com.vetos.modules.platformadmin.application.SuspendTenantUseCase;
 import com.vetos.modules.platformadmin.application.UpdateTenantSubscriptionUseCase;
 import com.vetos.modules.platformadmin.application.dto.CreatePlatformTenantCommand;
 import com.vetos.modules.platformadmin.application.dto.UpdateTenantSubscriptionCommand;
+import com.vetos.platform.security.AuthenticatedPlatformAdmin;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -32,6 +36,7 @@ public class PlatformAdminTenantsController {
     private final UpdateTenantSubscriptionUseCase updateTenantSubscriptionUseCase;
     private final SuspendTenantUseCase suspendTenantUseCase;
     private final ActivateTenantUseCase activateTenantUseCase;
+    private final StartImpersonationUseCase startImpersonationUseCase;
 
     @GetMapping
     public List<TenantAdminOverviewResponse> list() {
@@ -70,5 +75,18 @@ public class PlatformAdminTenantsController {
     @PostMapping("/{id}/activate")
     public void activate(@PathVariable UUID id) {
         activateTenantUseCase.execute(id);
+    }
+
+    /**
+     * Destek amacli: o kiracinin ADMIN'i YERINE gecen bir JWT uretir --
+     * sifresi BILINMEDEN. Frontend, donen token/staffUserId/tenantId/
+     * branchId/fullName/role ile normal kiraci oturumunu (myvet.session)
+     * dolduruyor (bkz. StartImpersonationUseCase).
+     */
+    @PostMapping("/{id}/impersonate")
+    public ImpersonationSessionResponse impersonate(@PathVariable UUID id, @AuthenticationPrincipal AuthenticatedPlatformAdmin principal) {
+        return ImpersonationSessionResponse.from(
+            startImpersonationUseCase.execute(id, principal.platformAdminId(), principal.email())
+        );
     }
 }

@@ -118,6 +118,43 @@ export interface FailedEInvoice {
   attemptedAt: string;
 }
 
+export interface PlanRevenueBreakdown {
+  planCode: string;
+  planName: string;
+  tenantCount: number;
+  monthlyRevenue: number;
+}
+
+export interface RecentTenantSummary {
+  tenantId: string;
+  name: string;
+  planCode: string;
+  createdAt: string;
+}
+
+export interface PlatformOverview {
+  totalTenants: number;
+  activeTenants: number;
+  suspendedTenants: number;
+  trialBillingTenants: number;
+  newTenantsLast30Days: number;
+  monthlyRecurringRevenue: number;
+  collectedThisMonth: number;
+  overdueInvoiceCount: number;
+  overdueInvoiceTotal: number;
+  planBreakdown: PlanRevenueBreakdown[];
+  recentTenants: RecentTenantSummary[];
+}
+
+export interface ImpersonationSession {
+  token: string;
+  staffUserId: string;
+  tenantId: string;
+  branchId: string;
+  fullName: string;
+  role: string;
+}
+
 export const platformAdminApi = {
   login: (payload: PlatformAdminLoginPayload) =>
     platformAdminClient.post<PlatformAdminSession>('/api/v1/platform-admin/auth/login', payload),
@@ -149,4 +186,7 @@ export const platformAdminApi = {
     platformAdminClient.post<void>(`/api/v1/platform-admin/system-health/notifications/${notificationLogId}/retry`),
   retryFailedEInvoice: (submissionId: string) =>
     platformAdminClient.post<void>(`/api/v1/platform-admin/system-health/efatura/${submissionId}/retry`),
+  getOverview: () => platformAdminClient.get<PlatformOverview>('/api/v1/platform-admin/overview'),
+  impersonateTenant: (tenantId: string) =>
+    platformAdminClient.post<ImpersonationSession>(`/api/v1/platform-admin/tenants/${tenantId}/impersonate`),
 };
