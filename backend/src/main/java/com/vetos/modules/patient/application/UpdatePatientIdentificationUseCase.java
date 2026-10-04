@@ -23,11 +23,11 @@ public class UpdatePatientIdentificationUseCase {
             .orElseThrow(() -> new PatientNotFoundException(command.patientId()));
 
         patient.updateMicrochip(command.microchipNumber());
-        patient.updateTarbilAnimalId(command.tarbilAnimalId());
+        patient.updatePassportNumber(command.passportNumber());
         patientRepository.save(patient);
 
         eventPublisher.publish(new PatientIdentificationUpdatedEvent(
-            patient.getId(), command.microchipNumber(), command.tarbilAnimalId()
+            patient.getId(), command.microchipNumber(), command.passportNumber()
         ));
     }
 }

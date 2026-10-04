@@ -197,7 +197,7 @@ VACC_ID=$(echo "$VACC_LOC" | grep -i '^Location' | sed 's#.*/##' | tr -d '\r')
 checkTrue "Asi kaydi olusturuldu" "$([ -n "$VACC_ID" ] && echo 1 || echo 0)"
 
 S=$(status -X PUT $BASE/api/v1/patients/$PATIENT_ID/identification -H "Authorization: Bearer $VET_TOKEN" -H "Content-Type: application/json" \
-  -d '{"microchipNumber":"999000111222333","tarbilAnimalId":"TR-SMOKE-001"}')
+  -d '{"microchipNumber":"999000111222333","passportNumber":"TR-SMOKE-001"}')
 check "Hasta kimliklendirme (mikrocip/TARBIL no) guncellendi" "200" "$S"
 
 sleep 4

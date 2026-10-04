@@ -7,6 +7,7 @@ export interface Submission {
   status: SubmissionStatus;
   patientName: string;
   microchipNumber: string | null;
+  passportNumber: string | null;
   speciesId: string | null;
   speciesName: string | null;
   breedName: string | null;

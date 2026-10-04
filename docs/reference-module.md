@@ -48,8 +48,8 @@ public class Patient {
 
     private String microchipNumber;
 
-    @Column(name = "tarbil_animal_id")
-    private String tarbilAnimalId;
+    @Column(name = "passport_no")
+    private String passportNumber;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

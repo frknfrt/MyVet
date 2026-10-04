@@ -33,7 +33,7 @@ export interface PatientProfile {
   neutered: boolean;
   birthDate: string | null;
   microchipNumber: string | null;
-  tarbilAnimalId: string | null;
+  passportNumber: string | null;
   weightKg: number | null;
   photoUrl: string | null;
   color: string | null;
@@ -194,7 +194,7 @@ export const patientApi = {
   register: (payload: RegisterPatientPayload) => apiClient.post<{ id: string }>('/api/v1/patients', payload),
   update: (patientId: string, payload: UpdatePatientPayload) =>
     apiClient.put<void>(`/api/v1/patients/${patientId}`, payload),
-  updateIdentification: (patientId: string, payload: { microchipNumber?: string; tarbilAnimalId?: string }) =>
+  updateIdentification: (patientId: string, payload: { microchipNumber?: string; passportNumber?: string }) =>
     apiClient.put<void>(`/api/v1/patients/${patientId}/identification`, payload),
   markDeceased: (patientId: string) => apiClient.post<void>(`/api/v1/patients/${patientId}/deceased`),
   searchOwners: (query: string) =>

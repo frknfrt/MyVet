@@ -5,6 +5,6 @@ import java.util.UUID;
 
 /** integration/tarbil icin hasta profili -- sahip kisisel verisi (TC/adres/telefon) BILINCLI olarak yok. */
 public record PatientTarbilProfile(
-    UUID id, String name, String microchipNumber, UUID speciesId, String speciesName,
+    UUID id, String name, String microchipNumber, String passportNumber, UUID speciesId, String speciesName,
     String breedName, Sex sex, LocalDate birthDate
 ) {}

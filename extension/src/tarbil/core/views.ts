@@ -34,14 +34,14 @@ export const views = {
       [],
     ),
   idle: (s: Submission): CardView =>
-    view(s, 'Uygulama tarihini ve türü girip hayvanı çip numarasıyla bulacağız.', 'muted', [{ id: 'fill', label: 'Formu doldur' }, ...FALLBACK]),
+    view(s, 'Uygulama tarihini ve türü girip hayvanı çip (yoksa pasaport) numarasıyla bulacağız.', 'muted', [{ id: 'fill', label: 'Formu doldur' }, ...FALLBACK]),
   noChip: (s: Submission): CardView =>
-    view(s, "Çip numarası yok. Hayvan TARBİL'de kayıtlı değilse önce kimliklendirme gerekir; formu kendiniz doldurun.", 'warn'),
+    view(s, "Çip ve pasaport numarası yok. Vetly'de hastaya birini girin; hayvan TARBİL'de kayıtlı değilse önce kimliklendirme gerekir.", 'warn'),
   unsupportedSpecies: (s: Submission): CardView =>
     view(s, `Otomatik doldurma yalnız kedi ve köpek için (${s.speciesName ?? 'tür bilinmiyor'}). Formu kendiniz doldurun.`, 'warn'),
   progress: (s: Submission, text: string): CardView => view(s, text, 'muted'),
   searching: (s: Submission): CardView =>
-    view(s, 'PetVet arama penceresinde çip numarasıyla aranıyor… Pencere açılmadıysa aşağıdaki butona basın.', 'muted', [
+    view(s, 'PetVet arama penceresinde hayvan aranıyor… Pencere açılmadıysa aşağıdaki butona basın.', 'muted', [
       { id: 'petvet', label: 'Arama penceresini aç' },
       ...FALLBACK,
     ]),
@@ -55,7 +55,7 @@ export const views = {
   needsVet: (s: Submission, message: string): CardView =>
     view(s, `${message} Hayvan forma eklenince devam edeceğiz.`, 'warn'),
   wrongAnimal: (s: Submission): CardView =>
-    view(s, `Forma eklenen hayvanın çipi Vetly'deki çiple (${s.microchipNumber ?? '—'}) aynı değil. Yanlış satırı silip doğru hayvanı ekleyin.`, 'warn'),
+    view(s, `Forma eklenen hayvan Vetly'deki hastayla (${s.microchipNumber ? `çip ${s.microchipNumber}` : `pasaport ${s.passportNumber ?? '—'}`}) aynı değil. Yanlış satırı silip doğru hayvanı ekleyin.`, 'warn'),
   addProduct: (s: Submission): CardView => ({
     lines: [
       ...header(s),

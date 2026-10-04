@@ -10,9 +10,9 @@ function searchTable(rows: string) {
     <th>Anne Çip No</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
-function srow(i: number, chip: string, status = 'CANLI', mother = '') {
+function srow(i: number, chip: string, status = 'CANLI', mother = '', passport = 'TR00000000') {
   return `<tr id="${SP}__${i}"><td><input type="checkbox" id="${SP}_ctl0${4 + 2 * i}_gridchkBoxAnimalIscheckedTempColumn"></td>
-    <td>Ad</td><td>${chip}</td><td>TR00000000</td><td>Kedi</td><td>Irk</td><td>Erkek</td><td>Gri</td><td>01/01/23</td>
+    <td>Ad</td><td>${chip}</td><td>${passport}</td><td>Kedi</td><td>Irk</td><td>Erkek</td><td>Gri</td><td>01/01/23</td>
     <td> ${status} </td><td></td><td>${mother}</td></tr>`;
 }
 
@@ -42,7 +42,7 @@ describe('readSearchRows', () => {
     searchTable(srow(0, '900000000000001'));
 
     expect(readSearchRows(document)).toEqual([
-      { rowId: `${SP}__0`, chip: '900000000000001', status: 'CANLI', checkboxId: `${SP}_ctl04_gridchkBoxAnimalIscheckedTempColumn` },
+      { rowId: `${SP}__0`, chip: '900000000000001', passport: 'TR00000000', status: 'CANLI', checkboxId: `${SP}_ctl04_gridchkBoxAnimalIscheckedTempColumn` },
     ]);
   });
 
@@ -56,7 +56,7 @@ describe('pickAnimal', () => {
   it('picks the single alive exact match', () => {
     searchTable(srow(0, '900000000000001') + srow(1, '900000000000002'));
 
-    const result = pickAnimal(readSearchRows(document), '900000000000002');
+    const result = pickAnimal(readSearchRows(document), { chip: '900000000000002' });
 
     expect(result).toMatchObject({ kind: 'one', row: { rowId: `${SP}__1` } });
   });
@@ -64,19 +64,33 @@ describe('pickAnimal', () => {
   it('does not match on the mother chip column', () => {
     searchTable(srow(0, '900000000000009', 'CANLI', '900000000000001'));
 
-    expect(pickAnimal(readSearchRows(document), '900000000000001')).toEqual({ kind: 'none' });
+    expect(pickAnimal(readSearchRows(document), { chip: '900000000000001' })).toEqual({ kind: 'none' });
   });
 
   it('refuses to choose between several matches', () => {
     searchTable(srow(0, '900000000000001') + srow(1, '900000000000001'));
 
-    expect(pickAnimal(readSearchRows(document), '900000000000001')).toEqual({ kind: 'many' });
+    expect(pickAnimal(readSearchRows(document), { chip: '900000000000001' })).toEqual({ kind: 'many' });
   });
 
   it('does not auto-select an animal that is not alive', () => {
     searchTable(srow(0, '900000000000001', 'ÖLÜ'));
 
-    expect(pickAnimal(readSearchRows(document), '900000000000001')).toMatchObject({ kind: 'notAlive', row: { status: 'ÖLÜ' } });
+    expect(pickAnimal(readSearchRows(document), { chip: '900000000000001' })).toMatchObject({ kind: 'notAlive', row: { status: 'ÖLÜ' } });
+  });
+});
+
+describe('pickAnimal by passport', () => {
+  it('matches the passport ignoring spaces and case when the patient has no chip', () => {
+    searchTable(srow(0, '900000000000001', 'CANLI', '', 'TR-34 AB12') + srow(1, '900000000000002', 'CANLI', '', 'TR-34 AB99'));
+
+    expect(pickAnimal(readSearchRows(document), { passport: 'tr-34ab12' })).toMatchObject({ kind: 'one', row: { rowId: `${SP}__0` } });
+  });
+
+  it('prefers the chip when both are known', () => {
+    searchTable(srow(0, '900000000000001', 'CANLI', '', 'TR1'));
+
+    expect(pickAnimal(readSearchRows(document), { chip: '900000000000009', passport: 'TR1' })).toEqual({ kind: 'none' });
   });
 });
 

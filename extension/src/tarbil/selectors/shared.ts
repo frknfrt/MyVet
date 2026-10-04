@@ -19,6 +19,7 @@ export const ANIMAL_TYPE = {
 /** PetVet hayvan arama penceresi (VaccineKKBSAnimalSearchModalPage.aspx). */
 export const SEARCH = {
   chip: '_UCVaccineKKBSAnimalSearch_txtChipNo',
+  passport: '_UCVaccineKKBSAnimalSearch_txtPassportNo',
   search: '_UCVaccineKKBSAnimalSearch_btnSearch',
   grid: '_UCVaccineKKBSAnimalSearch_radGridAnimal_ctl00',
   transfer: '_UCVaccineKKBSAnimalSearch_btnAddBulkAnimal',

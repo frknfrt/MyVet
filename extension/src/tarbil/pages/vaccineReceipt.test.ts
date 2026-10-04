@@ -29,7 +29,7 @@ function showSuccess() {
 }
 
 const base = {
-  id: 's1', vaccinationRecordId: 'v1', status: 'PENDING', patientName: 'Pamuk', microchipNumber: CHIP,
+  id: 's1', vaccinationRecordId: 'v1', status: 'PENDING', patientName: 'Pamuk', microchipNumber: CHIP, passportNumber: null,
   speciesId: null, speciesName: 'Kedi', breedName: null, sex: null, birthDate: null, vaccineName: 'Kuduz Aşısı',
   lotNumber: 'L1', administeredDate: '2026-10-03', submittedAt: null, confirmationMethod: null, tarbilReference: null,
   vaccineKey: 'kuduz aşisi', vaccineMapping: null, speciesMapping: null,
@@ -80,12 +80,35 @@ describe('receiptFlow', () => {
 
   it('does nothing on the page when the patient has no chip', async () => {
     page();
-    const { receipt, calls, text } = await setup({ microchipNumber: null });
+    const { receipt, calls, text } = await setup({ microchipNumber: null, passportNumber: null });
 
     await receipt.start();
 
     expect(calls).toEqual([]);
-    expect(text()).toContain('Çip numarası yok');
+    expect(text()).toContain('Çip ve pasaport numarası yok');
+  });
+
+  it('fills the form when the patient has only a passport number', async () => {
+    page();
+    const { receipt, calls, flow } = await setup({ microchipNumber: null, passportNumber: 'TR-34 AB12' });
+
+    await receipt.start();
+
+    expect(calls.map((c) => c.op)).toEqual(['ready', 'setDate', 'selectAnimalType', 'clickAllowed']);
+    expect((await flow.get())?.step).toBe('searching');
+  });
+
+  it('verifies a passport-only animal by the chip TARBIL showed in the search', async () => {
+    page();
+    const { receipt, flow, mutate, text } = await setup({ microchipNumber: null, passportNumber: 'TR-34 AB12' }, 'transferred');
+    await flow.update('s1', { stepData: { matchedChip: CHIP } });
+    await receipt.start();
+
+    addAnimalRow(CHIP);
+    mutate();
+
+    await vi.waitFor(async () => expect((await flow.get())?.step).toBe('awaitingConfirm'));
+    expect(text()).toContain('Ürün Ekle');
   });
 
   it('does nothing on the page for unsupported species', async () => {

@@ -1,10 +1,11 @@
 import { RECEIPT, SEARCH, bySuffix } from '../selectors';
 
-// Gizlilik: tablolardan YALNIZ cip, durum ve satir onay kutusunun id'si okunur; ad, sahip vb. hucrelere dokunulmaz.
+// Gizlilik: tablolardan YALNIZ cip, pasaport no, durum ve satir onay kutusunun id'si okunur; ad, sahip vb. hucrelere dokunulmaz.
 
 export interface AnimalRow {
   rowId: string;
   chip: string;
+  passport: string;
   status: string | null;
   checkboxId: string | null;
 }
@@ -17,6 +18,16 @@ export type PickResult =
 
 export function normalizeChip(s: string | null | undefined): string {
   return (s ?? '').replace(/\D/g, '');
+}
+
+/** Pasaport no: bosluklar atilir, Turkce buyuk harf (TR-34 ab12 = TR-34AB12). */
+export function normalizePassport(s: string | null | undefined): string {
+  return (s ?? '').replace(/\s+/g, '').toLocaleUpperCase('tr-TR');
+}
+
+export interface AnimalKey {
+  chip?: string | null;
+  passport?: string | null;
 }
 
 const headerText = (s: string | null) => (s ?? '').replace(/\s+/g, ' ').trim().toLocaleLowerCase('tr-TR');
@@ -41,10 +52,12 @@ export function readSearchRows(doc: Document): AnimalRow[] {
   const table = findTable(doc, SEARCH.grid);
   if (!table) return [];
   const chipCol = columnIndex(table, (h) => h.includes('çip') && !h.includes('anne'), 2);
+  const passportCol = columnIndex(table, (h) => h.includes('pasaport'), 3);
   const statusCol = columnIndex(table, (h) => h.startsWith('durum'), 9);
   return dataRows(table).map((r) => ({
     rowId: r.id,
     chip: normalizeChip(r.cells[chipCol]?.textContent),
+    passport: normalizePassport(r.cells[passportCol]?.textContent),
     status: r.cells[statusCol]?.textContent?.trim() || null,
     checkboxId: r.querySelector<HTMLInputElement>('input[type="checkbox"]')?.id || null,
   }));
@@ -59,9 +72,11 @@ export function readReceiptChips(doc: Document): string[] {
     .filter((c) => c.length > 0);
 }
 
-export function pickAnimal(rows: AnimalRow[], chip: string): PickResult {
-  const target = normalizeChip(chip);
-  const matches = target ? rows.filter((r) => r.chip === target) : [];
+/** Cip biliniyorsa yalniz cip ile, bilinmiyorsa pasaport no ile birebir eslesme. */
+export function pickAnimal(rows: AnimalRow[], key: AnimalKey): PickResult {
+  const chip = normalizeChip(key.chip);
+  const passport = normalizePassport(key.passport);
+  const matches = chip ? rows.filter((r) => r.chip === chip) : passport ? rows.filter((r) => r.passport === passport) : [];
   if (matches.length === 0) return { kind: 'none' };
   if (matches.length > 1) return { kind: 'many' };
   const row = matches[0];

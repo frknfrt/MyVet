@@ -27,7 +27,7 @@ class PatientLookupAdapter implements PatientLookupPort {
     @Override
     public Optional<PatientTarbilProfile> findTarbilProfile(UUID patientId) {
         return jpaRepository.findById(patientId).map(p -> new PatientTarbilProfile(
-            p.getId(), p.getName(), p.getMicrochipNumber(), p.getSpeciesId(),
+            p.getId(), p.getName(), p.getMicrochipNumber(), p.getPassportNumber(), p.getSpeciesId(),
             speciesJpaRepository.findById(p.getSpeciesId()).map(Species::getName).orElse(null),
             p.getBreedId() == null ? null : breedJpaRepository.findById(p.getBreedId()).map(Breed::getName).orElse(null),
             p.getSex(), p.getBirthDate()

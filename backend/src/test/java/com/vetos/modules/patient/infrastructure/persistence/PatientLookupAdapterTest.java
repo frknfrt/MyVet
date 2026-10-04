@@ -38,6 +38,7 @@ class PatientLookupAdapterTest {
         when(patient.getId()).thenReturn(patientId);
         when(patient.getName()).thenReturn("Pamuk");
         when(patient.getMicrochipNumber()).thenReturn("900123456789012");
+        when(patient.getPassportNumber()).thenReturn("TR-34-000123");
         when(patient.getSpeciesId()).thenReturn(speciesId);
         when(patient.getBreedId()).thenReturn(breedId);
         when(patient.getSex()).thenReturn(Sex.FEMALE);
@@ -53,7 +54,7 @@ class PatientLookupAdapterTest {
         Optional<PatientTarbilProfile> profile = adapter().findTarbilProfile(patientId);
 
         assertThat(profile).contains(new PatientTarbilProfile(
-            patientId, "Pamuk", "900123456789012", speciesId, "Kedi", "Van Kedisi", Sex.FEMALE, LocalDate.of(2023, 5, 1)));
+            patientId, "Pamuk", "900123456789012", "TR-34-000123", speciesId, "Kedi", "Van Kedisi", Sex.FEMALE, LocalDate.of(2023, 5, 1)));
     }
 
     @Test

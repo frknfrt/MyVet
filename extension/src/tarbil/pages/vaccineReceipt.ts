@@ -1,7 +1,7 @@
 import { hasFreshSuccess, isConfirmClick, markStaleSuccess } from '../core/success';
 import type { FlowState, FlowStore } from '../../shared/flowStore';
 import type { Submission } from '../../shared/types';
-import { normalizeChip, readReceiptChips } from '../steps/animalRows';
+import { normalizeChip, normalizePassport, readReceiptChips } from '../steps/animalRows';
 import type { PageBridge } from '../core/bridge';
 import type { Card } from '../core/card';
 import type { Send } from '../steps/findAnimal';
@@ -87,7 +87,7 @@ export function createReceiptFlow(d: ReceiptDeps) {
 
   async function fill(): Promise<void> {
     const s = sub!;
-    const chip = normalizeChip(s.microchipNumber);
+    const chip = normalizeChip(s.microchipNumber) || normalizePassport(s.passportNumber);
     const animalType = resolveAnimalType(s);
     // Doldurulamiyorsa akis "armed" birakilmaz (yoksa TARBIL ana sayfasi tekrar tekrar yonlendirilir).
     if (!chip) {
@@ -118,7 +118,7 @@ export function createReceiptFlow(d: ReceiptDeps) {
     const s = sub!;
     if (!(await current())) await d.flow.arm(s.id);
     await d.flow.update(s.id, { step: 'searching' });
-    d.card.show(views.progress(s, 'PetVet arama penceresinde çip numarasıyla aranıyor…'));
+    d.card.show(views.progress(s, 'PetVet arama penceresinde hayvan aranıyor…'));
     await d.bridge.call('clickAllowed', { page: 'vaccineReceipt', button: 'petVet' });
     // Otomatik akista kullanici hareketi yok; Chrome pencereyi engelleyebilir. Buton hemen sunulur.
     d.card.show(views.searching(s));
@@ -160,10 +160,13 @@ export function createReceiptFlow(d: ReceiptDeps) {
     }
     if (!WAITING_FOR_ANIMAL.includes(st.step)) return;
     const chips = readReceiptChips(d.doc);
-    if (chips.includes(normalizeChip(s.microchipNumber))) {
+    // Pasaportla bulunan hayvan: arama penceresinin TARBIL'den okudugu cip (findAnimal, stepData.matchedChip).
+    const expected = normalizeChip(s.microchipNumber) || normalizeChip(st.stepData?.matchedChip as string | undefined);
+    if (expected && chips.includes(expected)) {
       await d.flow.update(s.id, { step: 'awaitingConfirm' });
       d.card.show(views.addProduct(s));
-    } else if (chips.length > 0) {
+    } else if (expected && chips.length > 0) {
+      // expected yoksa (pasaportlu hasta, hayvani hekim elle ekledi) dogrulanamaz: yanlis "ayni degil" uyarisi verilmez.
       d.card.show(views.wrongAnimal(s));
     }
   }

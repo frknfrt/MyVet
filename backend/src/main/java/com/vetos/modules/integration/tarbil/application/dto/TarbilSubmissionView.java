@@ -11,7 +11,7 @@ import java.util.UUID;
 /** Eklentiye giden aktarim verisi -- sahip TC/adres/telefon BILINCLI olarak yok (spec S4). */
 public record TarbilSubmissionView(
     UUID id, UUID vaccinationRecordId, TarbilSyncStatus status,
-    String patientName, String microchipNumber, UUID speciesId, String speciesName, String breedName,
+    String patientName, String microchipNumber, String passportNumber, UUID speciesId, String speciesName, String breedName,
     String sex, LocalDate birthDate,
     String vaccineName, String lotNumber, LocalDate administeredDate,
     Instant submittedAt, TarbilConfirmationMethod confirmationMethod, String tarbilReference,

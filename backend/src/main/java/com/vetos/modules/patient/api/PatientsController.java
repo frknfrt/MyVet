@@ -78,7 +78,7 @@ public class PatientsController {
     @PreAuthorize("hasAnyRole('VET', 'RECEPTIONIST', 'ADMIN')")
     public void updateIdentification(@PathVariable UUID id, @RequestBody UpdatePatientIdentificationRequest request) {
         updatePatientIdentificationUseCase.execute(new UpdatePatientIdentificationCommand(
-            id, request.microchipNumber(), request.tarbilAnimalId()
+            id, request.microchipNumber(), request.passportNumber()
         ));
     }
 }

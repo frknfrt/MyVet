@@ -16,7 +16,7 @@ public record PatientProfile(
     boolean neutered,
     LocalDate birthDate,
     String microchipNumber,
-    String tarbilAnimalId,
+    String passportNumber,
     BigDecimal weightKg,
     String photoUrl,
     String color,

@@ -1,7 +1,7 @@
 import type { BackgroundRequest, BackgroundResponse } from '../../shared/messages';
 import type { FlowStore } from '../../shared/flowStore';
 import type { Submission } from '../../shared/types';
-import { normalizeChip, pickAnimal, readSearchRows } from './animalRows';
+import { normalizeChip, normalizePassport, pickAnimal, readSearchRows } from './animalRows';
 import type { PageBridge } from '../core/bridge';
 import type { Card } from '../core/card';
 import { views } from '../core/views';
@@ -23,8 +23,9 @@ export const SEARCH_HANDOFF_MS = 120_000;
 const code = (e: unknown) => (e as { code?: string })?.code ?? 'UNKNOWN';
 
 /**
- * PetVet hayvan arama penceresi (spec S3, S12.4): cip yazilir, Ara'ya basilir; cipi birebir eslesen TEK ve CANLI
- * satir varsa isaretlenip Transfer Et'e basilir. Diger her durumda karar hekime birakilir. Pencereyi hekim
+ * PetVet hayvan arama penceresi (spec S3, S12.4): cip (yoksa pasaport no) yazilir, Ara'ya basilir; birebir eslesen
+ * TEK ve CANLI satir varsa isaretlenip Transfer Et'e basilir. Pasaportla bulunan hayvanin TARBIL'deki cipi akisa
+ * yazilir: ana sayfa forma eklenen hayvani o ciple dogrular. Diger her durumda karar hekime birakilir. Pencereyi hekim
  * kendisi actiysa (akis "searching" degil) hicbir sey yapilmaz.
  */
 export async function runSearchFlow(d: SearchDeps): Promise<void> {
@@ -33,34 +34,42 @@ export async function runSearchFlow(d: SearchDeps): Promise<void> {
   const res = await d.send<Submission | null>({ type: 'GET_ACTIVE' });
   const s = res.ok ? res.data : null;
   const chip = normalizeChip(s?.microchipNumber);
-  if (!s || s.id !== state.submissionId || !chip) return;
+  const passport = chip ? '' : normalizePassport(s?.passportNumber);
+  if (!s || s.id !== state.submissionId || (!chip && !passport)) return;
+  const by = chip ? 'çip' : 'pasaport';
 
   const needsVet = async (message: string) => {
     await d.flow.update(s.id, { step: 'needsVet', message });
     d.card.show(views.popup(message, 'warn'));
   };
 
-  d.card.show(views.popup('Vetly: çip numarasıyla aranıyor…', 'muted'));
+  d.card.show(views.popup(`Vetly: ${by} numarasıyla aranıyor…`, 'muted'));
   try {
     await d.bridge.call('ready');
-    await d.bridge.call('searchChip', { chip });
+    if (chip) await d.bridge.call('searchChip', { chip });
+    else await d.bridge.call('searchPassport', { passport: s.passportNumber!.trim() });
   } catch (e) {
-    await needsVet(`Arama yapılamadı (${code(e)}). Çip numarasını kendiniz aratın.`);
+    await needsVet(`Arama yapılamadı (${code(e)}). ${chip ? 'Çip' : 'Pasaport'} numarasını kendiniz aratın.`);
     return;
   }
 
-  const pick = pickAnimal(readSearchRows(d.doc), chip);
+  const pick = pickAnimal(readSearchRows(d.doc), { chip, passport });
   switch (pick.kind) {
     case 'none':
-      await needsVet("Bu çiple TARBİL'de hayvan bulunamadı. Çipi kontrol edin; hayvan kayıtlı değilse önce kimliklendirme gerekir.");
+      await needsVet(`Bu ${by} numarasıyla TARBİL'de hayvan bulunamadı. Numarayı kontrol edin; hayvan kayıtlı değilse önce kimliklendirme gerekir.`);
       return;
     case 'many':
-      await needsVet("Bu çiple birden fazla hayvan çıktı. Doğru satırı kendiniz işaretleyip Transfer Et'e basın.");
+      await needsVet(`Bu ${by} numarasıyla birden fazla hayvan çıktı. Doğru satırı kendiniz işaretleyip Transfer Et'e basın.`);
       return;
     case 'notAlive':
       await needsVet(`Hayvanın TARBİL'deki durumu "${pick.row.status ?? '—'}". Otomatik seçilmedi; kontrol edip kendiniz seçin.`);
       return;
     case 'one':
+      // Forma eklenen hayvan cipiyle dogrulanir; pasaportla bulunan hayvanin TARBIL'de cipi yoksa dogrulanamaz.
+      if (!chip && !pick.row.chip) {
+        await needsVet("Hayvanın TARBİL'de çip kaydı yok, forma eklenince doğrulayamayız. Hayvanı kendiniz işaretleyip Transfer Et'e basın.");
+        return;
+      }
       if (!pick.row.checkboxId) {
         await needsVet("Satır işaretlenemedi. Hayvanı kendiniz işaretleyip Transfer Et'e basın.");
         return;
@@ -73,7 +82,7 @@ export async function runSearchFlow(d: SearchDeps): Promise<void> {
       }
       d.card.show(views.popup('Vetly: hayvan forma aktarılıyor…', 'muted'));
       // Transfer Et pencereyi kapatir; yanit gelmeyebilir. Durum once yazilir, ana sayfa sonucu tablodan dogrular.
-      await d.flow.update(s.id, { step: 'transferred' });
+      await d.flow.update(s.id, { step: 'transferred', ...(chip ? {} : { stepData: { matchedChip: pick.row.chip } }) });
       await d.bridge.call('clickAllowed', { page: 'animalSearch', button: 'transfer' }, 5000).catch(() => undefined);
   }
 }

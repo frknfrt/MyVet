@@ -48,8 +48,8 @@ public class Patient {
     @Column(name = "microchip_no")
     private String microchipNumber;
 
-    @Column(name = "tarbil_animal_id")
-    private String tarbilAnimalId;
+    @Column(name = "passport_no")
+    private String passportNumber;
 
     @Column(name = "weight_kg")
     private BigDecimal weightKg;
@@ -137,8 +137,8 @@ public class Patient {
         this.microchipNumber = microchipNumber;
     }
 
-    public void updateTarbilAnimalId(String tarbilAnimalId) {
-        this.tarbilAnimalId = tarbilAnimalId;
+    public void updatePassportNumber(String passportNumber) {
+        this.passportNumber = passportNumber;
     }
 
     public void recordWeight(BigDecimal weightKg) {

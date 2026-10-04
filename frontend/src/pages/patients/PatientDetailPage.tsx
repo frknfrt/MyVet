@@ -200,7 +200,7 @@ export function PatientDetailPage() {
           <InfoItem label="Kısırlaştırma" value={profile.neutered ? 'Evet' : 'Hayır'} />
           <InfoItem label="Ağırlık" value={profile.weightKg != null ? `${profile.weightKg} kg` : '—'} />
           <InfoItem label="Mikroçip No" value={profile.microchipNumber ?? '—'} />
-          <InfoItem label="TARBİL Kimlik No" value={profile.tarbilAnimalId ?? '—'} />
+          <InfoItem label="Pasaport No" value={profile.passportNumber ?? '—'} />
           <InfoItem label="Kuduz Küpe No" value={profile.rabiesTag ?? '—'} />
           <InfoItem label="Kan Grubu" value={profile.bloodType ?? '—'} />
           <InfoItem label="Kullanılan Mama" value={profile.foodBrand ?? '—'} />

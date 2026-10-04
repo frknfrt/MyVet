@@ -23,6 +23,12 @@ export function createPageOps(env: TelerikEnv): Record<string, PageHandler> {
       setText(env, SEARCH.chip, chip);
       await clickButton(env, allowed('animalSearch', 'search'));
     },
+    // Cipi olmayan hasta: TARBIL'de pasaport numarasiyla aranir (cip kutusu bosaltilir, yoksa iki kosul birlesir).
+    searchPassport: async ({ passport }: { passport: string }) => {
+      setText(env, SEARCH.chip, '');
+      setText(env, SEARCH.passport, passport);
+      await clickButton(env, allowed('animalSearch', 'search'));
+    },
     // Yalniz arama tablosundaki satir kutulari: id ile herhangi bir oge (ornegin Onayla) tiklanamaz.
     checkRow: ({ checkboxId }: { checkboxId: string }) => {
       const box = env.doc.getElementById(checkboxId);

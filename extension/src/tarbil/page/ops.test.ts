@@ -116,4 +116,21 @@ describe('page ops', () => {
     const env: TelerikEnv = { doc: document, find: () => null, prm: () => instantPrm(), isReady: () => true };
     await expect(createPageOps(env).loadStockTable({ page: 'vaccineReceipt' })).rejects.toMatchObject({ code: 'BAD_INPUT' });
   });
+
+  it('searches by passport: clears the chip box, types the passport and presses Ara', async () => {
+    const P = 'ctl00_ctl00_ContentPlaceHolder1_ContentPlaceHolderBody_UCVaccineKKBSAnimalSearch_';
+    document.body.innerHTML = `<input id="${P}txtChipNo"><input id="${P}txtPassportNo"><a id="${P}btnSearch"></a>`;
+    const prm = instantPrm();
+    const log: string[] = [];
+    const comps: Record<string, Record<string, unknown>> = {
+      [`${P}txtChipNo`]: { set_value: (v: string) => log.push(`chip:${v}`) },
+      [`${P}txtPassportNo`]: { set_value: (v: string) => log.push(`passport:${v}`) },
+      [`${P}btnSearch`]: { click: () => { log.push('search'); prm.fire(); } },
+    };
+    const env: TelerikEnv = { doc: document, find: (id) => comps[id] ?? null, prm: () => prm, isReady: () => true };
+
+    await createPageOps(env).searchPassport({ passport: 'TR-34 AB12' });
+
+    expect(log).toEqual(['chip:', 'passport:TR-34 AB12', 'search']);
+  });
 });

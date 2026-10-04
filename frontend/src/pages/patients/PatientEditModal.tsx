@@ -31,7 +31,7 @@ export function PatientEditModal({ open, profile, onClose, onSaved }: PatientEdi
   const [bloodType, setBloodType] = useState('');
   const [foodBrand, setFoodBrand] = useState('');
   const [microchipNumber, setMicrochipNumber] = useState('');
-  const [tarbilAnimalId, setTarbilAnimalId] = useState('');
+  const [passportNumber, setPassportNumber] = useState('');
   const [rabiesTag, setRabiesTag] = useState('');
   const [protocolNumber, setProtocolNumber] = useState('');
   const [criticalAlert, setCriticalAlert] = useState('');
@@ -54,7 +54,7 @@ export function PatientEditModal({ open, profile, onClose, onSaved }: PatientEdi
     setBloodType(profile.bloodType ?? '');
     setFoodBrand(profile.foodBrand ?? '');
     setMicrochipNumber(profile.microchipNumber ?? '');
-    setTarbilAnimalId(profile.tarbilAnimalId ?? '');
+    setPassportNumber(profile.passportNumber ?? '');
     setRabiesTag(profile.rabiesTag ?? '');
     setProtocolNumber(profile.protocolNumber ?? '');
     setCriticalAlert(profile.criticalAlert ?? '');
@@ -72,7 +72,7 @@ export function PatientEditModal({ open, profile, onClose, onSaved }: PatientEdi
       bloodType: profile.bloodType ?? '',
       foodBrand: profile.foodBrand ?? '',
       microchipNumber: profile.microchipNumber ?? '',
-      tarbilAnimalId: profile.tarbilAnimalId ?? '',
+      passportNumber: profile.passportNumber ?? '',
       rabiesTag: profile.rabiesTag ?? '',
       protocolNumber: profile.protocolNumber ?? '',
       criticalAlert: profile.criticalAlert ?? '',
@@ -121,7 +121,7 @@ export function PatientEditModal({ open, profile, onClose, onSaved }: PatientEdi
       });
       await patientApi.updateIdentification(profile.id, {
         microchipNumber: microchipNumber || undefined,
-        tarbilAnimalId: tarbilAnimalId || undefined,
+        passportNumber: passportNumber || undefined,
       });
       onSaved();
     } catch (err) {
@@ -138,7 +138,7 @@ export function PatientEditModal({ open, profile, onClose, onSaved }: PatientEdi
     JSON.stringify(initialRef.current) !==
       JSON.stringify({
         breedId, sex, birthDate, neutered, color, temperament, distinguishingMarks, aggressive,
-        bloodType, foodBrand, microchipNumber, tarbilAnimalId, rabiesTag, protocolNumber, criticalAlert, notes,
+        bloodType, foodBrand, microchipNumber, passportNumber, rabiesTag, protocolNumber, criticalAlert, notes,
       });
 
   return (
@@ -196,8 +196,8 @@ export function PatientEditModal({ open, profile, onClose, onSaved }: PatientEdi
           <FieldWrap label="Mikroçip No">
             <Input value={microchipNumber} onChange={(e) => setMicrochipNumber(e.target.value)} />
           </FieldWrap>
-          <FieldWrap label="TARBİL Kimlik No">
-            <Input value={tarbilAnimalId} onChange={(e) => setTarbilAnimalId(e.target.value)} />
+          <FieldWrap label="Pasaport No">
+            <Input value={passportNumber} onChange={(e) => setPassportNumber(e.target.value)} />
           </FieldWrap>
           <FieldWrap label="Kuduz Küpe No">
             <Input value={rabiesTag} onChange={(e) => setRabiesTag(e.target.value)} />

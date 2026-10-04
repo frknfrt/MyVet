@@ -60,6 +60,7 @@ class TarbilSubmissionAssembler {
             log.getId(), log.getSourceId(), log.getStatus(),
             patient.map(PatientTarbilProfile::name).orElse("—"),
             patient.map(PatientTarbilProfile::microchipNumber).orElse(null),
+            patient.map(PatientTarbilProfile::passportNumber).orElse(null),
             patient.map(PatientTarbilProfile::speciesId).orElse(null),
             patient.map(PatientTarbilProfile::speciesName).orElse(null),
             patient.map(PatientTarbilProfile::breedName).orElse(null),

@@ -45,10 +45,10 @@ export function SubmissionCard({ submission: s, onDone }: { submission: Submissi
       <div className="muted">
         {[s.speciesName, s.breedName, s.sex ? SEX[s.sex] : null].filter(Boolean).join(' · ')}
       </div>
-      {s.microchipNumber ? (
-        <div>Çip: {s.microchipNumber}</div>
-      ) : (
-        <div className="warning">Çip numarası yok. Hayvan TARBİL'de kayıtlı değilse önce kimliklendirme gerekir.</div>
+      {s.microchipNumber && <div>Çip: {s.microchipNumber}</div>}
+      {s.passportNumber && <div>Pasaport: {s.passportNumber}</div>}
+      {!s.microchipNumber && !s.passportNumber && (
+        <div className="warning">Çip ve pasaport numarası yok. Hayvan TARBİL'de kayıtlı değilse önce kimliklendirme gerekir.</div>
       )}
       <div>
         {s.vaccineName}
