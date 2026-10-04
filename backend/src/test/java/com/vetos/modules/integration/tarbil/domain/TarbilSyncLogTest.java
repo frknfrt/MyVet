@@ -22,25 +22,38 @@ class TarbilSyncLogTest {
     }
 
     @Test
-    void should_incrementAttemptCount_and_setNextRetryAt_when_markFailed() {
+    void should_incrementAttemptCount_and_setNextRetryAt_and_storeFailureReason_when_markFailed() {
         TarbilSyncLog log = aLog();
         Instant nextRetry = Instant.now().plusSeconds(120);
 
-        log.markFailed(nextRetry);
+        log.markFailed("Bakanlik API zaman asimi", nextRetry);
 
         assertThat(log.getStatus()).isEqualTo(TarbilSyncStatus.FAILED);
         assertThat(log.getAttemptCount()).isEqualTo(1);
         assertThat(log.getNextRetryAt()).isEqualTo(nextRetry);
+        assertThat(log.getFailureReason()).isEqualTo("Bakanlik API zaman asimi");
     }
 
     @Test
-    void should_clearNextRetryAt_when_markRetrying() {
+    void should_clearNextRetryAt_and_clearFailureReason_when_markRetrying() {
         TarbilSyncLog log = aLog();
-        log.markFailed(Instant.now().plusSeconds(120));
+        log.markFailed("gecici hata", Instant.now().plusSeconds(120));
 
         log.markRetrying();
 
         assertThat(log.getStatus()).isEqualTo(TarbilSyncStatus.PENDING);
         assertThat(log.getNextRetryAt()).isNull();
+        assertThat(log.getFailureReason()).isNull();
+    }
+
+    @Test
+    void should_clearFailureReason_when_markSynced() {
+        TarbilSyncLog log = aLog();
+        log.markFailed("gecici hata", Instant.now().plusSeconds(120));
+
+        log.markSynced();
+
+        assertThat(log.getStatus()).isEqualTo(TarbilSyncStatus.SYNCED);
+        assertThat(log.getFailureReason()).isNull();
     }
 }

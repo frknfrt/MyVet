@@ -3,7 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import { StaffRole, storeSession } from '../../auth/session';
 import { ApiError } from '../../api/client';
 import {
-  BillingStatus, Plan, PlatformInvoice, PlatformPaymentMethod, platformAdminApi, TenantAdminOverview, TenantSuspensionReason,
+  BillingStatus, Plan, PlatformInvoice, PlatformPaymentMethod, platformAdminApi, TenantAdminOverview,
+  TenantIntegrationHealth, TenantSuspensionReason,
 } from '../../api/platformAdminApi';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
@@ -32,6 +33,7 @@ export function TenantDetailPage() {
   const { tenantId } = useParams<{ tenantId: string }>();
   const [tenant, setTenant] = useState<TenantAdminOverview | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [integrationHealth, setIntegrationHealth] = useState<TenantIntegrationHealth | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -52,6 +54,7 @@ export function TenantDetailPage() {
     if (!tenantId) return;
     platformAdminApi.getTenant(tenantId).then(setTenant).catch((err) => setError(errorMessageOf(err)));
     platformAdminApi.listInvoices(tenantId).then(setInvoices).catch(() => undefined);
+    platformAdminApi.getTenantIntegrationHealth(tenantId).then(setIntegrationHealth).catch(() => undefined);
   }
 
   useEffect(load, [tenantId]);
@@ -266,6 +269,38 @@ export function TenantDetailPage() {
                   Plan / Durum Değiştir
                 </Button>
               </div>
+            </div>
+
+            <div className={styles.card}>
+              <div className={styles.cardTitle}>Entegrasyon Durumu</div>
+              {integrationHealth === null ? (
+                <div className={styles.empty}>Yükleniyor...</div>
+              ) : (
+                <>
+                  <div className={styles.infoRow}>
+                    <span className={styles.infoLabel}>e-Fatura (Başarısız)</span>
+                    <Badge tone={integrationHealth.failedEInvoiceCount > 0 ? 'danger' : 'success'}>
+                      {integrationHealth.failedEInvoiceCount}
+                    </Badge>
+                  </div>
+                  <div className={styles.infoRow}>
+                    <span className={styles.infoLabel}>TARBIL (Başarısız)</span>
+                    <Badge tone={integrationHealth.failedTarbilSyncCount > 0 ? 'danger' : 'success'}>
+                      {integrationHealth.failedTarbilSyncCount}
+                    </Badge>
+                  </div>
+                  {(integrationHealth.failedEInvoiceCount > 0 || integrationHealth.failedTarbilSyncCount > 0) && (
+                    <p className={styles.note} style={{ marginTop: 8, marginBottom: 0 }}>
+                      Tekrar deneme ve ayrıntılı hata mesajları için Sistem Sağlığı sayfasına bakın.
+                    </p>
+                  )}
+                  <div className={styles.modalActions}>
+                    <Link to="/platform-admin/system-health">
+                      <Button variant="secondary">Sistem Sağlığına Git</Button>
+                    </Link>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

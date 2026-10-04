@@ -11,4 +11,5 @@ public interface TarbilSyncLogRepository {
     List<TarbilSyncLog> findByTenantId(UUID tenantId);
     List<TarbilSyncLog> findByPatientId(UUID patientId);
     List<TarbilSyncLog> claimDueForRetry(Instant now, int limit);
+    List<TarbilSyncLog> findRecentByStatus(TarbilSyncStatus status, int limit);
 }

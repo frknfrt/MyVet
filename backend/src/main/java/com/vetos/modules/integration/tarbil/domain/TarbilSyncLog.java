@@ -44,6 +44,12 @@ public class TarbilSyncLog {
     @Column(name = "next_retry_at")
     private Instant nextRetryAt;
 
+    // Basarisizlik sebebi (TarbilSyncOutcome.message()) -- personel/platform
+    // admin neden basarisiz oldugunu arayuzde gorsun diye ayrica saklanir
+    // (bkz. V67 migration, NotificationLog/EInvoiceSubmission ile ayni desen).
+    @Column(name = "failure_reason")
+    private String failureReason;
+
     public static TarbilSyncLog queue(UUID tenantId, UUID patientId, TarbilSyncType syncType, String payload) {
         TarbilSyncLog log = new TarbilSyncLog();
         log.tenantId = tenantId;
@@ -58,18 +64,21 @@ public class TarbilSyncLog {
     public void markSynced() {
         this.status = TarbilSyncStatus.SYNCED;
         this.attemptedAt = Instant.now();
+        this.failureReason = null;
     }
 
-    public void markFailed(Instant nextRetryAt) {
+    public void markFailed(String failureReason, Instant nextRetryAt) {
         this.status = TarbilSyncStatus.FAILED;
         this.attemptedAt = Instant.now();
         this.attemptCount++;
         this.nextRetryAt = nextRetryAt;
+        this.failureReason = failureReason;
     }
 
     public void markRetrying() {
         this.status = TarbilSyncStatus.PENDING;
         this.attemptedAt = Instant.now();
         this.nextRetryAt = null;
+        this.failureReason = null;
     }
 }

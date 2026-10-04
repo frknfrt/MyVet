@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { ApiError } from '../../api/client';
 import {
-  EInvoiceDocumentType, FailedEInvoice, FailedNotification, NotificationChannel, NotificationType, platformAdminApi,
+  EInvoiceDocumentType, FailedEInvoice, FailedNotification, FailedTarbilSync, NotificationChannel, NotificationType,
+  platformAdminApi, TarbilSyncType,
 } from '../../api/platformAdminApi';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
@@ -33,9 +34,16 @@ const DOCUMENT_TYPE_LABELS: Record<EInvoiceDocumentType, string> = {
   E_ARSIV: 'e-Arşiv',
 };
 
+const TARBIL_SYNC_TYPE_LABELS: Record<TarbilSyncType, string> = {
+  VACCINATION: 'Aşı Kaydı',
+  IDENTIFICATION: 'Kimliklendirme',
+  TREATMENT: 'Tedavi Kaydı',
+};
+
 export function SystemHealthPage() {
   const [notifications, setNotifications] = useState<FailedNotification[]>([]);
   const [eInvoices, setEInvoices] = useState<FailedEInvoice[]>([]);
+  const [tarbilSyncs, setTarbilSyncs] = useState<FailedTarbilSync[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryingIds, setRetryingIds] = useState<Set<string>>(new Set());
@@ -43,10 +51,13 @@ export function SystemHealthPage() {
   function load() {
     setLoading(true);
     setError(null);
-    Promise.all([platformAdminApi.listFailedNotifications(), platformAdminApi.listFailedEInvoices()])
-      .then(([n, e]) => {
+    Promise.all([
+      platformAdminApi.listFailedNotifications(), platformAdminApi.listFailedEInvoices(), platformAdminApi.listFailedTarbilSyncs(),
+    ])
+      .then(([n, e, t]) => {
         setNotifications(n);
         setEInvoices(e);
+        setTarbilSyncs(t);
       })
       .catch((err) => setError(errorMessageOf(err)))
       .finally(() => setLoading(false));
@@ -77,14 +88,18 @@ export function SystemHealthPage() {
     withRetrying(id, () => platformAdminApi.retryFailedEInvoice(id));
   }
 
+  function handleRetryTarbilSync(id: string) {
+    withRetrying(id, () => platformAdminApi.retryFailedTarbilSync(id));
+  }
+
   return (
     <div>
       <div className={styles.title}>Sistem Sağlığı</div>
       <p className={styles.note}>
         Tüm kiracılardaki, otomatik yeniden deneme hakları tükenmiş veya henüz yeniden denenmeyi bekleyen başarısız
-        SMS/WhatsApp ve e-Fatura gönderimleri. "Son Deneme Tarihi" sütunu, sorunun ne zamandır sürdüğünü anlamak için
-        önemlidir. "Tekrar Dene" sorunu (örn. yanlış numara) düzelttikten sonra kullanılmalı — aksi halde aynı hata
-        tekrar oluşur.
+        SMS/WhatsApp, e-Fatura ve TARBIL senkronizasyon gönderimleri. "Son Deneme Tarihi" sütunu, sorunun ne zamandır
+        sürdüğünü anlamak için önemlidir. "Tekrar Dene" sorunu (örn. yanlış numara) düzelttikten sonra kullanılmalı —
+        aksi halde aynı hata tekrar oluşur.
       </p>
 
       <div className={styles.actionsRow}>
@@ -180,6 +195,52 @@ export function SystemHealthPage() {
                   disabled={retryingIds.has(inv.submissionId)}
                 >
                   {retryingIds.has(inv.submissionId) ? 'Deneniyor...' : 'Tekrar Dene'}
+                </Button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className={styles.modalTitle} style={{ marginTop: 24 }}>
+        Başarısız TARBIL Senkronizasyonları {tarbilSyncs.length > 0 && `(${tarbilSyncs.length})`}
+      </div>
+      <div className={styles.tableCard}>
+        <div className={[styles.tableHead, styles.healthInvoiceRow].join(' ')}>
+          <div>Klinik</div>
+          <div>Hasta</div>
+          <div>Kayıt Türü</div>
+          <div>Hata</div>
+          <div>Deneme</div>
+          <div>Son Deneme</div>
+          <div></div>
+        </div>
+        {loading ? (
+          <div className={styles.empty}>Yükleniyor...</div>
+        ) : tarbilSyncs.length === 0 ? (
+          <div className={styles.empty}>Başarısız TARBIL senkronu yok 🎉</div>
+        ) : (
+          tarbilSyncs.map((sync) => (
+            <div key={sync.syncLogId} className={[styles.row, styles.healthInvoiceRow].join(' ')}>
+              <div>{sync.tenantName}</div>
+              <div className={styles.muted}>{sync.patientName}</div>
+              <div className={styles.muted}>{TARBIL_SYNC_TYPE_LABELS[sync.syncType]}</div>
+              <div className={styles.muted} title={sync.failureReason ?? ''}>
+                {sync.failureReason
+                  ? (sync.failureReason.length > 60 ? `${sync.failureReason.slice(0, 60)}…` : sync.failureReason)
+                  : '—'}
+              </div>
+              <div>
+                <Badge tone="danger">{sync.attemptCount}</Badge>
+              </div>
+              <div className={styles.muted}>{formatDateTime(sync.attemptedAt)}</div>
+              <div>
+                <Button
+                  variant="secondary"
+                  onClick={() => handleRetryTarbilSync(sync.syncLogId)}
+                  disabled={retryingIds.has(sync.syncLogId)}
+                >
+                  {retryingIds.has(sync.syncLogId) ? 'Deneniyor...' : 'Tekrar Dene'}
                 </Button>
               </div>
             </div>

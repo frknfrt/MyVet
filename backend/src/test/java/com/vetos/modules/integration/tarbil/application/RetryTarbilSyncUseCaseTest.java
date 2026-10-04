@@ -53,4 +53,30 @@ class RetryTarbilSyncUseCaseTest {
         verify(tarbilSyncLogRepository).save(log);
         verify(tarbilSyncExecutor).attemptSync(logId);
     }
+
+    @Test
+    void should_throwNotFound_when_executeAsAdmin_and_logMissing() {
+        RetryTarbilSyncUseCase useCase = new RetryTarbilSyncUseCase(tarbilSyncLogRepository, tarbilSyncExecutor);
+        UUID logId = UUID.randomUUID();
+        when(tarbilSyncLogRepository.findById(logId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> useCase.executeAsAdmin(logId))
+            .isInstanceOf(TarbilSyncLogNotFoundException.class);
+
+        verify(tarbilSyncLogRepository, never()).save(any());
+    }
+
+    @Test
+    void should_retry_regardlessOfTenant_when_executeAsAdmin() {
+        RetryTarbilSyncUseCase useCase = new RetryTarbilSyncUseCase(tarbilSyncLogRepository, tarbilSyncExecutor);
+        UUID anyTenantId = UUID.randomUUID();
+        UUID logId = UUID.randomUUID();
+        TarbilSyncLog log = TarbilSyncLog.queue(anyTenantId, UUID.randomUUID(), TarbilSyncType.VACCINATION, "{}");
+        when(tarbilSyncLogRepository.findById(logId)).thenReturn(Optional.of(log));
+
+        useCase.executeAsAdmin(logId);
+
+        verify(tarbilSyncLogRepository).save(log);
+        verify(tarbilSyncExecutor).attemptSync(logId);
+    }
 }

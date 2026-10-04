@@ -4,10 +4,12 @@ import com.vetos.modules.platformadmin.api.dto.CreatePlatformTenantRequest;
 import com.vetos.modules.platformadmin.api.dto.ImpersonationSessionResponse;
 import com.vetos.modules.platformadmin.api.dto.TenantAdminOverviewResponse;
 import com.vetos.modules.platformadmin.api.dto.SuspendTenantRequest;
+import com.vetos.modules.platformadmin.api.dto.TenantIntegrationHealthResponse;
 import com.vetos.modules.platformadmin.api.dto.UpdateTenantSubscriptionRequest;
 import com.vetos.modules.platformadmin.application.ActivateTenantUseCase;
 import com.vetos.modules.platformadmin.application.CreatePlatformTenantUseCase;
 import com.vetos.modules.platformadmin.application.GetTenantAdminOverviewUseCase;
+import com.vetos.modules.platformadmin.application.GetTenantIntegrationHealthUseCase;
 import com.vetos.modules.platformadmin.application.ListTenantsForAdminUseCase;
 import com.vetos.modules.platformadmin.application.StartImpersonationUseCase;
 import com.vetos.modules.platformadmin.application.SuspendTenantUseCase;
@@ -38,6 +40,7 @@ public class PlatformAdminTenantsController {
     private final SuspendTenantUseCase suspendTenantUseCase;
     private final ActivateTenantUseCase activateTenantUseCase;
     private final StartImpersonationUseCase startImpersonationUseCase;
+    private final GetTenantIntegrationHealthUseCase getTenantIntegrationHealthUseCase;
 
     @GetMapping
     public List<TenantAdminOverviewResponse> list() {
@@ -97,5 +100,15 @@ public class PlatformAdminTenantsController {
         return ImpersonationSessionResponse.from(
             startImpersonationUseCase.execute(id, principal.platformAdminId(), principal.email())
         );
+    }
+
+    /**
+     * Tenant Detayi sayfasi -- "Entegrasyon Durumu" ozeti (bkz.
+     * GetTenantIntegrationHealthUseCase). Global Sistem Sagligi panelindeki
+     * detayli listelerin aksine sadece bu kiracinin basarisiz sayilarini doner.
+     */
+    @GetMapping("/{id}/integration-health")
+    public TenantIntegrationHealthResponse integrationHealth(@PathVariable UUID id) {
+        return TenantIntegrationHealthResponse.from(getTenantIntegrationHealthUseCase.execute(id));
     }
 }

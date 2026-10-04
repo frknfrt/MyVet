@@ -2,6 +2,7 @@ package com.vetos.modules.platformadmin.api;
 
 import com.vetos.modules.platformadmin.api.dto.FailedEInvoiceResponse;
 import com.vetos.modules.platformadmin.api.dto.FailedNotificationResponse;
+import com.vetos.modules.platformadmin.api.dto.FailedTarbilSyncResponse;
 import com.vetos.modules.platformadmin.application.ListPlatformSystemHealthUseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -12,8 +13,9 @@ import java.util.UUID;
 
 /**
  * Platform admin "Sistem Sagligi" paneli -- tum kiracilardaki basarisiz
- * bildirim ve e-Fatura gonderimlerini goruntuler, manuel tekrar deneme
- * imkani sunar (bkz. SS101 kontrol listesi: operasyonel gorunurluk).
+ * bildirim, e-Fatura ve TARBIL senkron gonderimlerini goruntuler, manuel
+ * tekrar deneme imkani sunar (bkz. SS101 kontrol listesi: operasyonel
+ * gorunurluk).
  */
 @RestController
 @RequestMapping("/api/v1/platform-admin/system-health")
@@ -37,6 +39,13 @@ public class PlatformSystemHealthController {
             .toList();
     }
 
+    @GetMapping("/tarbil")
+    public List<FailedTarbilSyncResponse> failedTarbilSyncs() {
+        return listPlatformSystemHealthUseCase.failedTarbilSyncs().stream()
+            .map(FailedTarbilSyncResponse::from)
+            .toList();
+    }
+
     @PostMapping("/notifications/{id}/retry")
     public void retryNotification(@PathVariable UUID id) {
         listPlatformSystemHealthUseCase.retryNotification(id);
@@ -45,5 +54,10 @@ public class PlatformSystemHealthController {
     @PostMapping("/efatura/{id}/retry")
     public void retryEInvoice(@PathVariable UUID id) {
         listPlatformSystemHealthUseCase.retryEInvoice(id);
+    }
+
+    @PostMapping("/tarbil/{id}/retry")
+    public void retryTarbilSync(@PathVariable UUID id) {
+        listPlatformSystemHealthUseCase.retryTarbilSync(id);
     }
 }

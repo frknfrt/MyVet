@@ -29,6 +29,22 @@ public class RetryTarbilSyncUseCase {
         TarbilSyncLog log = tarbilSyncLogRepository.findById(logId)
             .filter(l -> l.getTenantId().equals(tenantId))
             .orElseThrow(() -> new TarbilSyncLogNotFoundException(logId));
+        retry(log, logId);
+    }
+
+    /**
+     * Platform admin Sistem Sagligi paneli -- kiraci sinirlamasi olmadan
+     * (bkz. TarbilAdminPort). Admin zaten tum kiracilar uzerinde yetkili
+     * oldugu icin burada sahiplik kontrolu yapilmaz.
+     */
+    @Transactional
+    public void executeAsAdmin(UUID logId) {
+        TarbilSyncLog log = tarbilSyncLogRepository.findById(logId)
+            .orElseThrow(() -> new TarbilSyncLogNotFoundException(logId));
+        retry(log, logId);
+    }
+
+    private void retry(TarbilSyncLog log, UUID logId) {
         log.markRetrying();
         tarbilSyncLogRepository.save(log);
 

@@ -126,6 +126,25 @@ export interface FailedEInvoice {
   attemptedAt: string;
 }
 
+export type TarbilSyncType = 'VACCINATION' | 'IDENTIFICATION' | 'TREATMENT';
+
+export interface FailedTarbilSync {
+  syncLogId: string;
+  tenantId: string;
+  tenantName: string;
+  patientId: string;
+  patientName: string;
+  syncType: TarbilSyncType;
+  failureReason: string | null;
+  attemptCount: number;
+  attemptedAt: string;
+}
+
+export interface TenantIntegrationHealth {
+  failedEInvoiceCount: number;
+  failedTarbilSyncCount: number;
+}
+
 export interface PlanRevenueBreakdown {
   planCode: string;
   planName: string;
@@ -255,6 +274,8 @@ export const platformAdminApi = {
   suspendTenant: (id: string, payload: { reason: TenantSuspensionReason; note: string | null }) =>
     platformAdminClient.post<void>(`/api/v1/platform-admin/tenants/${id}/suspend`, payload),
   activateTenant: (id: string) => platformAdminClient.post<void>(`/api/v1/platform-admin/tenants/${id}/activate`),
+  getTenantIntegrationHealth: (id: string) =>
+    platformAdminClient.get<TenantIntegrationHealth>(`/api/v1/platform-admin/tenants/${id}/integration-health`),
   listPlans: () => platformAdminClient.get<Plan[]>('/api/v1/platform-admin/plans'),
   createPlan: (payload: { code: string; name: string; monthlyPrice: number }) =>
     platformAdminClient.post<void>('/api/v1/platform-admin/plans', payload),
@@ -271,10 +292,14 @@ export const platformAdminApi = {
     platformAdminClient.get<FailedNotification[]>('/api/v1/platform-admin/system-health/notifications'),
   listFailedEInvoices: () =>
     platformAdminClient.get<FailedEInvoice[]>('/api/v1/platform-admin/system-health/efatura'),
+  listFailedTarbilSyncs: () =>
+    platformAdminClient.get<FailedTarbilSync[]>('/api/v1/platform-admin/system-health/tarbil'),
   retryFailedNotification: (notificationLogId: string) =>
     platformAdminClient.post<void>(`/api/v1/platform-admin/system-health/notifications/${notificationLogId}/retry`),
   retryFailedEInvoice: (submissionId: string) =>
     platformAdminClient.post<void>(`/api/v1/platform-admin/system-health/efatura/${submissionId}/retry`),
+  retryFailedTarbilSync: (syncLogId: string) =>
+    platformAdminClient.post<void>(`/api/v1/platform-admin/system-health/tarbil/${syncLogId}/retry`),
   getOverview: () => platformAdminClient.get<PlatformOverview>('/api/v1/platform-admin/overview'),
   impersonateTenant: (tenantId: string) =>
     platformAdminClient.post<ImpersonationSession>(`/api/v1/platform-admin/tenants/${tenantId}/impersonate`),

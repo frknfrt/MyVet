@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -25,6 +26,14 @@ class EInvoiceHealthAdapter implements EInvoiceHealthPort {
         return eInvoiceSubmissionRepository.findRecentByStatus(EInvoiceSubmissionStatus.FAILED, limit).stream()
             .map(this::toView)
             .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countFailedForTenant(UUID tenantId) {
+        return eInvoiceSubmissionRepository.findByTenantId(tenantId).stream()
+            .filter(s -> s.getStatus() == EInvoiceSubmissionStatus.FAILED)
+            .count();
     }
 
     private FailedEInvoiceView toView(EInvoiceSubmission submission) {

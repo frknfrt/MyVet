@@ -26,7 +26,7 @@ class RetryDueTarbilSyncsUseCaseTest {
 
     private TarbilSyncLog aFailedLog() {
         TarbilSyncLog log = TarbilSyncLog.queue(UUID.randomUUID(), UUID.randomUUID(), TarbilSyncType.VACCINATION, "{}");
-        log.markFailed(Instant.now());
+        log.markFailed("hata", Instant.now());
         return log;
     }
 
