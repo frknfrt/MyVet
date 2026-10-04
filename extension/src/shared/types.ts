@@ -21,9 +21,13 @@ export interface Submission {
   vaccineKey: string;
   vaccineMapping: Record<string, unknown> | null;
   speciesMapping: Record<string, unknown> | null;
+  /** Backend P0'dan itibaren gelir; eski yanitlarda yoksa VACCINATION sayilir. */
+  documentType?: DocumentType;
 }
 
 export interface ExtensionProfile {
   clinicName: string;
   staffName: string;
 }
+
+export type DocumentType = 'VACCINATION' | 'PRESCRIPTION' | 'STOCK_RECEIPT';

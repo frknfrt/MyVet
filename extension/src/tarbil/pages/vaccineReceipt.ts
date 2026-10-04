@@ -1,3 +1,4 @@
+import { hasFreshSuccess, isConfirmClick, markStaleSuccess } from '../core/success';
 import type { FlowState, FlowStore } from '../../shared/flowStore';
 import type { Submission } from '../../shared/types';
 import { normalizeChip, readReceiptChips } from '../steps/animalRows';
@@ -153,10 +154,7 @@ export function createReceiptFlow(d: ReceiptDeps) {
     if (!st) return;
     if (st.step === 'awaitingConfirm') {
       const clickedRecently = st.insertClickedAt !== undefined && d.now() - st.insertClickedAt <= SUCCESS_WINDOW_MS;
-      // TARBIL bildirim panellerini her yuklemede BOS olarak cizer (2026-10-04 canli dogrulama); yalniz metinli panel sayilir.
-      const freshSuccess = Array.from(d.doc.querySelectorAll(bySuffix(RECEIPT.successPanel))).some(
-        (el) => !staleSuccess.has(el) && (el.textContent ?? '').trim().length > 0,
-      );
+      const freshSuccess = hasFreshSuccess(d.doc, RECEIPT.successPanel, staleSuccess);
       if (clickedRecently && freshSuccess) await confirm(s);
       return;
     }
@@ -188,9 +186,8 @@ export function createReceiptFlow(d: ReceiptDeps) {
   d.doc.addEventListener(
     'click',
     (e) => {
-      const target = e.target as Element | null;
-      if (!target?.closest || !RECEIPT.insertButtons.some((suffix) => target.closest(bySuffix(suffix)))) return;
-      d.doc.querySelectorAll(bySuffix(RECEIPT.successPanel)).forEach((el) => staleSuccess.add(el));
+      if (!isConfirmClick(e.target, RECEIPT.insertButtons)) return;
+      markStaleSuccess(d.doc, RECEIPT.successPanel, staleSuccess);
       void (async () => {
         const st = await current();
         if (st?.step === 'awaitingConfirm') await d.flow.update(st.submissionId, { insertClickedAt: d.now() });
