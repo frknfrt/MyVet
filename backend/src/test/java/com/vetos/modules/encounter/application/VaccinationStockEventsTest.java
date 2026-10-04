@@ -49,6 +49,7 @@ class VaccinationStockEventsTest {
         ArgumentCaptor<VaccinationRecordedEvent> event = ArgumentCaptor.forClass(VaccinationRecordedEvent.class);
         verify(publisher).publish(event.capture());
         assertThat(event.getValue().inventoryItemId()).isEqualTo(itemId);
+        assertThat(event.getValue().lotNumber()).isEqualTo("665932");
     }
 
     @Test
@@ -87,5 +88,31 @@ class VaccinationStockEventsTest {
         ArgumentCaptor<VaccinationCancelledEvent> event = ArgumentCaptor.forClass(VaccinationCancelledEvent.class);
         verify(publisher).publish(event.capture());
         assertThat(event.getValue().inventoryItemId()).isEqualTo(itemId);
+    }
+
+    @Test
+    void should_notAnnounceAgain_when_alreadyAdministered() {
+        UUID id = UUID.randomUUID();
+        VaccinationRecord record = VaccinationRecord.record(tenantId, UUID.randomUUID(), null, "Biocan R", "665932",
+            LocalDate.of(2026, 10, 4), null, UUID.randomUUID(), VaccinationStatus.ADMINISTERED, null, itemId);
+        when(repository.findById(id)).thenReturn(Optional.of(record));
+
+        new MarkVaccinationAdministeredUseCase(repository, publisher).execute(id, null);
+
+        verify(publisher, never()).publish(any());
+    }
+
+    @Test
+    void should_notAdminister_when_cancelled() {
+        UUID id = UUID.randomUUID();
+        VaccinationRecord record = VaccinationRecord.record(tenantId, UUID.randomUUID(), null, "Biocan R", "665932",
+            LocalDate.of(2026, 10, 4), null, UUID.randomUUID(), VaccinationStatus.SCHEDULED, null, itemId);
+        record.cancel();
+        when(repository.findById(id)).thenReturn(Optional.of(record));
+
+        new MarkVaccinationAdministeredUseCase(repository, publisher).execute(id, null);
+
+        assertThat(record.getStatus()).isEqualTo(VaccinationStatus.CANCELLED);
+        verify(publisher, never()).publish(any());
     }
 }

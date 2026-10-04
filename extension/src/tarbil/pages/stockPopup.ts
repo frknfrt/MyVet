@@ -60,6 +60,9 @@ export async function runStockPopupFlow(d: StockPopupDeps): Promise<void> {
     case 'expired':
       await handOver(`Seri ${serial} son kullanma tarihi geçmiş.`);
       return;
+    case 'unknownExpiry':
+      await handOver(`Seri ${serial} için son kullanma tarihi okunamadı.`);
+      return;
     case 'nameMismatch':
       await handOver(`Seri ${serial} TARBİL'de "${pick.row.productName}" olarak görünüyor; Vetly'deki aşıyla aynı değil.`);
       return;

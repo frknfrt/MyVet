@@ -14,6 +14,7 @@ export type StockPick =
   | { kind: 'none' }
   | { kind: 'many' }
   | { kind: 'expired'; row: StockPopupRow }
+  | { kind: 'unknownExpiry'; row: StockPopupRow }
   | { kind: 'nameMismatch'; row: StockPopupRow };
 
 const clean = (s: string | null | undefined) => (s ?? '').replace(/\s+/g, ' ').trim();
@@ -57,7 +58,10 @@ export function readStockPopupRows(doc: Document): StockPopupRow[] {
     .filter((r) => r.serial && r.linkId);
 }
 
-/** Seri birebir; Vetly'de TARBIL urun adi varsa o da birebir (normalize). Tek eslesme ve SKT >= bugun ise secilir. */
+/**
+ * Seri birebir; Vetly'de TARBIL urun adi varsa o da birebir (normalize). Tek eslesme ve SKT okunabilir ve >= bugun ise
+ * secilir; SKT okunamazsa secilmez (belirsizlikte hekim karar verir).
+ */
 export function pickStockRow(rows: StockPopupRow[], want: { serial: string; productName: string | null; today: string }): StockPick {
   const serial = normalizeSerial(want.serial);
   const matches = rows.filter((r) => r.serial === serial);
@@ -65,7 +69,8 @@ export function pickStockRow(rows: StockPopupRow[], want: { serial: string; prod
   if (matches.length > 1) return { kind: 'many' };
   const row = matches[0];
   if (want.productName && normalizeName(row.productName) !== normalizeName(want.productName)) return { kind: 'nameMismatch', row };
-  if (row.expiryDate && row.expiryDate < want.today) return { kind: 'expired', row };
+  if (!row.expiryDate) return { kind: 'unknownExpiry', row };
+  if (row.expiryDate < want.today) return { kind: 'expired', row };
   return { kind: 'one', row };
 }
 

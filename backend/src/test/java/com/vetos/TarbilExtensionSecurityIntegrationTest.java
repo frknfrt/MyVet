@@ -333,4 +333,18 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
         Integer afterCancel = jdbcTemplate.queryForObject("SELECT quantity_on_hand FROM inventory_items WHERE id = ?", Integer.class, item);
         assertThat(afterCancel).isEqualTo(18);
     }
+
+    @Test
+    void databaseRejectsASecondVaccinationOutMovement() {
+        UUID item = asTenant(tenantA, () -> inventoryItemRepository.save(
+            InventoryItem.create(tenantA, inRootSession(() -> branchRepository.save(Branch.create(tenantA, "Kilit Şubesi")).getId()),
+                "Biocan R", "Aşı", null, 5, 0, null, "L9", null)).getId());
+        UUID vaccination = UUID.randomUUID();
+        String sql = "INSERT INTO stock_movements (id, tenant_id, inventory_item_id, movement_type, quantity, reference_type, reference_id, created_at)"
+            + " VALUES (?, ?, ?, 'OUT', 1, 'VACCINATION', ?, now())";
+        jdbcTemplate.update(sql, UUID.randomUUID(), tenantA, item, vaccination);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> jdbcTemplate.update(sql, UUID.randomUUID(), tenantA, item, vaccination))
+            .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+    }
 }

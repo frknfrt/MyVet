@@ -2,9 +2,12 @@ import { useEffect, useState } from 'react';
 import { inventoryApi, InventoryItem } from '../../api/inventoryApi';
 import { Select } from '../../components/ui/Field';
 
-/** "Aşı", "aşı", "Asi" ... (P1a TARBİL'den gelen kalemler "Aşı" kategorisiyle açılır). */
+/**
+ * Kategorisi tam olarak "Aşı" (büyük/küçük harf ve ş/ı farkı gözetmeden) olan kalemler -- sunucu da yalnız bunları
+ * stoktan düşer (ApplyVaccinationStockUseCase). P1a TARBİL'den gelen kalemler "Aşı" kategorisiyle açılır.
+ */
 const isVaccine = (i: InventoryItem) =>
-  (i.category ?? '').toLocaleLowerCase('tr-TR').replace(/ş/g, 's').replace(/ı/g, 'i').includes('asi');
+  (i.category ?? '').trim().toLocaleLowerCase('tr-TR').replace(/ş/g, 's').replace(/ı/g, 'i') === 'asi';
 
 function trDate(iso: string | null): string {
   const m = iso ? /^(\d{4})-(\d{2})-(\d{2})/.exec(iso) : null;

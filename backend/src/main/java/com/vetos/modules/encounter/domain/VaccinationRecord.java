@@ -85,9 +85,14 @@ public class VaccinationRecord {
         return record;
     }
 
-    public void markAdministered(LocalDate administeredDate) {
+    /** Yalniz planlanmis (SCHEDULED) asi uygulandi olur; zaten uygulanmis ya da iptal edilmis kayitta hicbir sey yapmaz. */
+    public boolean markAdministered(LocalDate administeredDate) {
+        if (this.status != VaccinationStatus.SCHEDULED) {
+            return false;
+        }
         this.status = VaccinationStatus.ADMINISTERED;
         this.administeredDate = administeredDate;
+        return true;
     }
 
     public void cancel() {

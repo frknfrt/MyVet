@@ -26,7 +26,7 @@ export interface RecordVaccinationPayload {
   nextDueDate?: string;
   status: VaccinationStatus;
   notes?: string;
-  /** Stoktan secilen asi (spec 2026-10-04 P2); verilirse vaccineName/lotNumber kalemden doldurulur. */
+  /** Stoktan secilen asi (spec 2026-10-04 P2): form vaccineName/lotNumber'i kalemden doldurur; sunucu yalniz kalem asi ve serisi ayniysa stoktan duser. */
   inventoryItemId?: string;
 }
 

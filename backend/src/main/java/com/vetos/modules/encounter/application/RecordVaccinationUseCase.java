@@ -33,7 +33,8 @@ public class RecordVaccinationUseCase {
         // markAdministered() ile tamamlandiginda gonderilir.
         if (record.getStatus() == VaccinationStatus.ADMINISTERED) {
             eventPublisher.publish(new VaccinationRecordedEvent(
-                record.getId(), record.getPatientId(), record.getVaccineName(), record.getAdministeredDate(), record.getInventoryItemId()
+                record.getId(), record.getPatientId(), record.getVaccineName(), record.getAdministeredDate(), record.getInventoryItemId(),
+                record.getLotNumber()
             ));
         }
         return record.getId();

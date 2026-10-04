@@ -58,7 +58,8 @@ async function setup(sub: Partial<Submission> = {}, step: FlowStep | null = 'arm
     return req.type === 'GET_ACTIVE' ? { ok: true, data: submission } : { ok: true, data: submission };
   }) as Send;
   const shown: CardView[] = [];
-  const card = { show: (v: CardView) => shown.push(v), hide: () => undefined, onAction: () => undefined };
+  let action: (id: string) => void = () => undefined;
+  const card = { show: (v: CardView) => shown.push(v), hide: () => undefined, onAction: (h: (id: string) => void) => { action = h; } };
   const timers: (() => void)[] = [];
   let observer: () => void = () => undefined;
   const receipt = createReceiptFlow({
@@ -67,7 +68,7 @@ async function setup(sub: Partial<Submission> = {}, step: FlowStep | null = 'arm
     observe: (cb) => { observer = cb; return () => undefined; },
   });
   const text = () => shown.at(-1)?.lines.map((l) => l.text).join(' ') ?? '';
-  return { receipt, flow, calls, sent, shown, timers, text, mutate: () => observer(), advance: (ms: number) => { t += ms; } };
+  return { receipt, flow, calls, sent, shown, timers, text, mutate: () => observer(), advance: (ms: number) => { t += ms; }, act: (id: string) => action(id) };
 }
 
 describe('receiptFlow', () => {
@@ -411,5 +412,19 @@ describe('receiptFlow', () => {
     await vi.waitFor(() =>
       expect(sent).toContainEqual({ type: 'MARK_SUBMITTED', id: 's1', method: 'AUTO', tarbilReference: null }),
     );
+  });
+
+  it('restarts the stock window hand-off when the vet presses the reopen button late', async () => {
+    page();
+    const { receipt, flow, calls, act, advance } = await setup({ lotNumber: '665932' }, 'choosingProduct');
+    await receipt.start();
+    const before = (await flow.get())!.updatedAt;
+
+    advance(5 * 60_000);
+    act('stockWindow');
+
+    await vi.waitFor(async () => expect((await flow.get())!.updatedAt).toBeGreaterThan(before));
+    expect((await flow.get())?.step).toBe('choosingProduct');
+    expect(calls).toContainEqual({ op: 'clickAllowed', args: { page: 'vaccineReceipt', button: 'addProduct' } });
   });
 });

@@ -94,4 +94,14 @@ describe('runStockPopupFlow', () => {
 
     expect((await flow.get())?.message).toContain('Nobivac');
   });
+
+  it('hands over when the expiry date cannot be read', async () => {
+    popup([['Biocan R', '665932', '']]);
+    const { deps, flow, calls } = await setup();
+
+    await runStockPopupFlow(deps);
+
+    expect(calls.map((c) => c.op)).toEqual(['ready', 'searchSerial']);
+    expect((await flow.get())?.message).toContain('okunamadı');
+  });
 });

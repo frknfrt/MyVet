@@ -24,11 +24,15 @@ public class MarkVaccinationAdministeredUseCase {
         VaccinationRecord record = vaccinationRecordRepository.findById(vaccinationRecordId)
             .orElseThrow(() -> new VaccinationRecordNotFoundException(vaccinationRecordId));
 
-        record.markAdministered(administeredDate != null ? administeredDate : record.getAdministeredDate());
+        // Ikinci "uygulandi" (cift tiklama, yeniden deneme) ya da iptal edilmis kayit: olay yok -> stok ikinci kez dusmez.
+        if (!record.markAdministered(administeredDate != null ? administeredDate : record.getAdministeredDate())) {
+            return;
+        }
         vaccinationRecordRepository.save(record);
 
         eventPublisher.publish(new VaccinationRecordedEvent(
-            record.getId(), record.getPatientId(), record.getVaccineName(), record.getAdministeredDate(), record.getInventoryItemId()
+            record.getId(), record.getPatientId(), record.getVaccineName(), record.getAdministeredDate(), record.getInventoryItemId(),
+                record.getLotNumber()
         ));
     }
 }

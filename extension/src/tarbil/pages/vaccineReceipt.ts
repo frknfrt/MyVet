@@ -284,6 +284,8 @@ export function createReceiptFlow(d: ReceiptDeps) {
           return;
         case 'stockWindow':
           try {
+            // Adim yenilenir: stok penceresi akisi yalniz son PRODUCT_HANDOFF_MS icindeki istegi devralir.
+            await d.flow.update(s.id, { step: 'choosingProduct', message: undefined });
             await d.bridge.call('clickAllowed', { page: 'vaccineReceipt', button: 'addProduct' });
           } catch (e) {
             await failed(e);

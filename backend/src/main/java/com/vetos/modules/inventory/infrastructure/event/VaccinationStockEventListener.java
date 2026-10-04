@@ -16,7 +16,7 @@ class VaccinationStockEventListener {
 
     @EventListener
     void onVaccinationRecorded(VaccinationRecordedEvent event) {
-        applyVaccinationStockUseCase.administered(event.vaccinationRecordId(), event.inventoryItemId());
+        applyVaccinationStockUseCase.administered(event.vaccinationRecordId(), event.inventoryItemId(), event.lotNumber());
     }
 
     @EventListener

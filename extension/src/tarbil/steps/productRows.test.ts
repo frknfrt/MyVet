@@ -50,6 +50,11 @@ describe('stock popup rows', () => {
     expect(pickStockRow(readStockPopupRows(document), { serial: '665932', productName: 'Biocan R', today: '2026-10-04' }).kind).toBe('expired');
   });
 
+  it('does not pick a row whose expiry date cannot be read', () => {
+    popup([['Biocan R', '665932', '']]);
+    expect(pickStockRow(readStockPopupRows(document), { serial: '665932', productName: 'Biocan R', today: '2026-10-04' }).kind).toBe('unknownExpiry');
+  });
+
   it('finds nothing for an unknown serial', () => {
     popup([['Biocan R', '665932', '31.01.2027']]);
     expect(pickStockRow(readStockPopupRows(document), { serial: '000', productName: null, today: '2026-10-04' })).toEqual({ kind: 'none' });

@@ -45,7 +45,7 @@ class ApplyVaccinationStockUseCaseTest {
         when(items.findById(itemId)).thenReturn(Optional.of(item));
         when(movements.existsByReference(vaccinationId, StockReferenceType.VACCINATION, StockMovementType.OUT)).thenReturn(false);
 
-        useCase().administered(vaccinationId, itemId);
+        useCase().administered(vaccinationId, itemId, "665932");
 
         assertThat(item.getQuantityOnHand()).isEqualTo(17);
         ArgumentCaptor<StockMovement> m = ArgumentCaptor.forClass(StockMovement.class);
@@ -61,7 +61,7 @@ class ApplyVaccinationStockUseCaseTest {
     void should_deductOnlyOnce_when_sameVaccinationReportedTwice() {
         when(movements.existsByReference(vaccinationId, StockReferenceType.VACCINATION, StockMovementType.OUT)).thenReturn(true);
 
-        useCase().administered(vaccinationId, itemId);
+        useCase().administered(vaccinationId, itemId, "665932");
 
         verify(items, never()).findById(any());
         verify(movements, never()).save(any());
@@ -73,7 +73,7 @@ class ApplyVaccinationStockUseCaseTest {
         when(items.findById(itemId)).thenReturn(Optional.of(item));
         when(movements.existsByReference(vaccinationId, StockReferenceType.VACCINATION, StockMovementType.OUT)).thenReturn(false);
 
-        useCase().administered(vaccinationId, itemId);
+        useCase().administered(vaccinationId, itemId, "665932");
 
         assertThat(item.getQuantityOnHand()).isZero();
         verify(movements, never()).save(any());
@@ -84,14 +84,14 @@ class ApplyVaccinationStockUseCaseTest {
         when(items.findById(itemId)).thenReturn(Optional.empty());
         when(movements.existsByReference(vaccinationId, StockReferenceType.VACCINATION, StockMovementType.OUT)).thenReturn(false);
 
-        useCase().administered(vaccinationId, itemId);
+        useCase().administered(vaccinationId, itemId, "665932");
 
         verify(movements, never()).save(any());
     }
 
     @Test
     void should_ignore_when_noItem() {
-        useCase().administered(vaccinationId, null);
+        useCase().administered(vaccinationId, null, null);
         useCase().cancelled(vaccinationId, null);
 
         verify(items, never()).findById(any());
@@ -131,5 +131,41 @@ class ApplyVaccinationStockUseCaseTest {
         useCase().cancelled(vaccinationId, itemId);
 
         verify(movements, never()).save(any());
+    }
+
+    @Test
+    void should_skip_when_itemIsNotAVaccine() {
+        InventoryItem drug = InventoryItem.create(tenantId, UUID.randomUUID(), "Drontal", "İlaç", null, 5, 0, null, "665932", null);
+        when(items.findById(itemId)).thenReturn(Optional.of(drug));
+        when(movements.existsByReference(vaccinationId, StockReferenceType.VACCINATION, StockMovementType.OUT)).thenReturn(false);
+
+        useCase().administered(vaccinationId, itemId, "665932");
+
+        assertThat(drug.getQuantityOnHand()).isEqualTo(5);
+        verify(movements, never()).save(any());
+    }
+
+    @Test
+    void should_skip_when_lotDiffersFromVaccinationRecord() {
+        InventoryItem item = item(18);
+        when(items.findById(itemId)).thenReturn(Optional.of(item));
+        when(movements.existsByReference(vaccinationId, StockReferenceType.VACCINATION, StockMovementType.OUT)).thenReturn(false);
+
+        useCase().administered(vaccinationId, itemId, "999999");
+
+        assertThat(item.getQuantityOnHand()).isEqualTo(18);
+        verify(movements, never()).save(any());
+    }
+
+    @Test
+    void should_acceptTarbilVaccineWithOtherCategoryAndSpacedLot() {
+        InventoryItem item = InventoryItem.create(tenantId, UUID.randomUUID(), "Biocan R", "Diğer", null, 3, 0, null, "665932", null);
+        item.linkTarbil("HBSAPP_VACCINE", "Biocan R", null);
+        when(items.findById(itemId)).thenReturn(Optional.of(item));
+        when(movements.existsByReference(vaccinationId, StockReferenceType.VACCINATION, StockMovementType.OUT)).thenReturn(false);
+
+        useCase().administered(vaccinationId, itemId, " 665 932 ");
+
+        assertThat(item.getQuantityOnHand()).isEqualTo(2);
     }
 }
