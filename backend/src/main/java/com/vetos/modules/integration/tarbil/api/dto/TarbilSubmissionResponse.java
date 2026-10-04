@@ -1,5 +1,6 @@
 package com.vetos.modules.integration.tarbil.api.dto;
 
+import com.vetos.modules.integration.tarbil.domain.TarbilDocumentType;
 import com.fasterxml.jackson.annotation.JsonRawValue;
 import com.vetos.modules.integration.tarbil.application.dto.TarbilSubmissionView;
 import com.vetos.modules.integration.tarbil.domain.TarbilConfirmationMethod;
@@ -14,12 +15,13 @@ public record TarbilSubmissionResponse(
     String patientName, String microchipNumber, UUID speciesId, String speciesName, String breedName,
     String sex, LocalDate birthDate, String vaccineName, String lotNumber, LocalDate administeredDate,
     Instant submittedAt, TarbilConfirmationMethod confirmationMethod, String tarbilReference,
-    String vaccineKey, @JsonRawValue String vaccineMapping, @JsonRawValue String speciesMapping
+    String vaccineKey, @JsonRawValue String vaccineMapping, @JsonRawValue String speciesMapping,
+    TarbilDocumentType documentType
 ) {
     public static TarbilSubmissionResponse from(TarbilSubmissionView v) {
         return new TarbilSubmissionResponse(v.id(), v.vaccinationRecordId(), v.status(), v.patientName(), v.microchipNumber(),
             v.speciesId(), v.speciesName(), v.breedName(), v.sex(), v.birthDate(), v.vaccineName(), v.lotNumber(),
             v.administeredDate(), v.submittedAt(), v.confirmationMethod(), v.tarbilReference(),
-            v.vaccineKey(), v.vaccineMappingJson(), v.speciesMappingJson());
+            v.vaccineKey(), v.vaccineMappingJson(), v.speciesMappingJson(), v.documentType());
     }
 }

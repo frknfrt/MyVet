@@ -1,7 +1,8 @@
 package com.vetos.modules.integration.tarbil.application;
 
-import com.vetos.modules.integration.tarbil.domain.TarbilSyncLog;
-import com.vetos.modules.integration.tarbil.domain.TarbilSyncLogRepository;
+import com.vetos.modules.integration.tarbil.domain.TarbilSubmission;
+import com.vetos.modules.integration.tarbil.domain.TarbilDocumentType;
+import com.vetos.modules.integration.tarbil.domain.TarbilSubmissionRepository;
 import com.vetos.platform.tenancy.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,18 +20,18 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class QueueTarbilSyncUseCase {
 
-    private final TarbilSyncLogRepository tarbilSyncLogRepository;
+    private final TarbilSubmissionRepository tarbilSyncLogRepository;
 
     @Transactional
     public UUID queueVaccination(UUID patientId, UUID vaccinationRecordId) {
         // Cagiran: VaccinationRecordedEventListener -- kimligi dogrulanmis bir istek
         // icindeki senkron @EventListener, TenantContext kurulu.
-        Optional<TarbilSyncLog> existing = tarbilSyncLogRepository.findByVaccinationRecordId(vaccinationRecordId);
+        Optional<TarbilSubmission> existing = tarbilSyncLogRepository.findByDocumentTypeAndSourceId(TarbilDocumentType.VACCINATION, vaccinationRecordId);
         if (existing.isPresent()) {
             return existing.get().getId();
         }
         return tarbilSyncLogRepository.save(
-            TarbilSyncLog.queueVaccination(TenantContext.current(), patientId, vaccinationRecordId)
+            TarbilSubmission.queueVaccination(TenantContext.current(), patientId, vaccinationRecordId)
         ).getId();
     }
 }

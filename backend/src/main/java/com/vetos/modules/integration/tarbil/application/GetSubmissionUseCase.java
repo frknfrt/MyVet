@@ -1,8 +1,9 @@
 package com.vetos.modules.integration.tarbil.application;
 
 import com.vetos.modules.integration.tarbil.application.dto.TarbilSubmissionView;
-import com.vetos.modules.integration.tarbil.domain.TarbilSyncLog;
-import com.vetos.modules.integration.tarbil.domain.TarbilSyncLogRepository;
+import com.vetos.modules.integration.tarbil.domain.TarbilSubmission;
+import com.vetos.modules.integration.tarbil.domain.TarbilDocumentType;
+import com.vetos.modules.integration.tarbil.domain.TarbilSubmissionRepository;
 import com.vetos.modules.integration.tarbil.domain.exception.TarbilSubmissionNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,7 +16,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class GetSubmissionUseCase {
 
-    private final TarbilSyncLogRepository syncLogRepository;
+    private final TarbilSubmissionRepository syncLogRepository;
     private final TarbilSubmissionAssembler assembler;
 
     @Transactional(readOnly = true)
@@ -25,10 +26,10 @@ public class GetSubmissionUseCase {
 
     @Transactional(readOnly = true)
     public TarbilSubmissionView byVaccination(UUID tenantId, UUID vaccinationRecordId) {
-        return resolve(tenantId, syncLogRepository.findByVaccinationRecordId(vaccinationRecordId), vaccinationRecordId);
+        return resolve(tenantId, syncLogRepository.findByDocumentTypeAndSourceId(TarbilDocumentType.VACCINATION, vaccinationRecordId), vaccinationRecordId);
     }
 
-    private TarbilSubmissionView resolve(UUID tenantId, Optional<TarbilSyncLog> log, UUID requestedId) {
+    private TarbilSubmissionView resolve(UUID tenantId, Optional<TarbilSubmission> log, UUID requestedId) {
         return log.filter(l -> l.getTenantId().equals(tenantId))
             .flatMap(assembler::assemble)
             .orElseThrow(() -> new TarbilSubmissionNotFoundException(requestedId));

@@ -7,8 +7,8 @@ import com.vetos.modules.integration.tarbil.application.CreatePairingCodeUseCase
 import com.vetos.modules.integration.tarbil.application.ListExtensionTokensUseCase;
 import com.vetos.modules.integration.tarbil.application.PairExtensionUseCase;
 import com.vetos.modules.integration.tarbil.application.RevokeExtensionTokenUseCase;
-import com.vetos.modules.integration.tarbil.domain.TarbilSyncLog;
-import com.vetos.modules.integration.tarbil.domain.TarbilSyncLogRepository;
+import com.vetos.modules.integration.tarbil.domain.TarbilSubmission;
+import com.vetos.modules.integration.tarbil.domain.TarbilSubmissionRepository;
 import com.vetos.modules.integration.tarbil.domain.TarbilSyncStatus;
 import com.vetos.modules.patient.domain.Owner;
 import com.vetos.modules.patient.domain.OwnerRepository;
@@ -41,6 +41,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -61,7 +62,7 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
     @Autowired private OwnerRepository ownerRepository;
     @Autowired private PatientRepository patientRepository;
     @Autowired private SpeciesRepository speciesRepository;
-    @Autowired private TarbilSyncLogRepository tarbilSyncLogRepository;
+    @Autowired private TarbilSubmissionRepository tarbilSyncLogRepository;
     @Autowired private VaccinationRecordRepository vaccinationRecordRepository;
     @Autowired private CreatePairingCodeUseCase createPairingCodeUseCase;
     @Autowired private PairExtensionUseCase pairExtensionUseCase;
@@ -100,7 +101,7 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
     @AfterEach
     void tearDown() {
         for (UUID t : List.of(tenantA, tenantB)) {
-            jdbcTemplate.update("DELETE FROM tarbil_sync_log WHERE tenant_id = ?", t);
+            jdbcTemplate.update("DELETE FROM tarbil_submission WHERE tenant_id = ?", t);
             jdbcTemplate.update("DELETE FROM tarbil_extension_token WHERE tenant_id = ?", t);
             jdbcTemplate.update("DELETE FROM tarbil_value_mapping WHERE tenant_id = ?", t);
             jdbcTemplate.update("DELETE FROM vaccination_records WHERE tenant_id = ?", t);
@@ -150,7 +151,7 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
         UUID vaccinationB = asTenant(tenantB, () -> vaccinationRecordRepository.save(VaccinationRecord.record(
             tenantB, patientB, null, "Kuduz", null, LocalDate.now(), null, staffB, VaccinationStatus.ADMINISTERED, null)).getId());
         return asTenant(tenantB, () -> tarbilSyncLogRepository.save(
-            TarbilSyncLog.queueVaccination(tenantB, patientB, vaccinationB)).getId());
+            TarbilSubmission.queueVaccination(tenantB, patientB, vaccinationB)).getId());
     }
 
     private String tokenFor(UUID tenantId) {
@@ -208,5 +209,27 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
 
         mockMvc.perform(get("/api/v1/tarbil-extension/pending").header("Authorization", "Bearer " + tokenA))
             .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void migratedVaccinationSubmissionIsListedAsBefore() throws Exception {
+        UUID speciesId = inRootSession(() -> speciesRepository.findAll().get(0).getId());
+        UUID ownerA = asTenant(tenantA, () -> ownerRepository.save(
+            Owner.register(tenantA, "A Sahip", "05550000000", null, null)).getId());
+        UUID patientA = asTenant(tenantA, () -> patientRepository.save(
+            Patient.register(tenantA, ownerA, speciesId, null, "Deneme", Sex.FEMALE, null)).getId());
+        UUID vaccinationA = asTenant(tenantA, () -> vaccinationRecordRepository.save(VaccinationRecord.record(
+            tenantA, patientA, null, "Karma", null, LocalDate.now(), null, staffA, VaccinationStatus.ADMINISTERED, null)).getId());
+        UUID submissionId = asTenant(tenantA, () -> tarbilSyncLogRepository.save(
+            TarbilSubmission.queueVaccination(tenantA, patientA, vaccinationA)).getId());
+
+        mockMvc.perform(get("/api/v1/tarbil-extension/pending").header("Authorization", "Bearer " + tokenA))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].id").value(submissionId.toString()))
+            .andExpect(jsonPath("$[0].vaccinationRecordId").value(vaccinationA.toString()))
+            .andExpect(jsonPath("$[0].documentType").value("VACCINATION"));
+        mockMvc.perform(get("/api/v1/tarbil-extension/pending?type=PRESCRIPTION").header("Authorization", "Bearer " + tokenA))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(0));
     }
 }

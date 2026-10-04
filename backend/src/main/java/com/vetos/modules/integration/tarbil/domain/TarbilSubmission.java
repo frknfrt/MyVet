@@ -10,15 +10,16 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Bir asinin TARBIL'e aktarim durumu. Sunucu TARBIL'e hicbir sey gondermez;
- * gonderimi hekim TARBIL arayuzunde yapar, eklenti (ya da hekim elle) bunu
- * buraya bildirir. Bkz. docs/superpowers/specs/2026-10-02-tarbil-eklenti-design.md.
+ * Bir Vetly kaydinin (asi, recete, stok kabul) TARBIL'e aktarim durumu. Sunucu TARBIL'e hicbir sey
+ * gondermez; resmi kaydi hekim TARBIL arayuzunde onaylar, eklenti (ya da hekim elle) bunu buraya bildirir.
+ * source_id: VACCINATION -> vaccination_records.id, PRESCRIPTION -> prescriptions.id,
+ * STOCK_RECEIPT -> stock_receipts.id. Bkz. docs/superpowers/specs/2026-10-04-tarbil-otomasyon-cekirdegi-design.md.
  */
 @Entity
-@Table(name = "tarbil_sync_log")
+@Table(name = "tarbil_submission")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class TarbilSyncLog {
+public class TarbilSubmission {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -27,15 +28,16 @@ public class TarbilSyncLog {
     @Column(name = "tenant_id", nullable = false)
     private UUID tenantId;
 
-    @Column(name = "patient_id", nullable = false)
+    /** Stok kabulde hasta yoktur. */
+    @Column(name = "patient_id")
     private UUID patientId;
 
-    @Column(name = "vaccination_record_id", nullable = false, unique = true)
-    private UUID vaccinationRecordId;
-
     @Enumerated(EnumType.STRING)
-    @Column(name = "sync_type", nullable = false)
-    private TarbilSyncType syncType;
+    @Column(name = "document_type", nullable = false)
+    private TarbilDocumentType documentType;
+
+    @Column(name = "source_id", nullable = false)
+    private UUID sourceId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -66,15 +68,19 @@ public class TarbilSyncLog {
     @Column(name = "dismissed_by_staff_id")
     private UUID dismissedByStaffId;
 
-    public static TarbilSyncLog queueVaccination(UUID tenantId, UUID patientId, UUID vaccinationRecordId) {
-        TarbilSyncLog log = new TarbilSyncLog();
-        log.tenantId = tenantId;
-        log.patientId = patientId;
-        log.vaccinationRecordId = vaccinationRecordId;
-        log.syncType = TarbilSyncType.VACCINATION;
-        log.status = TarbilSyncStatus.PENDING;
-        log.queuedAt = Instant.now();
-        return log;
+    public static TarbilSubmission queue(UUID tenantId, TarbilDocumentType type, UUID patientId, UUID sourceId) {
+        TarbilSubmission submission = new TarbilSubmission();
+        submission.tenantId = tenantId;
+        submission.documentType = type;
+        submission.patientId = patientId;
+        submission.sourceId = sourceId;
+        submission.status = TarbilSyncStatus.PENDING;
+        submission.queuedAt = Instant.now();
+        return submission;
+    }
+
+    public static TarbilSubmission queueVaccination(UUID tenantId, UUID patientId, UUID vaccinationRecordId) {
+        return queue(tenantId, TarbilDocumentType.VACCINATION, patientId, vaccinationRecordId);
     }
 
     /** @return true ise durum degisti; false ise zaten SUBMITTED'di (idempotent, ilk kayit korunur). */

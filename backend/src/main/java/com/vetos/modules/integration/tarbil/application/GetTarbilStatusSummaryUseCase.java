@@ -1,8 +1,8 @@
 package com.vetos.modules.integration.tarbil.application;
 
 import com.vetos.modules.integration.tarbil.application.dto.TarbilStatusSummary;
-import com.vetos.modules.integration.tarbil.domain.TarbilSyncLog;
-import com.vetos.modules.integration.tarbil.domain.TarbilSyncLogRepository;
+import com.vetos.modules.integration.tarbil.domain.TarbilSubmission;
+import com.vetos.modules.integration.tarbil.domain.TarbilSubmissionRepository;
 import com.vetos.modules.integration.tarbil.domain.TarbilSyncStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,19 +17,19 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class GetTarbilStatusSummaryUseCase {
 
-    private final TarbilSyncLogRepository tarbilSyncLogRepository;
+    private final TarbilSubmissionRepository tarbilSyncLogRepository;
     private final TarbilSubmissionAssembler assembler;
 
     @Transactional(readOnly = true)
     public TarbilStatusSummary execute(UUID tenantId) {
-        List<TarbilSyncLog> logs = tarbilSyncLogRepository.findByTenantId(tenantId).stream()
+        List<TarbilSubmission> logs = tarbilSyncLogRepository.findByTenantId(tenantId).stream()
             .filter(assembler::isVisible)
             .toList();
         long pending = logs.stream().filter(l -> l.getStatus() == TarbilSyncStatus.PENDING).count();
         long submitted = logs.stream().filter(l -> l.getStatus() == TarbilSyncStatus.SUBMITTED).count();
         long dismissed = logs.stream().filter(l -> l.getStatus() == TarbilSyncStatus.DISMISSED).count();
         Instant lastSubmittedAt = logs.stream()
-            .map(TarbilSyncLog::getSubmittedAt)
+            .map(TarbilSubmission::getSubmittedAt)
             .filter(Objects::nonNull)
             .max(Instant::compareTo)
             .orElse(null);

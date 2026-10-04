@@ -1,11 +1,12 @@
 package com.vetos.modules.integration.tarbil.application;
 
+import com.vetos.modules.integration.tarbil.domain.TarbilDocumentType;
 import com.vetos.modules.encounter.domain.VaccinationLookupPort;
 import com.vetos.modules.encounter.domain.VaccinationStatus;
 import com.vetos.modules.encounter.domain.VaccinationTarbilView;
 import com.vetos.modules.integration.tarbil.application.dto.TarbilSubmissionView;
 import com.vetos.modules.integration.tarbil.domain.TarbilMappingKind;
-import com.vetos.modules.integration.tarbil.domain.TarbilSyncLog;
+import com.vetos.modules.integration.tarbil.domain.TarbilSubmission;
 import com.vetos.modules.integration.tarbil.domain.TarbilSyncStatus;
 import com.vetos.modules.integration.tarbil.domain.TarbilValueMapping;
 import com.vetos.modules.integration.tarbil.domain.TarbilValueMappingRepository;
@@ -17,7 +18,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Optional;
 
-/** TarbilSyncLog + asi + hasta + esletirmeleri tek gorunumde birlestirir. Asi iptal/silinmisse bos doner. */
+/** TarbilSubmission + asi + hasta + esletirmeleri tek gorunumde birlestirir. Asi iptal/silinmisse bos doner. */
 @Component
 @RequiredArgsConstructor
 class TarbilSubmissionAssembler {
@@ -26,19 +27,22 @@ class TarbilSubmissionAssembler {
     private final PatientLookupPort patientLookupPort;
     private final TarbilValueMappingRepository mappingRepository;
 
-    /** Eklenti ve web ekrani ayni kurali kullansin: ayni kiracida, iptal edilmemis asi. */
-    Optional<VaccinationTarbilView> liveVaccination(TarbilSyncLog log) {
-        return vaccinationLookupPort.findForTarbil(log.getVaccinationRecordId())
+    /** Eklenti ve web ekrani ayni kurali kullansin: ayni kiracida, iptal edilmemis asi. Asi disi satirlar burada yok sayilir. */
+    Optional<VaccinationTarbilView> liveVaccination(TarbilSubmission log) {
+        if (log.getDocumentType() != TarbilDocumentType.VACCINATION) {
+            return Optional.empty();
+        }
+        return vaccinationLookupPort.findForTarbil(log.getSourceId())
             .filter(v -> v.tenantId().equals(log.getTenantId()))
             .filter(v -> v.status() != VaccinationStatus.CANCELLED);
     }
 
     /** Bekleyen satir ancak asisi canliysa "bekliyor" sayilir; gonderilmis/bildirilmeyecek satirlar gecmis olarak kalir. */
-    boolean isVisible(TarbilSyncLog log) {
+    boolean isVisible(TarbilSubmission log) {
         return log.getStatus() != TarbilSyncStatus.PENDING || liveVaccination(log).isPresent();
     }
 
-    Optional<TarbilSubmissionView> assemble(TarbilSyncLog log) {
+    Optional<TarbilSubmissionView> assemble(TarbilSubmission log) {
         Optional<VaccinationTarbilView> vaccination = liveVaccination(log);
         if (vaccination.isEmpty()) {
             return Optional.empty();
@@ -53,7 +57,7 @@ class TarbilSubmissionAssembler {
             .flatMap(sid -> mappingRepository.findByTenantIdAndKindAndVetlyKey(log.getTenantId(), TarbilMappingKind.SPECIES, sid.toString()))
             .map(TarbilValueMapping::getTarbilFields).orElse(null);
         return Optional.of(new TarbilSubmissionView(
-            log.getId(), log.getVaccinationRecordId(), log.getStatus(),
+            log.getId(), log.getSourceId(), log.getStatus(),
             patient.map(PatientTarbilProfile::name).orElse("—"),
             patient.map(PatientTarbilProfile::microchipNumber).orElse(null),
             patient.map(PatientTarbilProfile::speciesId).orElse(null),
@@ -63,7 +67,7 @@ class TarbilSubmissionAssembler {
             patient.map(PatientTarbilProfile::birthDate).orElse(null),
             v.vaccineName(), v.lotNumber(), v.administeredDate(),
             log.getSubmittedAt(), log.getConfirmationMethod(), log.getTarbilReference(),
-            vaccineKey, vaccineMapping, speciesMapping
+            vaccineKey, vaccineMapping, speciesMapping, log.getDocumentType()
         ));
     }
 }

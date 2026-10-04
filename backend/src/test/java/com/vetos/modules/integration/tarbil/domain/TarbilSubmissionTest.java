@@ -9,28 +9,28 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class TarbilSyncLogTest {
+class TarbilSubmissionTest {
 
     private final UUID staffId = UUID.randomUUID();
     private final Instant now = Instant.parse("2026-10-02T10:00:00Z");
 
-    private TarbilSyncLog aLog() {
-        return TarbilSyncLog.queueVaccination(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+    private TarbilSubmission aLog() {
+        return TarbilSubmission.queueVaccination(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
     }
 
     @Test
     void should_startPending_when_queued() {
         UUID vaccinationId = UUID.randomUUID();
-        TarbilSyncLog log = TarbilSyncLog.queueVaccination(UUID.randomUUID(), UUID.randomUUID(), vaccinationId);
+        TarbilSubmission log = TarbilSubmission.queueVaccination(UUID.randomUUID(), UUID.randomUUID(), vaccinationId);
 
         assertThat(log.getStatus()).isEqualTo(TarbilSyncStatus.PENDING);
-        assertThat(log.getVaccinationRecordId()).isEqualTo(vaccinationId);
+        assertThat(log.getSourceId()).isEqualTo(vaccinationId);
         assertThat(log.getQueuedAt()).isNotNull();
     }
 
     @Test
     void should_recordSubmission_when_markSubmittedFromPending() {
-        TarbilSyncLog log = aLog();
+        TarbilSubmission log = aLog();
 
         boolean changed = log.markSubmitted(staffId, TarbilConfirmationMethod.AUTO, "TRB-1", now);
 
@@ -44,7 +44,7 @@ class TarbilSyncLogTest {
 
     @Test
     void should_keepFirstSubmission_when_markSubmittedTwice() {
-        TarbilSyncLog log = aLog();
+        TarbilSubmission log = aLog();
         log.markSubmitted(staffId, TarbilConfirmationMethod.AUTO, "TRB-1", now);
 
         boolean changed = log.markSubmitted(UUID.randomUUID(), TarbilConfirmationMethod.MANUAL, null, now.plusSeconds(60));
@@ -58,7 +58,7 @@ class TarbilSyncLogTest {
     @Test
     void should_recordSubmission_when_markSubmittedWhileDismissed() {
         // TARBIL'e gercekten kaydedildiyse "bildirilmeyecek" niyeti olgunun onune gecemez.
-        TarbilSyncLog log = aLog();
+        TarbilSubmission log = aLog();
         log.dismiss(staffId, "Bildirim gerekmiyor", now);
 
         assertThat(log.markSubmitted(staffId, TarbilConfirmationMethod.MANUAL, null, now)).isTrue();
@@ -69,7 +69,7 @@ class TarbilSyncLogTest {
 
     @Test
     void should_dismissAndRestore_when_pending() {
-        TarbilSyncLog log = aLog();
+        TarbilSubmission log = aLog();
 
         log.dismiss(staffId, "Karma asi", now);
         assertThat(log.getStatus()).isEqualTo(TarbilSyncStatus.DISMISSED);
@@ -83,7 +83,7 @@ class TarbilSyncLogTest {
 
     @Test
     void should_throwConflict_when_dismissingSubmitted() {
-        TarbilSyncLog log = aLog();
+        TarbilSubmission log = aLog();
         log.markSubmitted(staffId, TarbilConfirmationMethod.AUTO, null, now);
 
         assertThatThrownBy(() -> log.dismiss(staffId, "x", now))
@@ -94,5 +94,25 @@ class TarbilSyncLogTest {
     void should_throwConflict_when_restoringPending() {
         assertThatThrownBy(() -> aLog().restore())
             .isInstanceOf(TarbilSubmissionStateConflictException.class);
+    }
+
+    @Test
+    void should_carryDocumentTypeAndSource_when_queuedGenerically() {
+        UUID tenantId = UUID.randomUUID();
+        UUID prescriptionId = UUID.randomUUID();
+
+        TarbilSubmission submission = TarbilSubmission.queue(tenantId, TarbilDocumentType.PRESCRIPTION, null, prescriptionId);
+
+        assertThat(submission.getDocumentType()).isEqualTo(TarbilDocumentType.PRESCRIPTION);
+        assertThat(submission.getSourceId()).isEqualTo(prescriptionId);
+        assertThat(submission.getPatientId()).isNull();
+        assertThat(submission.getStatus()).isEqualTo(TarbilSyncStatus.PENDING);
+    }
+
+    @Test
+    void should_beVaccination_when_queuedForVaccination() {
+        TarbilSubmission submission = TarbilSubmission.queueVaccination(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+
+        assertThat(submission.getDocumentType()).isEqualTo(TarbilDocumentType.VACCINATION);
     }
 }

@@ -4,8 +4,8 @@ import com.vetos.modules.encounter.domain.VaccinationLookupPort;
 import com.vetos.modules.encounter.domain.VaccinationStatus;
 import com.vetos.modules.encounter.domain.VaccinationTarbilView;
 import com.vetos.modules.integration.tarbil.domain.TarbilConfirmationMethod;
-import com.vetos.modules.integration.tarbil.domain.TarbilSyncLog;
-import com.vetos.modules.integration.tarbil.domain.TarbilSyncLogRepository;
+import com.vetos.modules.integration.tarbil.domain.TarbilSubmission;
+import com.vetos.modules.integration.tarbil.domain.TarbilSubmissionRepository;
 import com.vetos.modules.integration.tarbil.domain.TarbilSyncStatus;
 import com.vetos.modules.integration.tarbil.domain.TarbilValueMappingRepository;
 import com.vetos.modules.patient.domain.PatientLookupPort;
@@ -29,7 +29,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class MarkSubmittedUseCaseTest {
 
-    @Mock private TarbilSyncLogRepository syncLogRepository;
+    @Mock private TarbilSubmissionRepository syncLogRepository;
     @Mock private TarbilValueMappingRepository mappingRepository;
     @Mock private VaccinationLookupPort vaccinationLookupPort;
     @Mock private PatientLookupPort patientLookupPort;
@@ -42,9 +42,9 @@ class MarkSubmittedUseCaseTest {
             new TarbilSubmissionAssembler(vaccinationLookupPort, patientLookupPort, mappingRepository));
     }
 
-    private TarbilSyncLog pendingWithVaccination(UUID id) {
+    private TarbilSubmission pendingWithVaccination(UUID id) {
         UUID vaccinationId = UUID.randomUUID();
-        TarbilSyncLog log = TarbilSyncLog.queueVaccination(tenantId, UUID.randomUUID(), vaccinationId);
+        TarbilSubmission log = TarbilSubmission.queueVaccination(tenantId, UUID.randomUUID(), vaccinationId);
         when(syncLogRepository.findById(id)).thenReturn(Optional.of(log));
         lenient().when(vaccinationLookupPort.findForTarbil(vaccinationId)).thenReturn(Optional.of(new VaccinationTarbilView(
             vaccinationId, tenantId, log.getPatientId(), "Kuduz", null, LocalDate.now(), VaccinationStatus.ADMINISTERED)));
@@ -55,7 +55,7 @@ class MarkSubmittedUseCaseTest {
     @Test
     void should_markAndSave_when_pending() {
         UUID id = UUID.randomUUID();
-        TarbilSyncLog log = pendingWithVaccination(id);
+        TarbilSubmission log = pendingWithVaccination(id);
 
         useCase().execute(tenantId, staffId, id, TarbilConfirmationMethod.AUTO, "TRB-9");
 
@@ -66,7 +66,7 @@ class MarkSubmittedUseCaseTest {
     @Test
     void should_returnExistingWithoutChange_when_alreadySubmitted() {
         UUID id = UUID.randomUUID();
-        TarbilSyncLog log = pendingWithVaccination(id);
+        TarbilSubmission log = pendingWithVaccination(id);
         log.markSubmitted(staffId, TarbilConfirmationMethod.AUTO, "TRB-1", Instant.now());
 
         useCase().execute(tenantId, staffId, id, TarbilConfirmationMethod.MANUAL, null);
@@ -80,7 +80,7 @@ class MarkSubmittedUseCaseTest {
         // Cevrimdisi kuyruktan gelen onay: asi bu arada Vetly'de iptal edilmis. TARBIL kaydi gercek -- kaybolmamali.
         UUID id = UUID.randomUUID();
         UUID vaccinationId = UUID.randomUUID();
-        TarbilSyncLog log = TarbilSyncLog.queueVaccination(tenantId, UUID.randomUUID(), vaccinationId);
+        TarbilSubmission log = TarbilSubmission.queueVaccination(tenantId, UUID.randomUUID(), vaccinationId);
         when(syncLogRepository.findById(id)).thenReturn(Optional.of(log));
         when(vaccinationLookupPort.findForTarbil(vaccinationId)).thenReturn(Optional.of(new VaccinationTarbilView(
             vaccinationId, tenantId, log.getPatientId(), "Kuduz", null, LocalDate.now(), VaccinationStatus.CANCELLED)));

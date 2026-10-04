@@ -1,5 +1,6 @@
 package com.vetos.modules.integration.tarbil.application.dto;
 
+import com.vetos.modules.integration.tarbil.domain.TarbilDocumentType;
 import com.vetos.modules.integration.tarbil.domain.TarbilConfirmationMethod;
 import com.vetos.modules.integration.tarbil.domain.TarbilSyncStatus;
 
@@ -14,5 +15,6 @@ public record TarbilSubmissionView(
     String sex, LocalDate birthDate,
     String vaccineName, String lotNumber, LocalDate administeredDate,
     Instant submittedAt, TarbilConfirmationMethod confirmationMethod, String tarbilReference,
-    String vaccineKey, String vaccineMappingJson, String speciesMappingJson
+    String vaccineKey, String vaccineMappingJson, String speciesMappingJson,
+    TarbilDocumentType documentType
 ) {}

@@ -1,7 +1,7 @@
 package com.vetos.modules.integration.tarbil.application;
 
-import com.vetos.modules.integration.tarbil.domain.TarbilSyncLog;
-import com.vetos.modules.integration.tarbil.domain.TarbilSyncLogRepository;
+import com.vetos.modules.integration.tarbil.domain.TarbilSubmission;
+import com.vetos.modules.integration.tarbil.domain.TarbilSubmissionRepository;
 import com.vetos.modules.integration.tarbil.domain.exception.TarbilSubmissionNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -14,11 +14,11 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class DismissSubmissionUseCase {
 
-    private final TarbilSyncLogRepository syncLogRepository;
+    private final TarbilSubmissionRepository syncLogRepository;
 
     @Transactional
     public void execute(UUID tenantId, UUID staffId, UUID submissionId, String reason) {
-        TarbilSyncLog log = syncLogRepository.findById(submissionId)
+        TarbilSubmission log = syncLogRepository.findById(submissionId)
             .filter(l -> l.getTenantId().equals(tenantId))
             .orElseThrow(() -> new TarbilSubmissionNotFoundException(submissionId));
         String safeReason = reason == null || reason.isBlank() ? null : reason.trim();

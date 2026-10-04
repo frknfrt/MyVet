@@ -2,7 +2,7 @@ package com.vetos.modules.integration.tarbil.application;
 
 import com.vetos.modules.encounter.domain.VaccinationTarbilView;
 import com.vetos.modules.integration.tarbil.application.dto.TarbilSyncLogSummary;
-import com.vetos.modules.integration.tarbil.domain.TarbilSyncLogRepository;
+import com.vetos.modules.integration.tarbil.domain.TarbilSubmissionRepository;
 import com.vetos.modules.patient.domain.PatientLookupPort;
 import com.vetos.modules.patient.domain.PatientTarbilProfile;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +17,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ListTarbilSyncLogsUseCase {
 
-    private final TarbilSyncLogRepository tarbilSyncLogRepository;
+    private final TarbilSubmissionRepository tarbilSyncLogRepository;
     private final PatientLookupPort patientLookupPort;
     private final TarbilSubmissionAssembler assembler;
 

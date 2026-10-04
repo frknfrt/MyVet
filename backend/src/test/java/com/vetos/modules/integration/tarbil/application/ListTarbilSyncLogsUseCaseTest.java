@@ -3,8 +3,8 @@ package com.vetos.modules.integration.tarbil.application;
 import com.vetos.modules.encounter.domain.VaccinationLookupPort;
 import com.vetos.modules.encounter.domain.VaccinationStatus;
 import com.vetos.modules.encounter.domain.VaccinationTarbilView;
-import com.vetos.modules.integration.tarbil.domain.TarbilSyncLog;
-import com.vetos.modules.integration.tarbil.domain.TarbilSyncLogRepository;
+import com.vetos.modules.integration.tarbil.domain.TarbilSubmission;
+import com.vetos.modules.integration.tarbil.domain.TarbilSubmissionRepository;
 import com.vetos.modules.integration.tarbil.domain.TarbilValueMappingRepository;
 import com.vetos.modules.patient.domain.PatientLookupPort;
 import org.junit.jupiter.api.Test;
@@ -25,7 +25,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class ListTarbilSyncLogsUseCaseTest {
 
-    @Mock private TarbilSyncLogRepository syncLogRepository;
+    @Mock private TarbilSubmissionRepository syncLogRepository;
     @Mock private TarbilValueMappingRepository mappingRepository;
     @Mock private VaccinationLookupPort vaccinationLookupPort;
     @Mock private PatientLookupPort patientLookupPort;
@@ -36,9 +36,9 @@ class ListTarbilSyncLogsUseCaseTest {
         return new TarbilSubmissionAssembler(vaccinationLookupPort, patientLookupPort, mappingRepository);
     }
 
-    private TarbilSyncLog pendingWith(VaccinationStatus status) {
+    private TarbilSubmission pendingWith(VaccinationStatus status) {
         UUID vaccinationId = UUID.randomUUID();
-        TarbilSyncLog log = TarbilSyncLog.queueVaccination(tenantId, UUID.randomUUID(), vaccinationId);
+        TarbilSubmission log = TarbilSubmission.queueVaccination(tenantId, UUID.randomUUID(), vaccinationId);
         when(vaccinationLookupPort.findForTarbil(vaccinationId)).thenReturn(Optional.of(new VaccinationTarbilView(
             vaccinationId, tenantId, log.getPatientId(), "Kuduz", null, LocalDate.now(), status)));
         return log;
@@ -46,8 +46,8 @@ class ListTarbilSyncLogsUseCaseTest {
 
     @Test
     void should_hidePending_when_vaccinationCancelledAfterQueueing() {
-        TarbilSyncLog live = pendingWith(VaccinationStatus.ADMINISTERED);
-        TarbilSyncLog cancelled = pendingWith(VaccinationStatus.CANCELLED);
+        TarbilSubmission live = pendingWith(VaccinationStatus.ADMINISTERED);
+        TarbilSubmission cancelled = pendingWith(VaccinationStatus.CANCELLED);
         when(syncLogRepository.findByTenantId(tenantId)).thenReturn(List.of(live, cancelled));
         lenient().when(patientLookupPort.findTarbilProfile(any())).thenReturn(Optional.empty());
 

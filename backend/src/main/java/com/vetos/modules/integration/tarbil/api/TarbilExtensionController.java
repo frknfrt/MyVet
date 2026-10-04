@@ -1,5 +1,6 @@
 package com.vetos.modules.integration.tarbil.api;
 
+import com.vetos.modules.integration.tarbil.domain.TarbilDocumentType;
 import com.vetos.modules.integration.tarbil.api.dto.DismissRequest;
 import com.vetos.modules.integration.tarbil.api.dto.ExtensionProfileResponse;
 import com.vetos.modules.integration.tarbil.api.dto.LearnMappingRequest;
@@ -52,8 +53,8 @@ public class TarbilExtensionController {
     }
 
     @GetMapping("/pending")
-    public List<TarbilSubmissionResponse> pending() {
-        return listPendingSubmissionsUseCase.execute(TenantContext.current()).stream().map(TarbilSubmissionResponse::from).toList();
+    public List<TarbilSubmissionResponse> pending(@RequestParam(name = "type", required = false) TarbilDocumentType type) {
+        return listPendingSubmissionsUseCase.execute(TenantContext.current(), type).stream().map(TarbilSubmissionResponse::from).toList();
     }
 
     @GetMapping("/submissions/{id}")
