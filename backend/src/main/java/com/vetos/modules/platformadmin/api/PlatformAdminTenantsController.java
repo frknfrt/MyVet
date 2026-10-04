@@ -51,30 +51,35 @@ public class PlatformAdminTenantsController {
     }
 
     @PostMapping
-    public ResponseEntity<TenantAdminOverviewResponse> create(@RequestBody @Valid CreatePlatformTenantRequest request) {
+    public ResponseEntity<TenantAdminOverviewResponse> create(
+        @RequestBody @Valid CreatePlatformTenantRequest request, @AuthenticationPrincipal AuthenticatedPlatformAdmin principal
+    ) {
         UUID tenantId = createPlatformTenantUseCase.execute(new CreatePlatformTenantCommand(
             request.tenantName(), request.taxNumber(), request.branchName(), request.address(), request.city(),
             request.adminFullName(), request.adminEmail(), request.adminPassword()
-        ));
+        ), principal.platformAdminId(), principal.email());
         var overview = getTenantAdminOverviewUseCase.execute(tenantId);
         return ResponseEntity.status(201).body(TenantAdminOverviewResponse.from(overview));
     }
 
     @PutMapping("/{id}/subscription")
-    public void updateSubscription(@PathVariable UUID id, @RequestBody @Valid UpdateTenantSubscriptionRequest request) {
+    public void updateSubscription(
+        @PathVariable UUID id, @RequestBody @Valid UpdateTenantSubscriptionRequest request,
+        @AuthenticationPrincipal AuthenticatedPlatformAdmin principal
+    ) {
         updateTenantSubscriptionUseCase.execute(new UpdateTenantSubscriptionCommand(
             id, request.planCode(), request.billingStatus(), request.renewsAt()
-        ));
+        ), principal.platformAdminId(), principal.email());
     }
 
     @PostMapping("/{id}/suspend")
-    public void suspend(@PathVariable UUID id) {
-        suspendTenantUseCase.execute(id);
+    public void suspend(@PathVariable UUID id, @AuthenticationPrincipal AuthenticatedPlatformAdmin principal) {
+        suspendTenantUseCase.execute(id, principal.platformAdminId(), principal.email());
     }
 
     @PostMapping("/{id}/activate")
-    public void activate(@PathVariable UUID id) {
-        activateTenantUseCase.execute(id);
+    public void activate(@PathVariable UUID id, @AuthenticationPrincipal AuthenticatedPlatformAdmin principal) {
+        activateTenantUseCase.execute(id, principal.platformAdminId(), principal.email());
     }
 
     /**

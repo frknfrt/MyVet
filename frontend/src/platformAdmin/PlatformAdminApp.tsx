@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { AuditLogPage } from '../pages/platform-admin/AuditLogPage';
 import { CouponsPage } from '../pages/platform-admin/CouponsPage';
 import { LeadsPage } from '../pages/platform-admin/LeadsPage';
 import { OverviewPage } from '../pages/platform-admin/OverviewPage';
@@ -32,6 +33,7 @@ export function PlatformAdminApp() {
                   <Route path="coupons" element={<CouponsPage />} />
                   <Route path="billing" element={<PlatformBillingPage />} />
                   <Route path="system-health" element={<SystemHealthPage />} />
+                  <Route path="audit-log" element={<AuditLogPage />} />
                 </Routes>
               </PlatformAdminShell>
             </RequirePlatformAdminAuth>

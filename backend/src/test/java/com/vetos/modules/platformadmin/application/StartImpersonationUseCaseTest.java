@@ -1,6 +1,7 @@
 package com.vetos.modules.platformadmin.application;
 
 import com.vetos.modules.platformadmin.application.dto.ImpersonationSession;
+import com.vetos.modules.platformadmin.domain.AuditAction;
 import com.vetos.modules.platformadmin.domain.exception.ImpersonationTargetNotFoundException;
 import com.vetos.modules.tenant.domain.ImpersonationTarget;
 import com.vetos.modules.tenant.domain.StaffRole;
@@ -17,6 +18,10 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -24,6 +29,7 @@ class StartImpersonationUseCaseTest {
 
     @Mock private TenantAdminPort tenantAdminPort;
     @Mock private JwtTokenProvider jwtTokenProvider;
+    @Mock private RecordAuditLogUseCase recordAuditLogUseCase;
 
     @Test
     void should_generateTokenForTenantsAdminStaff_when_targetExists() {
@@ -35,7 +41,7 @@ class StartImpersonationUseCaseTest {
         when(tenantAdminPort.findImpersonationTarget(tenantId)).thenReturn(Optional.of(target));
         when(jwtTokenProvider.generateToken(staffUserId, tenantId, List.of(branchId), "ADMIN")).thenReturn("jwt-token-123");
 
-        StartImpersonationUseCase useCase = new StartImpersonationUseCase(tenantAdminPort, jwtTokenProvider);
+        StartImpersonationUseCase useCase = new StartImpersonationUseCase(tenantAdminPort, jwtTokenProvider, recordAuditLogUseCase);
         ImpersonationSession session = useCase.execute(tenantId, platformAdminId, "admin@vetly.com.tr");
 
         assertThat(session.token()).isEqualTo("jwt-token-123");
@@ -44,6 +50,9 @@ class StartImpersonationUseCaseTest {
         assertThat(session.branchId()).isEqualTo(branchId);
         assertThat(session.fullName()).isEqualTo("Ayse Yilmaz");
         assertThat(session.role()).isEqualTo("ADMIN");
+        verify(recordAuditLogUseCase).execute(
+            eq(platformAdminId), eq("admin@vetly.com.tr"), eq(AuditAction.TENANT_IMPERSONATED), eq("TENANT"), eq(tenantId), any()
+        );
     }
 
     @Test
@@ -51,9 +60,10 @@ class StartImpersonationUseCaseTest {
         UUID tenantId = UUID.randomUUID();
         when(tenantAdminPort.findImpersonationTarget(tenantId)).thenReturn(Optional.empty());
 
-        StartImpersonationUseCase useCase = new StartImpersonationUseCase(tenantAdminPort, jwtTokenProvider);
+        StartImpersonationUseCase useCase = new StartImpersonationUseCase(tenantAdminPort, jwtTokenProvider, recordAuditLogUseCase);
 
         assertThatThrownBy(() -> useCase.execute(tenantId, UUID.randomUUID(), "admin@vetly.com.tr"))
             .isInstanceOf(ImpersonationTargetNotFoundException.class);
+        verifyNoInteractions(recordAuditLogUseCase);
     }
 }

@@ -8,10 +8,12 @@ import com.vetos.modules.platformadmin.application.DeactivateCouponUseCase;
 import com.vetos.modules.platformadmin.application.ListCouponsUseCase;
 import com.vetos.modules.platformadmin.application.dto.CreateCouponCommand;
 import com.vetos.modules.platformadmin.domain.Coupon;
+import com.vetos.platform.security.AuthenticatedPlatformAdmin;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -38,20 +40,20 @@ public class CouponsController {
     }
 
     @PostMapping
-    public ResponseEntity<CouponResponse> create(@RequestBody @Valid CreateCouponRequest request) {
+    public ResponseEntity<CouponResponse> create(@RequestBody @Valid CreateCouponRequest request, @AuthenticationPrincipal AuthenticatedPlatformAdmin principal) {
         Coupon coupon = createCouponUseCase.execute(new CreateCouponCommand(
             request.code(), request.discountType(), request.discountValue(), request.maxRedemptions(), request.expiresAt()
-        ));
+        ), principal.platformAdminId(), principal.email());
         return ResponseEntity.status(201).body(CouponResponse.from(coupon));
     }
 
     @PostMapping("/{id}/activate")
-    public void activate(@PathVariable UUID id) {
-        activateCouponUseCase.execute(id);
+    public void activate(@PathVariable UUID id, @AuthenticationPrincipal AuthenticatedPlatformAdmin principal) {
+        activateCouponUseCase.execute(id, principal.platformAdminId(), principal.email());
     }
 
     @PostMapping("/{id}/deactivate")
-    public void deactivate(@PathVariable UUID id) {
-        deactivateCouponUseCase.execute(id);
+    public void deactivate(@PathVariable UUID id, @AuthenticationPrincipal AuthenticatedPlatformAdmin principal) {
+        deactivateCouponUseCase.execute(id, principal.platformAdminId(), principal.email());
     }
 }

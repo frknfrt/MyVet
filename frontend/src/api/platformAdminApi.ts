@@ -192,6 +192,18 @@ export interface CreateCouponPayload {
   expiresAt: string | null;
 }
 
+
+export interface AuditLogEntry {
+  id: string;
+  platformAdminId: string;
+  platformAdminEmail: string;
+  action: string;
+  targetType: string;
+  targetId: string | null;
+  details: string | null;
+  createdAt: string;
+}
+
 export const platformAdminApi = {
   login: (payload: PlatformAdminLoginPayload) =>
     platformAdminClient.post<PlatformAdminSession>('/api/v1/platform-admin/auth/login', payload),
@@ -232,4 +244,5 @@ export const platformAdminApi = {
     platformAdminClient.post<Coupon>('/api/v1/platform-admin/coupons', payload),
   activateCoupon: (id: string) => platformAdminClient.post<void>(`/api/v1/platform-admin/coupons/${id}/activate`),
   deactivateCoupon: (id: string) => platformAdminClient.post<void>(`/api/v1/platform-admin/coupons/${id}/deactivate`),
+  listAuditLog: () => platformAdminClient.get<AuditLogEntry[]>('/api/v1/platform-admin/audit-log'),
 };

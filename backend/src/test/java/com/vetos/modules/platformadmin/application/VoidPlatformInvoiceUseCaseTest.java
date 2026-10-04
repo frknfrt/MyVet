@@ -1,5 +1,6 @@
 package com.vetos.modules.platformadmin.application;
 
+import com.vetos.modules.platformadmin.domain.AuditAction;
 import com.vetos.modules.platformadmin.domain.PlatformInvoice;
 import com.vetos.modules.platformadmin.domain.PlatformInvoiceRepository;
 import com.vetos.modules.platformadmin.domain.PlatformInvoiceStatus;
@@ -25,6 +26,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -32,24 +34,27 @@ class VoidPlatformInvoiceUseCaseTest {
 
     @Mock private PlatformInvoiceRepository platformInvoiceRepository;
     @Mock private TenantAdminPort tenantAdminPort;
+    @Mock private RecordAuditLogUseCase recordAuditLogUseCase;
 
     private VoidPlatformInvoiceUseCase useCase;
 
     @BeforeEach
     void setUp() {
         TenantBillingReconciler tenantBillingReconciler = new TenantBillingReconciler(platformInvoiceRepository, tenantAdminPort);
-        useCase = new VoidPlatformInvoiceUseCase(platformInvoiceRepository, tenantBillingReconciler);
+        useCase = new VoidPlatformInvoiceUseCase(platformInvoiceRepository, tenantBillingReconciler, recordAuditLogUseCase);
     }
 
     @Test
     void should_voidInvoice_when_statusIsIssued() {
         LocalDate today = LocalDate.of(2026, 8, 28);
         PlatformInvoice invoice = PlatformInvoice.issue(UUID.randomUUID(), "PRO", new BigDecimal("500.00"), today, today.plusMonths(1), today);
+        UUID adminId = UUID.randomUUID();
         when(platformInvoiceRepository.findById(invoice.getId())).thenReturn(Optional.of(invoice));
 
-        useCase.execute(invoice.getId());
+        useCase.execute(invoice.getId(), adminId, "admin@vetly.com.tr");
 
         assertThat(invoice.getStatus()).isEqualTo(PlatformInvoiceStatus.VOID);
+        verify(recordAuditLogUseCase).execute(eq(adminId), eq("admin@vetly.com.tr"), eq(AuditAction.INVOICE_VOIDED), eq("INVOICE"), eq(invoice.getId()), any());
     }
 
     @Test
@@ -58,7 +63,7 @@ class VoidPlatformInvoiceUseCaseTest {
         PlatformInvoice invoice = PlatformInvoice.issue(UUID.randomUUID(), "PRO", new BigDecimal("500.00"), today, today.plusMonths(1), today);
         when(platformInvoiceRepository.findById(invoice.getId())).thenReturn(Optional.of(invoice));
 
-        useCase.execute(invoice.getId());
+        useCase.execute(invoice.getId(), UUID.randomUUID(), "admin@vetly.com.tr");
 
         verifyNoInteractions(tenantAdminPort);
         verify(platformInvoiceRepository, never()).findByTenantId(any());
@@ -75,7 +80,7 @@ class VoidPlatformInvoiceUseCaseTest {
         when(platformInvoiceRepository.findByTenantId(tenantId)).thenReturn(List.of(invoice));
         when(tenantAdminPort.getOverview(tenantId)).thenReturn(overview(tenantId, TenantStatus.SUSPENDED));
 
-        useCase.execute(invoice.getId());
+        useCase.execute(invoice.getId(), UUID.randomUUID(), "admin@vetly.com.tr");
 
         assertThat(invoice.getStatus()).isEqualTo(PlatformInvoiceStatus.VOID);
         verify(tenantAdminPort).updateBillingStatus(tenantId, BillingStatus.ACTIVE);
@@ -94,7 +99,7 @@ class VoidPlatformInvoiceUseCaseTest {
         when(platformInvoiceRepository.findById(overdueInvoice.getId())).thenReturn(Optional.of(overdueInvoice));
         when(platformInvoiceRepository.findByTenantId(tenantId)).thenReturn(List.of(overdueInvoice, otherIssuedInvoice));
 
-        useCase.execute(overdueInvoice.getId());
+        useCase.execute(overdueInvoice.getId(), UUID.randomUUID(), "admin@vetly.com.tr");
 
         assertThat(overdueInvoice.getStatus()).isEqualTo(PlatformInvoiceStatus.VOID);
         verify(tenantAdminPort, never()).updateBillingStatus(eq(tenantId), any(BillingStatus.class));
@@ -106,7 +111,7 @@ class VoidPlatformInvoiceUseCaseTest {
         UUID invoiceId = UUID.randomUUID();
         when(platformInvoiceRepository.findById(invoiceId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> useCase.execute(invoiceId))
+        assertThatThrownBy(() -> useCase.execute(invoiceId, UUID.randomUUID(), "admin@vetly.com.tr"))
             .isInstanceOf(PlatformInvoiceNotFoundException.class);
     }
 
@@ -117,7 +122,7 @@ class VoidPlatformInvoiceUseCaseTest {
         invoice.markPaid();
         when(platformInvoiceRepository.findById(invoice.getId())).thenReturn(Optional.of(invoice));
 
-        assertThatThrownBy(() -> useCase.execute(invoice.getId()))
+        assertThatThrownBy(() -> useCase.execute(invoice.getId(), UUID.randomUUID(), "admin@vetly.com.tr"))
             .isInstanceOf(PlatformInvoiceInvalidTransitionException.class);
     }
 

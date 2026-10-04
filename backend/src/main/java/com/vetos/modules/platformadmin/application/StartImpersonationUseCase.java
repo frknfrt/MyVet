@@ -1,6 +1,7 @@
 package com.vetos.modules.platformadmin.application;
 
 import com.vetos.modules.platformadmin.application.dto.ImpersonationSession;
+import com.vetos.modules.platformadmin.domain.AuditAction;
 import com.vetos.modules.platformadmin.domain.exception.ImpersonationTargetNotFoundException;
 import com.vetos.modules.tenant.domain.ImpersonationTarget;
 import com.vetos.modules.tenant.domain.TenantAdminPort;
@@ -16,14 +17,11 @@ import java.util.UUID;
 /**
  * Platform admin'in bir kiracinin ADMIN rolundeki personeli YERINE gecerek
  * (sifresini bilmeden) o kiracinin panelini aynen gormesini saglar --
- * destek/sorun giderme icin. Henuz kalici bir audit_log tablosu yok (bkz.
- * docs/architecture.md, "Audit log" plani -- yol haritasinda ayri bir
- * madde); bu yuzden her impersonasyon en azindan sunucu logunda WARN
- * seviyesinde izlenebilir sekilde kayit birakir. Uretilen JWT, normal bir
- * staff girisininkiyle AYNI -- JwtTokenProvider'a ayri bir "impersonation"
- * claim turu EKLENMEDI (dogrulanmis staff kimlik dogrulama yoluna
- * dokunulmadi); tam izlenebilirlik icin audit_log eklendiginde bu kayit
- * kalici hale getirilmeli.
+ * destek/sorun giderme icin. Her impersonasyon artik AuditLogEntry'ye kalici
+ * olarak yaziliyor (bkz. RecordAuditLogUseCase); WARN log satiri da ek bir
+ * guvenlik agi olarak korundu. Uretilen JWT, normal bir staff girisininkiyle
+ * AYNI -- JwtTokenProvider'a ayri bir "impersonation" claim turu EKLENMEDI
+ * (dogrulanmis staff kimlik dogrulama yoluna dokunulmadi).
  */
 @Service
 @RequiredArgsConstructor
@@ -33,6 +31,7 @@ public class StartImpersonationUseCase {
 
     private final TenantAdminPort tenantAdminPort;
     private final JwtTokenProvider jwtTokenProvider;
+    private final RecordAuditLogUseCase recordAuditLogUseCase;
 
     public ImpersonationSession execute(UUID tenantId, UUID platformAdminId, String platformAdminEmail) {
         ImpersonationTarget target = tenantAdminPort.findImpersonationTarget(tenantId)
@@ -45,6 +44,10 @@ public class StartImpersonationUseCase {
         log.warn(
             "IMPERSONATION baslatildi: platformAdmin={} ({}), tenantId={}, impersonatedStaffUserId={}, role={}",
             platformAdminEmail, platformAdminId, tenantId, target.staffUserId(), target.role()
+        );
+        recordAuditLogUseCase.execute(
+            platformAdminId, platformAdminEmail, AuditAction.TENANT_IMPERSONATED, "TENANT", tenantId,
+            "impersonatedStaffUserId=" + target.staffUserId() + ", role=" + target.role()
         );
 
         return new ImpersonationSession(

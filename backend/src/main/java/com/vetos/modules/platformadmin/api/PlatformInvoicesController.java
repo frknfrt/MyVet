@@ -39,12 +39,13 @@ public class PlatformInvoicesController {
         @RequestBody @Valid RecordPlatformPaymentRequest request
     ) {
         recordPlatformPaymentUseCase.execute(new RecordPlatformPaymentCommand(
-            invoiceId, request.amount(), request.method(), request.paidAt(), request.notes(), principal.platformAdminId()
+            invoiceId, request.amount(), request.method(), request.paidAt(), request.notes(),
+            principal.platformAdminId(), principal.email()
         ));
     }
 
     @PostMapping("/{invoiceId}/void")
-    public void voidInvoice(@PathVariable UUID tenantId, @PathVariable UUID invoiceId) {
-        voidPlatformInvoiceUseCase.execute(invoiceId);
+    public void voidInvoice(@PathVariable UUID tenantId, @PathVariable UUID invoiceId, @AuthenticationPrincipal AuthenticatedPlatformAdmin principal) {
+        voidPlatformInvoiceUseCase.execute(invoiceId, principal.platformAdminId(), principal.email());
     }
 }

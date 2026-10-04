@@ -1,6 +1,7 @@
 package com.vetos.modules.platformadmin.application;
 
 import com.vetos.modules.platformadmin.application.dto.RecordPlatformPaymentCommand;
+import com.vetos.modules.platformadmin.domain.AuditAction;
 import com.vetos.modules.platformadmin.domain.PlatformInvoice;
 import com.vetos.modules.platformadmin.domain.PlatformInvoiceRepository;
 import com.vetos.modules.platformadmin.domain.PlatformPayment;
@@ -17,6 +18,7 @@ public class RecordPlatformPaymentUseCase {
     private final PlatformInvoiceRepository platformInvoiceRepository;
     private final PlatformPaymentRepository platformPaymentRepository;
     private final TenantBillingReconciler tenantBillingReconciler;
+    private final RecordAuditLogUseCase recordAuditLogUseCase;
 
     @Transactional
     public void execute(RecordPlatformPaymentCommand command) {
@@ -31,5 +33,14 @@ public class RecordPlatformPaymentUseCase {
         ));
 
         tenantBillingReconciler.reconcileAfterInvoiceResolved(invoice.getTenantId(), invoice.getId());
+
+        // recordedByAdminId null ise bu otomatik/sistem odemesi (ör. iyzico webhook) -- audit log'a yazilmiyor,
+        // sadece bir platform admin'in bilerek girdigi manuel odeme kaydediliyor.
+        if (command.recordedByAdminId() != null) {
+            recordAuditLogUseCase.execute(
+                command.recordedByAdminId(), command.recordedByAdminEmail(), AuditAction.PAYMENT_RECORDED, "INVOICE", invoice.getId(),
+                "amount=" + command.amount() + ", method=" + command.method()
+            );
+        }
     }
 }

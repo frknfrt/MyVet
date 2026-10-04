@@ -92,6 +92,16 @@ const NAV_ITEMS: NavItem[] = [
       </svg>
     ),
   },
+  {
+    path: 'audit-log',
+    label: 'Denetim Kaydı',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 2h6a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" />
+        <path d="M9 8h6M9 12h6M9 16h3" />
+      </svg>
+    ),
+  },
 ];
 
 /**
