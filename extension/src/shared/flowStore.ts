@@ -8,7 +8,9 @@ import type { DocumentType } from './types';
  */
 export const FLOW_KEY = 'tarbilFlow';
 
-export type FlowStep = 'armed' | 'filling' | 'searching' | 'transferred' | 'needsVet' | 'awaitingConfirm' | 'done' | 'error';
+export type FlowStep =
+  | 'armed' | 'filling' | 'searching' | 'transferred' | 'needsVet' | 'awaitingConfirm'
+  | 'choosingProduct' | 'productReady' | 'done' | 'error';
 
 export interface FlowState {
   submissionId: string;

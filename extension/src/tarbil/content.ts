@@ -12,6 +12,7 @@ import { createCard } from './core/card';
 import { shouldRedirectHome } from './core/home';
 import { isKeepAliveEnabled, startKeepAlive } from './core/keepAlive';
 import { createStockSync } from './pages/stockSync';
+import { runStockPopupFlow } from './pages/stockPopup';
 import { createReceiptFlow } from './pages/vaccineReceipt';
 import { runSearchFlow, type Send } from './steps/findAnimal';
 import { VACCINE_PAGE_URL, pageKind } from './selectors';
@@ -89,6 +90,20 @@ switch (pageKind(location)) {
   }
   case 'search':
     void runSearchFlow({ bridge: createPageBridge(window), flow, send, doc: document, card, now: Date.now });
+    break;
+  case 'vaccineStockPopup':
+    void runStockPopupFlow({
+      bridge: createPageBridge(window),
+      flow,
+      send,
+      doc: document,
+      card,
+      now: Date.now,
+      today: () => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      },
+    });
     break;
   case 'vaccineStock':
     startStockSync('vaccineStock');
