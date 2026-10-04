@@ -49,6 +49,19 @@ public class InventoryItem {
     @Column(name = "unit_cost")
     private BigDecimal unitCost;
 
+    /** TARBIL eslesmesi (spec 2026-10-04 S13): HBSAPP_VACCINE | VETILAC_MEDICINE; TARBIL'den gelmeyen kalemde null. */
+    @Column(name = "tarbil_system")
+    private String tarbilSystem;
+
+    @Column(name = "tarbil_product_name")
+    private String tarbilProductName;
+
+    @Column(name = "tarbil_presentation")
+    private String tarbilPresentation;
+
+    @Column(nullable = false)
+    private String unit = "ADET";
+
     public static InventoryItem create(
         UUID tenantId, UUID branchId, String name, String category, String skuBarcode,
         int initialQuantity, int reorderThreshold, LocalDate expiryDate, String lotNumber, BigDecimal unitCost
@@ -80,5 +93,11 @@ public class InventoryItem {
         this.category = category;
         this.reorderThreshold = reorderThreshold;
         this.unitCost = unitCost;
+    }
+
+    public void linkTarbil(String system, String productName, String presentation) {
+        this.tarbilSystem = system;
+        this.tarbilProductName = productName;
+        this.tarbilPresentation = presentation;
     }
 }
