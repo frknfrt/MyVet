@@ -19,7 +19,6 @@ function formatDateTime(value: string | null): string {
 const CHANNEL_LABELS: Record<NotificationChannel, string> = {
   SMS: 'SMS',
   WHATSAPP: 'WhatsApp',
-  EMAIL: 'E-posta',
 };
 
 const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
@@ -39,6 +38,7 @@ export function SystemHealthPage() {
   const [eInvoices, setEInvoices] = useState<FailedEInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryingIds, setRetryingIds] = useState<Set<string>>(new Set());
 
   function load() {
     setLoading(true);
@@ -54,13 +54,37 @@ export function SystemHealthPage() {
 
   useEffect(load, []);
 
+  function withRetrying(id: string, run: () => Promise<void>) {
+    setError(null);
+    setRetryingIds((prev) => new Set(prev).add(id));
+    run()
+      .then(load)
+      .catch((err) => setError(errorMessageOf(err)))
+      .finally(() => {
+        setRetryingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      });
+  }
+
+  function handleRetryNotification(id: string) {
+    withRetrying(id, () => platformAdminApi.retryFailedNotification(id));
+  }
+
+  function handleRetryEInvoice(id: string) {
+    withRetrying(id, () => platformAdminApi.retryFailedEInvoice(id));
+  }
+
   return (
     <div>
       <div className={styles.title}>Sistem Sağlığı</div>
       <p className={styles.note}>
         Tüm kiracılardaki, otomatik yeniden deneme hakları tükenmiş veya henüz yeniden denenmeyi bekleyen başarısız
         SMS/WhatsApp ve e-Fatura gönderimleri. "Son Deneme Tarihi" sütunu, sorunun ne zamandır sürdüğünü anlamak için
-        önemlidir.
+        önemlidir. "Tekrar Dene" sorunu (örn. yanlış numara) düzelttikten sonra kullanılmalı — aksi halde aynı hata
+        tekrar oluşur.
       </p>
 
       <div className={styles.actionsRow}>
@@ -83,14 +107,15 @@ export function SystemHealthPage() {
           <div>Hata</div>
           <div>Deneme</div>
           <div>Son Deneme</div>
+          <div></div>
         </div>
         {loading ? (
           <div className={styles.empty}>Yükleniyor...</div>
         ) : notifications.length === 0 ? (
           <div className={styles.empty}>Başarısız bildirim yok 🎉</div>
         ) : (
-          notifications.map((n, i) => (
-            <div key={i} className={[styles.row, styles.healthNotifRow].join(' ')}>
+          notifications.map((n) => (
+            <div key={n.notificationLogId} className={[styles.row, styles.healthNotifRow].join(' ')}>
               <div>{n.tenantName}</div>
               <div>
                 <Badge tone={n.channel === 'WHATSAPP' ? 'success' : 'neutral'}>{CHANNEL_LABELS[n.channel]}</Badge>
@@ -104,6 +129,15 @@ export function SystemHealthPage() {
                 <Badge tone={n.nextRetryAt ? 'warning' : 'danger'}>{n.attemptCount}</Badge>
               </div>
               <div className={styles.muted}>{formatDateTime(n.attemptedAt)}</div>
+              <div>
+                <Button
+                  variant="secondary"
+                  onClick={() => handleRetryNotification(n.notificationLogId)}
+                  disabled={retryingIds.has(n.notificationLogId)}
+                >
+                  {retryingIds.has(n.notificationLogId) ? 'Deneniyor...' : 'Tekrar Dene'}
+                </Button>
+              </div>
             </div>
           ))
         )}
@@ -120,6 +154,7 @@ export function SystemHealthPage() {
           <div>Hata</div>
           <div>Deneme</div>
           <div>Son Deneme</div>
+          <div></div>
         </div>
         {loading ? (
           <div className={styles.empty}>Yükleniyor...</div>
@@ -127,7 +162,7 @@ export function SystemHealthPage() {
           <div className={styles.empty}>Başarısız e-Fatura gönderimi yok 🎉</div>
         ) : (
           eInvoices.map((inv) => (
-            <div key={inv.invoiceId} className={[styles.row, styles.healthInvoiceRow].join(' ')}>
+            <div key={inv.submissionId} className={[styles.row, styles.healthInvoiceRow].join(' ')}>
               <div>{inv.tenantName}</div>
               <div className={styles.muted}>{DOCUMENT_TYPE_LABELS[inv.documentType]}</div>
               <div className={styles.muted}>{inv.totalAmount.toLocaleString('tr-TR')} ₺</div>
@@ -138,6 +173,15 @@ export function SystemHealthPage() {
                 <Badge tone="danger">{inv.attemptCount}</Badge>
               </div>
               <div className={styles.muted}>{formatDateTime(inv.attemptedAt)}</div>
+              <div>
+                <Button
+                  variant="secondary"
+                  onClick={() => handleRetryEInvoice(inv.submissionId)}
+                  disabled={retryingIds.has(inv.submissionId)}
+                >
+                  {retryingIds.has(inv.submissionId) ? 'Deneniyor...' : 'Tekrar Dene'}
+                </Button>
+              </div>
             </div>
           ))
         )}

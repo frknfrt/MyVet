@@ -8,12 +8,12 @@ import java.time.Instant;
 import java.util.UUID;
 
 public record FailedEInvoiceResponse(
-    UUID tenantId, String tenantName, UUID invoiceId, EInvoiceDocumentType documentType,
+    UUID submissionId, UUID tenantId, String tenantName, UUID invoiceId, EInvoiceDocumentType documentType,
     BigDecimal totalAmount, String failureReason, int attemptCount, Instant attemptedAt
 ) {
     public static FailedEInvoiceResponse from(FailedEInvoiceView v) {
         return new FailedEInvoiceResponse(
-            v.tenantId(), v.tenantName(), v.invoiceId(), v.documentType(),
+            v.submissionId(), v.tenantId(), v.tenantName(), v.invoiceId(), v.documentType(),
             v.totalAmount(), v.failureReason(), v.attemptCount(), v.attemptedAt()
         );
     }

@@ -30,7 +30,7 @@ class EInvoiceHealthAdapter implements EInvoiceHealthPort {
     private FailedEInvoiceView toView(EInvoiceSubmission submission) {
         String tenantName = tenantLookupPort.findTenantName(submission.getTenantId()).orElse("Bilinmeyen Klinik");
         return new FailedEInvoiceView(
-            submission.getTenantId(), tenantName, submission.getInvoiceId(), submission.getDocumentType(),
+            submission.getId(), submission.getTenantId(), tenantName, submission.getInvoiceId(), submission.getDocumentType(),
             submission.getTotalAmount(), submission.getFailureReason(), submission.getAttemptCount(), submission.getAttemptedAt()
         );
     }

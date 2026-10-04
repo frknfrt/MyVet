@@ -91,6 +91,7 @@ export type NotificationType =
   | 'APPOINTMENT_CONFIRMATION' | 'APPOINTMENT_REMINDER' | 'CAMPAIGN_MESSAGE' | 'VACCINATION_REMINDER';
 
 export interface FailedNotification {
+  notificationLogId: string;
   tenantId: string;
   tenantName: string;
   recipientLabel: string | null;
@@ -106,6 +107,7 @@ export interface FailedNotification {
 export type EInvoiceDocumentType = 'E_FATURA' | 'E_ARSIV';
 
 export interface FailedEInvoice {
+  submissionId: string;
   tenantId: string;
   tenantName: string;
   invoiceId: string;
@@ -143,4 +145,8 @@ export const platformAdminApi = {
     platformAdminClient.get<FailedNotification[]>('/api/v1/platform-admin/system-health/notifications'),
   listFailedEInvoices: () =>
     platformAdminClient.get<FailedEInvoice[]>('/api/v1/platform-admin/system-health/efatura'),
+  retryFailedNotification: (notificationLogId: string) =>
+    platformAdminClient.post<void>(`/api/v1/platform-admin/system-health/notifications/${notificationLogId}/retry`),
+  retryFailedEInvoice: (submissionId: string) =>
+    platformAdminClient.post<void>(`/api/v1/platform-admin/system-health/efatura/${submissionId}/retry`),
 };

@@ -30,7 +30,7 @@ class NotificationHealthAdapter implements NotificationHealthPort {
     private FailedNotificationView toView(NotificationLog log) {
         String tenantName = tenantLookupPort.findTenantName(log.getTenantId()).orElse("Bilinmeyen Klinik");
         return new FailedNotificationView(
-            log.getTenantId(), tenantName, log.getRecipientLabel(), log.getRecipientContact(),
+            log.getId(), log.getTenantId(), tenantName, log.getRecipientLabel(), log.getRecipientContact(),
             log.getChannel(), log.getNotificationType(), log.getFailureReason(),
             log.getAttemptCount(), log.getAttemptedAt(), log.getNextRetryAt()
         );

@@ -20,12 +20,28 @@ public class RetryEInvoiceSubmissionUseCase {
     private final EInvoiceSubmissionRepository eInvoiceSubmissionRepository;
     private final EInvoiceSubmissionExecutor eInvoiceSubmissionExecutor;
 
+    /** Kiracinin kendi panelinden -- sahiplik kontrolu yapilir. */
     @Transactional
     public void execute(UUID tenantId, UUID submissionId) {
         EInvoiceSubmission submission = eInvoiceSubmissionRepository.findById(submissionId)
             .filter(s -> s.getTenantId().equals(tenantId))
             .orElseThrow(() -> new EInvoiceSubmissionNotFoundException(submissionId));
+        retry(submission, submissionId);
+    }
 
+    /**
+     * Platform admin Sistem Sagligi paneli -- kiraci sinirlamasi olmadan
+     * (bkz. EInvoiceAdminPort). Admin zaten tum kiracilar uzerinde yetkili
+     * oldugu icin burada sahiplik kontrolu yapilmaz.
+     */
+    @Transactional
+    public void executeAsAdmin(UUID submissionId) {
+        EInvoiceSubmission submission = eInvoiceSubmissionRepository.findById(submissionId)
+            .orElseThrow(() -> new EInvoiceSubmissionNotFoundException(submissionId));
+        retry(submission, submissionId);
+    }
+
+    private void retry(EInvoiceSubmission submission, UUID submissionId) {
         // PROCESSING: saglayici istegi zaten kabul etti, GIB resmilesme
         // callback'i bekleniyor -- tekrar gonderim mukerrer fatura yaratir.
         if (submission.getStatus() == EInvoiceSubmissionStatus.PROCESSING) {

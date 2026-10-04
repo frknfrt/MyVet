@@ -5,16 +5,15 @@ import com.vetos.modules.platformadmin.api.dto.FailedNotificationResponse;
 import com.vetos.modules.platformadmin.application.ListPlatformSystemHealthUseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Platform admin "Sistem Sagligi" paneli -- tum kiracilardaki basarisiz
- * bildirim ve e-Fatura gonderimlerini goruntuler (bkz. SS101 kontrol
- * listesi: operasyonel gorunurluk).
+ * bildirim ve e-Fatura gonderimlerini goruntuler, manuel tekrar deneme
+ * imkani sunar (bkz. SS101 kontrol listesi: operasyonel gorunurluk).
  */
 @RestController
 @RequestMapping("/api/v1/platform-admin/system-health")
@@ -36,5 +35,15 @@ public class PlatformSystemHealthController {
         return listPlatformSystemHealthUseCase.failedEInvoices().stream()
             .map(FailedEInvoiceResponse::from)
             .toList();
+    }
+
+    @PostMapping("/notifications/{id}/retry")
+    public void retryNotification(@PathVariable UUID id) {
+        listPlatformSystemHealthUseCase.retryNotification(id);
+    }
+
+    @PostMapping("/efatura/{id}/retry")
+    public void retryEInvoice(@PathVariable UUID id) {
+        listPlatformSystemHealthUseCase.retryEInvoice(id);
     }
 }
