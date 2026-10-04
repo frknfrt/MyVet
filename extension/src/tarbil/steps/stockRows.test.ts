@@ -41,4 +41,16 @@ describe('stock rows', () => {
     vaccineTable(`<tr id="${VP}__0"><td>Aşı X</td></tr>`, ['Ad']);
     expect(readStockRows(document, 'vaccineStock')).toEqual([]);
   });
+
+  it('rejects the whole table when a quantity or date cell cannot be read', () => {
+    vaccineTable(`<tr id="${VP}__0"><td></td><td></td><td></td><td>R</td><td>Aşı X</td><td>Flakon</td><td>1</td><td>31.01.2027</td><td>4</td><td>A</td></tr>
+      <tr id="${VP}__1"><td></td><td></td><td></td><td>R</td><td>Aşı Y</td><td>Flakon</td><td>2</td><td>31.01.2027</td><td>4 Adet</td><td>A</td></tr>`);
+    expect(readStockRows(document, 'vaccineStock')).toEqual([]);
+
+    vaccineTable(`<tr id="${VP}__0"><td></td><td></td><td></td><td>R</td><td>Aşı X</td><td>Flakon</td><td>1</td><td>2027/01/31</td><td>4</td><td>A</td></tr>`);
+    expect(readStockRows(document, 'vaccineStock')).toEqual([]);
+
+    vaccineTable(`<tr id="${VP}__0"><td></td><td></td><td></td><td>R</td><td>Aşı X</td><td>Flakon</td><td>1</td><td>31.01.2027</td><td>2,5</td><td>A</td></tr>`);
+    expect(readStockRows(document, 'vaccineStock')).toEqual([]);
+  });
 });

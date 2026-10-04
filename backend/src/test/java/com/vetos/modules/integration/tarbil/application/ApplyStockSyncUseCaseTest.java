@@ -58,7 +58,7 @@ class ApplyStockSyncUseCaseTest {
         TarbilStockSnapshotLine fresh = line(1, "Drontal", "L1", 3);
         TarbilStockSnapshotLine differs = line(2, "Rabisin", "R9", 10);
         UUID existing = UUID.randomUUID();
-        when(repository.findById(snapshotId)).thenReturn(Optional.of(s));
+        when(repository.findByIdForUpdate(snapshotId)).thenReturn(Optional.of(s));
         when(repository.findLines(snapshotId)).thenReturn(List.of(fresh, differs));
         when(port.listForBranch(branchId)).thenReturn(List.of(new InventoryStockView(existing, "Rabisin", "R9", null, 4, null)));
         UUID created = UUID.randomUUID();
@@ -77,20 +77,39 @@ class ApplyStockSyncUseCaseTest {
     }
 
     @Test
-    void should_notCreateDuplicate_when_sameLotAppliedTwiceInOneCall() {
+    void should_createOneItemWithSummedQuantity_when_sameLotSpansTwoRows() {
         UUID snapshotId = UUID.randomUUID();
         TarbilStockSnapshotLine first = line(1, "Drontal", "L1", 3);
         TarbilStockSnapshotLine second = line(2, "Drontal", "L1", 5);
-        when(repository.findById(snapshotId)).thenReturn(Optional.of(snapshot(TarbilStockSystem.VETILAC_MEDICINE)));
+        when(repository.findByIdForUpdate(snapshotId)).thenReturn(Optional.of(snapshot(TarbilStockSystem.VETILAC_MEDICINE)));
         when(repository.findLines(snapshotId)).thenReturn(List.of(first, second));
         when(port.listForBranch(branchId)).thenReturn(List.of());
         UUID created = UUID.randomUUID();
         when(port.createFromTarbil(eq(branchId), any(), eq(snapshotId))).thenReturn(created);
 
-        useCase().execute(tenantId, branchId, snapshotId, List.of(first.getId(), second.getId()));
+        int applied = useCase().execute(tenantId, branchId, snapshotId, List.of(first.getId()));
 
-        verify(port, times(1)).createFromTarbil(any(), any(), any());
-        verify(port).syncFromTarbil(eq(created), eq(5), any(TarbilStockLink.class), eq(snapshotId));
+        ArgumentCaptor<NewTarbilStockItem> item = ArgumentCaptor.forClass(NewTarbilStockItem.class);
+        verify(port, times(1)).createFromTarbil(eq(branchId), item.capture(), eq(snapshotId));
+        assertThat(item.getValue().quantity()).isEqualTo(8);
+        verify(port, never()).syncFromTarbil(any(), anyInt(), any(), any());
+        assertThat(applied).isEqualTo(1);
+        assertThat(second.getAppliedInventoryItemId()).isEqualTo(created);
+    }
+
+    @Test
+    void should_syncExistingLotlessItem_insteadOfCreatingAgain() {
+        UUID snapshotId = UUID.randomUUID();
+        TarbilStockSnapshotLine lotless = line(1, "Drontal", null, 6);
+        UUID existing = UUID.randomUUID();
+        when(repository.findByIdForUpdate(snapshotId)).thenReturn(Optional.of(snapshot(TarbilStockSystem.VETILAC_MEDICINE)));
+        when(repository.findLines(snapshotId)).thenReturn(List.of(lotless));
+        when(port.listForBranch(branchId)).thenReturn(List.of(new InventoryStockView(existing, "Drontal", null, null, 4, "Drontal")));
+
+        useCase().execute(tenantId, branchId, snapshotId, List.of(lotless.getId()));
+
+        verify(port, never()).createFromTarbil(any(), any(), any());
+        verify(port).syncFromTarbil(eq(existing), eq(6), any(TarbilStockLink.class), eq(snapshotId));
     }
 
     @Test
@@ -98,7 +117,7 @@ class ApplyStockSyncUseCaseTest {
         UUID snapshotId = UUID.randomUUID();
         TarbilStockSnapshotLine done = line(1, "Drontal", "L1", 3);
         done.markApplied(UUID.randomUUID(), Instant.now());
-        when(repository.findById(snapshotId)).thenReturn(Optional.of(snapshot(TarbilStockSystem.HBSAPP_VACCINE)));
+        when(repository.findByIdForUpdate(snapshotId)).thenReturn(Optional.of(snapshot(TarbilStockSystem.HBSAPP_VACCINE)));
         when(repository.findLines(snapshotId)).thenReturn(List.of(done));
         when(port.listForBranch(branchId)).thenReturn(List.of());
 
@@ -110,7 +129,7 @@ class ApplyStockSyncUseCaseTest {
     @Test
     void should_throwNotFound_when_snapshotBelongsToAnotherTenant() {
         UUID snapshotId = UUID.randomUUID();
-        when(repository.findById(snapshotId)).thenReturn(Optional.of(
+        when(repository.findByIdForUpdate(snapshotId)).thenReturn(Optional.of(
             TarbilStockSnapshot.take(UUID.randomUUID(), TarbilStockSystem.HBSAPP_VACCINE, UUID.randomUUID(), Instant.now())));
 
         assertThatThrownBy(() -> useCase().execute(tenantId, branchId, snapshotId, List.of(UUID.randomUUID())))

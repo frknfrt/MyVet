@@ -54,15 +54,29 @@ export function readStockRows(doc: Document, kind: StockKind): StockRow[] {
   const quantity = idx(cols.quantity);
   const opened = idx(cols.opened);
   if ([product, presentation, lot, expiry, quantity].some((i) => i < 0) || (cols.opened && opened < 0)) return [];
-  return Array.from(table.tBodies[0]?.rows ?? [])
-    .filter((r) => r.id.startsWith(`${table.id}__`))
-    .map((r) => ({
-      productName: clean(r.cells[product]?.textContent),
+  const rows: StockRow[] = [];
+  for (const r of Array.from(table.tBodies[0]?.rows ?? [])) {
+    if (!r.id.startsWith(`${table.id}__`)) continue;
+    const productName = clean(r.cells[product]?.textContent);
+    if (!productName) continue;
+    // Okunamayan miktar/tarih: TARBIL bicimi degismis olabilir. Tek satir bile supheliyse hicbiri gonderilmez
+    // (0 olarak gonderilen miktar Vetly stogunu sifirlardi).
+    const qty = parseTrNumber(r.cells[quantity]?.textContent);
+    const expiryText = clean(r.cells[expiry]?.textContent);
+    const expiryDate = parseTrDate(expiryText);
+    const openedText = opened >= 0 ? clean(r.cells[opened]?.textContent) : '';
+    const openedQuantity = openedText ? parseTrNumber(openedText) : null;
+    if (qty === null || !Number.isInteger(qty) || qty < 0) return [];
+    if (expiryText && !expiryDate) return [];
+    if (openedText && openedQuantity === null) return [];
+    rows.push({
+      productName,
       presentation: clean(r.cells[presentation]?.textContent) || null,
       lotNumber: clean(r.cells[lot]?.textContent) || null,
-      expiryDate: parseTrDate(r.cells[expiry]?.textContent),
-      quantity: Math.max(0, Math.round(parseTrNumber(r.cells[quantity]?.textContent) ?? 0)),
-      openedQuantity: opened >= 0 ? parseTrNumber(r.cells[opened]?.textContent) : null,
-    }))
-    .filter((row) => row.productName.length > 0);
+      expiryDate,
+      quantity: qty,
+      openedQuantity,
+    });
+  }
+  return rows;
 }

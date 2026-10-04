@@ -26,6 +26,8 @@ class TarbilStockSnapshotRepositoryAdapter implements TarbilStockSnapshotReposit
 
     @Override public Optional<TarbilStockSnapshot> findById(UUID id) { return snapshots.findById(id); }
 
+    @Override public Optional<TarbilStockSnapshot> findByIdForUpdate(UUID id) { return snapshots.findLockedById(id); }
+
     @Override
     public Optional<TarbilStockSnapshot> findLatest(UUID tenantId, TarbilStockSystem system) {
         return snapshots.findFirstByTenantIdAndTarbilSystemOrderByTakenAtDesc(tenantId, system);
