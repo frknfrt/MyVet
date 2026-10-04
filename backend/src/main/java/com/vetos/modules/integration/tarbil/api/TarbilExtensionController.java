@@ -7,6 +7,8 @@ import com.vetos.modules.integration.tarbil.api.dto.LearnMappingRequest;
 import com.vetos.modules.integration.tarbil.api.dto.MarkSubmittedRequest;
 import com.vetos.modules.integration.tarbil.api.dto.PairRequest;
 import com.vetos.modules.integration.tarbil.api.dto.PairResponse;
+import com.vetos.modules.integration.tarbil.api.dto.StockSnapshotRequest;
+import com.vetos.modules.integration.tarbil.api.dto.StockSnapshotResponse;
 import com.vetos.modules.integration.tarbil.api.dto.TarbilSubmissionResponse;
 import com.vetos.modules.integration.tarbil.application.DismissSubmissionUseCase;
 import com.vetos.modules.integration.tarbil.application.GetExtensionProfileUseCase;
@@ -15,6 +17,7 @@ import com.vetos.modules.integration.tarbil.application.LearnTarbilMappingUseCas
 import com.vetos.modules.integration.tarbil.application.ListPendingSubmissionsUseCase;
 import com.vetos.modules.integration.tarbil.application.MarkSubmittedUseCase;
 import com.vetos.modules.integration.tarbil.application.PairExtensionUseCase;
+import com.vetos.modules.integration.tarbil.application.RecordStockSnapshotUseCase;
 import com.vetos.modules.integration.tarbil.domain.TarbilMappingKind;
 import com.vetos.platform.security.AuthenticatedStaffUser;
 import com.vetos.platform.tenancy.TenantContext;
@@ -41,6 +44,7 @@ public class TarbilExtensionController {
     private final MarkSubmittedUseCase markSubmittedUseCase;
     private final DismissSubmissionUseCase dismissSubmissionUseCase;
     private final LearnTarbilMappingUseCase learnTarbilMappingUseCase;
+    private final RecordStockSnapshotUseCase recordStockSnapshotUseCase;
 
     @PostMapping("/pair")
     public PairResponse pair(@Valid @RequestBody PairRequest request) {
@@ -88,5 +92,13 @@ public class TarbilExtensionController {
     public void learnMapping(@PathVariable TarbilMappingKind kind, @Valid @RequestBody LearnMappingRequest request,
                              @AuthenticationPrincipal AuthenticatedStaffUser user) {
         learnTarbilMappingUseCase.execute(TenantContext.current(), user.staffUserId(), kind, request.key(), request.fields().toString());
+    }
+
+    @PostMapping("/stock-snapshots")
+    @ResponseStatus(HttpStatus.CREATED)
+    public StockSnapshotResponse uploadStockSnapshot(@Valid @RequestBody StockSnapshotRequest request,
+                                                     @AuthenticationPrincipal AuthenticatedStaffUser user) {
+        return new StockSnapshotResponse(recordStockSnapshotUseCase.execute(
+            TenantContext.current(), user.staffUserId(), request.system(), request.toInputs()));
     }
 }

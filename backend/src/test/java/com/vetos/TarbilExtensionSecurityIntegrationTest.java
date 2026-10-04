@@ -1,6 +1,7 @@
 package com.vetos;
 
 import static org.hamcrest.Matchers.hasItem;
+import com.jayway.jsonpath.JsonPath;
 import com.vetos.modules.encounter.domain.VaccinationRecord;
 import com.vetos.modules.encounter.domain.VaccinationRecordRepository;
 import com.vetos.modules.encounter.domain.VaccinationStatus;
@@ -105,6 +106,10 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
             jdbcTemplate.update("DELETE FROM tarbil_submission WHERE tenant_id = ?", t);
             jdbcTemplate.update("DELETE FROM tarbil_extension_token WHERE tenant_id = ?", t);
             jdbcTemplate.update("DELETE FROM tarbil_value_mapping WHERE tenant_id = ?", t);
+            jdbcTemplate.update("DELETE FROM tarbil_stock_snapshot_line WHERE tenant_id = ?", t);
+            jdbcTemplate.update("DELETE FROM tarbil_stock_snapshot WHERE tenant_id = ?", t);
+            jdbcTemplate.update("DELETE FROM stock_movements WHERE tenant_id = ?", t);
+            jdbcTemplate.update("DELETE FROM inventory_items WHERE tenant_id = ?", t);
             jdbcTemplate.update("DELETE FROM vaccination_records WHERE tenant_id = ?", t);
             jdbcTemplate.update("DELETE FROM patients WHERE owner_id IN (SELECT id FROM owners WHERE tenant_id = ?)", t);
             jdbcTemplate.update("DELETE FROM owners WHERE tenant_id = ?", t);
@@ -267,5 +272,36 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
             .andExpect(jsonPath("$[0].id").value(submissionId.toString()))
             .andExpect(jsonPath("$[0].status").value("PENDING"))
             .andExpect(jsonPath("$[0].vaccineName").value("Kuduz"));
+    }
+
+    @Test
+    void stockSnapshotUploadedByExtensionCanBeAppliedFromWeb() throws Exception {
+        UUID branchA = inRootSession(() -> branchRepository.save(Branch.create(tenantA, "Stok Şubesi")).getId());
+        String jwt = jwtTokenProvider.generateToken(staffA, tenantA, List.of(branchA), "VET");
+        String body = "{\"system\":\"VETILAC_MEDICINE\",\"lines\":[{\"productName\":\"Test İlaç\",\"presentation\":\"Kutu\","
+            + "\"lotNumber\":\"LOT-1\",\"expiryDate\":\"2027-01-31\",\"quantity\":3,\"openedQuantity\":null}]}";
+
+        mockMvc.perform(post("/api/v1/tarbil-extension/stock-snapshots")
+                .header("Authorization", "Bearer " + tokenA).contentType("application/json").content(body))
+            .andExpect(status().isCreated());
+
+        String view = mockMvc.perform(get("/api/v1/tarbil/stock-sync?system=VETILAC_MEDICINE").header("Authorization", "Bearer " + jwt))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.lines[0].status").value("NEW"))
+            .andReturn().getResponse().getContentAsString();
+        String snapshotId = JsonPath.read(view, "$.snapshotId");
+        String lineId = JsonPath.read(view, "$.lines[0].lineId");
+
+        mockMvc.perform(post("/api/v1/tarbil/stock-sync/" + snapshotId + "/apply").header("Authorization", "Bearer " + jwt)
+                .contentType("application/json").content("{\"lineIds\":[\"" + lineId + "\"]}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.applied").value(1));
+        mockMvc.perform(get("/api/v1/tarbil/stock-sync?system=VETILAC_MEDICINE").header("Authorization", "Bearer " + jwt))
+            .andExpect(jsonPath("$.lines[0].status").value("APPLIED"))
+            .andExpect(jsonPath("$.lines[0].vetlyQuantity").value(3));
+        Integer count = jdbcTemplate.queryForObject(
+            "SELECT count(*) FROM inventory_items WHERE tenant_id = ? AND lot_number = 'LOT-1' AND tarbil_system = 'VETILAC_MEDICINE'",
+            Integer.class, tenantA);
+        assertThat(count).isEqualTo(1);
     }
 }
