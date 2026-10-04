@@ -195,6 +195,7 @@ P0'ın uygulama planı bu belge onaylanınca yazılır; P1–P3 için kendi plan
 - Uçlar: eklenti `POST /api/v1/tarbil-extension/stock-snapshots` `{system, lines[{productName, presentation, lotNumber, expiryDate, quantity, openedQuantity}]}` (en çok 500 satır) → `{snapshotId}`; web `GET /api/v1/tarbil/stock-sync?system=` (son görüntü + durumlar; yoksa `snapshotId: null`) ve `POST /api/v1/tarbil/stock-sync/{snapshotId}/apply {lineIds}` → `{applied}`. Web uçları `/tarbil/**` kuralıyla ADMIN, VET. Şube: işlemi yapan kullanıcının ilk şubesi (`branchIds[0]`); çok şubeli klinikte şube seçimi sonraki iş.
 - Eklenti: aşı ve ilaç stok sayfalarında kart "TARBİL stoğunu Vetly'ye gönder" (hekim tıklar) → "Ara" (izin listesi `vaccineStock.search`, `medicineStock.search`) → sayfa boyutu 500 → tablo okunur → Vetly'ye gönderilir. `vetilac` için MAIN dünya betiği de eklenir.
 - Vetly Stok sayfası: "TARBİL Eşitleme" bölümü (ADMIN, VET): Aşı / İlaç sekmesi, satırlar durumlarıyla; `NEW` ve `QUANTITY_DIFFERS` seçilip "Vetly stoğuna işle".
+- **Uygulandı:** `docs/superpowers/plans/2026-10-04-tarbil-p1a-stok-esitleme.md` (V64 stok alanları, V65 `tarbil_stock_snapshot`).
 
 ## Ek A — TARBİL hastalık ağacı (reçete, 2026-10-04)
 Kök kategoriler seçilemez; yapraklar seçilir. `METABOLİZMA HASTALIKLARI` kendisi yapraktır.

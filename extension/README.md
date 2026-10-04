@@ -33,3 +33,6 @@ Teknik not: `page.js` sayfanın kendi dünyasında (`world: "MAIN"`) çalışır
 
 TARBİL boş kalan oturumu kendisi kapatır (`hbs.tarbil.gov.tr/?T=TimeOut`). Eklenti, açık bir TARBİL sekmesi (`hbsapp` ya da `vetilac`) varken 4 dakikada bir aynı siteden sade bir sayfa ister (`/Default.aspx`, `vetilac`'ta `/Pages/PharmacyDefault.aspx`). Veri ya da form göndermez, hiçbir butona basmaz. Yan paneldeki **TARBİL oturumunu açık tut** kutusuyla kapatılabilir (varsayılan açık). Oturum bir kez düştüyse e-Devlet girişi yine hekimdedir.
 
+## TARBİL stoğunu Vetly'ye aktarma (P1a)
+
+TARBİL'de **Aşı > Stok > Ara** (`hbsapp`) ya da **İlaç Takip Sistemi > Stok Ara** (`vetilac`) sayfasını açın; Vetly kartındaki **TARBİL stoğunu Vetly'ye gönder** butonuna basın. Eklenti yalnız "Ara"ya basar ve tabloyu tek sayfaya alır, okur ve Vetly'ye gönderir. Ardından Vetly'de **Stok** sayfasının altındaki **TARBİL Eşitleme** bölümünden farkları görüp seçtiğiniz satırları Vetly stoğuna işleyin.
