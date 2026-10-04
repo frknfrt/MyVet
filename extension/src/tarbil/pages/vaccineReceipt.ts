@@ -1,12 +1,12 @@
-import type { FlowState, FlowStore } from '../shared/flowStore';
-import type { Submission } from '../shared/types';
-import { normalizeChip, readReceiptChips } from './animalRows';
-import type { PageBridge } from './bridge';
-import type { Card } from './card';
-import type { Send } from './searchFlow';
-import { RECEIPT, bySuffix } from './selectors';
-import { resolveAnimalType } from './species';
-import { views } from './views';
+import type { FlowState, FlowStore } from '../../shared/flowStore';
+import type { Submission } from '../../shared/types';
+import { normalizeChip, readReceiptChips } from '../steps/animalRows';
+import type { PageBridge } from '../core/bridge';
+import type { Card } from '../core/card';
+import type { Send } from '../steps/findAnimal';
+import { RECEIPT, bySuffix } from '../selectors';
+import { resolveAnimalType } from '../steps/species';
+import { views } from '../core/views';
 
 export interface ReceiptDeps {
   bridge: PageBridge;

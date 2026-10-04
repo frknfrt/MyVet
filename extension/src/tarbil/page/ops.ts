@@ -1,4 +1,4 @@
-import type { PageHandler } from '../bridge';
+import type { PageHandler } from '../core/bridge';
 import { RECEIPT, SEARCH, bySuffix } from '../selectors';
 import { PageError, clickButton, clickElement, selectComboValue, setDate, setText, waitUntil, type TelerikEnv } from './telerik';
 

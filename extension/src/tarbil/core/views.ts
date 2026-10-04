@@ -1,4 +1,4 @@
-import type { Submission } from '../shared/types';
+import type { Submission } from '../../shared/types';
 import type { CardAction, CardLine, CardView, Tone } from './card';
 
 function trDate(iso: string): string {

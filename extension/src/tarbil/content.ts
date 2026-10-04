@@ -7,13 +7,13 @@
 import { chromeSessionStore } from '../background/chromeStorage';
 import { FLOW_KEY, createFlowStore, type FlowState } from '../shared/flowStore';
 import type { Submission } from '../shared/types';
-import { createPageBridge } from './bridge';
-import { createCard } from './card';
-import { shouldRedirectHome } from './home';
-import { createReceiptFlow } from './receiptFlow';
-import { runSearchFlow, type Send } from './searchFlow';
+import { createPageBridge } from './core/bridge';
+import { createCard } from './core/card';
+import { shouldRedirectHome } from './core/home';
+import { createReceiptFlow } from './pages/vaccineReceipt';
+import { runSearchFlow, type Send } from './steps/findAnimal';
 import { VACCINE_PAGE_URL, pageKind } from './selectors';
-import { views } from './views';
+import { views } from './core/views';
 
 const send: Send = (req) => chrome.runtime.sendMessage(req);
 const flow = createFlowStore(chromeSessionStore());

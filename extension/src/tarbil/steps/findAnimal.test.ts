@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { memoryStore } from '../background/chromeStorage';
-import type { BackgroundRequest } from '../shared/messages';
-import { createFlowStore } from '../shared/flowStore';
-import type { Submission } from '../shared/types';
-import type { CardView } from './card';
-import { runSearchFlow, type Send } from './searchFlow';
+import { memoryStore } from '../../background/chromeStorage';
+import type { BackgroundRequest } from '../../shared/messages';
+import { createFlowStore } from '../../shared/flowStore';
+import type { Submission } from '../../shared/types';
+import type { CardView } from '../core/card';
+import { runSearchFlow, type Send } from './findAnimal';
 
 const SP = 'ctl00_ctl00_ContentPlaceHolder1_ContentPlaceHolderBody_UCVaccineKKBSAnimalSearch_radGridAnimal_ctl00';
 const CHIP = '900000000000001';

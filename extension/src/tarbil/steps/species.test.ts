@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ANIMAL_TYPE } from './selectors';
+import { ANIMAL_TYPE } from '../selectors';
 import { resolveAnimalType } from './species';
 
 describe('resolveAnimalType', () => {

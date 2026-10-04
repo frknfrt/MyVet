@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { memoryStore } from '../background/chromeStorage';
-import { createFlowStore, type FlowStep } from '../shared/flowStore';
-import type { BackgroundRequest } from '../shared/messages';
-import type { Submission } from '../shared/types';
-import type { CardView } from './card';
-import { POPUP_WAIT_MS, createReceiptFlow } from './receiptFlow';
-import type { Send } from './searchFlow';
-import { ANIMAL_TYPE } from './selectors';
+import { memoryStore } from '../../background/chromeStorage';
+import { createFlowStore, type FlowStep } from '../../shared/flowStore';
+import type { BackgroundRequest } from '../../shared/messages';
+import type { Submission } from '../../shared/types';
+import type { CardView } from '../core/card';
+import { POPUP_WAIT_MS, createReceiptFlow } from './vaccineReceipt';
+import type { Send } from '../steps/findAnimal';
+import { ANIMAL_TYPE } from '../selectors';
 
 const P = 'ctl00_ctl00_ctl00_bodyCPH_ContentPlaceHolder1_cntVACCINEBodyContent_';
 const GRID = `${P}ReceiptAddOtherAnimal_RadOtherAnimal_ctl00`;

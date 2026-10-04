@@ -1,5 +1,5 @@
-import type { Submission } from '../shared/types';
-import { ANIMAL_TYPE } from './selectors';
+import type { Submission } from '../../shared/types';
+import { ANIMAL_TYPE } from '../selectors';
 
 /** Vetly turu -> TARBIL cbxAnimalType degeri. Ogrenilmis eslestirme varsa o kazanir; yoksa yalniz kedi/kopek. */
 export function resolveAnimalType(s: Pick<Submission, 'speciesName' | 'speciesMapping'>): string | null {

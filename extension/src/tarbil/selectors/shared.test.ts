@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bySuffix, pageKind } from './selectors';
+import { bySuffix, pageKind } from './';
 
 describe('pageKind', () => {
   it('recognizes the vaccine receipt page only for type=1', () => {

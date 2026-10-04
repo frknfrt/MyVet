@@ -1,4 +1,4 @@
-import type { FlowState } from '../shared/flowStore';
+import type { FlowState } from '../../shared/flowStore';
 
 export const ARMED_TTL_MS = 30 * 60_000;
 export const REDIRECT_COOLDOWN_MS = 60_000;

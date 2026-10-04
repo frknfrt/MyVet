@@ -14,18 +14,6 @@ export const ANIMAL_TYPE = {
   DOG: '3eea84e6-b2d8-494f-a01c-89e739bb004d',
 } as const;
 
-/** Asi Uygulama Belgesi Ekle sayfasi. */
-export const RECEIPT = {
-  date: '_cntVACCINEBodyContent_dpApplicationDate',
-  animalType: '_cntVACCINEBodyContent_cbxAnimalType',
-  petVet: '_ReceiptAddOtherAnimal_RadOtherAnimal_ctl00_ctl02_ctl00_bntPetVet',
-  animalGrid: '_ReceiptAddOtherAnimal_RadOtherAnimal_ctl00',
-  // Onayla butonlari: eklenti bunlara ASLA basmaz, yalniz hekimin tiklamasini fark eder.
-  insertButtons: ['_cntVACCINEBodyContent_btnInsert', '_cntVACCINEBodyContent_btnInsert2'],
-  // Varsayim: hata paneli pnlNotifiError, basari paneli ayni kalipla (elle kabul testinde dogrulanacak).
-  successPanel: '_UCVACCINENotification_pnlNotifiSuccess',
-} as const;
-
 /** PetVet hayvan arama penceresi (VaccineKKBSAnimalSearchModalPage.aspx). */
 export const SEARCH = {
   chip: '_UCVaccineKKBSAnimalSearch_txtChipNo',

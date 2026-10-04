@@ -1,10 +1,10 @@
-import type { BackgroundRequest, BackgroundResponse } from '../shared/messages';
-import type { FlowStore } from '../shared/flowStore';
-import type { Submission } from '../shared/types';
+import type { BackgroundRequest, BackgroundResponse } from '../../shared/messages';
+import type { FlowStore } from '../../shared/flowStore';
+import type { Submission } from '../../shared/types';
 import { normalizeChip, pickAnimal, readSearchRows } from './animalRows';
-import type { PageBridge } from './bridge';
-import type { Card } from './card';
-import { views } from './views';
+import type { PageBridge } from '../core/bridge';
+import type { Card } from '../core/card';
+import { views } from '../core/views';
 
 export type Send = <T>(req: BackgroundRequest) => Promise<BackgroundResponse<T>>;
 

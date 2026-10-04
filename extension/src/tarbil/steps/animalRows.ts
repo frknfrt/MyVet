@@ -1,4 +1,4 @@
-import { RECEIPT, SEARCH, bySuffix } from './selectors';
+import { RECEIPT, SEARCH, bySuffix } from '../selectors';
 
 // Gizlilik: tablolardan YALNIZ cip, durum ve satir onay kutusunun id'si okunur; ad, sahip vb. hucrelere dokunulmaz.
 
