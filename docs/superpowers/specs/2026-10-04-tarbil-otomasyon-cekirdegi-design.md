@@ -183,6 +183,19 @@ Her biri ayrı plan → ayrı dal → ayrı birleştirme; her adımdan sonra ür
 
 P0'ın uygulama planı bu belge onaylanınca yazılır; P1–P3 için kendi planlarından önce kısa canlı analiz + gerekirse bu belgeye ek yapılır.
 
+## 13. P1'in bölünmesi ve P1a: TARBİL stoğunu Vetly'ye eşitleme (2026-10-04)
+
+**Canlı bulgular (yalnız yapı ve satır sayısı okundu):** İlaç (`vetilac` Ürün Kabul) ve aşı (Siparişlerim, Kabul Bekleyen Stok) tarafında **kabul bekleyen kayıt yok**; kabul satırlarının içi görülemedi. Ürün Kabul sayfa kodundan: satır başına onaylanan/iade/zayi metin kutuları, `onblur` ile gizli `btnAmount` / `btnReturnAmount` / `btnLostAmount` butonlarına (postback) basılıyor; `btnApprove` `ApproveConfirm` ile onay soruyor. Mevcut stok okunabiliyor: aşı `VaccineStockSearch.aspx` "Ara" → `_radGridStock_ctl00` (20/sayfa; Aşı Adı, Takdim Şekli, Seri Numarası, Son Kullanma Tarihi `gg.aa.yyyy`, Ürün Miktarı tam sayı), ilaç `vetilac /Pages/StockSearch.aspx` `ContentHolder_btnSearch` → `_radGridStockSearch_ctl00` (başlık ayrı `_Header` tablosunda; 10/sayfa; Ürün, Takdim Şekli, Miktar tam sayı, Son Kullanma Tarihi, Açılmış Kalan Miktar `9,99`, Seri Numarası). `get_masterTableView().set_pageSize(n)` ile tüm satırlar tek sayfaya alınabiliyor (40 satır doğrulandı). Oturum düşünce `hbs.tarbil.gov.tr/?T=TimeOut`; `vetilac` kendi giriş sayfası.
+
+**Karar:** P1 ikiye bölünür. **P1a** (şimdi): TARBİL'deki mevcut aşı ve ilaç stoğunun Vetly'ye eşitlenmesi — TARBİL'de yalnız okuma (Ara + sayfa boyutu). **P1b** (ilk gerçek bekleyen sipariş geldiğinde canlı analizle): mal kabul (§5.2 `stock_receipt`, §7.2 akış 3) — Vetly'de kabul + TARBİL'e miktar yazma; Onayla hekimde.
+
+**P1a tasarımı:**
+- `inventory_items` + `tarbil_system` (`HBSAPP_VACCINE` | `VETILAC_MEDICINE`, metin), `tarbil_product_name`, `tarbil_presentation`, `unit` (varsayılan `ADET`). `StockReferenceType.TARBIL_SYNC`. `inventory` modülü `TarbilStockSyncPort` (domain) açar: şube stokunu listeleme, TARBİL satırından kalem oluşturma (IN hareketi), miktarı TARBİL'e eşitleme (fark kadar IN/OUT hareketi) ve TARBİL bağlantısını yazma. `integration/tarbil` bu porta `modules.inventory::domain` üzerinden erişir.
+- `integration/tarbil`: `tarbil_stock_snapshot` (+ `tarbil_stock_snapshot_line`) — eklentinin gönderdiği anlık görüntü (kiracı elle filtrelenir). Eşleşme: lot (normalize) aynı **ve** ürün adı stok kaleminin `tarbil_product_name`'i ya da adıyla aynı. Satır durumu: `NEW` (Vetly'de yok), `QUANTITY_DIFFERS`, `MATCHED`, `APPLIED` (bu görüntüden işlendi). Lotsuz satır her zaman `NEW` sayılır.
+- Uçlar: eklenti `POST /api/v1/tarbil-extension/stock-snapshots` `{system, lines[{productName, presentation, lotNumber, expiryDate, quantity, openedQuantity}]}` (en çok 500 satır) → `{snapshotId}`; web `GET /api/v1/tarbil/stock-sync?system=` (son görüntü + durumlar; yoksa `snapshotId: null`) ve `POST /api/v1/tarbil/stock-sync/{snapshotId}/apply {lineIds}` → `{applied}`. Web uçları `/tarbil/**` kuralıyla ADMIN, VET. Şube: işlemi yapan kullanıcının ilk şubesi (`branchIds[0]`); çok şubeli klinikte şube seçimi sonraki iş.
+- Eklenti: aşı ve ilaç stok sayfalarında kart "TARBİL stoğunu Vetly'ye gönder" (hekim tıklar) → "Ara" (izin listesi `vaccineStock.search`, `medicineStock.search`) → sayfa boyutu 500 → tablo okunur → Vetly'ye gönderilir. `vetilac` için MAIN dünya betiği de eklenir.
+- Vetly Stok sayfası: "TARBİL Eşitleme" bölümü (ADMIN, VET): Aşı / İlaç sekmesi, satırlar durumlarıyla; `NEW` ve `QUANTITY_DIFFERS` seçilip "Vetly stoğuna işle".
+
 ## Ek A — TARBİL hastalık ağacı (reçete, 2026-10-04)
 Kök kategoriler seçilemez; yapraklar seçilir. `METABOLİZMA HASTALIKLARI` kendisi yapraktır.
 
