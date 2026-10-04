@@ -2,6 +2,8 @@ package com.vetos.modules.inventory.infrastructure.persistence;
 
 import com.vetos.modules.inventory.domain.StockMovement;
 import com.vetos.modules.inventory.domain.StockMovementRepository;
+import com.vetos.modules.inventory.domain.StockMovementType;
+import com.vetos.modules.inventory.domain.StockReferenceType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -19,4 +21,9 @@ class StockMovementRepositoryAdapter implements StockMovementRepository {
 
     @Override
     public List<StockMovement> findByInventoryItemId(UUID inventoryItemId) { return jpaRepository.findByInventoryItemId(inventoryItemId); }
+
+    @Override
+    public boolean existsByReference(UUID referenceId, StockReferenceType referenceType, StockMovementType movementType) {
+        return jpaRepository.existsByReferenceIdAndReferenceTypeAndMovementType(referenceId, referenceType, movementType);
+    }
 }
