@@ -265,6 +265,17 @@ describe('receiptFlow', () => {
     expect((await flow.get())?.step).toBe('error');
   });
 
+  it('ignores the empty notification panels TARBIL renders on every page load', async () => {
+    page();
+    document.body.insertAdjacentHTML('beforeend', '<div id="bodyCPH_ContentPlaceHolder1_UCVACCINENotification_pnlNotifiSuccess"></div>');
+    const { receipt, sent } = await setup({}, 'awaitingConfirm', { insertClickedAt: 99_000 });
+
+    await receipt.start();
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(sent.some((r) => r.type === 'MARK_SUBMITTED')).toBe(false);
+  });
+
   it('stops and reports when a page step fails', async () => {
     page();
     const flow = createFlowStore(memoryStore(), () => 100_000);

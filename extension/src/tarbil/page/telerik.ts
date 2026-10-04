@@ -121,12 +121,17 @@ export async function setDate(env: TelerikEnv, suffix: string, iso: string): Pro
   return { changed: true };
 }
 
-export async function selectComboValue(env: TelerikEnv, suffix: string, value: string): Promise<{ changed: boolean }> {
+/** force: deger istemcide secili gorunse de sunucuya gitmemis olabilir (yarim kalmis postback); yeniden sec. */
+export async function selectComboValue(env: TelerikEnv, suffix: string, value: string, force = false): Promise<{ changed: boolean }> {
   const combo = component(env, suffix);
-  if (combo.get_value() === value) return { changed: false };
+  const alreadySelected = combo.get_value() === value;
+  if (alreadySelected && !force) return { changed: false };
   const item = combo.findItemByValue(value);
   if (!item) throw new PageError('OPTION_NOT_FOUND', `Seçenek yok: ${suffix}`);
-  await withPostback(env, () => item.select());
+  await withPostback(env, () => {
+    if (alreadySelected) combo.clearSelection?.();
+    item.select();
+  });
   return { changed: true };
 }
 

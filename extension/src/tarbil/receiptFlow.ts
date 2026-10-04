@@ -153,7 +153,10 @@ export function createReceiptFlow(d: ReceiptDeps) {
     if (!st) return;
     if (st.step === 'awaitingConfirm') {
       const clickedRecently = st.insertClickedAt !== undefined && d.now() - st.insertClickedAt <= SUCCESS_WINDOW_MS;
-      const freshSuccess = Array.from(d.doc.querySelectorAll(bySuffix(RECEIPT.successPanel))).some((el) => !staleSuccess.has(el));
+      // TARBIL bildirim panellerini her yuklemede BOS olarak cizer (2026-10-04 canli dogrulama); yalniz metinli panel sayilir.
+      const freshSuccess = Array.from(d.doc.querySelectorAll(bySuffix(RECEIPT.successPanel))).some(
+        (el) => !staleSuccess.has(el) && (el.textContent ?? '').trim().length > 0,
+      );
       if (clickedRecently && freshSuccess) await confirm(s);
       return;
     }

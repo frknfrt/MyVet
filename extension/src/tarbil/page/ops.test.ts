@@ -32,6 +32,23 @@ describe('page ops', () => {
     expect(log).toEqual(['chip:900000000000001', 'search']);
   });
 
+  it('re-selects the animal type when the value is set but the form never posted back', async () => {
+    const ID = 'ctl00_X_cntVACCINEBodyContent_cbxAnimalType';
+    document.body.innerHTML = `<div id="${ID}"></div>`;
+    const prm = instantPrm();
+    const log: string[] = [];
+    const combo = {
+      get_value: () => 'cat',
+      clearSelection: () => log.push('clear'),
+      findItemByValue: () => ({ select: () => { log.push('select'); prm.fire(); } }),
+    };
+    const env: TelerikEnv = { doc: document, find: (id) => (id === ID ? combo : null), prm: () => prm, isReady: () => true };
+
+    await createPageOps(env).selectAnimalType({ value: 'cat' });
+
+    expect(log).toEqual(['clear', 'select']);
+  });
+
   it('refuses to click anything that is not a search-result checkbox', async () => {
     document.body.innerHTML = '<a id="ctl00_X_cntVACCINEBodyContent_btnInsert"><input id="ins" type="button"></a>';
     let clicked = false;

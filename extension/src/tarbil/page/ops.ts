@@ -10,7 +10,9 @@ export function createPageOps(env: TelerikEnv): Record<string, PageHandler> {
   return {
     ready: () => waitUntil(env.isReady, 10_000),
     setDate: ({ iso }: { iso: string }) => setDate(env, RECEIPT.date, iso),
-    selectAnimalType: ({ value }: { value: string }) => selectComboValue(env, RECEIPT.animalType, value),
+    // Tur postback'i tamamlanmissa PetVet butonu vardir; yoksa secim istemcide kalmis demektir, zorla yeniden sec.
+    selectAnimalType: ({ value }: { value: string }) =>
+      selectComboValue(env, RECEIPT.animalType, value, !env.doc.querySelector(bySuffix(RECEIPT.petVet))),
     clickPetVet: () => clickButton(env, RECEIPT.petVet),
     searchChip: async ({ chip }: { chip: string }) => {
       setText(env, SEARCH.chip, chip);
