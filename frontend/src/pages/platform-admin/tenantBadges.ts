@@ -1,5 +1,5 @@
 import { BadgeTone } from '../../components/ui/Badge';
-import { BillingStatus, PlatformInvoiceStatus, TenantStatus } from '../../api/platformAdminApi';
+import { BillingStatus, PlatformInvoiceStatus, TenantStatus, TenantSuspensionReason } from '../../api/platformAdminApi';
 
 export const TENANT_STATUS_LABELS: Record<TenantStatus, string> = {
   ACTIVE: 'Aktif',
@@ -45,3 +45,13 @@ export function formatDate(value: string | null): string {
   if (!value) return '—';
   return new Date(value).toLocaleDateString('tr-TR');
 }
+
+export const TENANT_SUSPENSION_REASON_LABELS: Record<TenantSuspensionReason, string> = {
+  BILLING_OVERDUE: 'Ödeme Gecikmesi (Otomatik)',
+  PRICE: 'Fiyat',
+  COMPETITOR: 'Rakibe Geçti',
+  NOT_USING: 'Kullanmıyor',
+  DISSATISFIED: 'Memnuniyetsizlik',
+  CLOSED_BUSINESS: 'İşyeri Kapandı',
+  OTHER: 'Diğer',
+};

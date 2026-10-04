@@ -117,7 +117,7 @@ class InitiateInvoiceCheckoutUseCaseTest {
     private TenantAdminOverview overview(UUID tenantId) {
         return new TenantAdminOverview(
             tenantId, "Test Klinik", "123", TenantStatus.ACTIVE, Instant.now(), "PRO", BillingStatus.PAST_DUE,
-            LocalDate.of(2026, 1, 1), LocalDate.of(2026, 8, 30), 1, 3
+            LocalDate.of(2026, 1, 1), LocalDate.of(2026, 8, 30), 1, 3, null, null
         );
     }
 }

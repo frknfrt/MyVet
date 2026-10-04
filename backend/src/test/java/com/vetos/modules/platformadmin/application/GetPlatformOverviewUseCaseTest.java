@@ -1,6 +1,7 @@
 package com.vetos.modules.platformadmin.application;
 
 import com.vetos.modules.platformadmin.application.dto.PlanRevenueBreakdown;
+import com.vetos.modules.platformadmin.application.dto.ChurnReasonBreakdown;
 import com.vetos.modules.platformadmin.application.dto.PlatformOverviewSummary;
 import com.vetos.modules.platformadmin.domain.Plan;
 import com.vetos.modules.platformadmin.domain.PlanRepository;
@@ -11,6 +12,7 @@ import com.vetos.modules.tenant.domain.BillingStatus;
 import com.vetos.modules.tenant.domain.TenantAdminOverview;
 import com.vetos.modules.tenant.domain.TenantAdminPort;
 import com.vetos.modules.tenant.domain.TenantStatus;
+import com.vetos.modules.tenant.domain.TenantSuspensionReason;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -38,7 +40,14 @@ class GetPlatformOverviewUseCaseTest {
     ) {
         return new TenantAdminOverview(
             UUID.randomUUID(), name, "1111111111", status, createdAt, planCode, billingStatus,
-            LocalDate.now(), LocalDate.now().plusMonths(1), 1, 1
+            LocalDate.now(), LocalDate.now().plusMonths(1), 1, 1, null, null
+        );
+    }
+
+    private TenantAdminOverview suspendedTenant(String name, String planCode, Instant createdAt, TenantSuspensionReason reason) {
+        return new TenantAdminOverview(
+            UUID.randomUUID(), name, "1111111111", TenantStatus.SUSPENDED, createdAt, planCode, BillingStatus.PAST_DUE,
+            LocalDate.now(), LocalDate.now().plusMonths(1), 1, 1, reason, null
         );
     }
 
@@ -99,6 +108,33 @@ class GetPlatformOverviewUseCaseTest {
 
         assertThat(summary.recentTenants()).hasSize(5);
         assertThat(summary.recentTenants().get(0).name()).isIn("Ulukavak", "Deneme Klinik"); // en yeni ikisi
+
+        // "Askidaki Klinik" suspensionReason=null ile askiya alinmis (bu ozellik oncesi senaryosu) -- UNKNOWN kovasina girer
+        assertThat(summary.churnBreakdown()).hasSize(1);
+        assertThat(summary.churnBreakdown().get(0).reason()).isEqualTo("UNKNOWN");
+        assertThat(summary.churnBreakdown().get(0).count()).isEqualTo(1);
+    }
+
+    @Test
+    void should_groupChurnBreakdown_byActualSuspensionReason() {
+        List<TenantAdminOverview> tenants = List.of(
+            suspendedTenant("Fiyat Yuzunden Ayrilan", "PRO", Instant.now(), TenantSuspensionReason.PRICE),
+            suspendedTenant("Rakibe Gecen", "PRO", Instant.now(), TenantSuspensionReason.COMPETITOR),
+            suspendedTenant("Fiyat Yuzunden Ayrilan 2", "BASIC", Instant.now(), TenantSuspensionReason.PRICE)
+        );
+        when(tenantAdminPort.listAll()).thenReturn(tenants);
+        when(planRepository.findAll()).thenReturn(List.of());
+        when(platformInvoiceRepository.findByStatus(PlatformInvoiceStatus.PAID)).thenReturn(List.of());
+        when(platformInvoiceRepository.findByStatus(PlatformInvoiceStatus.OVERDUE)).thenReturn(List.of());
+
+        GetPlatformOverviewUseCase useCase = new GetPlatformOverviewUseCase(tenantAdminPort, planRepository, platformInvoiceRepository);
+        PlatformOverviewSummary summary = useCase.execute();
+
+        assertThat(summary.churnBreakdown()).extracting(ChurnReasonBreakdown::reason, ChurnReasonBreakdown::count)
+            .containsExactlyInAnyOrder(
+                org.assertj.core.groups.Tuple.tuple("PRICE", 2),
+                org.assertj.core.groups.Tuple.tuple("COMPETITOR", 1)
+            );
     }
 
     @Test
@@ -115,5 +151,6 @@ class GetPlatformOverviewUseCaseTest {
         assertThat(summary.monthlyRecurringRevenue()).isEqualByComparingTo("0");
         assertThat(summary.planBreakdown()).isEmpty();
         assertThat(summary.recentTenants()).isEmpty();
+        assertThat(summary.churnBreakdown()).isEmpty();
     }
 }

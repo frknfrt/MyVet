@@ -3,6 +3,7 @@ package com.vetos.modules.platformadmin.api;
 import com.vetos.modules.platformadmin.api.dto.CreatePlatformTenantRequest;
 import com.vetos.modules.platformadmin.api.dto.ImpersonationSessionResponse;
 import com.vetos.modules.platformadmin.api.dto.TenantAdminOverviewResponse;
+import com.vetos.modules.platformadmin.api.dto.SuspendTenantRequest;
 import com.vetos.modules.platformadmin.api.dto.UpdateTenantSubscriptionRequest;
 import com.vetos.modules.platformadmin.application.ActivateTenantUseCase;
 import com.vetos.modules.platformadmin.application.CreatePlatformTenantUseCase;
@@ -73,8 +74,11 @@ public class PlatformAdminTenantsController {
     }
 
     @PostMapping("/{id}/suspend")
-    public void suspend(@PathVariable UUID id, @AuthenticationPrincipal AuthenticatedPlatformAdmin principal) {
-        suspendTenantUseCase.execute(id, principal.platformAdminId(), principal.email());
+    public void suspend(
+        @PathVariable UUID id, @RequestBody @Valid SuspendTenantRequest request,
+        @AuthenticationPrincipal AuthenticatedPlatformAdmin principal
+    ) {
+        suspendTenantUseCase.execute(id, request.reason(), request.note(), principal.platformAdminId(), principal.email());
     }
 
     @PostMapping("/{id}/activate")

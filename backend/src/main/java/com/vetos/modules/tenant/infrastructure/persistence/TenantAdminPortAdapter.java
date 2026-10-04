@@ -10,6 +10,7 @@ import com.vetos.modules.tenant.domain.StaffRole;
 import com.vetos.modules.tenant.domain.StaffUser;
 import com.vetos.modules.tenant.domain.Subscription;
 import com.vetos.modules.tenant.domain.Tenant;
+import com.vetos.modules.tenant.domain.TenantSuspensionReason;
 import com.vetos.modules.tenant.domain.TenantAdminOverview;
 import com.vetos.modules.tenant.domain.TenantAdminPort;
 import com.vetos.modules.tenant.domain.TenantSignupResult;
@@ -62,10 +63,10 @@ class TenantAdminPortAdapter implements TenantAdminPort {
     }
 
     @Override
-    public void suspend(UUID tenantId) {
+    public void suspend(UUID tenantId, TenantSuspensionReason reason, String note) {
         Tenant tenant = tenantJpaRepository.findById(tenantId)
             .orElseThrow(() -> new TenantNotFoundException(tenantId));
-        tenant.suspend();
+        tenant.suspend(reason, note);
         tenantJpaRepository.save(tenant);
     }
 
@@ -232,7 +233,7 @@ class TenantAdminPortAdapter implements TenantAdminPort {
         return new TenantAdminOverview(
             tenant.getId(), tenant.getName(), tenant.getTaxNumber(), tenant.getStatus(), tenant.getCreatedAt(),
             subscription.getPlanCode(), subscription.getBillingStatus(), subscription.getStartedAt(), subscription.getRenewsAt(),
-            branches.size(), (int) staffCount
+            branches.size(), (int) staffCount, tenant.getSuspensionReason(), tenant.getSuspensionNote()
         );
     }
 }

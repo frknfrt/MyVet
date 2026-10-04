@@ -18,7 +18,7 @@ public interface TenantAdminPort {
     List<TenantAdminOverview> listAll();
     TenantAdminOverview getOverview(UUID tenantId);
     void updateSubscription(UUID tenantId, String planCode, BillingStatus billingStatus, LocalDate renewsAt);
-    void suspend(UUID tenantId);
+    void suspend(UUID tenantId, TenantSuspensionReason reason, String note);
     void activate(UUID tenantId);
 
     /** planCode != TRIAL ve renewsAt <= date olan tum abonelikler -- platform faturalama scheduler'i icin. */

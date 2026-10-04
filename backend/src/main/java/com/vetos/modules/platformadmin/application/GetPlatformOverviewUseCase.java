@@ -1,6 +1,7 @@
 package com.vetos.modules.platformadmin.application;
 
 import com.vetos.modules.platformadmin.application.dto.PlanRevenueBreakdown;
+import com.vetos.modules.platformadmin.application.dto.ChurnReasonBreakdown;
 import com.vetos.modules.platformadmin.application.dto.PlatformOverviewSummary;
 import com.vetos.modules.platformadmin.application.dto.RecentTenantSummary;
 import com.vetos.modules.platformadmin.domain.Plan;
@@ -83,10 +84,26 @@ public class GetPlatformOverviewUseCase {
             .map(t -> new RecentTenantSummary(t.tenantId(), t.name(), t.planCode(), t.createdAt()))
             .toList();
 
+        List<ChurnReasonBreakdown> churnBreakdown = buildChurnBreakdown(tenants);
+
         return new PlatformOverviewSummary(
             totalTenants, activeTenants, suspendedTenants, trialBillingTenants, newTenantsLast30Days,
-            mrr, collectedThisMonth, overdueInvoiceCount, overdueInvoiceTotal, planBreakdown, recentTenants
+            mrr, collectedThisMonth, overdueInvoiceCount, overdueInvoiceTotal, planBreakdown, recentTenants, churnBreakdown
         );
+    }
+
+    /** Henuz neden kaydedilmeden (bu ozellik oncesi) askiya alinmis kiracilar "UNKNOWN" kovasina girer. */
+    private List<ChurnReasonBreakdown> buildChurnBreakdown(List<TenantAdminOverview> tenants) {
+        Map<String, Integer> countByReason = new LinkedHashMap<>();
+        for (TenantAdminOverview t : tenants) {
+            if (t.status() != TenantStatus.SUSPENDED) continue;
+            String reason = t.suspensionReason() != null ? t.suspensionReason().name() : "UNKNOWN";
+            countByReason.merge(reason, 1, Integer::sum);
+        }
+        return countByReason.entrySet().stream()
+            .map(e -> new ChurnReasonBreakdown(e.getKey(), e.getValue()))
+            .sorted(Comparator.comparing(ChurnReasonBreakdown::count).reversed())
+            .toList();
     }
 
     /** CANCELED abonelikler plan dagilimina dahil edilmez -- artik gelir getirmiyorlar. */

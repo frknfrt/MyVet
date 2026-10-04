@@ -4,6 +4,7 @@ import com.vetos.modules.platformadmin.domain.*;
 import com.vetos.modules.tenant.domain.BillingStatus;
 import com.vetos.modules.tenant.domain.TenantAdminOverview;
 import com.vetos.modules.tenant.domain.TenantAdminPort;
+import com.vetos.modules.tenant.domain.TenantSuspensionReason;
 import com.vetos.modules.tenant.domain.TenantStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,7 +46,7 @@ class FlagOverdueAndSuspendUseCaseTest {
         assertThat(invoice.getStatus()).isEqualTo(PlatformInvoiceStatus.OVERDUE);
         verify(platformInvoiceRepository).save(invoice);
         verify(tenantAdminPort).updateBillingStatus(tenantId, BillingStatus.PAST_DUE);
-        verify(tenantAdminPort).suspend(tenantId);
+        verify(tenantAdminPort).suspend(tenantId, TenantSuspensionReason.BILLING_OVERDUE, null);
         verify(platformBillingEmailPort).sendTenantSuspended("Test Klinik", "admin@klinik.com");
         verify(platformBillingSmsPort).sendTenantSuspended("Test Klinik", "+905551112233");
     }
@@ -57,13 +58,13 @@ class FlagOverdueAndSuspendUseCaseTest {
 
         new FlagOverdueAndSuspendUseCase(platformInvoiceRepository, tenantAdminPort, platformBillingEmailPort, platformBillingSmsPort).execute(today);
 
-        verify(tenantAdminPort, never()).suspend(any());
+        verify(tenantAdminPort, never()).suspend(any(), any(), any());
     }
 
     private TenantAdminOverview overview(UUID tenantId) {
         return new TenantAdminOverview(
             tenantId, "Test Klinik", "123", TenantStatus.ACTIVE, Instant.now(), "PRO", BillingStatus.ACTIVE,
-            LocalDate.of(2026, 1, 1), LocalDate.of(2026, 8, 20), 1, 3
+            LocalDate.of(2026, 1, 1), LocalDate.of(2026, 8, 20), 1, 3, null, null
         );
     }
 }

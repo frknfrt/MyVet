@@ -14,5 +14,6 @@ public record PlatformOverviewSummary(
     int overdueInvoiceCount,
     BigDecimal overdueInvoiceTotal,
     List<PlanRevenueBreakdown> planBreakdown,
-    List<RecentTenantSummary> recentTenants
+    List<RecentTenantSummary> recentTenants,
+    List<ChurnReasonBreakdown> churnBreakdown
 ) {}

@@ -9,6 +9,8 @@ export interface PlatformAdminLoginPayload {
 export type TenantStatus = 'ACTIVE' | 'SUSPENDED' | 'TRIAL';
 export type BillingStatus = 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED';
 
+export type TenantSuspensionReason = 'BILLING_OVERDUE' | 'PRICE' | 'COMPETITOR' | 'NOT_USING' | 'DISSATISFIED' | 'CLOSED_BUSINESS' | 'OTHER';
+
 export interface TenantAdminOverview {
   tenantId: string;
   name: string;
@@ -21,6 +23,8 @@ export interface TenantAdminOverview {
   renewsAt: string | null;
   branchCount: number;
   staffUserCount: number;
+  suspensionReason: TenantSuspensionReason | null;
+  suspensionNote: string | null;
 }
 
 export interface UpdateTenantSubscriptionPayload {
@@ -144,6 +148,12 @@ export interface PlatformOverview {
   overdueInvoiceTotal: number;
   planBreakdown: PlanRevenueBreakdown[];
   recentTenants: RecentTenantSummary[];
+  churnBreakdown: ChurnReasonBreakdown[];
+}
+
+export interface ChurnReasonBreakdown {
+  reason: string;
+  count: number;
 }
 
 export interface ImpersonationSession {
@@ -204,6 +214,22 @@ export interface AuditLogEntry {
   createdAt: string;
 }
 
+export interface AiUsageByTenant {
+  tenantId: string;
+  tenantName: string;
+  totalJobs: number;
+  diagnosisJobs: number;
+  treatmentJobs: number;
+  acceptedAsIs: number;
+  acceptedWithEdits: number;
+  rejected: number;
+  noDecisionYet: number;
+  accurateFeedback: number;
+  inaccurateFeedback: number;
+  lastUsedAt: string | null;
+}
+
+
 export const platformAdminApi = {
   login: (payload: PlatformAdminLoginPayload) =>
     platformAdminClient.post<PlatformAdminSession>('/api/v1/platform-admin/auth/login', payload),
@@ -213,7 +239,8 @@ export const platformAdminApi = {
     platformAdminClient.post<TenantAdminOverview>('/api/v1/platform-admin/tenants', payload),
   updateSubscription: (id: string, payload: UpdateTenantSubscriptionPayload) =>
     platformAdminClient.put<void>(`/api/v1/platform-admin/tenants/${id}/subscription`, payload),
-  suspendTenant: (id: string) => platformAdminClient.post<void>(`/api/v1/platform-admin/tenants/${id}/suspend`),
+  suspendTenant: (id: string, payload: { reason: TenantSuspensionReason; note: string | null }) =>
+    platformAdminClient.post<void>(`/api/v1/platform-admin/tenants/${id}/suspend`, payload),
   activateTenant: (id: string) => platformAdminClient.post<void>(`/api/v1/platform-admin/tenants/${id}/activate`),
   listPlans: () => platformAdminClient.get<Plan[]>('/api/v1/platform-admin/plans'),
   createPlan: (payload: { code: string; name: string; monthlyPrice: number }) =>
@@ -245,4 +272,5 @@ export const platformAdminApi = {
   activateCoupon: (id: string) => platformAdminClient.post<void>(`/api/v1/platform-admin/coupons/${id}/activate`),
   deactivateCoupon: (id: string) => platformAdminClient.post<void>(`/api/v1/platform-admin/coupons/${id}/deactivate`),
   listAuditLog: () => platformAdminClient.get<AuditLogEntry[]>('/api/v1/platform-admin/audit-log'),
+  listAiUsage: () => platformAdminClient.get<AiUsageByTenant[]>('/api/v1/platform-admin/ai-usage'),
 };

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ApiError } from '../../api/client';
 import { PlatformOverview, platformAdminApi } from '../../api/platformAdminApi';
 import { Badge } from '../../components/ui/Badge';
+import { TENANT_SUSPENSION_REASON_LABELS } from './tenantBadges';
 import styles from './PlatformAdminPages.module.css';
 import overviewStyles from './OverviewPage.module.css';
 
@@ -16,6 +17,10 @@ function formatCurrency(value: number): string {
 
 function formatDate(value: string): string {
   return new Date(value).toLocaleDateString('tr-TR');
+}
+
+function churnReasonLabel(reason: string): string {
+  return (TENANT_SUSPENSION_REASON_LABELS as Record<string, string>)[reason] ?? 'Bilinmiyor (eski kayıt)';
 }
 
 export function OverviewPage() {
@@ -107,6 +112,24 @@ export function OverviewPage() {
                   <div className={styles.muted}>{p.tenantCount}</div>
                   <div></div>
                   <div className={styles.muted}>{formatCurrency(p.monthlyRevenue)}</div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className={overviewStyles.sectionTitle}>Neden Kaybettik (Churn)</div>
+          <div className={styles.tableCard}>
+            <div className={[styles.tableHead, overviewStyles.churnRow].join(' ')}>
+              <div>Neden</div>
+              <div>Kiracı Sayısı</div>
+            </div>
+            {overview.churnBreakdown.length === 0 ? (
+              <div className={styles.empty}>Henüz askıya alınmış kiracı yok</div>
+            ) : (
+              overview.churnBreakdown.map((c) => (
+                <div key={c.reason} className={[styles.row, overviewStyles.churnRow].join(' ')} style={{ cursor: 'default' }}>
+                  <div>{churnReasonLabel(c.reason)}</div>
+                  <div className={styles.muted}>{c.count}</div>
                 </div>
               ))
             )}

@@ -31,6 +31,13 @@ public class Tenant {
     @Column(nullable = false)
     private TenantStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "suspension_reason")
+    private TenantSuspensionReason suspensionReason;
+
+    @Column(name = "suspension_note")
+    private String suspensionNote;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -43,11 +50,15 @@ public class Tenant {
         return tenant;
     }
 
-    public void suspend() {
+    public void suspend(TenantSuspensionReason reason, String note) {
         this.status = TenantStatus.SUSPENDED;
+        this.suspensionReason = reason;
+        this.suspensionNote = note;
     }
 
     public void activate() {
         this.status = TenantStatus.ACTIVE;
+        this.suspensionReason = null;
+        this.suspensionNote = null;
     }
 }

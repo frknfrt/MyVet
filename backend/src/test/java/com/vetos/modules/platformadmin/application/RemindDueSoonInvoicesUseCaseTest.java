@@ -66,7 +66,7 @@ class RemindDueSoonInvoicesUseCaseTest {
     private TenantAdminOverview overview(UUID tenantId) {
         return new TenantAdminOverview(
             tenantId, "Test Klinik", "123", TenantStatus.ACTIVE, Instant.now(), "PRO", BillingStatus.ACTIVE,
-            LocalDate.of(2026, 1, 1), LocalDate.of(2026, 9, 27), 1, 3
+            LocalDate.of(2026, 1, 1), LocalDate.of(2026, 9, 27), 1, 3, null, null
         );
     }
 }

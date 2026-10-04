@@ -16,14 +16,16 @@ public record PlatformOverviewResponse(
     int overdueInvoiceCount,
     BigDecimal overdueInvoiceTotal,
     List<PlanRevenueBreakdownResponse> planBreakdown,
-    List<RecentTenantResponse> recentTenants
+    List<RecentTenantResponse> recentTenants,
+    List<ChurnReasonBreakdownResponse> churnBreakdown
 ) {
     public static PlatformOverviewResponse from(PlatformOverviewSummary s) {
         return new PlatformOverviewResponse(
             s.totalTenants(), s.activeTenants(), s.suspendedTenants(), s.trialBillingTenants(), s.newTenantsLast30Days(),
             s.monthlyRecurringRevenue(), s.collectedThisMonth(), s.overdueInvoiceCount(), s.overdueInvoiceTotal(),
             s.planBreakdown().stream().map(PlanRevenueBreakdownResponse::from).toList(),
-            s.recentTenants().stream().map(RecentTenantResponse::from).toList()
+            s.recentTenants().stream().map(RecentTenantResponse::from).toList(),
+            s.churnBreakdown().stream().map(ChurnReasonBreakdownResponse::from).toList()
         );
     }
 }

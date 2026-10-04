@@ -17,13 +17,17 @@ public record TenantAdminOverviewResponse(
     LocalDate startedAt,
     LocalDate renewsAt,
     int branchCount,
-    int staffUserCount
+    int staffUserCount,
+    String suspensionReason,
+    String suspensionNote
 ) {
     public static TenantAdminOverviewResponse from(TenantAdminOverview overview) {
         return new TenantAdminOverviewResponse(
             overview.tenantId(), overview.name(), overview.taxNumber(), overview.status().name(), overview.createdAt(),
             overview.planCode(), overview.billingStatus().name(), overview.startedAt(), overview.renewsAt(),
-            overview.branchCount(), overview.staffUserCount()
+            overview.branchCount(), overview.staffUserCount(),
+            overview.suspensionReason() != null ? overview.suspensionReason().name() : null,
+            overview.suspensionNote()
         );
     }
 }
