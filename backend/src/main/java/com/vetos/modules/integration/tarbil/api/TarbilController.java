@@ -1,5 +1,7 @@
 package com.vetos.modules.integration.tarbil.api;
 
+import com.vetos.modules.integration.tarbil.application.ListTarbilDiseasesUseCase;
+import com.vetos.modules.integration.tarbil.api.dto.TarbilDiseaseResponse;
 import com.vetos.modules.integration.tarbil.api.dto.DismissRequest;
 import com.vetos.modules.integration.tarbil.api.dto.ExtensionTokenResponse;
 import com.vetos.modules.integration.tarbil.api.dto.PairingCodeResponse;
@@ -43,6 +45,7 @@ public class TarbilController {
     private final RevokeExtensionTokenUseCase revokeExtensionTokenUseCase;
     private final ListTarbilMappingsUseCase listTarbilMappingsUseCase;
     private final DeleteTarbilMappingUseCase deleteTarbilMappingUseCase;
+    private final ListTarbilDiseasesUseCase listTarbilDiseasesUseCase;
 
     @GetMapping("/status")
     public TarbilStatusResponse status() {
@@ -85,6 +88,11 @@ public class TarbilController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void revoke(@PathVariable UUID id, @AuthenticationPrincipal AuthenticatedStaffUser user) {
         revokeExtensionTokenUseCase.execute(TenantContext.current(), user.staffUserId(), "ADMIN".equals(user.role()), id);
+    }
+
+    @GetMapping("/diseases")
+    public List<TarbilDiseaseResponse> diseases() {
+        return listTarbilDiseasesUseCase.execute().stream().map(TarbilDiseaseResponse::from).toList();
     }
 
     @GetMapping("/mappings")

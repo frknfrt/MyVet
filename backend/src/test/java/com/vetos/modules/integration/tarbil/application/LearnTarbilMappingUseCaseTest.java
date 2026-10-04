@@ -82,4 +82,17 @@ class LearnTarbilMappingUseCaseTest {
         assertThatThrownBy(() -> useCase().execute(tenantId, staffId, TarbilMappingKind.VACCINE, "   ", "{}"))
             .isInstanceOf(InvalidTarbilMappingException.class);
     }
+
+    @Test
+    void should_storeTrimmedKey_when_diseaseMappingLearned() {
+        when(repository.findByTenantIdAndKindAndVetlyKey(tenantId, TarbilMappingKind.DISEASE, "iç parazit"))
+            .thenReturn(Optional.empty());
+
+        useCase().execute(tenantId, staffId, TarbilMappingKind.DISEASE, "  iç parazit ", "{\"diseaseId\":\"95860589-0057-42cc-8209-663e1e459594\"}");
+
+        ArgumentCaptor<TarbilValueMapping> captor = ArgumentCaptor.forClass(TarbilValueMapping.class);
+        verify(repository).save(captor.capture());
+        assertThat(captor.getValue().getKind()).isEqualTo(TarbilMappingKind.DISEASE);
+        assertThat(captor.getValue().getVetlyKey()).isEqualTo("iç parazit");
+    }
 }

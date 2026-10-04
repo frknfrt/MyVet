@@ -1,5 +1,6 @@
 package com.vetos;
 
+import static org.hamcrest.Matchers.hasItem;
 import com.vetos.modules.encounter.domain.VaccinationRecord;
 import com.vetos.modules.encounter.domain.VaccinationRecordRepository;
 import com.vetos.modules.encounter.domain.VaccinationStatus;
@@ -231,5 +232,21 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
         mockMvc.perform(get("/api/v1/tarbil-extension/pending?type=PRESCRIPTION").header("Authorization", "Bearer " + tokenA))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void jwtListsTarbilDiseaseCatalog() throws Exception {
+        mockMvc.perform(get("/api/v1/tarbil/diseases").header("Authorization", "Bearer " + jwtA))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(73))
+            .andExpect(jsonPath("$[?(@.id == '95860589-0057-42cc-8209-663e1e459594')].path")
+                .value(hasItem("SİNDİRİM SİSTEMİ HASTALIKLARI > PARAZİTER HASTALIKLAR")))
+            .andExpect(jsonPath("$[0].selectable").value(false));
+    }
+
+    @Test
+    void extensionTokenCannotListDiseaseCatalogThroughWebApi() throws Exception {
+        mockMvc.perform(get("/api/v1/tarbil/diseases").header("Authorization", "Bearer " + tokenA))
+            .andExpect(status().isUnauthorized());
     }
 }
