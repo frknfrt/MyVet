@@ -197,3 +197,25 @@ Yok — tasarım kullanıcı onayından geçti. İmplementasyon sırasında doğ
 Hibernate 6.6.53.Final bytecode'u bağımsız olarak incelendi (`javap` ile `CurrentTenantIdentifierResolver`, `TenantIdBinder`, `TenantIdGeneration`, `AbstractSharedSessionContract.setUpMultitenancy` doğrulandı). Sonuç: **§3'teki resolver'ın "TenantContext boşken `IllegalStateException` fırlat" tasarımı uygulanabilir değil** — Hibernate resolver'ı entity `@TenantId`'li olsun olmasın **her Session açılışında** çağırıyor. Birebir uygulanırsa: login, tüm `/api/v1/public/**` uçları, platform-admin uçları, `@Scheduled` işler ve `@Async` executor'lar dahil **uygulamanın tamamı** ilk `@TenantId`'li entity eklenir eklenmez kilitlenir.
 
 **Düzeltme:** `CurrentTenantIdentifierResolver<T>`'ın `default boolean isRoot(T)` metodu (Hibernate'in kendi, bu senaryo için var olan mekanizması) kullanılır. `TenantContext` boşken resolver bir `ROOT_TENANT_ID` sentinel'i döner; `isRoot(...)` bunu `true` işaretler; Hibernate o Session için `_tenantId` filtresini hiç etkinleştirmez — yani TenantContext'siz yollar bugünkü (filtresiz) davranışını korur, sadece kimlik doğrulanmış istekler (ispatlanmış açıkların bulunduğu yüzey) otomatik filtrelenir. Tam gerekçe ve kod: implementasyon planı `docs/superpowers/plans/2026-09-19-kiraci-izolasyonu-sertlestirme.md`, Task 1 ve "Hibernate 6.6 doğrulaması" bölümü.
+
+## 11. Ek tur: zaten `tenant_id` taşıyan varlıklar (2026-10-05)
+
+**Bulgu (TARBİL P2 son incelemesi, doğrulandı):** Bu tasarım `tenant_id` sütunu *olmayan* 16 varlığı kapsadı; sütunu *zaten olan* varlıklarda filtrenin "her use-case'te elle" yapıldığı varsayıldı. Varsayım tutmuyor: birçok use-case kaydı yalnız kimlikle okuyor (`findById`) ve kiracı karşılaştırması yapmıyor — ör. `GetInvoiceUseCase`, `IssueInvoiceUseCase`, `RecordPaymentUseCase`, `UpdateAppointmentStatusUseCase`, `AssignStaffToAppointmentUseCase`, `GetImagingRecordUseCase`, `UploadImagingRecordFileUseCase`, `CancelLabResultUseCase`, `CancelBoardingStayUseCase`, `MarkVaccinationAdministeredUseCase`, `CancelVaccinationUseCase`. Başka kiracının kaydının UUID'sini bilen kullanıcı okuyabilir/değiştirebilir.
+
+**Karar:** aynı mekanizma (§3, §10) bu varlıklara uygulanır — migration gerekmez (sütun var, `NOT NULL`): `@org.hibernate.annotations.TenantId` + `updatable = false`.
+
+| Varlık | Not |
+|---|---|
+| `Appointment`, `ServiceType` | herkese açık randevu ucu bağlamsız (root) çalışır, etkilenmez |
+| `Invoice` | `InvoiceLine`/`Payment` zaten filtreli; başlık şimdi de |
+| `BoardingRoom`, `BoardingStay` | |
+| `VaccinationRecord` | zamanlayıcı kiracı başına `TenantContext` kurar (değişmez) |
+| `ImagingRecord`, `LabResult` | dosya/kalem alt kayıtları zaten filtreli |
+| `EInvoiceSubmission` | yürütücü kiracı bağlamını kurar |
+| `MessageTemplate`, `Owner` | |
+| `Branch`, `StaffInvite`, `Subscription`, `PlatformInvoice` | klinik açma/ücretli kayıt/platform yönetimi/davet kabulü bağlamsız (root) çalışır ve kendi kiracısının kaydını yazar; JWT isteğinde yalnız kendi kiracısı görünür |
+
+**Bilinçli olarak dışarıda:** `NotificationSettings` (kiracı kimliği aynı zamanda birincil anahtar; her zaman çağıranın kiracısıyla aranır), `NotificationLog` (§6), `TarbilExtensionToken`, `TarbilSubmission`, `TarbilValueMapping`, `TarbilStockSnapshot(+Line)` (elle filtreli, testli).
+
+**Test:** `TenantIsolationTest`'e her varlık için "A, B'nin kaydını kimlikle göremez; B görür" testi; HTTP düzeyinde başka kiracının aşı kaydına `/administer` ve `/cancel` → 404 ve kayıt değişmez. Plan: `docs/superpowers/plans/2026-10-05-kiraci-izolasyonu-ek-tur.md`.
+
