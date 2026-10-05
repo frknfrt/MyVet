@@ -35,7 +35,7 @@ class LoginUseCaseTest {
         StaffUser staffUser = StaffUser.register(tenantId, branchId, "Dr. Test", "test@example.com", "hash", StaffRole.VET);
         Branch branch = Branch.create(tenantId, "Merkez");
         Tenant tenant = Tenant.register("Test Klinik", "1234567890");
-        tenant.suspend();
+        tenant.suspend(TenantSuspensionReason.OTHER, null);
 
         when(staffUserRepository.findByEmail("test@example.com")).thenReturn(Optional.of(staffUser));
         when(passwordEncoder.matches("password123", "hash")).thenReturn(true);

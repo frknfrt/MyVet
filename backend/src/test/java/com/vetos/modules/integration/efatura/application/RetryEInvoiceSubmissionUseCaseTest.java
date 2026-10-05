@@ -87,4 +87,33 @@ class RetryEInvoiceSubmissionUseCaseTest {
         verify(eInvoiceSubmissionRepository, never()).save(any());
         verifyNoInteractions(eInvoiceSubmissionExecutor);
     }
+
+    @Test
+    void should_requeueAndReattempt_when_adminRetriesAnyTenantsFailedSubmission() {
+        UUID submissionId = UUID.randomUUID();
+        EInvoiceSubmission submission = EInvoiceSubmission.queue(
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), EInvoiceDocumentType.E_ARSIV,
+            new BigDecimal("120.00"), new BigDecimal("20.00")
+        );
+        submission.markFailed("onceki hata mesaji", null);
+        when(eInvoiceSubmissionRepository.findById(submissionId)).thenReturn(Optional.of(submission));
+
+        useCase.executeAsAdmin(submissionId);
+
+        assertThat(submission.getStatus()).isEqualTo(EInvoiceSubmissionStatus.PENDING);
+        verify(eInvoiceSubmissionRepository).save(submission);
+        verify(eInvoiceSubmissionExecutor).attemptSubmit(submissionId);
+    }
+
+    @Test
+    void should_throwNotFound_when_adminRetriesMissingSubmission() {
+        UUID submissionId = UUID.randomUUID();
+        when(eInvoiceSubmissionRepository.findById(submissionId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> useCase.executeAsAdmin(submissionId))
+            .isInstanceOf(EInvoiceSubmissionNotFoundException.class);
+
+        verify(eInvoiceSubmissionRepository, never()).save(any());
+        verifyNoInteractions(eInvoiceSubmissionExecutor);
+    }
 }

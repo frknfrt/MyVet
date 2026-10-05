@@ -1,8 +1,10 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { StaffRole, storeSession } from '../../auth/session';
 import { ApiError } from '../../api/client';
 import {
   BillingStatus, Plan, PlatformInvoice, PlatformPaymentMethod, platformAdminApi, TenantAdminOverview,
+  TenantIntegrationHealth, TenantSuspensionReason,
 } from '../../api/platformAdminApi';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
@@ -11,7 +13,7 @@ import { Modal } from '../../components/ui/Modal';
 import styles from './PlatformAdminPages.module.css';
 import {
   BILLING_STATUS_LABELS, BILLING_STATUS_TONES, formatDate, PLATFORM_INVOICE_STATUS_LABELS,
-  PLATFORM_INVOICE_STATUS_TONES, TENANT_STATUS_LABELS, TENANT_STATUS_TONES,
+  PLATFORM_INVOICE_STATUS_TONES, TENANT_STATUS_LABELS, TENANT_STATUS_TONES, TENANT_SUSPENSION_REASON_LABELS,
 } from './tenantBadges';
 
 function errorMessageOf(err: unknown): string {
@@ -19,6 +21,7 @@ function errorMessageOf(err: unknown): string {
 }
 
 const BILLING_STATUS_OPTIONS: BillingStatus[] = ['TRIAL', 'ACTIVE', 'PAST_DUE', 'CANCELED'];
+const SUSPENSION_REASON_OPTIONS: TenantSuspensionReason[] = ['PRICE', 'COMPETITOR', 'NOT_USING', 'DISSATISFIED', 'CLOSED_BUSINESS', 'OTHER'];
 
 interface SubscriptionFormState {
   planCode: string;
@@ -30,9 +33,15 @@ export function TenantDetailPage() {
   const { tenantId } = useParams<{ tenantId: string }>();
   const [tenant, setTenant] = useState<TenantAdminOverview | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [integrationHealth, setIntegrationHealth] = useState<TenantIntegrationHealth | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [impersonating, setImpersonating] = useState(false);
+  const [suspendModalOpen, setSuspendModalOpen] = useState(false);
+  const [suspendReason, setSuspendReason] = useState<TenantSuspensionReason>('PRICE');
+  const [suspendNote, setSuspendNote] = useState('');
+  const [suspending, setSuspending] = useState(false);
   const [form, setForm] = useState<SubscriptionFormState>({ planCode: '', billingStatus: 'TRIAL', renewsAt: '' });
   const [invoices, setInvoices] = useState<PlatformInvoice[]>([]);
   const [paymentInvoiceId, setPaymentInvoiceId] = useState<string | null>(null);
@@ -45,6 +54,7 @@ export function TenantDetailPage() {
     if (!tenantId) return;
     platformAdminApi.getTenant(tenantId).then(setTenant).catch((err) => setError(errorMessageOf(err)));
     platformAdminApi.listInvoices(tenantId).then(setInvoices).catch(() => undefined);
+    platformAdminApi.getTenantIntegrationHealth(tenantId).then(setIntegrationHealth).catch(() => undefined);
   }
 
   useEffect(load, [tenantId]);
@@ -86,17 +96,58 @@ export function TenantDetailPage() {
     }
   }
 
-  async function handleToggleStatus() {
-    if (!tenant || !tenantId) return;
+  async function handleActivate() {
+    if (!tenantId) return;
     try {
-      if (tenant.status === 'SUSPENDED') {
-        await platformAdminApi.activateTenant(tenantId);
-      } else {
-        await platformAdminApi.suspendTenant(tenantId);
-      }
+      await platformAdminApi.activateTenant(tenantId);
       load();
     } catch (err) {
       setError(errorMessageOf(err));
+    }
+  }
+
+  function openSuspendModal() {
+    setSuspendReason('PRICE');
+    setSuspendNote('');
+    setSuspendModalOpen(true);
+  }
+
+  async function handleConfirmSuspend() {
+    if (!tenantId) return;
+    setSuspending(true);
+    try {
+      await platformAdminApi.suspendTenant(tenantId, { reason: suspendReason, note: suspendNote.trim() || null });
+      setSuspendModalOpen(false);
+      load();
+    } catch (err) {
+      setError(errorMessageOf(err));
+    } finally {
+      setSuspending(false);
+    }
+  }
+
+  async function handleImpersonate() {
+    if (!tenantId) return;
+    setError(null);
+    setImpersonating(true);
+    try {
+      const session = await platformAdminApi.impersonateTenant(tenantId);
+      storeSession({
+        token: session.token,
+        staffUserId: session.staffUserId,
+        tenantId: session.tenantId,
+        branchId: session.branchId,
+        fullName: session.fullName,
+        role: session.role as StaffRole,
+      });
+      // Kendi sekmesinde degil, yeni bir sekmede acilir -- boylece platform
+      // admin kendi oturumunu (ayri localStorage anahtari) kaybetmeden bu
+      // sayfada kalir.
+      window.open('/panel', '_blank');
+    } catch (err) {
+      setError(errorMessageOf(err));
+    } finally {
+      setImpersonating(false);
     }
   }
 
@@ -173,8 +224,23 @@ export function TenantDetailPage() {
                 <span className={styles.infoLabel}>Personel Sayısı</span>
                 <span>{tenant.staffUserCount}</span>
               </div>
+              {tenant.status === 'SUSPENDED' && tenant.suspensionReason && (
+                <div className={styles.infoRow}>
+                  <span className={styles.infoLabel}>Askıya Alma Nedeni</span>
+                  <span>
+                    {TENANT_SUSPENSION_REASON_LABELS[tenant.suspensionReason]}
+                    {tenant.suspensionNote && ` — ${tenant.suspensionNote}`}
+                  </span>
+                </div>
+              )}
               <div className={styles.modalActions}>
-                <Button variant={tenant.status === 'SUSPENDED' ? 'secondary' : 'danger'} onClick={handleToggleStatus}>
+                <Button variant="secondary" onClick={handleImpersonate} disabled={impersonating || tenant.status === 'SUSPENDED'}>
+                  {impersonating ? 'Giriliyor...' : 'Bu Klinik Olarak Gir'}
+                </Button>
+                <Button
+                  variant={tenant.status === 'SUSPENDED' ? 'secondary' : 'danger'}
+                  onClick={tenant.status === 'SUSPENDED' ? handleActivate : openSuspendModal}
+                >
                   {tenant.status === 'SUSPENDED' ? 'Aktif Et' : 'Askıya Al'}
                 </Button>
               </div>
@@ -203,6 +269,38 @@ export function TenantDetailPage() {
                   Plan / Durum Değiştir
                 </Button>
               </div>
+            </div>
+
+            <div className={styles.card}>
+              <div className={styles.cardTitle}>Entegrasyon Durumu</div>
+              {integrationHealth === null ? (
+                <div className={styles.empty}>Yükleniyor...</div>
+              ) : (
+                <>
+                  <div className={styles.infoRow}>
+                    <span className={styles.infoLabel}>e-Fatura (Başarısız)</span>
+                    <Badge tone={integrationHealth.failedEInvoiceCount > 0 ? 'danger' : 'success'}>
+                      {integrationHealth.failedEInvoiceCount}
+                    </Badge>
+                  </div>
+                  <div className={styles.infoRow}>
+                    <span className={styles.infoLabel}>TARBIL (Başarısız)</span>
+                    <Badge tone={integrationHealth.failedTarbilSyncCount > 0 ? 'danger' : 'success'}>
+                      {integrationHealth.failedTarbilSyncCount}
+                    </Badge>
+                  </div>
+                  {(integrationHealth.failedEInvoiceCount > 0 || integrationHealth.failedTarbilSyncCount > 0) && (
+                    <p className={styles.note} style={{ marginTop: 8, marginBottom: 0 }}>
+                      Tekrar deneme ve ayrıntılı hata mesajları için Sistem Sağlığı sayfasına bakın.
+                    </p>
+                  )}
+                  <div className={styles.modalActions}>
+                    <Link to="/platform-admin/system-health">
+                      <Button variant="secondary">Sistem Sağlığına Git</Button>
+                    </Link>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -339,6 +437,33 @@ export function TenantDetailPage() {
                 </Button>
               </div>
             </form>
+          </Modal>
+
+          <Modal open={suspendModalOpen} onClose={() => setSuspendModalOpen(false)} width={440}>
+            <div className={styles.modalTitle}>Kiracıyı Askıya Al</div>
+            <FieldWrap label="Neden">
+              <Select
+                value={suspendReason}
+                onChange={(e) => setSuspendReason(e.target.value as TenantSuspensionReason)}
+              >
+                {SUSPENSION_REASON_OPTIONS.map((reason) => (
+                  <option key={reason} value={reason}>
+                    {TENANT_SUSPENSION_REASON_LABELS[reason]}
+                  </option>
+                ))}
+              </Select>
+            </FieldWrap>
+            <FieldWrap label="Not (opsiyonel)">
+              <Input value={suspendNote} onChange={(e) => setSuspendNote(e.target.value)} placeholder="Ek detay..." />
+            </FieldWrap>
+            <div className={styles.modalActions}>
+              <Button type="button" variant="secondary" onClick={() => setSuspendModalOpen(false)}>
+                Vazgeç
+              </Button>
+              <Button type="button" variant="danger" onClick={handleConfirmSuspend} disabled={suspending}>
+                {suspending ? 'Askıya Alınıyor...' : 'Askıya Al'}
+              </Button>
+            </div>
           </Modal>
         </>
       )}

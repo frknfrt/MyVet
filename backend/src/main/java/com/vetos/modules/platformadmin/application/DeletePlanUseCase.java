@@ -1,5 +1,6 @@
 package com.vetos.modules.platformadmin.application;
 
+import com.vetos.modules.platformadmin.domain.AuditAction;
 import com.vetos.modules.platformadmin.domain.PlanRepository;
 import com.vetos.modules.platformadmin.domain.exception.PlanNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -13,10 +14,12 @@ import java.util.UUID;
 public class DeletePlanUseCase {
 
     private final PlanRepository planRepository;
+    private final RecordAuditLogUseCase recordAuditLogUseCase;
 
     @Transactional
-    public void execute(UUID planId) {
+    public void execute(UUID planId, UUID platformAdminId, String platformAdminEmail) {
         planRepository.findById(planId).orElseThrow(() -> new PlanNotFoundException(planId));
         planRepository.deleteById(planId);
+        recordAuditLogUseCase.execute(platformAdminId, platformAdminEmail, AuditAction.PLAN_DELETED, "PLAN", planId, null);
     }
 }

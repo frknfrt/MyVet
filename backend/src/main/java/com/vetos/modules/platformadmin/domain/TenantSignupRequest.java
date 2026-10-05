@@ -5,6 +5,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -13,6 +14,13 @@ import java.util.UUID;
  * olusturulmasi arasindaki bekleme durumunu tutar -- odeme aninda henuz
  * ne bir Tenant ne bir PlatformInvoice var, bu yuzden iyzico'nun
  * conversationId'si bu nesnenin id'sine baglanir.
+ *
+ * couponCode/chargedAmount: kayit sirasinda bir indirim kodu kullanildiysa
+ * (bkz. Coupon), ilk faturanin indirimli tutari burada saklanir -- odeme
+ * basarili oldugunda HandleSignupPaymentCallbackUseCase tam olarak bu tutari
+ * fatura/odeme kaydina yazar (plan fiyati degil). 5 parametreli eski create()
+ * ile olusturulan kayitlarda chargedAmount null kalir; bu durumda cagiran
+ * taraf plan fiyatini kullanir (geriye donuk uyumluluk).
  */
 @Entity
 @Table(name = "tenant_signup_requests")
@@ -43,11 +51,24 @@ public class TenantSignupRequest {
     @Column(nullable = false)
     private TenantSignupRequestStatus status;
 
+    @Column(name = "coupon_code")
+    private String couponCode;
+
+    @Column(name = "charged_amount")
+    private BigDecimal chargedAmount;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
     public static TenantSignupRequest create(
         String clinicName, String adminFullName, String adminEmail, String phone, String planCode
+    ) {
+        return create(clinicName, adminFullName, adminEmail, phone, planCode, null, null);
+    }
+
+    public static TenantSignupRequest create(
+        String clinicName, String adminFullName, String adminEmail, String phone, String planCode,
+        String couponCode, BigDecimal chargedAmount
     ) {
         TenantSignupRequest request = new TenantSignupRequest();
         request.clinicName = clinicName;
@@ -56,6 +77,8 @@ public class TenantSignupRequest {
         request.phone = phone;
         request.planCode = planCode;
         request.status = TenantSignupRequestStatus.PENDING;
+        request.couponCode = couponCode;
+        request.chargedAmount = chargedAmount;
         request.createdAt = Instant.now();
         return request;
     }

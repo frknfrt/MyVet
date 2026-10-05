@@ -96,7 +96,7 @@ class GenerateDueInvoicesUseCaseTest {
     private TenantAdminOverview overview(UUID tenantId) {
         return new TenantAdminOverview(
             tenantId, "Test Klinik", "123", TenantStatus.ACTIVE, Instant.now(), "PRO", BillingStatus.ACTIVE,
-            LocalDate.of(2026, 1, 1), LocalDate.of(2026, 8, 28), 1, 3
+            LocalDate.of(2026, 1, 1), LocalDate.of(2026, 8, 28), 1, 3, null, null
         );
     }
 }

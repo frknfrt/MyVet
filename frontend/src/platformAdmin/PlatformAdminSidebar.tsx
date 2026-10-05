@@ -19,6 +19,29 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   {
+    path: 'overview',
+    label: 'Genel Bakış',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="7" height="9" rx="1" />
+        <rect x="14" y="3" width="7" height="5" rx="1" />
+        <rect x="14" y="12" width="7" height="9" rx="1" />
+        <rect x="3" y="16" width="7" height="5" rx="1" />
+      </svg>
+    ),
+  },
+  {
+    path: 'leads',
+    label: 'Potansiyel Müşteriler',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4 21c0-4 3.5-7 8-7s8 3 8 7" />
+        <path d="M19 8h3M20.5 6.5v3" />
+      </svg>
+    ),
+  },
+  {
     path: 'tenants',
     label: 'Kiracılar',
     icon: (
@@ -41,12 +64,60 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
+    path: 'coupons',
+    label: 'Kuponlar',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1a2 2 0 0 0 0 4v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1a2 2 0 0 0 0-4V9z" />
+        <path d="M9 7v10" strokeDasharray="2 2" />
+      </svg>
+    ),
+  },
+  {
     path: 'billing',
     label: 'Faturalama',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="6" width="20" height="12" rx="2" />
         <circle cx="12" cy="12" r="2.5" />
+      </svg>
+    ),
+  },
+  {
+    path: 'ai-usage',
+    label: 'AI Kullanımı',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 3a4 4 0 0 1 4 4v1a4 4 0 0 1-4 4 4 4 0 0 1-4-4V7a4 4 0 0 1 4-4z" />
+        <path d="M8 12v2a4 4 0 0 0 8 0v-2M12 18v3M9 21h6" />
+      </svg>
+    ),
+  },
+  {
+    path: 'announcements',
+    label: 'Duyurular',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 11l18-7-7 18-2-8-9-3z" />
+      </svg>
+    ),
+  },
+  {
+    path: 'system-health',
+    label: 'Sistem Sağlığı',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+      </svg>
+    ),
+  },
+  {
+    path: 'audit-log',
+    label: 'Denetim Kaydı',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 2h6a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" />
+        <path d="M9 8h6M9 12h6M9 16h3" />
       </svg>
     ),
   },

@@ -12,6 +12,7 @@ import java.util.UUID;
 
 interface EInvoiceSubmissionJpaRepository extends JpaRepository<EInvoiceSubmission, UUID> {
     List<EInvoiceSubmission> findByTenantId(UUID tenantId);
+    List<EInvoiceSubmission> findTop200ByStatusOrderByAttemptedAtDesc(com.vetos.modules.integration.efatura.domain.EInvoiceSubmissionStatus status);
     Optional<EInvoiceSubmission> findByProviderReference(String providerReference);
 
     // status = 'FAILED' filtresi KESIN -- PROCESSING asla claim edilmez (mukerrer GIB gonderimi riski).

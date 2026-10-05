@@ -158,3 +158,23 @@
   padding-top: 20px;
   border-top: 1px solid var(--color-border);
 }
+
+.periodicToggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-ink);
+  cursor: pointer;
+  margin: -6px 0 16px;
+}
+.periodicHint {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+  background: var(--color-neutral-100, #f5f3ee);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin: -6px 0 16px;
+}

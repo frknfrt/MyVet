@@ -2,6 +2,8 @@ package com.vetos.modules.platformadmin.application;
 
 import com.vetos.modules.platformadmin.application.dto.RecordPlatformPaymentCommand;
 import com.vetos.modules.platformadmin.domain.CheckoutResult;
+import com.vetos.modules.platformadmin.domain.Coupon;
+import com.vetos.modules.platformadmin.domain.CouponRepository;
 import com.vetos.modules.platformadmin.domain.PaymentGatewayPort;
 import com.vetos.modules.platformadmin.domain.Plan;
 import com.vetos.modules.platformadmin.domain.PlanRepository;
@@ -22,6 +24,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -44,6 +47,7 @@ public class HandleSignupPaymentCallbackUseCase {
     private final InviteEmailPort inviteEmailPort;
     private final PlatformInvoiceRepository platformInvoiceRepository;
     private final RecordPlatformPaymentUseCase recordPlatformPaymentUseCase;
+    private final CouponRepository couponRepository;
 
     @Value("${app.frontend-base-url}")
     private String frontendBaseUrl;
@@ -79,13 +83,22 @@ public class HandleSignupPaymentCallbackUseCase {
         String acceptUrl = frontendBaseUrl + "/davet/" + invite.getToken();
         inviteEmailPort.sendInvite(invite, request.getClinicName(), acceptUrl);
 
+        BigDecimal chargedAmount = request.getChargedAmount() != null ? request.getChargedAmount() : plan.getMonthlyPrice();
+
         PlatformInvoice invoice = platformInvoiceRepository.save(
-            PlatformInvoice.issue(tenant.tenantId(), request.getPlanCode(), plan.getMonthlyPrice(), today, renewsAt, today)
+            PlatformInvoice.issue(tenant.tenantId(), request.getPlanCode(), chargedAmount, today, renewsAt, today)
         );
         recordPlatformPaymentUseCase.execute(new RecordPlatformPaymentCommand(
-            invoice.getId(), plan.getMonthlyPrice(), PlatformPaymentMethod.CARD_ONLINE,
+            invoice.getId(), chargedAmount, PlatformPaymentMethod.CARD_ONLINE,
             today, "iyzico odeme referansi: " + result.paymentId(), null
         ));
+
+        if (request.getCouponCode() != null) {
+            couponRepository.findByCode(request.getCouponCode()).ifPresent(coupon -> {
+                coupon.incrementRedemption();
+                couponRepository.save(coupon);
+            });
+        }
 
         request.complete();
         tenantSignupRequestRepository.save(request);

@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { ApiError } from '../../api/client';
-import { Plan, platformAdminApi } from '../../api/platformAdminApi';
+import { Plan, PlanFeatureFlag, platformAdminApi } from '../../api/platformAdminApi';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { FieldWrap, Input, Textarea } from '../../components/ui/Field';
@@ -20,6 +20,7 @@ interface PlanFormState {
   badge: string;
   imageUrl: string;
   features: string[];
+  enabledFeatures: PlanFeatureFlag[];
   active: boolean;
 }
 
@@ -32,7 +33,19 @@ const EMPTY_FORM: PlanFormState = {
   badge: '',
   imageUrl: '',
   features: [],
+  enabledFeatures: [],
   active: true,
+};
+
+const FEATURE_FLAG_OPTIONS: PlanFeatureFlag[] = ['AI_ASSISTANT', 'IMAGING', 'LAB_INTEGRATION', 'BOARDING', 'INVENTORY', 'E_FATURA'];
+
+const FEATURE_FLAG_LABELS: Record<PlanFeatureFlag, string> = {
+  AI_ASSISTANT: 'AI Asistanı (Tanı / Tedavi Önerisi)',
+  IMAGING: 'Görüntüleme',
+  LAB_INTEGRATION: 'Laboratuvar Entegrasyonu',
+  BOARDING: 'Pansiyon / Konaklama',
+  INVENTORY: 'Stok Yönetimi',
+  E_FATURA: 'E-Fatura',
 };
 
 export function PlanManagementPage() {
@@ -74,6 +87,7 @@ export function PlanManagementPage() {
       badge: plan.badge ?? '',
       imageUrl: plan.imageUrl ?? '',
       features: plan.features,
+      enabledFeatures: plan.enabledFeatures,
       active: plan.active,
     };
     setForm(initial);
@@ -93,6 +107,15 @@ export function PlanManagementPage() {
     setForm((f) => ({ ...f, features: f.features.filter((_, i) => i !== index) }));
   }
 
+  function toggleFeatureFlag(flag: PlanFeatureFlag) {
+    setForm((f) => ({
+      ...f,
+      enabledFeatures: f.enabledFeatures.includes(flag)
+        ? f.enabledFeatures.filter((x) => x !== flag)
+        : [...f.enabledFeatures, flag],
+    }));
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -108,6 +131,7 @@ export function PlanManagementPage() {
           badge: form.badge === '' ? null : form.badge,
           imageUrl: form.imageUrl === '' ? null : form.imageUrl,
           features: form.features.map((f) => f.trim()).filter((f) => f.length > 0),
+          enabledFeatures: form.enabledFeatures,
           active: form.active,
         });
       } else {
@@ -247,6 +271,18 @@ export function PlanManagementPage() {
                 <Button type="button" variant="secondary" onClick={addFeature}>
                   + Özellik Ekle
                 </Button>
+              </FieldWrap>
+              <FieldWrap label="Modül Erişimi (bu plan hangi modülleri açar)">
+                {FEATURE_FLAG_OPTIONS.map((flag) => (
+                  <label key={flag} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, marginBottom: 6 }}>
+                    <input
+                      type="checkbox"
+                      checked={form.enabledFeatures.includes(flag)}
+                      onChange={() => toggleFeatureFlag(flag)}
+                    />
+                    {FEATURE_FLAG_LABELS[flag]}
+                  </label>
+                ))}
               </FieldWrap>
               <FieldWrap label="Durum">
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>

@@ -30,7 +30,7 @@ class RetryDueNotificationsUseCaseTest {
             UUID.randomUUID(), UUID.randomUUID(), null, NotificationChannel.SMS, NotificationType.APPOINTMENT_REMINDER,
             "05551234567", "mesaj", null, null
         );
-        log.markFailed(Instant.now());
+        log.markFailed("test hatasi", Instant.now());
         return log;
     }
 

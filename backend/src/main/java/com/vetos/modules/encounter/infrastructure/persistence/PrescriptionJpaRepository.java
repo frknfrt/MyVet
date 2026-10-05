@@ -8,4 +8,5 @@ import java.util.UUID;
 
 interface PrescriptionJpaRepository extends JpaRepository<Prescription, UUID> {
     List<Prescription> findByPatientId(UUID patientId);
+    List<Prescription> findByEncounterId(UUID encounterId);
 }

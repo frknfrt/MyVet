@@ -107,7 +107,7 @@ class TenantBillingReconcilerTest {
     private TenantAdminOverview overview(UUID tenantId, TenantStatus status) {
         return new TenantAdminOverview(
             tenantId, "Test Klinik", "123", status, Instant.now(), "PRO", BillingStatus.PAST_DUE,
-            LocalDate.of(2026, 1, 1), LocalDate.of(2026, 8, 28), 1, 3
+            LocalDate.of(2026, 1, 1), LocalDate.of(2026, 8, 28), 1, 3, null, null
         );
     }
 }

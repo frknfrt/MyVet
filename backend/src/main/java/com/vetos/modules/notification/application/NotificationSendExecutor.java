@@ -74,7 +74,7 @@ class NotificationSendExecutor {
         if (outcome.success()) {
             notificationLog.markSent();
         } else {
-            notificationLog.markFailed(computeNextRetryAt(notificationLog.getAttemptCount() + 1));
+            notificationLog.markFailed(outcome.message(), computeNextRetryAt(notificationLog.getAttemptCount() + 1));
             log.warn("Bildirim gonderimi basarisiz: logId={}, sebep={}", logId, outcome.message());
         }
         notificationLogRepository.save(notificationLog);

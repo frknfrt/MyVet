@@ -25,7 +25,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -59,8 +59,11 @@ public class AppointmentsController {
         @AuthenticationPrincipal AuthenticatedStaffUser principal,
         @RequestParam LocalDate weekStart
     ) {
-        var rangeStart = weekStart.atStartOfDay(ZoneOffset.UTC).toInstant();
-        var rangeEnd = weekStart.plusDays(7).atStartOfDay(ZoneOffset.UTC).toInstant();
+        // Haftalik takvim araligi gercek Europe/Istanbul gun sinirlarina gore hesaplanir
+        // (UTC gece yarisi kullanilirsa 00:00-03:00 İstanbul saatindeki randevular yanlis haftaya dusebilir).
+        var istanbul = ZoneId.of("Europe/Istanbul");
+        var rangeStart = weekStart.atStartOfDay(istanbul).toInstant();
+        var rangeEnd = weekStart.plusDays(7).atStartOfDay(istanbul).toInstant();
         return getWeeklyCalendarUseCase.execute(principal.branchIds().get(0), rangeStart, rangeEnd).stream()
             .map(AppointmentResponse::from)
             .toList();
@@ -76,8 +79,9 @@ public class AppointmentsController {
     public List<AppointmentCampaignCandidateResponse> campaignCandidates(
         @RequestParam LocalDate from, @RequestParam LocalDate to, @RequestParam(required = false) AppointmentStatus status
     ) {
-        var rangeStart = from.atStartOfDay(ZoneOffset.UTC).toInstant();
-        var rangeEnd = to.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+        var istanbul = ZoneId.of("Europe/Istanbul");
+        var rangeStart = from.atStartOfDay(istanbul).toInstant();
+        var rangeEnd = to.plusDays(1).atStartOfDay(istanbul).toInstant();
         return listAppointmentCampaignCandidatesUseCase.execute(TenantContext.current(), rangeStart, rangeEnd, status).stream()
             .map(AppointmentCampaignCandidateResponse::from)
             .toList();

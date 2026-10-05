@@ -11,6 +11,7 @@ import java.util.UUID;
 interface VaccinationRecordJpaRepository extends JpaRepository<VaccinationRecord, UUID> {
     List<VaccinationRecord> findByPatientId(UUID patientId);
     List<VaccinationRecord> findByTenantId(UUID tenantId);
+    List<VaccinationRecord> findBySeriesId(UUID seriesId);
 
     /** Gunluk asi hatirlatma isi icin -- bkz. VaccinationLookupAdapter. */
     List<VaccinationRecord> findByTenantIdAndNextDueDateAndStatusNot(UUID tenantId, LocalDate nextDueDate, VaccinationStatus excludedStatus);

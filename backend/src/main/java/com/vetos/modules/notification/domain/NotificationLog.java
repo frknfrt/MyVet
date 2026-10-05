@@ -60,6 +60,9 @@ public class NotificationLog {
     @Column(name = "next_retry_at")
     private Instant nextRetryAt;
 
+    @Column(name = "failure_reason", columnDefinition = "text")
+    private String failureReason;
+
     public static NotificationLog queue(
         UUID tenantId, UUID ownerId, UUID patientId, NotificationChannel channel, NotificationType notificationType,
         String recipientContact, String message, UUID relatedEntityId, String recipientLabel
@@ -84,16 +87,18 @@ public class NotificationLog {
         this.attemptedAt = Instant.now();
     }
 
-    public void markFailed(Instant nextRetryAt) {
+    public void markFailed(String failureReason, Instant nextRetryAt) {
         this.status = NotificationStatus.FAILED;
         this.attemptedAt = Instant.now();
         this.attemptCount++;
         this.nextRetryAt = nextRetryAt;
+        this.failureReason = failureReason;
     }
 
     public void markRetrying() {
         this.status = NotificationStatus.PENDING;
         this.attemptedAt = Instant.now();
         this.nextRetryAt = null;
+        this.failureReason = null;
     }
 }

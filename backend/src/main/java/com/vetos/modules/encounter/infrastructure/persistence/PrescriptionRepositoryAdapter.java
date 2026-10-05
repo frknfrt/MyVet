@@ -23,4 +23,7 @@ class PrescriptionRepositoryAdapter implements PrescriptionRepository {
 
     @Override
     public List<Prescription> findByPatientId(UUID patientId) { return jpaRepository.findByPatientId(patientId); }
+
+    @Override
+    public List<Prescription> findByEncounterId(UUID encounterId) { return jpaRepository.findByEncounterId(encounterId); }
 }

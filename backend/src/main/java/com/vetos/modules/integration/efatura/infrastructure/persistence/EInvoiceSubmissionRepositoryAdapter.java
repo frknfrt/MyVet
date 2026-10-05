@@ -40,4 +40,9 @@ class EInvoiceSubmissionRepositoryAdapter implements EInvoiceSubmissionRepositor
     public List<String> findProviderReferencesByStatusAndAttemptedAtBefore(EInvoiceSubmissionStatus status, Instant threshold) {
         return jpaRepository.findProviderReferencesByStatusAndAttemptedAtBefore(status, threshold);
     }
+
+    @Override
+    public List<EInvoiceSubmission> findRecentByStatus(EInvoiceSubmissionStatus status, int limit) {
+        return jpaRepository.findTop200ByStatusOrderByAttemptedAtDesc(status).stream().limit(limit).toList();
+    }
 }

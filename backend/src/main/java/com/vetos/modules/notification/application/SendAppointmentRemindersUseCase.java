@@ -4,7 +4,9 @@ import com.vetos.modules.appointment.domain.AppointmentLookupPort;
 import com.vetos.modules.appointment.domain.AppointmentReminderCandidate;
 import com.vetos.modules.notification.domain.NotificationChannel;
 import com.vetos.modules.notification.domain.NotificationLogRepository;
+import com.vetos.modules.notification.domain.NotificationMessageTemplateRepository;
 import com.vetos.modules.notification.domain.NotificationSettingsRepository;
+import com.vetos.modules.notification.domain.NotificationTemplateDefaults;
 import com.vetos.modules.notification.domain.NotificationType;
 import com.vetos.modules.patient.domain.OwnerLookupPort;
 import com.vetos.modules.patient.domain.OwnerSummary;
@@ -17,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -39,6 +42,7 @@ public class SendAppointmentRemindersUseCase {
     private final OwnerLookupPort ownerLookupPort;
     private final PatientLookupPort patientLookupPort;
     private final NotificationSettingsRepository notificationSettingsRepository;
+    private final NotificationMessageTemplateRepository notificationMessageTemplateRepository;
 
     // REQUIRES_NEW: bu metot RANDEVU_HATIRLATMA_KILIDI'ni tutan disi transaction'a (AppointmentReminderScheduler)
     // katilirsa, bir kiracinin hatasi TUM kiracilarin isini sessizce geri alir (Spring
@@ -55,6 +59,10 @@ public class SendAppointmentRemindersUseCase {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public int execute(UUID tenantId, Instant rangeStart, Instant rangeEnd) {
         NotificationChannel preferredChannel = resolvePreferredChannel(tenantId);
+        String template = notificationMessageTemplateRepository
+            .findByTenantIdAndNotificationType(tenantId, NotificationType.APPOINTMENT_REMINDER)
+            .map(com.vetos.modules.notification.domain.NotificationMessageTemplate::getTemplateText)
+            .orElse(NotificationTemplateDefaults.defaultTextFor(NotificationType.APPOINTMENT_REMINDER));
         int queued = 0;
         for (AppointmentReminderCandidate candidate : appointmentLookupPort.findConfirmedBetween(tenantId, rangeStart, rangeEnd)) {
             if (notificationLogRepository.existsByRelatedEntityIdAndNotificationType(candidate.appointmentId(), NotificationType.APPOINTMENT_REMINDER)) {
@@ -66,9 +74,11 @@ public class SendAppointmentRemindersUseCase {
             }
             var patient = patientLookupPort.findSummaryById(candidate.patientId());
 
-            String message = "Sayin %s, %s icin yarin %s randevunuz var. Bu bir hatirlatma mesajidir.".formatted(
-                owner.fullName(), patient.name(), FORMAT.format(candidate.scheduledStart())
-            );
+            String message = NotificationTemplateDefaults.render(template, Map.of(
+                "sahipAdi", owner.fullName(),
+                "hastaAdi", patient.name(),
+                "tarihSaat", FORMAT.format(candidate.scheduledStart())
+            ));
 
             queueNotificationUseCase.execute(
                 tenantId, candidate.ownerId(), candidate.patientId(), channelFor(preferredChannel, owner),

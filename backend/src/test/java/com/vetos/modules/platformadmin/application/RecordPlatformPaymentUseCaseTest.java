@@ -33,13 +33,14 @@ class RecordPlatformPaymentUseCaseTest {
     @Mock private PlatformInvoiceRepository platformInvoiceRepository;
     @Mock private PlatformPaymentRepository platformPaymentRepository;
     @Mock private TenantAdminPort tenantAdminPort;
+    @Mock private RecordAuditLogUseCase recordAuditLogUseCase;
 
     private RecordPlatformPaymentUseCase useCase;
 
     @BeforeEach
     void setUp() {
         TenantBillingReconciler tenantBillingReconciler = new TenantBillingReconciler(platformInvoiceRepository, tenantAdminPort);
-        useCase = new RecordPlatformPaymentUseCase(platformInvoiceRepository, platformPaymentRepository, tenantBillingReconciler);
+        useCase = new RecordPlatformPaymentUseCase(platformInvoiceRepository, platformPaymentRepository, tenantBillingReconciler, recordAuditLogUseCase);
     }
 
     @Test
@@ -54,13 +55,31 @@ class RecordPlatformPaymentUseCaseTest {
         when(tenantAdminPort.getOverview(tenantId)).thenReturn(overview(tenantId, TenantStatus.SUSPENDED));
 
         useCase.execute(new RecordPlatformPaymentCommand(
-            invoice.getId(), new BigDecimal("500.00"), PlatformPaymentMethod.BANK_TRANSFER, today, "Havale ref: 1", adminId
+            invoice.getId(), new BigDecimal("500.00"), PlatformPaymentMethod.BANK_TRANSFER, today, "Havale ref: 1", adminId, "admin@vetly.com.tr"
         ));
 
         assertThat(invoice.getStatus()).isEqualTo(PlatformInvoiceStatus.PAID);
         verify(platformPaymentRepository).save(any(PlatformPayment.class));
         verify(tenantAdminPort).updateBillingStatus(tenantId, BillingStatus.ACTIVE);
         verify(tenantAdminPort).activate(tenantId);
+        verify(recordAuditLogUseCase).execute(eq(adminId), eq("admin@vetly.com.tr"), eq(AuditAction.PAYMENT_RECORDED), eq("INVOICE"), eq(invoice.getId()), any());
+    }
+
+    @Test
+    void should_notRecordAuditLog_when_paymentIsAutomaticWithoutAdmin() {
+        UUID tenantId = UUID.randomUUID();
+        LocalDate today = LocalDate.of(2026, 8, 28);
+        PlatformInvoice invoice = PlatformInvoice.issue(tenantId, "PRO", new BigDecimal("500.00"), today, today.plusMonths(1), today);
+        ReflectionTestUtils.setField(invoice, "id", UUID.randomUUID());
+        when(platformInvoiceRepository.findById(invoice.getId())).thenReturn(Optional.of(invoice));
+        when(platformInvoiceRepository.findByTenantId(tenantId)).thenReturn(List.of(invoice));
+        when(tenantAdminPort.getOverview(tenantId)).thenReturn(overview(tenantId, TenantStatus.ACTIVE));
+
+        useCase.execute(new RecordPlatformPaymentCommand(
+            invoice.getId(), new BigDecimal("500.00"), PlatformPaymentMethod.CARD, today, "iyzico webhook", null
+        ));
+
+        verifyNoInteractions(recordAuditLogUseCase);
     }
 
     @Test
@@ -74,7 +93,7 @@ class RecordPlatformPaymentUseCaseTest {
         when(tenantAdminPort.getOverview(tenantId)).thenReturn(overview(tenantId, TenantStatus.ACTIVE));
 
         useCase.execute(new RecordPlatformPaymentCommand(
-            invoice.getId(), new BigDecimal("500.00"), PlatformPaymentMethod.CARD, today, null, UUID.randomUUID()
+            invoice.getId(), new BigDecimal("500.00"), PlatformPaymentMethod.CARD, today, null, UUID.randomUUID(), "admin@vetly.com.tr"
         ));
 
         verify(tenantAdminPort, never()).activate(tenantId);
@@ -93,7 +112,7 @@ class RecordPlatformPaymentUseCaseTest {
         when(platformInvoiceRepository.findByTenantId(tenantId)).thenReturn(List.of(overdueInvoiceA, invoiceB));
 
         useCase.execute(new RecordPlatformPaymentCommand(
-            invoiceB.getId(), new BigDecimal("500.00"), PlatformPaymentMethod.CARD, today, null, UUID.randomUUID()
+            invoiceB.getId(), new BigDecimal("500.00"), PlatformPaymentMethod.CARD, today, null, UUID.randomUUID(), "admin@vetly.com.tr"
         ));
 
         assertThat(invoiceB.getStatus()).isEqualTo(PlatformInvoiceStatus.PAID);
@@ -107,7 +126,7 @@ class RecordPlatformPaymentUseCaseTest {
         when(platformInvoiceRepository.findById(invoiceId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> useCase.execute(new RecordPlatformPaymentCommand(
-            invoiceId, BigDecimal.TEN, PlatformPaymentMethod.OTHER, LocalDate.of(2026, 8, 28), null, UUID.randomUUID()
+            invoiceId, BigDecimal.TEN, PlatformPaymentMethod.OTHER, LocalDate.of(2026, 8, 28), null, UUID.randomUUID(), "admin@vetly.com.tr"
         ))).isInstanceOf(PlatformInvoiceNotFoundException.class);
     }
 
@@ -120,14 +139,14 @@ class RecordPlatformPaymentUseCaseTest {
         when(platformInvoiceRepository.findById(invoice.getId())).thenReturn(Optional.of(invoice));
 
         assertThatThrownBy(() -> useCase.execute(new RecordPlatformPaymentCommand(
-            invoice.getId(), new BigDecimal("500.00"), PlatformPaymentMethod.CARD, today, null, UUID.randomUUID()
+            invoice.getId(), new BigDecimal("500.00"), PlatformPaymentMethod.CARD, today, null, UUID.randomUUID(), "admin@vetly.com.tr"
         ))).isInstanceOf(PlatformInvoiceInvalidTransitionException.class);
     }
 
     private TenantAdminOverview overview(UUID tenantId, TenantStatus status) {
         return new TenantAdminOverview(
             tenantId, "Test Klinik", "123", status, Instant.now(), "PRO", BillingStatus.PAST_DUE,
-            LocalDate.of(2026, 1, 1), LocalDate.of(2026, 8, 28), 1, 3
+            LocalDate.of(2026, 1, 1), LocalDate.of(2026, 8, 28), 1, 3, null, null
         );
     }
 }

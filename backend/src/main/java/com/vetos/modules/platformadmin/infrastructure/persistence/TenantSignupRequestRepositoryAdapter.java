@@ -5,6 +5,7 @@ import com.vetos.modules.platformadmin.domain.TenantSignupRequestRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -19,4 +20,7 @@ class TenantSignupRequestRepositoryAdapter implements TenantSignupRequestReposit
 
     @Override
     public Optional<TenantSignupRequest> findById(UUID id) { return jpaRepository.findById(id); }
+
+    @Override
+    public List<TenantSignupRequest> findAllByOrderByCreatedAtDesc() { return jpaRepository.findAllByOrderByCreatedAtDesc(); }
 }

@@ -1,9 +1,11 @@
 package com.vetos.modules.platformadmin.api.dto;
 
 import com.vetos.modules.platformadmin.domain.Plan;
+import com.vetos.modules.platformadmin.domain.PlanFeatureFlag;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public record PlanResponse(
@@ -16,6 +18,7 @@ public record PlanResponse(
     String badge,
     String imageUrl,
     List<String> features,
+    Set<PlanFeatureFlag> enabledFeatures,
     boolean active
 ) {
     public static PlanResponse from(Plan plan) {
@@ -29,6 +32,7 @@ public record PlanResponse(
             plan.getBadge(),
             plan.getImageUrl(),
             plan.getFeatures(),
+            plan.getEnabledFeatures(),
             plan.isActive()
         );
     }

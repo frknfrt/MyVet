@@ -13,6 +13,7 @@ import java.util.UUID;
 interface NotificationLogJpaRepository extends JpaRepository<NotificationLog, UUID> {
     List<NotificationLog> findByTenantId(UUID tenantId);
     boolean existsByRelatedEntityIdAndNotificationType(UUID relatedEntityId, NotificationType notificationType);
+    List<NotificationLog> findTop200ByStatusOrderByAttemptedAtDesc(com.vetos.modules.notification.domain.NotificationStatus status);
 
     @Query(value = """
         SELECT * FROM notification_log

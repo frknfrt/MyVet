@@ -9,10 +9,12 @@ import com.vetos.modules.platformadmin.application.ListPlansUseCase;
 import com.vetos.modules.platformadmin.application.UpdatePlanUseCase;
 import com.vetos.modules.platformadmin.application.dto.CreatePlanCommand;
 import com.vetos.modules.platformadmin.application.dto.UpdatePlanCommand;
+import com.vetos.platform.security.AuthenticatedPlatformAdmin;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -35,13 +37,15 @@ public class PlanController {
     }
 
     @PostMapping
-    public ResponseEntity<Void> create(@RequestBody @Valid CreatePlanRequest request) {
-        createPlanUseCase.execute(new CreatePlanCommand(request.code(), request.name(), request.monthlyPrice()));
+    public ResponseEntity<Void> create(@RequestBody @Valid CreatePlanRequest request, @AuthenticationPrincipal AuthenticatedPlatformAdmin principal) {
+        createPlanUseCase.execute(
+            new CreatePlanCommand(request.code(), request.name(), request.monthlyPrice()), principal.platformAdminId(), principal.email()
+        );
         return ResponseEntity.status(201).build();
     }
 
     @PutMapping("/{id}")
-    public void update(@PathVariable UUID id, @RequestBody @Valid UpdatePlanRequest request) {
+    public void update(@PathVariable UUID id, @RequestBody @Valid UpdatePlanRequest request, @AuthenticationPrincipal AuthenticatedPlatformAdmin principal) {
         updatePlanUseCase.execute(new UpdatePlanCommand(
             id,
             request.name(),
@@ -51,13 +55,14 @@ public class PlanController {
             request.badge(),
             request.imageUrl(),
             request.features() == null ? List.of() : request.features(),
+            request.enabledFeatures() == null ? java.util.Set.of() : request.enabledFeatures(),
             request.active()
-        ));
+        ), principal.platformAdminId(), principal.email());
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
-        deletePlanUseCase.execute(id);
+    public ResponseEntity<Void> delete(@PathVariable UUID id, @AuthenticationPrincipal AuthenticatedPlatformAdmin principal) {
+        deletePlanUseCase.execute(id, principal.platformAdminId(), principal.email());
         return ResponseEntity.noContent().build();
     }
 }

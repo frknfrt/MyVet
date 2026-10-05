@@ -18,7 +18,7 @@ public interface TenantAdminPort {
     List<TenantAdminOverview> listAll();
     TenantAdminOverview getOverview(UUID tenantId);
     void updateSubscription(UUID tenantId, String planCode, BillingStatus billingStatus, LocalDate renewsAt);
-    void suspend(UUID tenantId);
+    void suspend(UUID tenantId, TenantSuspensionReason reason, String note);
     void activate(UUID tenantId);
 
     /** planCode != TRIAL ve renewsAt <= date olan tum abonelikler -- platform faturalama scheduler'i icin. */
@@ -65,4 +65,11 @@ public interface TenantAdminPort {
 
     /** Odeme oncesi e-posta benzersizligini kontrol etmek icin. */
     boolean isEmailRegistered(String email);
+
+    /**
+     * Platform admin'in impersonate edecegi kiracinin ADMIN rolundeki, aktif
+     * ilk personeli -- bulunamazsa (hic ADMIN'i yoksa) bos doner, cagiran
+     * kullaniciya anlamli bir hata gosterir (bkz. StartImpersonationUseCase).
+     */
+    Optional<ImpersonationTarget> findImpersonationTarget(UUID tenantId);
 }

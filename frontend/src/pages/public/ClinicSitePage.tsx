@@ -54,7 +54,8 @@ export function ClinicSitePage() {
         email: ownerEmail || undefined,
       });
       const patient = await publicApi.registerPatient({ ownerId: owner.id, speciesId, name: petName });
-      const scheduledStart = new Date(`${date}T${time}:00Z`);
+      // Turkiye sabit UTC+3 (DST yok, 2016dan beri) - girilen saat İstanbul yerel saatidir
+      const scheduledStart = new Date(`${date}T${time}:00+03:00`);
       const service = services.find((s) => s.id === serviceTypeId);
       const scheduledEnd = new Date(scheduledStart.getTime() + (service?.defaultDurationMin ?? 30) * 60 * 1000);
 

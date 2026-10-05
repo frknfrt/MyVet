@@ -71,7 +71,8 @@ export function ScheduleAppointmentModal({ open, onClose, onScheduled, defaultDa
     try {
       const service = serviceTypes.find((s) => s.id === serviceTypeId);
       const durationMin = service?.defaultDurationMin ?? 30;
-      const scheduledStart = new Date(`${date}T${startTime}:00Z`);
+      // Turkiye sabit UTC+3 (DST yok, 2016dan beri) - girilen saat İstanbul yerel saatidir
+      const scheduledStart = new Date(`${date}T${startTime}:00+03:00`);
       const scheduledEnd = new Date(scheduledStart.getTime() + durationMin * 60 * 1000);
 
       await appointmentApi.schedule({

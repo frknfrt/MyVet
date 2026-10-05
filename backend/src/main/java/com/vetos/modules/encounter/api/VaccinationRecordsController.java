@@ -2,15 +2,20 @@ package com.vetos.modules.encounter.api;
 
 import com.vetos.modules.encounter.api.dto.MarkVaccinationAdministeredRequest;
 import com.vetos.modules.encounter.api.dto.RecordVaccinationRequest;
+import com.vetos.modules.encounter.api.dto.RecordVaccinationSeriesRequest;
 import com.vetos.modules.encounter.api.dto.VaccinationCampaignCandidateResponse;
 import com.vetos.modules.encounter.api.dto.VaccinationScheduleItemResponse;
+import com.vetos.modules.encounter.application.CancelRemainingVaccinationSeriesUseCase;
 import com.vetos.modules.encounter.application.CancelVaccinationUseCase;
 import com.vetos.modules.encounter.application.ListVaccinationCampaignCandidatesUseCase;
 import com.vetos.modules.encounter.application.ListVaccinationsByPatientUseCase;
 import com.vetos.modules.encounter.application.ListVaccinationsUseCase;
 import com.vetos.modules.encounter.application.MarkVaccinationAdministeredUseCase;
+import com.vetos.modules.encounter.application.RecordVaccinationSeriesUseCase;
 import com.vetos.modules.encounter.application.RecordVaccinationUseCase;
 import com.vetos.modules.encounter.application.dto.RecordVaccinationCommand;
+import com.vetos.modules.encounter.application.dto.RecordVaccinationSeriesCommand;
+import com.vetos.modules.encounter.application.dto.RecordVaccinationSeriesResult;
 import com.vetos.platform.security.AuthenticatedStaffUser;
 import com.vetos.platform.tenancy.TenantContext;
 import jakarta.validation.Valid;
@@ -30,6 +35,8 @@ import java.util.UUID;
 public class VaccinationRecordsController {
 
     private final RecordVaccinationUseCase recordVaccinationUseCase;
+    private final RecordVaccinationSeriesUseCase recordVaccinationSeriesUseCase;
+    private final CancelRemainingVaccinationSeriesUseCase cancelRemainingVaccinationSeriesUseCase;
     private final ListVaccinationsByPatientUseCase listVaccinationsByPatientUseCase;
     private final ListVaccinationsUseCase listVaccinationsUseCase;
     private final MarkVaccinationAdministeredUseCase markVaccinationAdministeredUseCase;
@@ -48,6 +55,21 @@ public class VaccinationRecordsController {
             request.inventoryItemId()
         ));
         return ResponseEntity.created(java.net.URI.create("/api/v1/vaccination-records/" + id)).build();
+    }
+
+    /** Periyodik asi serisi -- orn. "60 gunde 10 doz". Tek cagrida doseCount adet kayit olusturur. */
+    @PostMapping("/series")
+    @PreAuthorize("hasAnyRole('VET', 'TECHNICIAN', 'ADMIN')")
+    public ResponseEntity<RecordVaccinationSeriesResult> recordSeries(
+        @AuthenticationPrincipal AuthenticatedStaffUser principal,
+        @RequestBody @Valid RecordVaccinationSeriesRequest request
+    ) {
+        RecordVaccinationSeriesResult result = recordVaccinationSeriesUseCase.execute(new RecordVaccinationSeriesCommand(
+            TenantContext.current(), request.patientId(), request.encounterId(), request.vaccineName(), request.lotNumber(),
+            request.startDate(), request.intervalDays(), request.doseCount(), request.firstDoseStatus(),
+            principal.staffUserId(), request.notes()
+        ));
+        return ResponseEntity.ok(result);
     }
 
     @GetMapping
@@ -78,5 +100,12 @@ public class VaccinationRecordsController {
     @PreAuthorize("hasAnyRole('VET', 'TECHNICIAN', 'ADMIN')")
     public void cancel(@PathVariable UUID id) {
         cancelVaccinationUseCase.execute(id);
+    }
+
+    /** Serinin henuz uygulanmamis kalan dozlarini iptal eder; yapilmis dozlara dokunmaz. */
+    @PostMapping("/series/{seriesId}/cancel-remaining")
+    @PreAuthorize("hasAnyRole('VET', 'TECHNICIAN', 'ADMIN')")
+    public void cancelRemaining(@PathVariable UUID seriesId) {
+        cancelRemainingVaccinationSeriesUseCase.execute(seriesId);
     }
 }

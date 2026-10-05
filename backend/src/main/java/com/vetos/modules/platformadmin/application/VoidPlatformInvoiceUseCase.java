@@ -1,5 +1,6 @@
 package com.vetos.modules.platformadmin.application;
 
+import com.vetos.modules.platformadmin.domain.AuditAction;
 import com.vetos.modules.platformadmin.domain.PlatformInvoice;
 import com.vetos.modules.platformadmin.domain.PlatformInvoiceRepository;
 import com.vetos.modules.platformadmin.domain.PlatformInvoiceStatus;
@@ -16,9 +17,10 @@ public class VoidPlatformInvoiceUseCase {
 
     private final PlatformInvoiceRepository platformInvoiceRepository;
     private final TenantBillingReconciler tenantBillingReconciler;
+    private final RecordAuditLogUseCase recordAuditLogUseCase;
 
     @Transactional
-    public void execute(UUID invoiceId) {
+    public void execute(UUID invoiceId, UUID platformAdminId, String platformAdminEmail) {
         PlatformInvoice invoice = platformInvoiceRepository.findById(invoiceId)
             .orElseThrow(() -> new PlatformInvoiceNotFoundException(invoiceId));
 
@@ -30,5 +32,10 @@ public class VoidPlatformInvoiceUseCase {
         if (wasOverdue) {
             tenantBillingReconciler.reconcileAfterInvoiceResolved(invoice.getTenantId(), invoice.getId());
         }
+
+        recordAuditLogUseCase.execute(
+            platformAdminId, platformAdminEmail, AuditAction.INVOICE_VOIDED, "INVOICE", invoiceId,
+            "tenantId=" + invoice.getTenantId()
+        );
     }
 }

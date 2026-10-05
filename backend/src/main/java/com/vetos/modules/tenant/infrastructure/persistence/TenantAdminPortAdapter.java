@@ -10,9 +10,11 @@ import com.vetos.modules.tenant.domain.StaffRole;
 import com.vetos.modules.tenant.domain.StaffUser;
 import com.vetos.modules.tenant.domain.Subscription;
 import com.vetos.modules.tenant.domain.Tenant;
+import com.vetos.modules.tenant.domain.TenantSuspensionReason;
 import com.vetos.modules.tenant.domain.TenantAdminOverview;
 import com.vetos.modules.tenant.domain.TenantAdminPort;
 import com.vetos.modules.tenant.domain.TenantSignupResult;
+import com.vetos.modules.tenant.domain.ImpersonationTarget;
 import com.vetos.modules.tenant.domain.event.ClinicRegisteredEvent;
 import com.vetos.modules.tenant.domain.exception.EmailAlreadyRegisteredConflictException;
 import com.vetos.modules.tenant.domain.exception.SubscriptionNotFoundException;
@@ -61,10 +63,10 @@ class TenantAdminPortAdapter implements TenantAdminPort {
     }
 
     @Override
-    public void suspend(UUID tenantId) {
+    public void suspend(UUID tenantId, TenantSuspensionReason reason, String note) {
         Tenant tenant = tenantJpaRepository.findById(tenantId)
             .orElseThrow(() -> new TenantNotFoundException(tenantId));
-        tenant.suspend();
+        tenant.suspend(reason, note);
         tenantJpaRepository.save(tenant);
     }
 
@@ -179,6 +181,26 @@ class TenantAdminPortAdapter implements TenantAdminPort {
             || staffInviteRepository.existsByEmailAndStatus(email, StaffInviteStatus.PENDING);
     }
 
+    @Override
+    public Optional<ImpersonationTarget> findImpersonationTarget(UUID tenantId) {
+        List<UUID> branchIds = branchJpaRepository.findByTenantId(tenantId).stream().map(Branch::getId).toList();
+        if (branchIds.isEmpty()) {
+            return Optional.empty();
+        }
+        // Koprulme kurali (tasarim dokumani S5): findBillingContact ile ayni
+        // sebep -- StaffUser @TenantId'li, platform admin istegi hicbir
+        // kiraciya baglanmamis context'te calisir.
+        TenantContext.set(tenantId);
+        try {
+            return staffUserJpaRepository.findByBranchIdInAndRole(branchIds, StaffRole.ADMIN).stream()
+                .filter(StaffUser::isActive)
+                .findFirst()
+                .map(su -> new ImpersonationTarget(su.getId(), su.getBranchId(), su.getFullName(), su.getRole()));
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
     // Koprulme kurali (tasarim dokumani S5): platform admin istegi, TenantContext
     // kurulu DEGIL. StaffUser artik @TenantId'li -- filtreyi devreye sokmak icin
     // context elle kurulur.
@@ -211,7 +233,7 @@ class TenantAdminPortAdapter implements TenantAdminPort {
         return new TenantAdminOverview(
             tenant.getId(), tenant.getName(), tenant.getTaxNumber(), tenant.getStatus(), tenant.getCreatedAt(),
             subscription.getPlanCode(), subscription.getBillingStatus(), subscription.getStartedAt(), subscription.getRenewsAt(),
-            branches.size(), (int) staffCount
+            branches.size(), (int) staffCount, tenant.getSuspensionReason(), tenant.getSuspensionNote()
         );
     }
 }

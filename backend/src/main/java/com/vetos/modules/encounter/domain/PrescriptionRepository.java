@@ -8,4 +8,5 @@ public interface PrescriptionRepository {
     Prescription save(Prescription prescription);
     Optional<Prescription> findById(UUID id);
     List<Prescription> findByPatientId(UUID patientId);
+    List<Prescription> findByEncounterId(UUID encounterId);
 }

@@ -15,5 +15,7 @@ public record TenantAdminOverview(
     LocalDate startedAt,
     LocalDate renewsAt,
     int branchCount,
-    int staffUserCount
+    int staffUserCount,
+    TenantSuspensionReason suspensionReason,
+    String suspensionNote
 ) {}

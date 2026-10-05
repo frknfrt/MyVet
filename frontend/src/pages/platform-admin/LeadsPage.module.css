@@ -1,0 +1,22 @@
+.note {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  max-width: 720px;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.leadRow {
+  grid-template-columns: 1.3fr 1.2fr 1.6fr 0.8fr 1fr 1fr;
+}
+
+.contact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.contactPhone {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}

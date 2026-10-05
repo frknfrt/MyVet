@@ -15,6 +15,9 @@ export interface VaccinationScheduleItem {
   status: VaccinationStatus;
   notes: string | null;
   administeredByStaffName: string | null;
+  seriesId: string | null;
+  doseNumber: number | null;
+  doseTotal: number | null;
 }
 
 export interface RecordVaccinationPayload {
@@ -30,11 +33,32 @@ export interface RecordVaccinationPayload {
   inventoryItemId?: string;
 }
 
+export interface RecordVaccinationSeriesPayload {
+  patientId: string;
+  encounterId?: string;
+  vaccineName: string;
+  lotNumber?: string;
+  startDate: string;
+  intervalDays: number;
+  doseCount: number;
+  firstDoseStatus: VaccinationStatus;
+  notes?: string;
+}
+
+export interface RecordVaccinationSeriesResult {
+  seriesId: string;
+  vaccinationRecordIds: string[];
+}
+
 export const vaccinationApi = {
   list: (patientId?: string) =>
     apiClient.get<VaccinationScheduleItem[]>(`/api/v1/vaccination-records${patientId ? `?patientId=${patientId}` : ''}`),
   record: (payload: RecordVaccinationPayload) => apiClient.postForId('/api/v1/vaccination-records', payload),
+  recordSeries: (payload: RecordVaccinationSeriesPayload) =>
+    apiClient.post<RecordVaccinationSeriesResult>('/api/v1/vaccination-records/series', payload),
   markAdministered: (id: string, administeredDate?: string) =>
     apiClient.post<void>(`/api/v1/vaccination-records/${id}/administer`, administeredDate ? { administeredDate } : {}),
   cancel: (id: string) => apiClient.post<void>(`/api/v1/vaccination-records/${id}/cancel`),
+  cancelRemainingSeries: (seriesId: string) =>
+    apiClient.post<void>(`/api/v1/vaccination-records/series/${seriesId}/cancel-remaining`),
 };

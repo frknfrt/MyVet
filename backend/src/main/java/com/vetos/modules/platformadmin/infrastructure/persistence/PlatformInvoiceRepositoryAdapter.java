@@ -32,6 +32,9 @@ class PlatformInvoiceRepositoryAdapter implements PlatformInvoiceRepository {
     public List<PlatformInvoice> findByTenantId(UUID tenantId) { return jpaRepository.findByTenantId(tenantId); }
 
     @Override
+    public List<PlatformInvoice> findByStatus(PlatformInvoiceStatus status) { return jpaRepository.findByStatus(status); }
+
+    @Override
     public List<PlatformInvoice> findByStatusAndDueDate(PlatformInvoiceStatus status, LocalDate dueDate) {
         return jpaRepository.findByStatusAndDueDate(status, dueDate);
     }

@@ -17,5 +17,8 @@ public record VaccinationScheduleItem(
     LocalDate nextDueDate,
     VaccinationStatus status,
     String notes,
-    String administeredByStaffName
+    String administeredByStaffName,
+    UUID seriesId,
+    Integer doseNumber,
+    Integer doseTotal
 ) {}
