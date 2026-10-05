@@ -11,6 +11,7 @@ import { createPageBridge } from './core/bridge';
 import { createCard } from './core/card';
 import { shouldRedirectHome } from './core/home';
 import { isKeepAliveEnabled, startKeepAlive } from './core/keepAlive';
+import { classifyPing, recordPing } from './core/keepAliveStatus';
 import { createStockSync } from './pages/stockSync';
 import { runStockPopupFlow } from './pages/stockPopup';
 import { createReceiptFlow } from './pages/vaccineReceipt';
@@ -46,7 +47,16 @@ async function home(): Promise<void> {
 startKeepAlive({
   origin: location.origin,
   enabled: () => isKeepAliveEnabled(chromeLocalStore()),
-  ping: (url) => fetch(url, { credentials: 'include', cache: 'no-store', redirect: 'manual' }),
+  // Sonuc kaydedilir (yan panel durumu; oturum kapaninca nedenini gormek icin). Arka plan da ayrica istek atar.
+  ping: async (url) => {
+    let result;
+    try {
+      result = classifyPing(await fetch(url, { credentials: 'include', cache: 'no-store', redirect: 'manual' }));
+    } catch {
+      result = classifyPing(new Error('ag'));
+    }
+    await recordPing(chromeLocalStore(), location.origin, 'tab', result, Date.now());
+  },
   setInterval: (fn, ms) => window.setInterval(fn, ms),
   clearInterval: (handle) => window.clearInterval(handle as number),
 });

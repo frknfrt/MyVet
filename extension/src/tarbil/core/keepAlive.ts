@@ -12,6 +12,9 @@ const PAGES: Record<string, string> = {
   'https://vetilac.tarbil.gov.tr': '/Pages/PharmacyDefault.aspx',
 };
 
+/** Canli tutulan TARBIL siteleri (hbsapp asi, vetilac ilac). */
+export const KEEP_ALIVE_ORIGINS: readonly string[] = Object.keys(PAGES);
+
 export function keepAliveUrl(origin: string): string | null {
   const path = Object.prototype.hasOwnProperty.call(PAGES, origin) ? PAGES[origin] : null;
   return path ? `${origin}${path}` : null;

@@ -5,6 +5,8 @@ import { createConfirmationOutbox } from './confirmationOutbox';
 import { createRouter } from './router';
 import { openVaccinePage } from './tarbilTab';
 import { createVetlyApi } from './vetlyApi';
+import { KEEP_ALIVE_ALARM, pingAll } from '../tarbil/core/keepAliveStatus';
+import { KEEP_ALIVE_INTERVAL_MS } from '../tarbil/core/keepAlive';
 
 // Icerik betigi (TARBIL karti) activeSubmissionId degisikligini dinler; session varsayilan olarak ona kapali.
 // Burada yalniz aktif asi kimligi durur, anahtar chrome.storage.local'da.
@@ -40,8 +42,24 @@ chrome.runtime.onMessageExternal.addListener((req: ExternalRequest, sender, send
 });
 
 chrome.alarms.create('flush-confirmations', { periodInMinutes: 1 });
+// TARBIL oturumunu canli tutma (2026-10-05): sekme uyutulsa da Chrome acik kaldikca istek gider; sonuc kaydedilir,
+// kapanan oturum simgede "!" olarak gorunur. Ayar yan panelden kapatilabilir (keepAlive.isKeepAliveEnabled).
+chrome.alarms.create(KEEP_ALIVE_ALARM, { periodInMinutes: KEEP_ALIVE_INTERVAL_MS / 60_000 });
+chrome.action.setBadgeBackgroundColor({ color: '#c0392b' }).catch(() => undefined);
+function keepTarbilAlive(): void {
+  pingAll({
+    store: chromeLocalStore(),
+    now: Date.now,
+    fetch: (url) => fetch(url, { credentials: 'include', cache: 'no-store', redirect: 'manual' }),
+    setBadge: (text) => {
+      chrome.action.setBadgeText({ text }).catch(() => undefined);
+    },
+  }).catch(() => undefined);
+}
+
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'flush-confirmations') outbox.flush().catch(() => undefined);
+  if (alarm.name === KEEP_ALIVE_ALARM) keepTarbilAlive();
 });
 chrome.runtime.onStartup.addListener(() => {
   outbox.flush().catch(() => undefined);
