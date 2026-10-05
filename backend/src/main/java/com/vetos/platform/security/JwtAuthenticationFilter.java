@@ -24,6 +24,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
 
+    /**
+     * Herkese acik uclar ve giris kiraci baglami olmadan (root oturum) calismali: tarayici baska bir klinige girisliyken
+     * acilan davet linki o klinigin filtresine takilmasin (spec 2026-09-17 S11).
+     */
+    @Override
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        if (uri == null) {
+            return false;
+        }
+        String contextPath = request.getContextPath();
+        String path = contextPath != null && uri.startsWith(contextPath) ? uri.substring(contextPath.length()) : uri;
+        return path.startsWith("/api/v1/public/") || path.startsWith("/api/v1/auth/");
+    }
+
     @Override
     protected void doFilterInternal(
         @NonNull HttpServletRequest request,

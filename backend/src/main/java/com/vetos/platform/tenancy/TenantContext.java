@@ -73,8 +73,12 @@ public final class TenantContext {
      * authenticated bir istek icinde kontrol edilmesi gerektigi durumlar
      * -- @TenantId'li StaffUser uzerindeki existsByEmail sorgusu, cagiranin
      * KENDI context'inde calisirsa sessizce o kiraciyla filtrelenir ve
-     * baska kiracidaki cakisan bir e-postayi KACIRIR (bkz.
-     * CreateStaffUserUseCase, InviteStaffMemberUseCase).
+     * baska kiracidaki cakisan bir e-postayi KACIRIR.
+     *
+     * DIKKAT (2026-10-05 inceleme): Hibernate oturumu islem (transaction) BASINDA acilir ve kiracisi o anda sabitlenir.
+     * Aktif bir @Transactional icinde cagrilirsa bu yardimci oturumu DEGISTIRMEZ -- sorgu yine cagiranin kiracisiyla
+     * filtrelenir. Global kontroller icin native sorgu kullanin (StaffUserJpaRepository.existsByEmail,
+     * StaffInviteJpaRepository.existsByEmailAndStatusInAnyTenant) ya da isi islem disinda calistirin.
      */
     public static <T> T callInRootSession(Supplier<T> work) {
         UUID previous = currentOrNull();

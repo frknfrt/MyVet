@@ -23,6 +23,8 @@ import com.vetos.modules.patient.domain.SpeciesRepository;
 import com.vetos.modules.tenant.domain.Branch;
 import com.vetos.modules.tenant.domain.BranchRepository;
 import com.vetos.modules.tenant.domain.StaffRole;
+import com.vetos.modules.tenant.domain.StaffInvite;
+import com.vetos.modules.tenant.domain.StaffInviteRepository;
 import com.vetos.modules.tenant.domain.StaffUser;
 import com.vetos.modules.tenant.domain.StaffUserRepository;
 import com.vetos.modules.tenant.domain.Tenant;
@@ -74,6 +76,7 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
     @Autowired private ListExtensionTokensUseCase listExtensionTokensUseCase;
     @Autowired private JwtTokenProvider jwtTokenProvider;
     @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private StaffInviteRepository staffInviteRepository;
     @Autowired private InventoryItemRepository inventoryItemRepository;
 
     private UUID tenantA;
@@ -116,6 +119,7 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
             jdbcTemplate.update("DELETE FROM vaccination_records WHERE tenant_id = ?", t);
             jdbcTemplate.update("DELETE FROM patients WHERE owner_id IN (SELECT id FROM owners WHERE tenant_id = ?)", t);
             jdbcTemplate.update("DELETE FROM owners WHERE tenant_id = ?", t);
+            jdbcTemplate.update("DELETE FROM staff_invites WHERE tenant_id = ?", t);
             jdbcTemplate.update("DELETE FROM staff_users WHERE tenant_id = ?", t);
             jdbcTemplate.update("DELETE FROM branches WHERE tenant_id = ?", t);
             jdbcTemplate.update("DELETE FROM tenants WHERE id = ?", t);
@@ -365,6 +369,58 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
 
         String statusAfter = jdbcTemplate.queryForObject("SELECT status FROM vaccination_records WHERE id = ?", String.class, vaccinationB);
         assertThat(statusAfter).isEqualTo("SCHEDULED");
+    }
+
+    private String adminJwtA(UUID branchA) {
+        return jwtTokenProvider.generateToken(staffA, tenantA, List.of(branchA), "ADMIN");
+    }
+
+    @Test
+    void emailTakenInAnotherClinicIsRejectedOnInviteAndCreate() throws Exception {
+        UUID branchA = inRootSession(() -> branchRepository.save(Branch.create(tenantA, "Personel Şubesi")).getId());
+        UUID branchB = inRootSession(() -> branchRepository.save(Branch.create(tenantB, "B Şubesi")).getId());
+        String takenEmail = "kayitli-" + UUID.randomUUID() + "@test.local";
+        String pendingEmail = "bekleyen-" + UUID.randomUUID() + "@test.local";
+        asTenant(tenantB, () -> staffUserRepository.save(StaffUser.register(tenantB, branchB, "B Hekim", takenEmail, "hash", StaffRole.VET)));
+        asTenant(tenantB, () -> staffInviteRepository.save(StaffInvite.create(tenantB, branchB, pendingEmail, "B Aday", StaffRole.VET, null)));
+        String jwt = adminJwtA(branchA);
+
+        mockMvc.perform(post("/api/v1/staff-invites").header("Authorization", "Bearer " + jwt).contentType("application/json")
+                .content("{\"branchId\":\"" + branchA + "\",\"fullName\":\"Yeni\",\"email\":\"" + takenEmail + "\",\"role\":\"VET\"}"))
+            .andExpect(status().isConflict());
+        mockMvc.perform(post("/api/v1/staff-invites").header("Authorization", "Bearer " + jwt).contentType("application/json")
+                .content("{\"branchId\":\"" + branchA + "\",\"fullName\":\"Yeni\",\"email\":\"" + pendingEmail + "\",\"role\":\"VET\"}"))
+            .andExpect(status().isConflict());
+        mockMvc.perform(post("/api/v1/staff-users").header("Authorization", "Bearer " + jwt).contentType("application/json")
+                .content("{\"branchId\":\"" + branchA + "\",\"fullName\":\"Yeni\",\"email\":\"" + takenEmail
+                    + "\",\"password\":\"Parola1234\",\"role\":\"VET\"}"))
+            .andExpect(status().isConflict());
+    }
+
+    @Test
+    void publicInviteLinkWorksWhileLoggedIntoAnotherClinic() throws Exception {
+        UUID branchB = inRootSession(() -> branchRepository.save(Branch.create(tenantB, "B Şubesi")).getId());
+        String token = asTenant(tenantB, () -> staffInviteRepository.save(StaffInvite.create(
+            tenantB, branchB, "davet-" + UUID.randomUUID() + "@test.local", "B Aday", StaffRole.VET, null)).getToken());
+
+        mockMvc.perform(get("/api/v1/public/staff-invites/" + token).header("Authorization", "Bearer " + jwtA))
+            .andExpect(status().isOk());
+    }
+
+    @Test
+    void anotherClinicsWorkingHoursAndShiftsAreNotReadable() throws Exception {
+        UUID branchA = inRootSession(() -> branchRepository.save(Branch.create(tenantA, "A Şubesi")).getId());
+        UUID branchB = inRootSession(() -> branchRepository.save(Branch.create(tenantB, "B Şubesi")).getId());
+        UUID staffB = asTenant(tenantB, () -> staffUserRepository.save(StaffUser.register(
+            tenantB, branchB, "B Hekim", "vardiya-" + UUID.randomUUID() + "@test.local", "hash", StaffRole.VET)).getId());
+        String jwt = adminJwtA(branchA);
+
+        mockMvc.perform(get("/api/v1/branches/" + branchB + "/working-hours").header("Authorization", "Bearer " + jwt))
+            .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/v1/staff-users/" + staffB + "/shifts").header("Authorization", "Bearer " + jwt))
+            .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/v1/branches/" + branchA + "/working-hours").header("Authorization", "Bearer " + jwt))
+            .andExpect(status().isOk());
     }
 }
 

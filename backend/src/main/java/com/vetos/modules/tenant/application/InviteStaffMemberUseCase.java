@@ -11,7 +11,6 @@ import com.vetos.modules.tenant.domain.TenantRepository;
 import com.vetos.modules.tenant.domain.exception.EmailAlreadyRegisteredConflictException;
 import com.vetos.modules.tenant.domain.exception.StaffInviteAlreadyPendingConflictException;
 import com.vetos.modules.tenant.domain.exception.TenantNotFoundException;
-import com.vetos.platform.tenancy.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -33,16 +32,9 @@ public class InviteStaffMemberUseCase {
 
     @Transactional
     public UUID execute(InviteStaffMemberCommand command) {
-        // staff_users.email GLOBAL essiz (tenant-bazli degil). StaffUser artik
-        // @TenantId'li oldugundan, bu existsByEmail sorgusu cagiranin KENDI
-        // context'inde calisirsa sessizce o kiraciyla filtrelenir ve baska
-        // kiracideki cakisan bir kaydi KACIRIR -- burada, CreateTenant'in
-        // aksine, cakisan kaydi yakalayacak asagi akista bir DB kisiti YOK
-        // (StaffInvite olusturmak carpismaz), yani hata gurultusuzce
-        // davetiyenin gonderilmesine kadar ertelenir. Kontrolu kasitli
-        // olarak root Session'da calistirip cagiranin context'ini hemen
-        // sonra geri yukluyoruz.
-        boolean emailTaken = TenantContext.callInRootSession(() -> staffUserRepository.existsByEmail(command.email()));
+        // staff_users.email ve bekleyen davetler GLOBAL kontrol edilir: iki sorgu da native, @TenantId filtresine takilmaz
+        // (cagiranin kiracisiyla acilmis oturumda bile baska klinikteki kayit/davet yakalanir).
+        boolean emailTaken = staffUserRepository.existsByEmail(command.email());
         if (emailTaken) {
             throw new EmailAlreadyRegisteredConflictException(command.email());
         }

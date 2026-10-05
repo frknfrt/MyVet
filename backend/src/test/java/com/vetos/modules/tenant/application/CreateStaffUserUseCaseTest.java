@@ -68,8 +68,9 @@ class CreateStaffUserUseCaseTest {
         assertThatThrownBy(() -> useCase().execute(command))
             .isInstanceOf(EmailAlreadyRegisteredConflictException.class);
 
-        // Kontrol root Session'da (context bos) calismis olmali.
-        assertThat(contextDuringCheck).containsExactly((UUID) null);
+        // Kontrol bir kez yapilmali; global olmasini native sorgu saglar (bkz. TarbilExtensionSecurityIntegrationTest
+        // emailTakenInAnotherClinicIsRejectedOnInviteAndCreate -- gercek veritabaninda baska kiracidaki cakisma 409).
+        assertThat(contextDuringCheck).hasSize(1);
         // Cagiranin orijinal context'i geri yuklenmis olmali.
         assertThat(TenantContext.currentOrNull()).isEqualTo(callerTenantId);
     }

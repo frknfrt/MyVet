@@ -33,7 +33,7 @@ class StaffInviteRepositoryAdapter implements StaffInviteRepository {
 
     @Override
     public boolean existsByEmailAndStatus(String email, StaffInviteStatus status) {
-        return jpaRepository.existsByEmailAndStatus(email, status);
+        return jpaRepository.existsByEmailAndStatusInAnyTenant(email, status.name());
     }
 
     @Override
