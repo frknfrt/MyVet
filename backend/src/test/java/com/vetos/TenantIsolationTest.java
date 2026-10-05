@@ -66,7 +66,34 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import com.vetos.modules.appointment.domain.Appointment;
+import com.vetos.modules.appointment.domain.AppointmentRepository;
+import com.vetos.modules.appointment.domain.AppointmentSource;
+import com.vetos.modules.appointment.domain.ServiceType;
+import com.vetos.modules.appointment.domain.ServiceTypeRepository;
+import com.vetos.modules.boarding.domain.BoardingRoom;
+import com.vetos.modules.boarding.domain.BoardingRoomRepository;
+import com.vetos.modules.boarding.domain.BoardingStay;
+import com.vetos.modules.boarding.domain.BoardingStayRepository;
+import com.vetos.modules.encounter.domain.VaccinationRecord;
+import com.vetos.modules.encounter.domain.VaccinationRecordRepository;
+import com.vetos.modules.encounter.domain.VaccinationStatus;
+import com.vetos.modules.integration.efatura.domain.EInvoiceDocumentType;
+import com.vetos.modules.integration.efatura.domain.EInvoiceSubmission;
+import com.vetos.modules.integration.efatura.domain.EInvoiceSubmissionRepository;
+import com.vetos.modules.notification.domain.MessageTemplate;
+import com.vetos.modules.notification.domain.MessageTemplateRepository;
+import com.vetos.modules.notification.domain.TemplateChannel;
+import com.vetos.modules.platformadmin.domain.PlatformInvoice;
+import com.vetos.modules.platformadmin.domain.PlatformInvoiceRepository;
+import com.vetos.modules.tenant.domain.StaffInvite;
+import com.vetos.modules.tenant.domain.StaffInviteRepository;
+import com.vetos.modules.tenant.domain.Subscription;
+import com.vetos.modules.tenant.domain.SubscriptionRepository;
+
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -122,6 +149,16 @@ class TenantIsolationTest extends TenantScopedTestSupport {
     @Autowired private EncounterInventoryUsageRepository encounterInventoryUsageRepository;
     @Autowired private PrescriptionItemRepository prescriptionItemRepository;
     @Autowired private DrugCatalogRepository drugCatalogRepository;
+    @Autowired private AppointmentRepository appointmentRepository;
+    @Autowired private ServiceTypeRepository serviceTypeRepository;
+    @Autowired private BoardingRoomRepository boardingRoomRepository;
+    @Autowired private BoardingStayRepository boardingStayRepository;
+    @Autowired private VaccinationRecordRepository vaccinationRecordRepository;
+    @Autowired private EInvoiceSubmissionRepository eInvoiceSubmissionRepository;
+    @Autowired private MessageTemplateRepository messageTemplateRepository;
+    @Autowired private PlatformInvoiceRepository platformInvoiceRepository;
+    @Autowired private StaffInviteRepository staffInviteRepository;
+    @Autowired private SubscriptionRepository subscriptionRepository;
 
     @PersistenceContext private EntityManager entityManager;
 
@@ -175,6 +212,16 @@ class TenantIsolationTest extends TenantScopedTestSupport {
             String pr = "(SELECT id FROM prescriptions WHERE patient_id IN " + p + ")";
 
             List<String> statements = List.of(
+                "DELETE FROM appointments WHERE tenant_id = :t",
+                "DELETE FROM service_types WHERE tenant_id = :t",
+                "DELETE FROM boarding_stays WHERE tenant_id = :t",
+                "DELETE FROM boarding_rooms WHERE tenant_id = :t",
+                "DELETE FROM vaccination_records WHERE tenant_id = :t",
+                "DELETE FROM efatura_submission WHERE tenant_id = :t",
+                "DELETE FROM message_templates WHERE tenant_id = :t",
+                "DELETE FROM platform_invoices WHERE tenant_id = :t",
+                "DELETE FROM staff_invites WHERE tenant_id = :t",
+                "DELETE FROM subscriptions WHERE tenant_id = :t",
                 "DELETE FROM prescription_items WHERE prescription_id IN " + pr,
                 "DELETE FROM prescriptions WHERE patient_id IN " + p,
                 "DELETE FROM encounter_inventory_usage WHERE encounter_id IN " + e,
@@ -550,4 +597,144 @@ class TenantIsolationTest extends TenantScopedTestSupport {
         assertThat(asTenant(a.tenantId(), () -> prescriptionItemRepository.findByPrescriptionId(prescriptionBId))).isEmpty();
         assertThat(asTenant(b.tenantId(), () -> prescriptionItemRepository.findByPrescriptionId(prescriptionBId))).hasSize(1);
     }
+
+    // --- Ek tur (spec S11, 2026-10-05): zaten tenant_id tasiyan varliklar ---
+
+    /** B'nin kaydi A baglaminda kimlikle gorunmez, B baglaminda gorunur. */
+    private <T> void assertIsolated(TenantFixture a, TenantFixture b, java.util.function.Function<UUID, Optional<T>> find, UUID idOfB) {
+        assertThat(asTenant(a.tenantId(), () -> find.apply(idOfB))).isEmpty();
+        assertThat(asTenant(b.tenantId(), () -> find.apply(idOfB))).isPresent();
+    }
+
+    private UUID createServiceType(TenantFixture f) {
+        return asTenant(f.tenantId(), () -> serviceTypeRepository.save(
+            ServiceType.create(f.tenantId(), "Muayene", 30, BigDecimal.TEN)).getId());
+    }
+
+    @Test
+    void appointment_isIsolatedAcrossTenants() {
+        TenantFixture a = createTenantFixture("Izolasyon A");
+        TenantFixture b = createTenantFixture("Izolasyon B");
+        UUID patientBId = createPatient(b);
+        UUID serviceTypeBId = createServiceType(b);
+        Instant start = Instant.parse("2027-01-10T09:00:00Z");
+
+        UUID appointmentBId = asTenant(b.tenantId(), () -> appointmentRepository.save(Appointment.schedule(
+            b.tenantId(), b.branchId(), patientBId, b.ownerId(), b.staffUserId(), serviceTypeBId,
+            start, start.plusSeconds(1800), AppointmentSource.PHONE, null)).getId());
+
+        assertIsolated(a, b, appointmentRepository::findById, appointmentBId);
+    }
+
+    @Test
+    void serviceType_isIsolatedAcrossTenants() {
+        TenantFixture a = createTenantFixture("Izolasyon A");
+        TenantFixture b = createTenantFixture("Izolasyon B");
+
+        assertIsolated(a, b, serviceTypeRepository::findById, createServiceType(b));
+    }
+
+    @Test
+    void invoice_isIsolatedAcrossTenants() {
+        TenantFixture a = createTenantFixture("Izolasyon A");
+        TenantFixture b = createTenantFixture("Izolasyon B");
+
+        assertIsolated(a, b, invoiceRepository::findById, createInvoice(b));
+    }
+
+    @Test
+    void boardingRoomAndStay_areIsolatedAcrossTenants() {
+        TenantFixture a = createTenantFixture("Izolasyon A");
+        TenantFixture b = createTenantFixture("Izolasyon B");
+        UUID patientBId = createPatient(b);
+
+        UUID roomBId = asTenant(b.tenantId(), () -> boardingRoomRepository.save(
+            BoardingRoom.create(b.tenantId(), b.branchId(), "Kedi", "Oda 1", 1, BigDecimal.TEN, null)).getId());
+        UUID stayBId = asTenant(b.tenantId(), () -> boardingStayRepository.save(BoardingStay.create(
+            b.tenantId(), b.branchId(), roomBId, patientBId, b.ownerId(), b.staffUserId(),
+            LocalDate.of(2027, 1, 10), LocalDate.of(2027, 1, 12), null)).getId());
+
+        assertIsolated(a, b, boardingRoomRepository::findById, roomBId);
+        assertIsolated(a, b, boardingStayRepository::findById, stayBId);
+    }
+
+    @Test
+    void vaccinationRecord_isIsolatedAcrossTenants() {
+        TenantFixture a = createTenantFixture("Izolasyon A");
+        TenantFixture b = createTenantFixture("Izolasyon B");
+        UUID patientBId = createPatient(b);
+
+        UUID vaccinationBId = asTenant(b.tenantId(), () -> vaccinationRecordRepository.save(VaccinationRecord.record(
+            b.tenantId(), patientBId, null, "Kuduz", null, LocalDate.of(2026, 10, 1), null, b.staffUserId(),
+            VaccinationStatus.ADMINISTERED, null)).getId());
+
+        assertIsolated(a, b, vaccinationRecordRepository::findById, vaccinationBId);
+    }
+
+    @Test
+    void imagingRecordAndLabResult_areIsolatedAcrossTenants() {
+        TenantFixture a = createTenantFixture("Izolasyon A");
+        TenantFixture b = createTenantFixture("Izolasyon B");
+        UUID patientBId = createPatient(b);
+
+        UUID imagingBId = asTenant(b.tenantId(), () -> imagingRecordRepository.save(ImagingRecord.request(
+            b.tenantId(), patientBId, b.staffUserId(), ImagingModality.XRAY, "Toraks", null)).getId());
+        UUID labBId = asTenant(b.tenantId(), () -> labResultRepository.save(LabResult.request(
+            b.tenantId(), patientBId, b.staffUserId(), "Hemogram", null)).getId());
+
+        assertIsolated(a, b, imagingRecordRepository::findById, imagingBId);
+        assertIsolated(a, b, labResultRepository::findById, labBId);
+    }
+
+    @Test
+    void eInvoiceSubmission_isIsolatedAcrossTenants() {
+        TenantFixture a = createTenantFixture("Izolasyon A");
+        TenantFixture b = createTenantFixture("Izolasyon B");
+        UUID invoiceBId = createInvoice(b);
+
+        UUID submissionBId = asTenant(b.tenantId(), () -> eInvoiceSubmissionRepository.save(EInvoiceSubmission.queue(
+            b.tenantId(), invoiceBId, b.ownerId(), EInvoiceDocumentType.E_ARSIV, BigDecimal.TEN, BigDecimal.ONE)).getId());
+
+        assertIsolated(a, b, eInvoiceSubmissionRepository::findById, submissionBId);
+    }
+
+    @Test
+    void messageTemplate_isIsolatedAcrossTenants() {
+        TenantFixture a = createTenantFixture("Izolasyon A");
+        TenantFixture b = createTenantFixture("Izolasyon B");
+
+        UUID templateBId = asTenant(b.tenantId(), () -> messageTemplateRepository.save(
+            MessageTemplate.create(b.tenantId(), "Hatirlatma", TemplateChannel.SMS, "GENEL", "Merhaba")).getId());
+
+        assertIsolated(a, b, messageTemplateRepository::findById, templateBId);
+    }
+
+    @Test
+    void ownerAndBranch_areIsolatedAcrossTenants() {
+        TenantFixture a = createTenantFixture("Izolasyon A");
+        TenantFixture b = createTenantFixture("Izolasyon B");
+
+        assertIsolated(a, b, ownerRepository::findById, b.ownerId());
+        assertIsolated(a, b, branchRepository::findById, b.branchId());
+    }
+
+    @Test
+    void platformInvoiceStaffInviteAndSubscription_areIsolatedAcrossTenants() {
+        TenantFixture a = createTenantFixture("Izolasyon A");
+        TenantFixture b = createTenantFixture("Izolasyon B");
+
+        UUID platformInvoiceBId = asTenant(b.tenantId(), () -> platformInvoiceRepository.save(PlatformInvoice.issue(
+            b.tenantId(), "TRIAL", BigDecimal.TEN, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 31), LocalDate.of(2026, 10, 1))).getId());
+        UUID inviteBId = asTenant(b.tenantId(), () -> staffInviteRepository.save(StaffInvite.create(
+            b.tenantId(), b.branchId(), "davet-" + UUID.randomUUID() + "@test.local", "Yeni Hekim", StaffRole.VET, b.staffUserId())).getId());
+        asTenant(b.tenantId(), () -> subscriptionRepository.save(Subscription.startTrial(b.tenantId())));
+
+        assertIsolated(a, b, platformInvoiceRepository::findById, platformInvoiceBId);
+        assertIsolated(a, b, staffInviteRepository::findById, inviteBId);
+        assertThat(asTenant(a.tenantId(), () -> subscriptionRepository.findByTenantId(b.tenantId()))).isEmpty();
+        assertThat(asTenant(b.tenantId(), () -> subscriptionRepository.findByTenantId(b.tenantId()))).isPresent();
+        // Platform yonetimi / giris baglamsiz (root) calisir ve tum kiracilari gorur.
+        assertThat(inRootSession(() -> subscriptionRepository.findByTenantId(b.tenantId()))).isPresent();
+    }
 }
+

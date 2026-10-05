@@ -347,4 +347,24 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> jdbcTemplate.update(sql, UUID.randomUUID(), tenantA, item, vaccination))
             .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
     }
+
+    @Test
+    void foreignVaccinationCannotBeAdministeredOrCancelled() throws Exception {
+        UUID staffB = createStaff(tenantB);
+        UUID speciesId = inRootSession(() -> speciesRepository.findAll().get(0).getId());
+        UUID ownerB = asTenant(tenantB, () -> ownerRepository.save(Owner.register(tenantB, "B Sahip", "05551234567", null, null)).getId());
+        UUID patientB = asTenant(tenantB, () -> patientRepository.save(
+            Patient.register(tenantB, ownerB, speciesId, null, "Tekir", Sex.FEMALE, null)).getId());
+        UUID vaccinationB = asTenant(tenantB, () -> vaccinationRecordRepository.save(VaccinationRecord.record(
+            tenantB, patientB, null, "Kuduz", null, LocalDate.now(), null, staffB, VaccinationStatus.SCHEDULED, null)).getId());
+
+        mockMvc.perform(post("/api/v1/vaccination-records/" + vaccinationB + "/administer").header("Authorization", "Bearer " + jwtA))
+            .andExpect(status().isNotFound());
+        mockMvc.perform(post("/api/v1/vaccination-records/" + vaccinationB + "/cancel").header("Authorization", "Bearer " + jwtA))
+            .andExpect(status().isNotFound());
+
+        String statusAfter = jdbcTemplate.queryForObject("SELECT status FROM vaccination_records WHERE id = ?", String.class, vaccinationB);
+        assertThat(statusAfter).isEqualTo("SCHEDULED");
+    }
 }
+

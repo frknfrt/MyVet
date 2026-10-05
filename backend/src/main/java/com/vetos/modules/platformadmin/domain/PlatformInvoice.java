@@ -23,7 +23,11 @@ public class PlatformInvoice {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "tenant_id", nullable = false)
+    // Kiraci filtresi (spec 2026-09-17 S11): baska kiracinin kaydi kimlikle de okunamaz.
+
+    @org.hibernate.annotations.TenantId
+
+    @Column(name = "tenant_id", nullable = false, updatable = false)
     private UUID tenantId;
 
     @Column(name = "plan_code", nullable = false)
