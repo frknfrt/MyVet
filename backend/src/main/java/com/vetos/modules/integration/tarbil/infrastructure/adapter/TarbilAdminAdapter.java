@@ -1,20 +1,17 @@
 package com.vetos.modules.integration.tarbil.infrastructure.adapter;
 
-import com.vetos.modules.integration.tarbil.application.RetryTarbilSyncUseCase;
 import com.vetos.modules.integration.tarbil.domain.TarbilAdminPort;
-import lombok.RequiredArgsConstructor;
+import com.vetos.modules.integration.tarbil.domain.exception.TarbilServerRetryUnsupportedConflictException;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
+/** Eklenti modelinde (2026-10-05) TARBIL'e gonderimi klinikteki eklenti hekimle yapar; sunucudan yeniden deneme yok. */
 @Component
-@RequiredArgsConstructor
 class TarbilAdminAdapter implements TarbilAdminPort {
-
-    private final RetryTarbilSyncUseCase retryTarbilSyncUseCase;
 
     @Override
     public void retryNow(UUID syncLogId) {
-        retryTarbilSyncUseCase.executeAsAdmin(syncLogId);
+        throw new TarbilServerRetryUnsupportedConflictException();
     }
 }

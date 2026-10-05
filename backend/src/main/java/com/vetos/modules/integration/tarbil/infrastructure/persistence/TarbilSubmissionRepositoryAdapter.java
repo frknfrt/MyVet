@@ -21,6 +21,19 @@ class TarbilSubmissionRepositoryAdapter implements TarbilSubmissionRepository {
 
     @Override public Optional<TarbilSubmission> findById(UUID id) { return jpaRepository.findById(id); }
 
+    @Override
+    public List<TarbilSubmission> findPendingQueuedBefore(java.time.Instant cutoff, int limit) {
+        return jpaRepository.findByStatusAndQueuedAtBeforeOrderByQueuedAtAsc(
+            com.vetos.modules.integration.tarbil.domain.TarbilSyncStatus.PENDING, cutoff,
+            org.springframework.data.domain.PageRequest.of(0, limit));
+    }
+
+    @Override
+    public long countPendingQueuedBefore(UUID tenantId, java.time.Instant cutoff) {
+        return jpaRepository.countByTenantIdAndStatusAndQueuedAtBefore(
+            tenantId, com.vetos.modules.integration.tarbil.domain.TarbilSyncStatus.PENDING, cutoff);
+    }
+
     @Override public List<TarbilSubmission> findByTenantId(UUID tenantId) { return jpaRepository.findByTenantId(tenantId); }
 
     @Override

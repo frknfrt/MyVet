@@ -1,98 +1,102 @@
 package com.vetos.modules.integration.tarbil.infrastructure.adapter;
 
 import com.vetos.modules.integration.tarbil.domain.FailedTarbilSyncView;
-import com.vetos.modules.integration.tarbil.domain.TarbilSyncLog;
-import com.vetos.modules.integration.tarbil.domain.TarbilSyncLogRepository;
-import com.vetos.modules.integration.tarbil.domain.TarbilSyncStatus;
-import com.vetos.modules.integration.tarbil.domain.TarbilSyncType;
+import com.vetos.modules.integration.tarbil.domain.TarbilDocumentType;
+import com.vetos.modules.integration.tarbil.domain.TarbilSubmission;
+import com.vetos.modules.integration.tarbil.domain.TarbilSubmissionRepository;
 import com.vetos.modules.patient.domain.PatientLookupPort;
 import com.vetos.modules.patient.domain.PatientSummary;
 import com.vetos.modules.patient.domain.exception.PatientNotFoundException;
 import com.vetos.modules.tenant.domain.TenantLookupPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * Eklenti modelinde sunucu TARBIL'e kendisi gondermez, "basarisiz senkron" yoktur. Saglik paneli bunun yerine
+ * eklentiden uzun suredir gonderilmeyen (STALE_AFTER) bekleyen aktarimlari gosterir.
+ */
 @ExtendWith(MockitoExtension.class)
 class TarbilHealthAdapterTest {
 
-    @Mock private TarbilSyncLogRepository tarbilSyncLogRepository;
+    @Mock private TarbilSubmissionRepository submissions;
     @Mock private TenantLookupPort tenantLookupPort;
     @Mock private PatientLookupPort patientLookupPort;
 
+    private final UUID tenantId = UUID.randomUUID();
+    private final UUID patientId = UUID.randomUUID();
+
     private TarbilHealthAdapter adapter() {
-        return new TarbilHealthAdapter(tarbilSyncLogRepository, tenantLookupPort, patientLookupPort);
+        return new TarbilHealthAdapter(submissions, tenantLookupPort, patientLookupPort);
     }
 
     @Test
-    void should_mapTenantNameAndPatientName_when_findRecentFailed() {
-        UUID tenantId = UUID.randomUUID();
-        UUID patientId = UUID.randomUUID();
-        TarbilSyncLog log = TarbilSyncLog.queue(tenantId, patientId, TarbilSyncType.VACCINATION, "{}");
-        log.markFailed("Bakanlik API zaman asimi", Instant.now().plusSeconds(60));
-        when(tarbilSyncLogRepository.findRecentByStatus(TarbilSyncStatus.FAILED, 100)).thenReturn(List.of(log));
+    void should_listPendingOlderThanThreeDays_withClinicAndPatientNames() {
+        TarbilSubmission stale = TarbilSubmission.queueVaccination(tenantId, patientId, UUID.randomUUID());
+        when(submissions.findPendingQueuedBefore(any(), eq(100))).thenReturn(List.of(stale));
         when(tenantLookupPort.findTenantName(tenantId)).thenReturn(Optional.of("Pati Veteriner"));
         when(patientLookupPort.findSummaryById(patientId)).thenReturn(new PatientSummary(patientId, "Tekir", UUID.randomUUID(), "Kedi"));
 
         List<FailedTarbilSyncView> views = adapter().findRecentFailed(100);
 
+        ArgumentCaptor<Instant> cutoff = ArgumentCaptor.forClass(Instant.class);
+        verify(submissions).findPendingQueuedBefore(cutoff.capture(), eq(100));
+        assertThat(cutoff.getValue()).isCloseTo(Instant.now().minus(TarbilHealthAdapter.STALE_AFTER), within(Duration.ofMinutes(1)));
         assertThat(views).hasSize(1);
-        FailedTarbilSyncView view = views.get(0);
-        assertThat(view.tenantName()).isEqualTo("Pati Veteriner");
-        assertThat(view.patientName()).isEqualTo("Tekir");
-        assertThat(view.failureReason()).isEqualTo("Bakanlik API zaman asimi");
+        FailedTarbilSyncView v = views.get(0);
+        assertThat(v.syncLogId()).isEqualTo(stale.getId());
+        assertThat(v.tenantName()).isEqualTo("Pati Veteriner");
+        assertThat(v.patientName()).isEqualTo("Tekir");
+        assertThat(v.syncType()).isEqualTo("VACCINATION");
+        assertThat(v.failureReason()).contains("eklenti");
+        assertThat(v.attemptCount()).isZero();
+        assertThat(v.attemptedAt()).isEqualTo(stale.getQueuedAt());
     }
 
     @Test
-    void should_fallbackToUnknownClinic_when_tenantNameMissing() {
-        UUID tenantId = UUID.randomUUID();
-        UUID patientId = UUID.randomUUID();
-        TarbilSyncLog log = TarbilSyncLog.queue(tenantId, patientId, TarbilSyncType.IDENTIFICATION, "{}");
-        log.markFailed("hata", Instant.now());
-        when(tarbilSyncLogRepository.findRecentByStatus(TarbilSyncStatus.FAILED, 100)).thenReturn(List.of(log));
+    void should_fallBackToUnknownNames_when_clinicOrPatientMissing() {
+        TarbilSubmission stale = TarbilSubmission.queueVaccination(tenantId, patientId, UUID.randomUUID());
+        when(submissions.findPendingQueuedBefore(any(), eq(100))).thenReturn(List.of(stale));
         when(tenantLookupPort.findTenantName(tenantId)).thenReturn(Optional.empty());
-        when(patientLookupPort.findSummaryById(patientId)).thenReturn(new PatientSummary(patientId, "Boncuk", UUID.randomUUID(), "Kopek"));
-
-        List<FailedTarbilSyncView> views = adapter().findRecentFailed(100);
-
-        assertThat(views.get(0).tenantName()).isEqualTo("Bilinmeyen Klinik");
-    }
-
-    @Test
-    void should_fallbackToUnknownPatient_when_patientDeleted() {
-        UUID tenantId = UUID.randomUUID();
-        UUID patientId = UUID.randomUUID();
-        TarbilSyncLog log = TarbilSyncLog.queue(tenantId, patientId, TarbilSyncType.TREATMENT, "{}");
-        log.markFailed("hata", Instant.now());
-        when(tarbilSyncLogRepository.findRecentByStatus(TarbilSyncStatus.FAILED, 100)).thenReturn(List.of(log));
-        when(tenantLookupPort.findTenantName(tenantId)).thenReturn(Optional.of("Pati Veteriner"));
         when(patientLookupPort.findSummaryById(patientId)).thenThrow(new PatientNotFoundException(patientId));
 
-        List<FailedTarbilSyncView> views = adapter().findRecentFailed(100);
+        FailedTarbilSyncView v = adapter().findRecentFailed(100).get(0);
 
-        assertThat(views.get(0).patientName()).isEqualTo("Bilinmeyen Hasta");
+        assertThat(v.tenantName()).isEqualTo("Bilinmeyen Klinik");
+        assertThat(v.patientName()).isEqualTo("Bilinmeyen Hasta");
     }
 
     @Test
-    void should_countOnlyFailed_when_countFailedForTenant() {
-        UUID tenantId = UUID.randomUUID();
-        TarbilSyncLog failed = TarbilSyncLog.queue(tenantId, UUID.randomUUID(), TarbilSyncType.VACCINATION, "{}");
-        failed.markFailed("hata", Instant.now());
-        TarbilSyncLog synced = TarbilSyncLog.queue(tenantId, UUID.randomUUID(), TarbilSyncType.VACCINATION, "{}");
-        synced.markSynced();
-        when(tarbilSyncLogRepository.findByTenantId(tenantId)).thenReturn(List.of(failed, synced));
+    void should_notLookUpPatient_when_documentHasNone() {
+        TarbilSubmission receipt = TarbilSubmission.queue(tenantId, TarbilDocumentType.STOCK_RECEIPT, null, UUID.randomUUID());
+        when(submissions.findPendingQueuedBefore(any(), eq(100))).thenReturn(List.of(receipt));
+        when(tenantLookupPort.findTenantName(tenantId)).thenReturn(Optional.of("Pati Veteriner"));
 
-        long count = adapter().countFailedForTenant(tenantId);
+        FailedTarbilSyncView v = adapter().findRecentFailed(100).get(0);
 
-        assertThat(count).isEqualTo(1);
+        assertThat(v.patientName()).isEqualTo("—");
+        assertThat(v.syncType()).isEqualTo("STOCK_RECEIPT");
+    }
+
+    @Test
+    void should_countStalePendingForTenant() {
+        when(submissions.countPendingQueuedBefore(eq(tenantId), any())).thenReturn(3L);
+
+        assertThat(adapter().countFailedForTenant(tenantId)).isEqualTo(3L);
     }
 }

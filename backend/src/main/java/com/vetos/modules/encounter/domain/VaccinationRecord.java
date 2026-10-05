@@ -19,9 +19,7 @@ public class VaccinationRecord {
     private UUID id;
 
     // Kiraci filtresi (spec 2026-09-17 S11): baska kiracinin kaydi kimlikle de okunamaz.
-
     @org.hibernate.annotations.TenantId
-
     @Column(name = "tenant_id", nullable = false, updatable = false)
     private UUID tenantId;
 
@@ -55,6 +53,18 @@ public class VaccinationRecord {
     @Column(name = "reminder_sent", nullable = false)
     private boolean reminderSent;
 
+    /** Periyodik asi serisinin parcasiysa bu seriye ait tum kayitlarda aynidir; tekil kayitlarda null. */
+    @Column(name = "series_id")
+    private UUID seriesId;
+
+    /** Seri icindeki sirasi (1'den baslar). Tekil kayitlarda null. */
+    @Column(name = "dose_number")
+    private Integer doseNumber;
+
+    /** Serideki toplam doz sayisi. Tekil kayitlarda null. */
+    @Column(name = "dose_total")
+    private Integer doseTotal;
+
     /** Stoktan secilen asi (spec 2026-10-04 P2): inventory modulundeki kalem; serbest yazilmis asida null. */
     @Column(name = "inventory_item_id")
     private UUID inventoryItemId;
@@ -65,13 +75,33 @@ public class VaccinationRecord {
         VaccinationStatus status, String notes
     ) {
         return record(tenantId, patientId, encounterId, vaccineName, lotNumber, administeredDate, nextDueDate,
-            administeredByStaffId, status, notes, null);
+            administeredByStaffId, status, notes, null, null, null, null);
     }
 
+    /** Stoktan secilen tekil asi (TARBIL P2). */
     public static VaccinationRecord record(
         UUID tenantId, UUID patientId, UUID encounterId, String vaccineName, String lotNumber,
         LocalDate administeredDate, LocalDate nextDueDate, UUID administeredByStaffId,
         VaccinationStatus status, String notes, UUID inventoryItemId
+    ) {
+        return record(tenantId, patientId, encounterId, vaccineName, lotNumber, administeredDate, nextDueDate,
+            administeredByStaffId, status, notes, inventoryItemId, null, null, null);
+    }
+
+    /** Periyodik asi serisinin bir dozu. */
+    public static VaccinationRecord record(
+        UUID tenantId, UUID patientId, UUID encounterId, String vaccineName, String lotNumber,
+        LocalDate administeredDate, LocalDate nextDueDate, UUID administeredByStaffId,
+        VaccinationStatus status, String notes, UUID seriesId, Integer doseNumber, Integer doseTotal
+    ) {
+        return record(tenantId, patientId, encounterId, vaccineName, lotNumber, administeredDate, nextDueDate,
+            administeredByStaffId, status, notes, null, seriesId, doseNumber, doseTotal);
+    }
+
+    private static VaccinationRecord record(
+        UUID tenantId, UUID patientId, UUID encounterId, String vaccineName, String lotNumber,
+        LocalDate administeredDate, LocalDate nextDueDate, UUID administeredByStaffId,
+        VaccinationStatus status, String notes, UUID inventoryItemId, UUID seriesId, Integer doseNumber, Integer doseTotal
     ) {
         VaccinationRecord record = new VaccinationRecord();
         record.tenantId = tenantId;
@@ -86,6 +116,9 @@ public class VaccinationRecord {
         record.notes = notes;
         record.reminderSent = false;
         record.inventoryItemId = inventoryItemId;
+        record.seriesId = seriesId;
+        record.doseNumber = doseNumber;
+        record.doseTotal = doseTotal;
         return record;
     }
 

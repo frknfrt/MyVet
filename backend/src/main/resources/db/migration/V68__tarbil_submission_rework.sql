@@ -33,4 +33,6 @@ DROP INDEX IF EXISTS idx_tarbil_sync_log_due_retry;
 ALTER TABLE tarbil_sync_log DROP COLUMN payload;
 ALTER TABLE tarbil_sync_log DROP COLUMN attempt_count;
 ALTER TABLE tarbil_sync_log DROP COLUMN next_retry_at;
+-- V67 (platform admin saglik paneli, eski sunucu-senkron modeli) bu sutunu ekledi; eklenti modelinde kullanilmiyor.
+ALTER TABLE tarbil_sync_log DROP COLUMN IF EXISTS failure_reason;
 CREATE INDEX idx_tarbil_sync_log_tenant_status ON tarbil_sync_log (tenant_id, status);

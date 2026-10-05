@@ -36,6 +36,8 @@ const DOCUMENT_TYPE_LABELS: Record<EInvoiceDocumentType, string> = {
 
 const TARBIL_SYNC_TYPE_LABELS: Record<TarbilSyncType, string> = {
   VACCINATION: 'Aşı Kaydı',
+  PRESCRIPTION: 'Reçete',
+  STOCK_RECEIPT: 'Mal Kabul',
   IDENTIFICATION: 'Kimliklendirme',
   TREATMENT: 'Tedavi Kaydı',
 };
@@ -88,10 +90,6 @@ export function SystemHealthPage() {
     withRetrying(id, () => platformAdminApi.retryFailedEInvoice(id));
   }
 
-  function handleRetryTarbilSync(id: string) {
-    withRetrying(id, () => platformAdminApi.retryFailedTarbilSync(id));
-  }
-
   return (
     <div>
       <div className={styles.title}>Sistem Sağlığı</div>
@@ -119,9 +117,9 @@ export function SystemHealthPage() {
           <div>Kanal</div>
           <div>Tür</div>
           <div>Alıcı</div>
-          <div>Hata</div>
-          <div>Deneme</div>
-          <div>Son Deneme</div>
+          <div>Durum</div>
+          <div></div>
+          <div>Kuyruğa Giriş</div>
           <div></div>
         </div>
         {loading ? (
@@ -203,7 +201,7 @@ export function SystemHealthPage() {
       </div>
 
       <div className={styles.modalTitle} style={{ marginTop: 24 }}>
-        Başarısız TARBIL Senkronizasyonları {tarbilSyncs.length > 0 && `(${tarbilSyncs.length})`}
+        Takılmış TARBİL Aktarımları {tarbilSyncs.length > 0 && `(${tarbilSyncs.length})`}
       </div>
       <div className={styles.tableCard}>
         <div className={[styles.tableHead, styles.healthInvoiceRow].join(' ')}>
@@ -218,7 +216,7 @@ export function SystemHealthPage() {
         {loading ? (
           <div className={styles.empty}>Yükleniyor...</div>
         ) : tarbilSyncs.length === 0 ? (
-          <div className={styles.empty}>Başarısız TARBIL senkronu yok 🎉</div>
+          <div className={styles.empty}>3 günden uzun süredir bekleyen TARBİL aktarımı yok 🎉</div>
         ) : (
           tarbilSyncs.map((sync) => (
             <div key={sync.syncLogId} className={[styles.row, styles.healthInvoiceRow].join(' ')}>
@@ -230,19 +228,10 @@ export function SystemHealthPage() {
                   ? (sync.failureReason.length > 60 ? `${sync.failureReason.slice(0, 60)}…` : sync.failureReason)
                   : '—'}
               </div>
-              <div>
-                <Badge tone="danger">{sync.attemptCount}</Badge>
-              </div>
+              <div></div>
               <div className={styles.muted}>{formatDateTime(sync.attemptedAt)}</div>
-              <div>
-                <Button
-                  variant="secondary"
-                  onClick={() => handleRetryTarbilSync(sync.syncLogId)}
-                  disabled={retryingIds.has(sync.syncLogId)}
-                >
-                  {retryingIds.has(sync.syncLogId) ? 'Deneniyor...' : 'Tekrar Dene'}
-                </Button>
-              </div>
+              {/* Eklenti modeli: TARBIL'e gonderimi klinikteki eklenti hekimle yapar; sunucudan yeniden deneme yok. */}
+              <div></div>
             </div>
           ))
         )}

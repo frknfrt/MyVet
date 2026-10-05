@@ -127,20 +127,11 @@ export function NewVaccinationPage() {
     setError(null);
     setSuccessMsg(null);
     try {
-      await vaccinationApi.record({
-        patientId,
-        vaccineName: stockItem ? stockItem.name : vaccineName.trim(),
-        lotNumber: stockItem?.lotNumber ?? undefined,
-        inventoryItemId: stockItem?.id,
-        administeredDate: vaccinationDate,
-        nextDueDate: nextDueDate || undefined,
-        status,
-        notes: notes || undefined,
-      });
+      // Birlestirme duzeltmesi (2026-10-05): tek kayit -- periyodikse seri, degilse tekil (stoktan secildiyse stok bilgisiyle).
       if (periodic) {
         await vaccinationApi.recordSeries({
           patientId,
-          vaccineName: vaccineName.trim(),
+          vaccineName: stockItem ? stockItem.name : vaccineName.trim(),
           startDate: vaccinationDate,
           intervalDays: Number(intervalDays),
           doseCount: Number(doseCount),
@@ -150,7 +141,9 @@ export function NewVaccinationPage() {
       } else {
         await vaccinationApi.record({
           patientId,
-          vaccineName: vaccineName.trim(),
+          vaccineName: stockItem ? stockItem.name : vaccineName.trim(),
+          lotNumber: stockItem?.lotNumber ?? undefined,
+          inventoryItemId: stockItem?.id,
           administeredDate: vaccinationDate,
           nextDueDate: nextDueDate || undefined,
           status,

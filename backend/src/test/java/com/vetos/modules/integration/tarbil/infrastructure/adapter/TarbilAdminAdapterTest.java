@@ -1,27 +1,18 @@
 package com.vetos.modules.integration.tarbil.infrastructure.adapter;
 
-import com.vetos.modules.integration.tarbil.application.RetryTarbilSyncUseCase;
+import com.vetos.modules.integration.tarbil.domain.exception.TarbilServerRetryUnsupportedConflictException;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.UUID;
 
-import static org.mockito.Mockito.verify;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@ExtendWith(MockitoExtension.class)
 class TarbilAdminAdapterTest {
 
-    @Mock private RetryTarbilSyncUseCase retryTarbilSyncUseCase;
-
     @Test
-    void should_delegateToExecuteAsAdmin_when_retryNow() {
-        TarbilAdminAdapter adapter = new TarbilAdminAdapter(retryTarbilSyncUseCase);
-        UUID logId = UUID.randomUUID();
-
-        adapter.retryNow(logId);
-
-        verify(retryTarbilSyncUseCase).executeAsAdmin(logId);
+    void should_refuseServerSideRetry_becauseTheExtensionSubmitsWithTheVet() {
+        assertThatThrownBy(() -> new TarbilAdminAdapter().retryNow(UUID.randomUUID()))
+            .isInstanceOf(TarbilServerRetryUnsupportedConflictException.class)
+            .hasMessageContaining("eklenti");
     }
 }

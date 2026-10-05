@@ -64,7 +64,8 @@ public class RecordVaccinationSeriesUseCase {
         for (VaccinationRecord record : saved) {
             if (record.getStatus() == VaccinationStatus.ADMINISTERED) {
                 eventPublisher.publish(new VaccinationRecordedEvent(
-                    record.getId(), record.getPatientId(), record.getVaccineName(), record.getAdministeredDate()
+                    record.getId(), record.getPatientId(), record.getVaccineName(), record.getAdministeredDate(),
+                    record.getInventoryItemId(), record.getLotNumber()
                 ));
             }
         }

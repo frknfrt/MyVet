@@ -126,7 +126,8 @@ export interface FailedEInvoice {
   attemptedAt: string;
 }
 
-export type TarbilSyncType = 'VACCINATION' | 'IDENTIFICATION' | 'TREATMENT';
+// Eklenti modeli (2026-10-05): belge turu; eski degerler geriye uyum icin.
+export type TarbilSyncType = 'VACCINATION' | 'PRESCRIPTION' | 'STOCK_RECEIPT' | 'IDENTIFICATION' | 'TREATMENT';
 
 export interface FailedTarbilSync {
   syncLogId: string;

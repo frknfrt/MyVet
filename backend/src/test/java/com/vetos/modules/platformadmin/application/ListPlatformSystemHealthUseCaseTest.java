@@ -5,7 +5,6 @@ import com.vetos.modules.integration.efatura.domain.EInvoiceHealthPort;
 import com.vetos.modules.integration.tarbil.domain.FailedTarbilSyncView;
 import com.vetos.modules.integration.tarbil.domain.TarbilAdminPort;
 import com.vetos.modules.integration.tarbil.domain.TarbilHealthPort;
-import com.vetos.modules.integration.tarbil.domain.TarbilSyncType;
 import com.vetos.modules.notification.domain.NotificationAdminPort;
 import com.vetos.modules.notification.domain.NotificationHealthPort;
 import org.junit.jupiter.api.Test;
@@ -41,7 +40,7 @@ class ListPlatformSystemHealthUseCaseTest {
     void should_delegateToTarbilHealthPort_when_failedTarbilSyncs() {
         FailedTarbilSyncView view = new FailedTarbilSyncView(
             UUID.randomUUID(), UUID.randomUUID(), "Pati Veteriner", UUID.randomUUID(), "Tekir",
-            TarbilSyncType.VACCINATION, "hata", 1, Instant.now()
+            "VACCINATION", "hata", 1, Instant.now()
         );
         when(tarbilHealthPort.findRecentFailed(100)).thenReturn(List.of(view));
 

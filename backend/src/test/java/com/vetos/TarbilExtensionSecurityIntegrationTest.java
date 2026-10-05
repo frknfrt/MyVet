@@ -216,7 +216,7 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
     void tokenOfSuspendedTenantIsRejected() throws Exception {
         inRootSession(() -> {
             Tenant t = tenantRepository.findById(tenantA).orElseThrow();
-            t.suspend();
+            t.suspend(com.vetos.modules.tenant.domain.TenantSuspensionReason.OTHER, null);
             return tenantRepository.save(t);
         });
 

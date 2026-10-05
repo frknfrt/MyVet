@@ -15,7 +15,7 @@ import java.util.UUID;
 
 /**
  * Stoktan secilen asi (spec 2026-10-04 P2 S3.3): uygulaninca 1 OUT, iptalde (yalniz dusulmusse) 1 IN.
- * Ayni asi kaydi icin her yonde en fazla bir hareket (V68 tekil indeks es zamanli istekte de korur); stok 0'da eksiye
+ * Ayni asi kaydi icin her yonde en fazla bir hareket (V77 tekil indeks es zamanli istekte de korur); stok 0'da eksiye
  * dusmez ve kayit yine olusur. Kalem asi degilse ya da serisi asi kaydinin serisiyle ayni degilse dusulmez.
  */
 @Service

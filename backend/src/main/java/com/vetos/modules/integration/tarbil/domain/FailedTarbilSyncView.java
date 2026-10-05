@@ -4,11 +4,12 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Platform admin Sistem Sagligi paneli icin -- basarisiz bir TARBIL
- * senkronunun kiraci ve hasta adiyla birlikte ozeti. bkz. TarbilHealthPort.
- * syncLogId, manuel "Tekrar Dene" aksiyonu icin gerekli (bkz. TarbilAdminPort).
+ * Platform admin Sistem Sagligi paneli icin -- eklentiden uzun suredir gonderilmeyen (takilmis) bir TARBIL
+ * aktariminin kiraci ve hasta adiyla ozeti. Eklenti modelinde sunucu TARBIL'e kendisi gondermez; "basarisiz senkron"
+ * yoktur. Alan adlari canlidaki platform admin arayuzuyle uyum icin korundu: syncLogId = aktarim kimligi,
+ * syncType = belge turu (VACCINATION | PRESCRIPTION | STOCK_RECEIPT), attemptedAt = kuyruga girdigi an.
  */
 public record FailedTarbilSyncView(
     UUID syncLogId, UUID tenantId, String tenantName, UUID patientId, String patientName,
-    TarbilSyncType syncType, String failureReason, int attemptCount, Instant attemptedAt
+    String syncType, String failureReason, int attemptCount, Instant attemptedAt
 ) {}

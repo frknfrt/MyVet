@@ -1,14 +1,13 @@
 package com.vetos.modules.platformadmin.api.dto;
 
 import com.vetos.modules.integration.tarbil.domain.FailedTarbilSyncView;
-import com.vetos.modules.integration.tarbil.domain.TarbilSyncType;
 
 import java.time.Instant;
 import java.util.UUID;
 
 public record FailedTarbilSyncResponse(
     UUID syncLogId, UUID tenantId, String tenantName, UUID patientId, String patientName,
-    TarbilSyncType syncType, String failureReason, int attemptCount, Instant attemptedAt
+    String syncType, String failureReason, int attemptCount, Instant attemptedAt
 ) {
     public static FailedTarbilSyncResponse from(FailedTarbilSyncView v) {
         return new FailedTarbilSyncResponse(
