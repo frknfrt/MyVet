@@ -58,6 +58,14 @@ export async function runSearchFlow(d: SearchDeps): Promise<void> {
     case 'none':
       await needsVet(`Bu ${by} numarasıyla TARBİL'de hayvan bulunamadı. Numarayı kontrol edin; hayvan kayıtlı değilse önce kimliklendirme gerekir.`);
       return;
+    case 'mismatch': {
+      const theirs = pick.listed.map((r) => (chip ? r.chip : r.passport) || '—').join(', ');
+      await needsVet(
+        `TARBİL ${pick.listed.length} hayvan listeledi ama ${by} numarası Vetly'dekiyle (${chip || s.passportNumber}) eşleşmedi; TARBİL'deki: ${theirs}. `
+          + "Doğru satırı kendiniz işaretleyip Transfer Et'e basın; gerekirse Vetly'deki numarayı düzeltin.",
+      );
+      return;
+    }
     case 'many':
       await needsVet(`Bu ${by} numarasıyla birden fazla hayvan çıktı. Doğru satırı kendiniz işaretleyip Transfer Et'e basın.`);
       return;

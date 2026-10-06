@@ -64,7 +64,7 @@ describe('pickAnimal', () => {
   it('does not match on the mother chip column', () => {
     searchTable(srow(0, '900000000000009', 'CANLI', '900000000000001'));
 
-    expect(pickAnimal(readSearchRows(document), { chip: '900000000000001' })).toEqual({ kind: 'none' });
+    expect(pickAnimal(readSearchRows(document), { chip: '900000000000001' })).toMatchObject({ kind: 'mismatch' });
   });
 
   it('refuses to choose between several matches', () => {
@@ -81,6 +81,24 @@ describe('pickAnimal', () => {
 });
 
 describe('pickAnimal by passport', () => {
+  it('picks the single listed animal whose passport contains the Vetly number (TARBIL searches by contains)', () => {
+    searchTable(srow(0, '', 'CANLI', '', 'TR-34-AB12345'));
+
+    expect(pickAnimal(readSearchRows(document), { passport: '34 AB12345' })).toMatchObject({ kind: 'one', row: { rowId: `${SP}__0` } });
+  });
+
+  it('reports a listed animal whose passport does not match as a mismatch, not as not-found', () => {
+    searchTable(srow(0, '', 'CANLI', '', 'TR34AB12345'));
+
+    expect(pickAnimal(readSearchRows(document), { passport: 'XX9999999' })).toMatchObject({ kind: 'mismatch', listed: [{ passport: 'TR34AB12345' }] });
+    expect(pickAnimal(readSearchRows(document), { passport: 'AB1' })).toMatchObject({ kind: 'mismatch' });
+  });
+
+  it('still says none when TARBIL listed nothing', () => {
+    searchTable('');
+    expect(pickAnimal(readSearchRows(document), { passport: 'TR34AB12345' })).toEqual({ kind: 'none' });
+  });
+
   it('matches when TARBIL and Vetly write the passport with different punctuation or Turkish case', () => {
     searchTable(srow(0, '', 'CANLI', '', 'TR34AB12') + srow(1, '', 'CANLI', '', 'TR.34/AB.99'));
 
@@ -105,7 +123,7 @@ describe('pickAnimal by passport', () => {
   it('prefers the chip when both are known', () => {
     searchTable(srow(0, '900000000000001', 'CANLI', '', 'TR1'));
 
-    expect(pickAnimal(readSearchRows(document), { chip: '900000000000009', passport: 'TR1' })).toEqual({ kind: 'none' });
+    expect(pickAnimal(readSearchRows(document), { chip: '900000000000009', passport: 'TR1' })).toMatchObject({ kind: 'mismatch' });
   });
 });
 

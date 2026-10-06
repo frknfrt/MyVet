@@ -57,7 +57,7 @@ describe('runSearchFlow', () => {
 
     expect(calls.map((c) => c.op)).toEqual(['ready', 'searchChip']);
     expect(await flow.get()).toMatchObject({ step: 'needsVet' });
-    expect(text()).toContain('bulunamadı');
+    expect(text()).toContain('eşleşmedi');
   });
 
   it('does not auto-select an animal that is not alive', async () => {
@@ -100,4 +100,17 @@ describe('runSearchFlow', () => {
     expect(await flow.get()).toMatchObject({ step: 'needsVet' });
     expect(text()).toContain('çip');
   });
+
+  it('explains a listed but non-matching passport instead of saying not found', async () => {
+    grid([[CHIP, 'CANLI', '', 'TR34AB12345']]);
+    const { deps, flow, calls, text } = await setup('searching', 1000, { ...submission, microchipNumber: null, passportNumber: 'XX9999999' });
+
+    await runSearchFlow(deps);
+
+    expect(calls.map((c) => c.op)).toEqual(['ready', 'searchPassport']);
+    expect(await flow.get()).toMatchObject({ step: 'needsVet' });
+    expect(text()).toContain('eşleşmedi');
+    expect(text()).toContain('TR34AB12345');
+  });
 });
+

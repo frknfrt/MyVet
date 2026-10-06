@@ -14,7 +14,9 @@ export type PickResult =
   | { kind: 'one'; row: AnimalRow }
   | { kind: 'none' }
   | { kind: 'many' }
-  | { kind: 'notAlive'; row: AnimalRow };
+  | { kind: 'notAlive'; row: AnimalRow }
+  /** TARBIL hayvan listeledi ama numara Vetly'dekiyle eslesmedi (secim hekimde; numara duzeltilebilir). */
+  | { kind: 'mismatch'; listed: AnimalRow[] };
 
 export function normalizeChip(s: string | null | undefined): string {
   return (s ?? '').replace(/\D/g, '');
@@ -79,12 +81,21 @@ export function readReceiptChips(doc: Document): string[] {
     .filter((c) => c.length > 0);
 }
 
-/** Cip biliniyorsa yalniz cip ile, bilinmiyorsa pasaport no ile birebir eslesme. */
+/** Kismi pasaport eslesmesi icin en kisa uzunluk (cok kisa numara yanlis hayvani yakalamasin). */
+const MIN_PARTIAL_PASSPORT = 5;
+
+/**
+ * Cip biliniyorsa yalniz cip ile birebir; bilinmiyorsa pasaport no ile birebir, o yoksa biri digerini iceren TEK satir
+ * (TARBIL pasaportla "iceren" arama yapiyor; Vetly'de numaranin bir kismi kayitli olabilir -- 2026-10-06 canli).
+ */
 export function pickAnimal(rows: AnimalRow[], key: AnimalKey): PickResult {
   const chip = normalizeChip(key.chip);
   const passport = normalizePassport(key.passport);
-  const matches = chip ? rows.filter((r) => r.chip === chip) : passport ? rows.filter((r) => r.passport === passport) : [];
-  if (matches.length === 0) return { kind: 'none' };
+  let matches = chip ? rows.filter((r) => r.chip === chip) : passport ? rows.filter((r) => r.passport === passport) : [];
+  if (!chip && matches.length === 0 && passport.length >= MIN_PARTIAL_PASSPORT) {
+    matches = rows.filter((r) => r.passport.length >= MIN_PARTIAL_PASSPORT && (r.passport.includes(passport) || passport.includes(r.passport)));
+  }
+  if (matches.length === 0) return rows.length > 0 && (chip || passport) ? { kind: 'mismatch', listed: rows } : { kind: 'none' };
   if (matches.length > 1) return { kind: 'many' };
   const row = matches[0];
   return (row.status ?? '').toLocaleUpperCase('tr-TR') === 'CANLI' ? { kind: 'one', row } : { kind: 'notAlive', row };
