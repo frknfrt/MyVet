@@ -81,6 +81,21 @@ describe('pickAnimal', () => {
 });
 
 describe('pickAnimal by passport', () => {
+  it('matches when TARBIL and Vetly write the passport with different punctuation or Turkish case', () => {
+    searchTable(srow(0, '', 'CANLI', '', 'TR34AB12') + srow(1, '', 'CANLI', '', 'TR.34/AB.99'));
+
+    expect(pickAnimal(readSearchRows(document), { passport: 'TR-34 ab-12' })).toMatchObject({ kind: 'one', row: { rowId: `${SP}__0` } });
+    expect(pickAnimal(readSearchRows(document), { passport: 'tr 34 ab 99' })).toMatchObject({ kind: 'one', row: { rowId: `${SP}__1` } });
+  });
+
+  it('folds Turkish dotted and dotless i to I', () => {
+    searchTable(srow(0, '', 'CANLI', '', 'TRI12345'));
+
+    expect(pickAnimal(readSearchRows(document), { passport: 'tri12345' })).toMatchObject({ kind: 'one' });
+    expect(pickAnimal(readSearchRows(document), { passport: 'TRİ12345' })).toMatchObject({ kind: 'one' });
+    expect(pickAnimal(readSearchRows(document), { passport: 'trı12345' })).toMatchObject({ kind: 'one' });
+  });
+
   it('matches the passport ignoring spaces and case when the patient has no chip', () => {
     searchTable(srow(0, '900000000000001', 'CANLI', '', 'TR-34 AB12') + srow(1, '900000000000002', 'CANLI', '', 'TR-34 AB99'));
 

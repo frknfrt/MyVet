@@ -20,9 +20,16 @@ export function normalizeChip(s: string | null | undefined): string {
   return (s ?? '').replace(/\D/g, '');
 }
 
-/** Pasaport no: bosluklar atilir, Turkce buyuk harf (TR-34 ab12 = TR-34AB12). */
+/**
+ * Pasaport no karsilastirmasi yalniz harf ve rakamla: bosluk, tire, nokta, egik cizgi atilir; i/ı/İ -> I, buyuk harf.
+ * TARBIL aramasi bu farklari tolere ediyor, tablo farkli bicimde gosterebiliyor (2026-10-06 canli: hayvan bulundu
+ * ama "TR-34 AB12" ile "TR34AB12" eslesmedigi icin secilemedi).
+ */
 export function normalizePassport(s: string | null | undefined): string {
-  return (s ?? '').replace(/\s+/g, '').toLocaleUpperCase('tr-TR');
+  return (s ?? '')
+    .replace(/[iıİ]/g, 'I')
+    .toUpperCase()
+    .replace(/[^A-Z0-9ÇĞÖŞÜ]/g, '');
 }
 
 export interface AnimalKey {
