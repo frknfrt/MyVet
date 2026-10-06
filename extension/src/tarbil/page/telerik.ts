@@ -140,7 +140,15 @@ export function clearCombo(env: TelerikEnv, suffix: string): void {
   const el = env.doc.querySelector(`[id$="${suffix}"]`);
   const combo = el ? env.find(el.id) : null;
   if (!combo || combo.get_value() === '') return;
-  combo.findItemByValue('')?.select();
+  // findItemByValue('') bos degerli secenegi BULAMAZ (Telerik; 2026-10-06 canli) -- listede degeri "" olan ilk oge aranir.
+  const items = combo.get_items();
+  for (let i = 0; i < items.get_count(); i++) {
+    const item = items.getItem(i);
+    if (item.get_value() === '') {
+      item.select();
+      return;
+    }
+  }
 }
 
 export function setText(env: TelerikEnv, suffix: string, value: string): void {

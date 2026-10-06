@@ -22,9 +22,12 @@ function addressCombos(P: string, log: string[], selected = 'dolu') {
   const html = ids.map((id) => `<div id="${id}"></div>`).join('');
   const comps = Object.fromEntries(ids.map((id) => {
     const name = id.split('_').pop()!;
+    const seciniz = { get_value: () => '', select: () => log.push(`clear:${name}`) };
     return [id, {
       get_value: () => selected,
-      findItemByValue: (v: string) => (v === '' ? { select: () => log.push(`clear:${name}`) } : null),
+      // Gercek Telerik gibi: findItemByValue('') bos degerli "Seciniz"i BULAMAZ (2026-10-06 canli).
+      findItemByValue: () => null,
+      get_items: () => ({ get_count: () => 2, getItem: (i: number) => (i === 0 ? seciniz : { get_value: () => 'x', select: () => log.push('wrong') }) }),
     }];
   }));
   return { html, comps };
