@@ -69,6 +69,9 @@ export function withPostback(
       started = true;
     };
     const onEnd = (_sender: unknown, args: { get_error?: () => unknown } | undefined) => {
+      // Kendi istegimiz baslamadan gelen yanit oncekine aittir (ornegin adres kutusu bosaltma) -- yok sayilir;
+      // yoksa sonuc tablosu arama bitmeden okunur (2026-10-06 canli: "bulunamadi").
+      if (!started) return;
       cleanup();
       const error = args?.get_error?.();
       if (error) reject(new PageError('AJAX_ERROR', `TARBİL isteği hata verdi: ${String((error as Error).message ?? error)}`));
@@ -135,8 +138,11 @@ export async function selectComboValue(env: TelerikEnv, suffix: string, value: s
   return { changed: true };
 }
 
-/** Kutu sayfada yoksa ya da zaten bossa hicbir sey yapmaz; "Seciniz" (deger "") secilir. Postback yapmayan kutular icin. */
-export function clearCombo(env: TelerikEnv, suffix: string): void {
+/**
+ * Kutu sayfada yoksa ya da zaten bossa hicbir sey yapmaz; "Seciniz" (deger "") secilir ve tetikledigi istegin bitmesi
+ * beklenir (TARBIL adres kutulari bosaltmada kisa bir postback yapar -- 2026-10-06 canli).
+ */
+export async function clearCombo(env: TelerikEnv, suffix: string): Promise<void> {
   const el = env.doc.querySelector(`[id$="${suffix}"]`);
   const combo = el ? env.find(el.id) : null;
   if (!combo || combo.get_value() === '') return;
@@ -145,7 +151,7 @@ export function clearCombo(env: TelerikEnv, suffix: string): void {
   for (let i = 0; i < items.get_count(); i++) {
     const item = items.getItem(i);
     if (item.get_value() === '') {
-      item.select();
+      await withPostback(env, () => item.select());
       return;
     }
   }

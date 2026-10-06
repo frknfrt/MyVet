@@ -17,12 +17,13 @@ function instantPrm(): Prm & { fire: () => void } {
 
 
 /** Arama penceresindeki il/ilce/mahalle kutulari (2026-10-06 canli: klinik adresiyle dolu, ilk secenek "Seciniz" = ""). */
-function addressCombos(P: string, log: string[], selected = 'dolu') {
+function addressCombos(P: string, log: string[], selected = 'dolu', onSelect: () => void = () => undefined) {
   const ids = ['cbxNeigbourhood', 'cbxDistrict', 'cbxProvince'].map((n) => `${P}UCProvinceDistrictNeigbourhood_${n}`);
   const html = ids.map((id) => `<div id="${id}"></div>`).join('');
   const comps = Object.fromEntries(ids.map((id) => {
     const name = id.split('_').pop()!;
-    const seciniz = { get_value: () => '', select: () => log.push(`clear:${name}`) };
+    // Gercek TARBIL: bosaltma da sunucuya kisa bir istek gonderir (2026-10-06 canli).
+    const seciniz = { get_value: () => '', select: () => { log.push(`clear:${name}`); onSelect(); } };
     return [id, {
       get_value: () => selected,
       // Gercek Telerik gibi: findItemByValue('') bos degerli "Seciniz"i BULAMAZ (2026-10-06 canli).
@@ -38,7 +39,7 @@ describe('page ops', () => {
     const P = 'ctl00_ctl00_ContentPlaceHolder1_ContentPlaceHolderBody_UCVaccineKKBSAnimalSearch_';
     const prm = instantPrm();
     const log: string[] = [];
-    const address = addressCombos(P, log);
+    const address = addressCombos(P, log, 'dolu', () => prm.fire());
     document.body.innerHTML = `<input id="${P}txtChipNo"><a id="${P}btnSearch"></a>${address.html}`;
     const comps: Record<string, Record<string, unknown>> = {
       ...address.comps,
@@ -142,7 +143,7 @@ describe('page ops', () => {
     const P = 'ctl00_ctl00_ContentPlaceHolder1_ContentPlaceHolderBody_UCVaccineKKBSAnimalSearch_';
     const prm = instantPrm();
     const log: string[] = [];
-    const address = addressCombos(P, log);
+    const address = addressCombos(P, log, 'dolu', () => prm.fire());
     document.body.innerHTML = `<input id="${P}txtChipNo"><input id="${P}txtPassportNo"><a id="${P}btnSearch"></a>${address.html}`;
     const comps: Record<string, Record<string, unknown>> = {
       ...address.comps,
@@ -216,4 +217,42 @@ describe('page ops', () => {
 
     expect(log).toEqual(['chip:900000000000001', 'search']);
   });
+
+  it('waits for the real search result, not the late reply of the address clearing (2026-10-06 canli)', async () => {
+    const P = 'ctl00_ctl00_ContentPlaceHolder1_ContentPlaceHolderBody_UCVaccineKKBSAnimalSearch_';
+    const begin = new Set<Function>();
+    const end = new Set<Function>();
+    const prm = {
+      add_beginRequest: (h: Function) => begin.add(h),
+      remove_beginRequest: (h: Function) => begin.delete(h),
+      add_endRequest: (h: Function) => end.add(h),
+      remove_endRequest: (h: Function) => end.delete(h),
+    };
+    const fireEnd = () => end.forEach((h) => h(null, { get_error: () => null }));
+    const log: string[] = [];
+    // Bosaltma istegi hemen baslar ama yaniti gec gelir; arama yaniti daha da gec.
+    const address = addressCombos(P, log, 'dolu', () => {
+      begin.forEach((h) => h());
+      setTimeout(fireEnd, 10);
+    });
+    document.body.innerHTML = `<input id="${P}txtChipNo"><input id="${P}txtPassportNo"><a id="${P}btnSearch"></a>${address.html}`;
+    const comps: Record<string, Record<string, unknown>> = {
+      ...address.comps,
+      [`${P}txtChipNo`]: { set_value: () => undefined },
+      [`${P}txtPassportNo`]: { set_value: () => undefined },
+      [`${P}btnSearch`]: {
+        click: () => {
+          log.push('search');
+          begin.forEach((h) => h());
+          setTimeout(() => { log.push('results'); fireEnd(); }, 30);
+        },
+      },
+    };
+    const env: TelerikEnv = { doc: document, find: (id) => comps[id] ?? null, prm: () => prm as never, isReady: () => true };
+
+    await createPageOps(env).searchPassport({ passport: 'TR0000000' });
+
+    expect(log).toEqual(['clear:cbxNeigbourhood', 'clear:cbxDistrict', 'clear:cbxProvince', 'search', 'results']);
+  });
 });
+

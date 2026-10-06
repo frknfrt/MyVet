@@ -21,13 +21,13 @@ export function createPageOps(env: TelerikEnv): Record<string, PageHandler> {
     clickAllowed: async ({ page, button }: { page: string; button: string }) => clickButton(env, allowed(page, button)),
     // Il/ilce/mahalle filtresi kaldirilir: hayvan klinigin mahallesinde kayitli olmayabilir (2026-10-06 canli bulgu).
     searchChip: async ({ chip }: { chip: string }) => {
-      SEARCH.addressFilters.forEach((suffix) => clearCombo(env, suffix));
+      for (const suffix of SEARCH.addressFilters) await clearCombo(env, suffix);
       setText(env, SEARCH.chip, chip);
       await clickButton(env, allowed('animalSearch', 'search'));
     },
     // Cipi olmayan hasta: TARBIL'de pasaport numarasiyla aranir (cip kutusu bosaltilir, yoksa iki kosul birlesir).
     searchPassport: async ({ passport }: { passport: string }) => {
-      SEARCH.addressFilters.forEach((suffix) => clearCombo(env, suffix));
+      for (const suffix of SEARCH.addressFilters) await clearCombo(env, suffix);
       setText(env, SEARCH.chip, '');
       setText(env, SEARCH.passport, passport);
       await clickButton(env, allowed('animalSearch', 'search'));

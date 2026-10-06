@@ -45,6 +45,22 @@ describe('withPostback', () => {
     await expect(p).rejects.toMatchObject({ code: 'AJAX_TIMEOUT' });
   });
 
+  it('ignores the end of an earlier postback that arrives before its own one starts (2026-10-06 canli)', async () => {
+    const prm = fakePrm();
+    let settled = false;
+    const p = withPostback(env(prm), () => {
+      prm.end(); // onceki (ornegin il kutusu bosaltma) isteginin gec gelen yaniti
+      setTimeout(() => prm.begin(), 5);
+    }).then((r) => {
+      settled = true;
+      return r;
+    });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(settled).toBe(false);
+    prm.end();
+    await expect(p).resolves.toEqual({ postback: true });
+  });
+
   it('rejects when the postback reports an error', async () => {
     const prm = fakePrm();
     await expect(withPostback(env(prm), () => { prm.begin(); prm.end(new Error('500')); })).rejects.toMatchObject({ code: 'AJAX_ERROR' });
