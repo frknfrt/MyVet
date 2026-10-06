@@ -4,6 +4,7 @@ import { chromeLocalStore, chromeSessionStore, createTokenStore } from './chrome
 import { createConfirmationOutbox } from './confirmationOutbox';
 import { createRouter } from './router';
 import { openVaccinePage } from './tarbilTab';
+import { allowTarbilPopups } from './tarbilPopups';
 import { createVetlyApi } from './vetlyApi';
 import { KEEP_ALIVE_ALARM, pingAll } from '../tarbil/core/keepAliveStatus';
 import { KEEP_ALIVE_INTERVAL_MS } from '../tarbil/core/keepAlive';
@@ -61,6 +62,11 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'flush-confirmations') outbox.flush().catch(() => undefined);
   if (alarm.name === KEEP_ALIVE_ALARM) keepTarbilAlive();
 });
+// TARBIL acilir pencereleri (hayvan arama, asi stok) tiklama olmadan da acilsin: yalniz hbsapp icin izin.
+const tarbilPopups = () => void allowTarbilPopups(chrome.contentSettings as unknown as Parameters<typeof allowTarbilPopups>[0]);
+chrome.runtime.onInstalled.addListener(tarbilPopups);
+tarbilPopups();
+
 chrome.runtime.onStartup.addListener(() => {
   outbox.flush().catch(() => undefined);
 });

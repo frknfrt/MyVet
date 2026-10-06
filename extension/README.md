@@ -40,3 +40,8 @@ TARBİL'de **Aşı > Stok > Ara** (`hbsapp`) ya da **İlaç Takip Sistemi > Stok
 ## Aşı ürünü (P2)
 
 Aşı Vetly'de stoktan seçildiyse eklenti hayvandan sonra **Ürün Ekle**'ye basar; açılan stok penceresinde Vetly serisini arar ve tek eşleşen satırı **Seç**er; formdaki **Ürün Adet**'i 1 yapar. Satırdaki **Kaydet** (TARBİL stoğundan düşer), Detay alanları ve **Onayla** hekimdedir. Stok penceresi açılmıyorsa TARBİL için açılır pencerelere izin verin.
+
+## Açılır pencereler
+
+TARBİL'in hayvan arama ve aşı stok pencerelerini TARBİL kendisi, sunucu yanıtından sonra açar; Chrome bunları normalde engeller. Eklenti kurulumda **yalnız `https://hbsapp.tarbil.gov.tr`** için açılır pencerelere izin verir (`contentSettings` izni); kullanıcının Chrome ayarlarına girmesi gerekmez, diğer sitelere dokunulmaz. Kurulum/güncellemede Chrome bu izin için bir kez uyarı gösterir. İzin verilemezse kart "Arama penceresini aç" düğmesini göstermeye devam eder.
+
