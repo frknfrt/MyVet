@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { normalizeSerial, pickStockRow, readProductEditRow, readStockPopupRows } from './productRows';
+import { normalizeSerial, pickStockRow, readProductEditRow, readSavedProductSerials, readStockPopupRows } from './productRows';
 
 const SP = 'ctl00_ctl00_ContentPlaceHolder1_ContentPlaceHolderBody_UcVaccineStockSearch_radGridStock_ctl00';
 const PG = 'ctl00_ctl00_ctl00_bodyCPH_ContentPlaceHolder1_cntVACCINEBodyContent_RadGridProduct_ctl00';
@@ -81,4 +81,17 @@ describe('product edit row', () => {
     document.body.innerHTML = `<table id="${PG}"><thead><tr><th>Seri Numarası</th></tr></thead><tbody></tbody></table>`;
     expect(readProductEditRow(document)).toBeNull();
   });
+
+  it('reads the serials of product rows already saved on the form', () => {
+    document.body.innerHTML = `<table id="${PG}"><thead><tr><th>Detay</th><th>Detay</th><th>Ürün</th><th>Takdim Şekli</th><th>Seri Numarası</th></tr></thead>
+      <tbody><tr id="${PG}__0" class="rgRow"><td></td><td></td><td>Biocan R</td><td>Flakon</td><td> 665 932 </td></tr></tbody></table>`;
+
+    expect(readSavedProductSerials(document)).toEqual(['665932']);
+  });
+
+  it('reads no saved product when the grid says no records', () => {
+    document.body.innerHTML = `<table id="${PG}"><thead><tr><th>Seri Numarası</th></tr></thead><tbody><tr class="rgNoRecords"><td>Kayıt Bulunamadı.</td></tr></tbody></table>`;
+    expect(readSavedProductSerials(document)).toEqual([]);
+  });
 });
+

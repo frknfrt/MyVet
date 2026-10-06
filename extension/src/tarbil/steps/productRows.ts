@@ -82,3 +82,14 @@ export function readProductEditRow(doc: Document): { serial: string } | null {
   const serial = headerIndex(table, 'Seri Numarası', 4);
   return { serial: normalizeSerial(edit.cells[serial]?.textContent) };
 }
+
+/** Formda zaten kaydedilmis (satir Kaydet'e basilmis, TARBIL stogundan dusmus) urun satirlarinin serileri. */
+export function readSavedProductSerials(doc: Document): string[] {
+  const table = doc.querySelector<HTMLTableElement>(`table${bySuffix(RECEIPT.productGrid)}`);
+  if (!table) return [];
+  const serial = headerIndex(table, 'Seri Numarası', 4);
+  return Array.from(table.tBodies[0]?.rows ?? [])
+    .filter((r) => r.id.startsWith(`${table.id}__`))
+    .map((r) => normalizeSerial(r.cells[serial]?.textContent))
+    .filter((s) => s.length > 0);
+}

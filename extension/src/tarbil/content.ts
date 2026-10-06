@@ -90,6 +90,7 @@ switch (pageKind(location)) {
         mo.observe(document.body, { childList: true, subtree: true });
         return () => mo.disconnect();
       },
+      reload: () => location.reload(),
     });
     void receipt.start();
     chrome.storage.session.onChanged.addListener((changes) => {

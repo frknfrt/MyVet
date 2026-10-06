@@ -1,14 +1,14 @@
 import { hasFreshSuccess, isConfirmClick, markStaleSuccess } from '../core/success';
 import type { FlowState, FlowStore } from '../../shared/flowStore';
 import type { Submission } from '../../shared/types';
-import { normalizeChip, normalizePassport, readReceiptChips } from '../steps/animalRows';
+import { countReceiptAnimals, normalizeChip, normalizePassport, readReceiptChips } from '../steps/animalRows';
 import type { PageBridge } from '../core/bridge';
 import type { Card } from '../core/card';
 import type { Send } from '../steps/findAnimal';
 import { RECEIPT, bySuffix } from '../selectors';
 import { resolveAnimalType } from '../steps/species';
 import { views } from '../core/views';
-import { normalizeSerial, readProductEditRow } from '../steps/productRows';
+import { normalizeSerial, readProductEditRow, readSavedProductSerials } from '../steps/productRows';
 
 export interface ReceiptDeps {
   bridge: PageBridge;
@@ -19,6 +19,8 @@ export interface ReceiptDeps {
   now: () => number;
   setTimer: (fn: () => void, ms: number) => void;
   observe: (cb: () => void) => () => void;
+  /** Formu sifirla: sayfayi yeniden yukler (TARBIL'de hicbir sey kaydetmez). */
+  reload: () => void;
 }
 
 /** PetVet'e basildiktan sonra arama penceresinin akisi devralmasi icin beklenen sure. */
@@ -142,6 +144,18 @@ export function createReceiptFlow(d: ReceiptDeps) {
       d.card.show(views.unsupportedSpecies(s));
       return;
     }
+    // Yarim kalmis form (2026-10-06): ayni hayvan/urun ikinci kez eklenmesin, iki hasta tek belgeye karismasin.
+    const form = inspectForm(s, await current());
+    if (form === 'dirty') {
+      await d.flow.update(s.id, { step: 'error', message: 'DIRTY_FORM' });
+      d.card.show(views.dirtyForm(s));
+      return;
+    }
+    if (form === 'resume') {
+      await resumeOnForm(s);
+      watch();
+      return;
+    }
     await d.flow.update(s.id, { step: 'filling' });
     try {
       d.card.show(views.progress(s, 'Uygulama tarihi ve tür giriliyor…'));
@@ -154,6 +168,36 @@ export function createReceiptFlow(d: ReceiptDeps) {
       return;
     }
     watch();
+  }
+
+  /** empty: bos form; resume: yalniz bu asinin hayvani (ve ayni serili urun) var; dirty: baska hayvan/urun var. */
+  function inspectForm(s: Submission, st: FlowState | null): 'empty' | 'resume' | 'dirty' {
+    const animals = countReceiptAnimals(d.doc);
+    const edit = readProductEditRow(d.doc);
+    const products = [...readSavedProductSerials(d.doc), ...(edit?.serial ? [edit.serial] : [])];
+    if (animals === 0 && products.length === 0) return 'empty';
+    const chips = readReceiptChips(d.doc);
+    const expected = normalizeChip(s.microchipNumber) || normalizeChip(st?.stepData?.matchedChip as string | undefined);
+    const ownAnimal = animals === 1 && expected.length > 0 && chips.length === 1 && chips[0] === expected;
+    const lot = normalizeSerial(s.lotNumber);
+    const ownProducts = products.every((p) => lot.length > 0 && p === lot);
+    return ownAnimal && ownProducts ? 'resume' : 'dirty';
+  }
+
+  /** Hayvan formda: kaydedilmis urun varsa dokunma, acik satir varsa adedi yaz, urun yoksa urun adimini baslat. */
+  async function resumeOnForm(s: Submission): Promise<void> {
+    const lot = normalizeSerial(s.lotNumber);
+    if (lot && readSavedProductSerials(d.doc).includes(lot)) {
+      await d.flow.update(s.id, { step: 'productReady', message: undefined });
+      d.card.show(views.resumeReady(s));
+      return;
+    }
+    if (lot && readProductEditRow(d.doc)?.serial === lot) {
+      await d.flow.update(s.id, { step: 'choosingProduct', message: undefined });
+      await checkProductRow(s);
+      return;
+    }
+    await startProductStep(s);
   }
 
   async function openSearch(): Promise<void> {
@@ -281,6 +325,11 @@ export function createReceiptFlow(d: ReceiptDeps) {
           } catch (e) {
             await failed(e);
           }
+          return;
+        case 'resetForm':
+          // Sayfa yenilenir; yeniden yuklenince akis "armed" oldugundan bos formu bastan doldurur.
+          await d.flow.arm(s.id);
+          d.reload();
           return;
         case 'stockWindow':
           try {

@@ -30,6 +30,16 @@ function openProductRow(serial: string) {
     <tr class="rgEditRow"><td></td><td></td><td><input></td><td>Flakon</td><td>${serial}</td></tr></thead><tbody></tbody></table>`);
 }
 
+/** Urun tablosu: kaydedilmis satirlar tbody'de, acik ekleme satiri thead'de (2026-10-04 canli). */
+function productGrid({ saved = [] as string[], edit = null as string | null } = {}) {
+  const T = `${P}RadGridProduct_ctl00`;
+  document.body.insertAdjacentHTML('beforeend', `<table id="${T}"><thead>
+    <tr><th>Detay</th><th>Detay</th><th>Ürün</th><th>Takdim Şekli</th><th>Seri Numarası</th></tr>
+    ${edit !== null ? `<tr class="rgEditRow"><td></td><td></td><td><input></td><td>Flakon</td><td>${edit}</td></tr>` : ''}</thead>
+    <tbody>${saved.length === 0 ? '<tr class="rgNoRecords"><td colspan="5">Kayıt Bulunamadı.</td></tr>'
+      : saved.map((serial, i) => `<tr id="${T}__${i}" class="rgRow"><td></td><td></td><td>Biocan R</td><td>Flakon</td><td>${serial}</td></tr>`).join('')}</tbody></table>`);
+}
+
 function showSuccess() {
   document.body.insertAdjacentHTML('beforeend', '<div id="bodyCPH_ContentPlaceHolder1_UCVACCINENotification_pnlNotifiSuccess">Kaydedildi</div>');
 }
@@ -59,6 +69,7 @@ async function setup(sub: Partial<Submission> = {}, step: FlowStep | null = 'arm
   }) as Send;
   const shown: CardView[] = [];
   let action: (id: string) => void = () => undefined;
+  const reloads: number[] = [];
   const card = { show: (v: CardView) => shown.push(v), hide: () => undefined, onAction: (h: (id: string) => void) => { action = h; } };
   const timers: (() => void)[] = [];
   let observer: () => void = () => undefined;
@@ -66,9 +77,10 @@ async function setup(sub: Partial<Submission> = {}, step: FlowStep | null = 'arm
     bridge, flow, send, doc: document, card, now,
     setTimer: (fn) => { timers.push(fn); },
     observe: (cb) => { observer = cb; return () => undefined; },
+    reload: () => { reloads.push(t); },
   });
   const text = () => shown.at(-1)?.lines.map((l) => l.text).join(' ') ?? '';
-  return { receipt, flow, calls, sent, shown, timers, text, mutate: () => observer(), advance: (ms: number) => { t += ms; }, act: (id: string) => action(id) };
+  return { receipt, flow, calls, sent, shown, timers, text, reloads, mutate: () => observer(), advance: (ms: number) => { t += ms; }, act: (id: string) => action(id) };
 }
 
 describe('receiptFlow', () => {
@@ -326,6 +338,7 @@ describe('receiptFlow', () => {
       now: () => 100_000,
       setTimer: () => undefined,
       observe: () => () => undefined,
+      reload: () => undefined,
     });
 
     await receipt.start();
@@ -427,4 +440,95 @@ describe('receiptFlow', () => {
     expect((await flow.get())?.step).toBe('choosingProduct');
     expect(calls).toContainEqual({ op: 'clickAllowed', args: { page: 'vaccineReceipt', button: 'addProduct' } });
   });
+
+  // --- Yarim kalmis form (2026-10-06): yeniden "TARBIL'de doldur" ayni hayvani/urunu ikinci kez eklememeli ---
+
+  it('resumes without searching again when the form already holds this vaccination\'s animal', async () => {
+    page();
+    addAnimalRow(CHIP);
+    const { receipt, flow, calls, text } = await setup({ lotNumber: null });
+
+    await receipt.start();
+
+    expect(calls.map((c) => c.op)).not.toContain('clickAllowed');
+    expect((await flow.get())?.step).toBe('awaitingConfirm');
+    expect(text()).toContain('Ürün Ekle');
+  });
+
+  it('only adds the product when the animal is already on the form', async () => {
+    page();
+    addAnimalRow(CHIP);
+    const { receipt, flow, calls } = await setup({ lotNumber: '665932' });
+
+    await receipt.start();
+
+    expect(calls).toContainEqual({ op: 'clickAllowed', args: { page: 'vaccineReceipt', button: 'addProduct' } });
+    expect(calls).not.toContainEqual({ op: 'clickAllowed', args: { page: 'vaccineReceipt', button: 'petVet' } });
+    expect((await flow.get())?.step).toBe('choosingProduct');
+  });
+
+  it('does not add the product again when a saved row with the Vetly serial is already there (TARBIL stock was deducted)', async () => {
+    page();
+    addAnimalRow(CHIP);
+    productGrid({ saved: ['665932'] });
+    const { receipt, flow, calls, text } = await setup({ lotNumber: '665932' });
+
+    await receipt.start();
+
+    expect(calls.map((c) => c.op)).not.toContain('clickAllowed');
+    expect((await flow.get())?.step).toBe('productReady');
+    expect(text()).toContain('Onayla');
+  });
+
+  it('fills the quantity of an open product row with the Vetly serial instead of adding another', async () => {
+    page();
+    addAnimalRow(CHIP);
+    productGrid({ edit: '665932' });
+    const { receipt, flow, calls } = await setup({ lotNumber: '665932' });
+
+    await receipt.start();
+
+    expect(calls).toContainEqual({ op: 'setProductQuantity', args: { quantity: 1 } });
+    expect(calls.map((c) => c.op)).not.toContain('clickAllowed');
+    expect((await flow.get())?.step).toBe('productReady');
+  });
+
+  it('stops on a half-finished form of another patient and offers to reset it', async () => {
+    page();
+    addAnimalRow('900000000000777');
+    const { receipt, flow, calls, shown, text } = await setup();
+
+    await receipt.start();
+
+    expect(calls).toEqual([]);
+    expect((await flow.get())?.step).toBe('error');
+    expect(text()).toContain('başka');
+    expect(shown.at(-1)?.actions.map((a) => a.id)).toContain('resetForm');
+  });
+
+  it('stops when the form holds another product', async () => {
+    page();
+    addAnimalRow(CHIP);
+    productGrid({ saved: ['999999'] });
+    const { receipt, calls, text } = await setup({ lotNumber: '665932' });
+
+    await receipt.start();
+
+    expect(calls).toEqual([]);
+    expect(text()).toContain('başka');
+  });
+
+  it('reset re-arms the vaccination and reloads the page without saving anything', async () => {
+    page();
+    addAnimalRow('900000000000777');
+    const { receipt, flow, act, reloads, calls } = await setup();
+    await receipt.start();
+
+    act('resetForm');
+
+    await vi.waitFor(() => expect(reloads).toHaveLength(1));
+    expect((await flow.get())?.step).toBe('armed');
+    expect(calls).toEqual([]);
+  });
 });
+

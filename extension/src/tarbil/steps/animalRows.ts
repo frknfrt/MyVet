@@ -100,3 +100,9 @@ export function pickAnimal(rows: AnimalRow[], key: AnimalKey): PickResult {
   const row = matches[0];
   return (row.status ?? '').toLocaleUpperCase('tr-TR') === 'CANLI' ? { kind: 'one', row } : { kind: 'notAlive', row };
 }
+
+/** Formdaki hayvan satiri sayisi (cipsiz olanlar dahil) -- yarim kalmis belgeyi tanimak icin. */
+export function countReceiptAnimals(doc: Document): number {
+  const table = findTable(doc, RECEIPT.animalGrid);
+  return table ? dataRows(table).length : 0;
+}

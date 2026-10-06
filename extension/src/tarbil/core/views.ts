@@ -56,6 +56,21 @@ export const views = {
     view(s, `${message} Hayvan forma eklenince devam edeceğiz.`, 'warn'),
   wrongAnimal: (s: Submission): CardView =>
     view(s, `Forma eklenen hayvan Vetly'deki hastayla (${s.microchipNumber ? `çip ${s.microchipNumber}` : `pasaport ${s.passportNumber ?? '—'}`}) aynı değil. Yanlış satırı silip doğru hayvanı ekleyin.`, 'warn'),
+  resumeReady: (s: Submission): CardView => ({
+    lines: [
+      ...header(s),
+      { text: `✓ Bu aşının hayvanı ve ürünü (Seri ${s.lotNumber ?? '—'}) formda zaten var; yeniden eklenmedi.`, tone: 'ok' },
+      { text: "Detay alanlarını kontrol edip Onayla'ya basın. Kaydı yakalayıp Vetly'ye işleyeceğiz." },
+    ],
+    actions: FALLBACK,
+  }),
+  dirtyForm: (s: Submission): CardView =>
+    view(
+      s,
+      "Bu formda başka bir hastaya ya da başka bir ürüne ait yarım kalmış bir belge var. Onu tamamlayıp Onayla'ya basın ya da formu sıfırlayın (TARBİL'de hiçbir şey kaydedilmez; satır Kaydet'e basılmışsa TARBİL stoğundan düşmüş olabilir).",
+      'warn',
+      [{ id: 'resetForm', label: 'Formu sıfırla' }, ...FALLBACK],
+    ),
   choosingProduct: (s: Submission): CardView =>
     view(s, `✓ Hayvan forma eklendi. Stok penceresinde seri ${s.lotNumber ?? '—'} aranıyor…`, 'muted'),
   stockWindowBlocked: (s: Submission): CardView =>

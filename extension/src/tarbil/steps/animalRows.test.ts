@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { normalizeChip, pickAnimal, readReceiptChips, readSearchRows } from './animalRows';
+import { countReceiptAnimals, normalizeChip, pickAnimal, readReceiptChips, readSearchRows } from './animalRows';
 
 const SP = 'ctl00_ctl00_ContentPlaceHolder1_ContentPlaceHolderBody_UCVaccineKKBSAnimalSearch_radGridAnimal_ctl00';
 
@@ -139,4 +139,12 @@ describe('readReceiptChips', () => {
 
     expect(readReceiptChips(document)).toEqual([]);
   });
+
+  it('counts every animal on the receipt form, including ones without a chip', () => {
+    document.body.innerHTML = `<table id="${RP}"><thead><tr><th></th><th></th><th>Sistem Küpe/Çip No</th></tr></thead><tbody>
+      ${rrow(0, '900000000000001')}${rrow(1, '')}</tbody></table>`;
+
+    expect(countReceiptAnimals(document)).toBe(2);
+  });
 });
+
