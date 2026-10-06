@@ -135,6 +135,14 @@ export async function selectComboValue(env: TelerikEnv, suffix: string, value: s
   return { changed: true };
 }
 
+/** Kutu sayfada yoksa ya da zaten bossa hicbir sey yapmaz; "Seciniz" (deger "") secilir. Postback yapmayan kutular icin. */
+export function clearCombo(env: TelerikEnv, suffix: string): void {
+  const el = env.doc.querySelector(`[id$="${suffix}"]`);
+  const combo = el ? env.find(el.id) : null;
+  if (!combo || combo.get_value() === '') return;
+  combo.findItemByValue('')?.select();
+}
+
 export function setText(env: TelerikEnv, suffix: string, value: string): void {
   component(env, suffix).set_value(value);
 }

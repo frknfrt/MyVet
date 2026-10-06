@@ -15,13 +15,30 @@ function instantPrm(): Prm & { fire: () => void } {
   };
 }
 
+
+/** Arama penceresindeki il/ilce/mahalle kutulari (2026-10-06 canli: klinik adresiyle dolu, ilk secenek "Seciniz" = ""). */
+function addressCombos(P: string, log: string[], selected = 'dolu') {
+  const ids = ['cbxNeigbourhood', 'cbxDistrict', 'cbxProvince'].map((n) => `${P}UCProvinceDistrictNeigbourhood_${n}`);
+  const html = ids.map((id) => `<div id="${id}"></div>`).join('');
+  const comps = Object.fromEntries(ids.map((id) => {
+    const name = id.split('_').pop()!;
+    return [id, {
+      get_value: () => selected,
+      findItemByValue: (v: string) => (v === '' ? { select: () => log.push(`clear:${name}`) } : null),
+    }];
+  }));
+  return { html, comps };
+}
+
 describe('page ops', () => {
   it('types the chip into the search box and presses Ara', async () => {
     const P = 'ctl00_ctl00_ContentPlaceHolder1_ContentPlaceHolderBody_UCVaccineKKBSAnimalSearch_';
-    document.body.innerHTML = `<input id="${P}txtChipNo"><a id="${P}btnSearch"></a>`;
     const prm = instantPrm();
     const log: string[] = [];
+    const address = addressCombos(P, log);
+    document.body.innerHTML = `<input id="${P}txtChipNo"><a id="${P}btnSearch"></a>${address.html}`;
     const comps: Record<string, Record<string, unknown>> = {
+      ...address.comps,
       [`${P}txtChipNo`]: { set_value: (v: string) => log.push(`chip:${v}`) },
       [`${P}btnSearch`]: { click: () => { log.push('search'); prm.fire(); } },
     };
@@ -29,7 +46,8 @@ describe('page ops', () => {
 
     await createPageOps(env).searchChip({ chip: '900000000000001' });
 
-    expect(log).toEqual(['chip:900000000000001', 'search']);
+    // Il/ilce/mahalle filtresi kaldirilir: hayvan baska ilde kayitli olabilir.
+    expect(log).toEqual(['clear:cbxNeigbourhood', 'clear:cbxDistrict', 'clear:cbxProvince', 'chip:900000000000001', 'search']);
   });
 
   it('re-selects the animal type when the value is set but the form never posted back', async () => {
@@ -119,10 +137,12 @@ describe('page ops', () => {
 
   it('searches by passport: clears the chip box, types the passport and presses Ara', async () => {
     const P = 'ctl00_ctl00_ContentPlaceHolder1_ContentPlaceHolderBody_UCVaccineKKBSAnimalSearch_';
-    document.body.innerHTML = `<input id="${P}txtChipNo"><input id="${P}txtPassportNo"><a id="${P}btnSearch"></a>`;
     const prm = instantPrm();
     const log: string[] = [];
+    const address = addressCombos(P, log);
+    document.body.innerHTML = `<input id="${P}txtChipNo"><input id="${P}txtPassportNo"><a id="${P}btnSearch"></a>${address.html}`;
     const comps: Record<string, Record<string, unknown>> = {
+      ...address.comps,
       [`${P}txtChipNo`]: { set_value: (v: string) => log.push(`chip:${v}`) },
       [`${P}txtPassportNo`]: { set_value: (v: string) => log.push(`passport:${v}`) },
       [`${P}btnSearch`]: { click: () => { log.push('search'); prm.fire(); } },
@@ -131,7 +151,7 @@ describe('page ops', () => {
 
     await createPageOps(env).searchPassport({ passport: 'TR-34 AB12' });
 
-    expect(log).toEqual(['chip:', 'passport:TR-34 AB12', 'search']);
+    expect(log).toEqual(['clear:cbxNeigbourhood', 'clear:cbxDistrict', 'clear:cbxProvince', 'chip:', 'passport:TR-34 AB12', 'search']);
   });
 
   it('searches the stock popup by serial', async () => {
@@ -174,5 +194,23 @@ describe('page ops', () => {
     await createPageOps(env).setProductQuantity({ quantity: 1 });
 
     expect(log).toEqual(['1']);
+  });
+
+  it('leaves the address filter alone when it is already empty', async () => {
+    const P = 'ctl00_ctl00_ContentPlaceHolder1_ContentPlaceHolderBody_UCVaccineKKBSAnimalSearch_';
+    const prm = instantPrm();
+    const log: string[] = [];
+    const address = addressCombos(P, log, '');
+    document.body.innerHTML = `<input id="${P}txtChipNo"><a id="${P}btnSearch"></a>${address.html}`;
+    const comps: Record<string, Record<string, unknown>> = {
+      ...address.comps,
+      [`${P}txtChipNo`]: { set_value: (v: string) => log.push(`chip:${v}`) },
+      [`${P}btnSearch`]: { click: () => { log.push('search'); prm.fire(); } },
+    };
+    const env: TelerikEnv = { doc: document, find: (id) => comps[id] ?? null, prm: () => prm, isReady: () => true };
+
+    await createPageOps(env).searchChip({ chip: '900000000000001' });
+
+    expect(log).toEqual(['chip:900000000000001', 'search']);
   });
 });

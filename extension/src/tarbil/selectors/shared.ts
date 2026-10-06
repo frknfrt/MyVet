@@ -24,6 +24,13 @@ export const SEARCH = {
   search: '_UCVaccineKKBSAnimalSearch_btnSearch',
   grid: '_UCVaccineKKBSAnimalSearch_radGridAnimal_ctl00',
   transfer: '_UCVaccineKKBSAnimalSearch_btnAddBulkAnimal',
+  // Adres filtresi (2026-10-06 canli): klinik adresiyle dolu gelir, sonucu o mahalleyle sinirlar. Ilk secenek
+  // "Seciniz" (deger ""), secim postback yapmaz. Mahalle -> ilce -> il sirasiyla bosaltilir.
+  addressFilters: [
+    '_UCVaccineKKBSAnimalSearch_UCProvinceDistrictNeigbourhood_cbxNeigbourhood',
+    '_UCVaccineKKBSAnimalSearch_UCProvinceDistrictNeigbourhood_cbxDistrict',
+    '_UCVaccineKKBSAnimalSearch_UCProvinceDistrictNeigbourhood_cbxProvince',
+  ],
 } as const;
 
 export const bySuffix = (suffix: string): string => `[id$="${suffix}"]`;

@@ -1,6 +1,6 @@
 import type { PageHandler } from '../core/bridge';
 import { MEDICINE_STOCK, RECEIPT, SEARCH, VACCINE_STOCK, VACCINE_STOCK_POPUP, allowedButtonSuffix, bySuffix } from '../selectors';
-import { PageError, clickButton, clickElement, selectComboValue, setDate, setText, showAllRows, waitUntil, type TelerikEnv } from './telerik';
+import { PageError, clearCombo, clickButton, clickElement, selectComboValue, setDate, setText, showAllRows, waitUntil, type TelerikEnv } from './telerik';
 
 /**
  * Koprudan cagrilan komutlar. Butonlara yalniz clickAllowed ile, selectors/allowlist.ts'teki listeden basilir;
@@ -19,12 +19,15 @@ export function createPageOps(env: TelerikEnv): Record<string, PageHandler> {
     selectAnimalType: ({ value }: { value: string }) =>
       selectComboValue(env, RECEIPT.animalType, value, !env.doc.querySelector(bySuffix(RECEIPT.petVet))),
     clickAllowed: async ({ page, button }: { page: string; button: string }) => clickButton(env, allowed(page, button)),
+    // Il/ilce/mahalle filtresi kaldirilir: hayvan klinigin mahallesinde kayitli olmayabilir (2026-10-06 canli bulgu).
     searchChip: async ({ chip }: { chip: string }) => {
+      SEARCH.addressFilters.forEach((suffix) => clearCombo(env, suffix));
       setText(env, SEARCH.chip, chip);
       await clickButton(env, allowed('animalSearch', 'search'));
     },
     // Cipi olmayan hasta: TARBIL'de pasaport numarasiyla aranir (cip kutusu bosaltilir, yoksa iki kosul birlesir).
     searchPassport: async ({ passport }: { passport: string }) => {
+      SEARCH.addressFilters.forEach((suffix) => clearCombo(env, suffix));
       setText(env, SEARCH.chip, '');
       setText(env, SEARCH.passport, passport);
       await clickButton(env, allowed('animalSearch', 'search'));
