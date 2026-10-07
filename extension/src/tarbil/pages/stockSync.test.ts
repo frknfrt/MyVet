@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
+import { memoryStore } from '../../background/chromeStorage';
 import type { BackgroundRequest } from '../../shared/messages';
 import type { CardView } from '../core/card';
 import type { Send } from '../steps/findAnimal';
@@ -23,14 +24,16 @@ function setup(sendResult: unknown = { ok: true, data: { snapshotId: 's1' } }) {
   let handler: (id: string) => void = () => undefined;
   const card = { show: (v: CardView) => shown.push(v), hide: () => undefined, onAction: (h: (id: string) => void) => { handler = h; } };
   const text = () => shown.at(-1)?.lines.map((l) => l.text).join(' ') ?? '';
-  return { calls, sent, shown, text, card, bridge, send, click: (id: string) => handler(id) };
+  const store = memoryStore();
+  const deps = { bridge, send, doc: document, card, store, now: () => Date.UTC(2026, 9, 7, 11, 32) };
+  return { calls, sent, shown, text, card, bridge, send, store, deps, click: (id: string) => handler(id) };
 }
 
 describe('stock sync page', () => {
-  it('offers a button and does nothing on TARBIL until the vet clicks it', () => {
+  it('offers a button and does nothing on TARBIL until the vet clicks it', async () => {
     medicineTable();
     const s = setup();
-    createStockSync({ bridge: s.bridge, send: s.send, doc: document, card: s.card, kind: 'medicineStock' }).start();
+    await createStockSync({ ...s.deps, kind: 'medicineStock' }).start();
 
     expect(s.calls).toEqual([]);
     expect(s.shown.at(-1)?.actions.map((a) => a.id)).toEqual(['sendStock']);
@@ -39,7 +42,7 @@ describe('stock sync page', () => {
   it('loads the table, reads it and uploads it to Vetly', async () => {
     medicineTable();
     const s = setup();
-    createStockSync({ bridge: s.bridge, send: s.send, doc: document, card: s.card, kind: 'medicineStock' }).start();
+    await createStockSync({ ...s.deps, kind: 'medicineStock' }).start();
 
     s.click('sendStock');
 
@@ -56,7 +59,7 @@ describe('stock sync page', () => {
   it('warns instead of uploading when the table is not recognized', async () => {
     document.body.innerHTML = '<div></div>';
     const s = setup();
-    createStockSync({ bridge: s.bridge, send: s.send, doc: document, card: s.card, kind: 'vaccineStock' }).start();
+    await createStockSync({ ...s.deps, kind: 'vaccineStock' }).start();
 
     s.click('sendStock');
 
@@ -67,10 +70,54 @@ describe('stock sync page', () => {
   it('reports a Vetly error', async () => {
     medicineTable();
     const s = setup({ ok: false, error: 'Eklenti bağlı değil', code: 'UNAUTHORIZED' });
-    createStockSync({ bridge: s.bridge, send: s.send, doc: document, card: s.card, kind: 'medicineStock' }).start();
+    await createStockSync({ ...s.deps, kind: 'medicineStock' }).start();
 
     s.click('sendStock');
 
     await vi.waitFor(() => expect(s.text()).toContain('Eklenti bağlı değil'));
   });
+
+  it('remembers a successful upload and shows a compact card on the next visit', async () => {
+    medicineTable();
+    const first = setup();
+    await createStockSync({ ...first.deps, kind: 'medicineStock' }).start();
+    first.click('sendStock');
+    await vi.waitFor(() => expect(first.text()).toContain('1 satır'));
+
+    const next = setup();
+    await createStockSync({ ...next.deps, store: first.store, kind: 'medicineStock' }).start();
+
+    expect(next.text()).toContain('Son gönderim');
+    expect(next.text()).toContain('1 satır');
+    expect(next.text()).not.toContain('aktarabilirsiniz');
+    expect(next.shown.at(-1)?.actions).toEqual([{ id: 'sendStock', label: 'Yeniden gönder' }]);
+    expect(next.calls).toEqual([]);
+  });
+
+  it('keeps vaccine and medicine uploads apart', async () => {
+    medicineTable();
+    const first = setup();
+    await createStockSync({ ...first.deps, kind: 'medicineStock' }).start();
+    first.click('sendStock');
+    await vi.waitFor(() => expect(first.sent).toHaveLength(1));
+
+    const vaccine = setup();
+    await createStockSync({ ...vaccine.deps, store: first.store, kind: 'vaccineStock' }).start();
+
+    expect(vaccine.text()).toContain('aktarabilirsiniz');
+  });
+
+  it('does not remember a failed upload', async () => {
+    medicineTable();
+    const failed = setup({ ok: false, error: 'Eklenti bağlı değil', code: 'UNAUTHORIZED' });
+    await createStockSync({ ...failed.deps, kind: 'medicineStock' }).start();
+    failed.click('sendStock');
+    await vi.waitFor(() => expect(failed.text()).toContain('Eklenti bağlı değil'));
+
+    const next = setup();
+    await createStockSync({ ...next.deps, store: failed.store, kind: 'medicineStock' }).start();
+
+    expect(next.text()).toContain('aktarabilirsiniz');
+  });
 });
+

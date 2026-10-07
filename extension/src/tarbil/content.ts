@@ -69,7 +69,7 @@ if (location.origin === 'https://vetilac.tarbil.gov.tr') {
 }
 
 function startStockSync(kind: 'vaccineStock' | 'medicineStock'): void {
-  createStockSync({ bridge: createPageBridge(window), send, doc: document, card, kind }).start();
+  void createStockSync({ bridge: createPageBridge(window), send, doc: document, card, kind, store: chromeLocalStore(), now: Date.now }).start();
 }
 
 function routeTarbilPage(): void {
