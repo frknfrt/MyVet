@@ -40,7 +40,7 @@ export interface KeepAliveDeps {
 export function startKeepAlive(d: KeepAliveDeps): () => void {
   const url = keepAliveUrl(d.origin);
   if (!url) return () => undefined;
-  const handle = d.setInterval(() => {
+  const tick = () => {
     void (async () => {
       try {
         if (await d.enabled()) await d.ping(url);
@@ -48,6 +48,9 @@ export function startKeepAlive(d: KeepAliveDeps): () => void {
         // Ag hatasi ya da dusmus oturum: bir sonraki turda yeniden denenir; hekime gosterilecek bir sey yok.
       }
     })();
-  }, KEEP_ALIVE_INTERVAL_MS);
+  };
+  const handle = d.setInterval(tick, KEEP_ALIVE_INTERVAL_MS);
+  // Sayfa acilir acilmaz bir istek: yan paneldeki durum giristen hemen sonra guncellenir (2026-10-07).
+  tick();
   return () => d.clearInterval(handle);
 }

@@ -33,11 +33,13 @@ describe('startKeepAlive', () => {
     const pinged: string[] = [];
     startKeepAlive({ origin: 'https://hbsapp.tarbil.gov.tr', enabled: async () => true, ping: async (u) => { pinged.push(u); }, ...timer });
 
+    await new Promise((r) => setTimeout(r, 0));
     await timer.tick();
     await timer.tick();
 
     expect(timer.interval).toBe(KEEP_ALIVE_INTERVAL_MS);
-    expect(pinged).toEqual(['https://hbsapp.tarbil.gov.tr/Default.aspx', 'https://hbsapp.tarbil.gov.tr/Default.aspx']);
+    // Sayfa acilir acilmaz bir istek (durum giristen hemen sonra guncellensin), sonra her turda bir.
+    expect(pinged).toEqual(Array(3).fill('https://hbsapp.tarbil.gov.tr/Default.aspx'));
   });
 
   it('does not ping when the vet turned it off', async () => {
@@ -55,11 +57,12 @@ describe('startKeepAlive', () => {
     let calls = 0;
     const stop = startKeepAlive({ origin: 'https://vetilac.tarbil.gov.tr', enabled: async () => true, ping: async () => { calls++; throw new Error('ag'); }, ...timer });
 
+    await new Promise((r) => setTimeout(r, 0));
     await timer.tick();
     await timer.tick();
     stop();
 
-    expect(calls).toBe(2);
+    expect(calls).toBe(3);
     expect(timer.cleared).toBe(true);
   });
 

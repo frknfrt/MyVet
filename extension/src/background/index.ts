@@ -62,6 +62,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'flush-confirmations') outbox.flush().catch(() => undefined);
   if (alarm.name === KEEP_ALIVE_ALARM) keepTarbilAlive();
 });
+keepTarbilAlive();
 // TARBIL acilir pencereleri (hayvan arama, asi stok) tiklama olmadan da acilsin: yalniz hbsapp icin izin.
 const tarbilPopups = () => void allowTarbilPopups(chrome.contentSettings as unknown as Parameters<typeof allowTarbilPopups>[0]);
 chrome.runtime.onInstalled.addListener(tarbilPopups);
