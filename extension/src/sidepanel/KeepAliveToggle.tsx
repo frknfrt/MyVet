@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { chromeLocalStore } from '../background/chromeStorage';
 import { KEEP_ALIVE_ORIGINS, isKeepAliveEnabled, setKeepAliveEnabled } from '../tarbil/core/keepAlive';
-import { readKeepAliveStatus, statusText, summarizeOrigin, type KeepAliveStatus } from '../tarbil/core/keepAliveStatus';
+import { readKeepAliveStatus, statusText, summarizeOrigin, type KeepAliveStatus, type OriginSummary } from '../tarbil/core/keepAliveStatus';
 
 const LABELS: Record<string, string> = {
   'https://hbsapp.tarbil.gov.tr': 'Aşı (hbsapp)',
@@ -9,6 +9,8 @@ const LABELS: Record<string, string> = {
 };
 
 const time = (ms: number) => new Date(ms).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+const DOT: Record<OriginSummary['state'], string> = { open: 'dot-ok', closed: 'dot-warn', stale: 'dot-stale', never: 'dot-off' };
 
 /**
  * TARBIL oturumunu canli tutma ayari (varsayilan acik) ve son durum. Istekler arka plandan (Chrome acik kaldikca) ve
@@ -32,30 +34,41 @@ export function KeepAliveToggle() {
 
   if (enabled === null) return null;
   return (
-    <div>
-      <label className="muted" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={async (e) => {
-            const next = e.target.checked;
-            await setKeepAliveEnabled(chromeLocalStore(), next);
-            setEnabled(next);
-          }}
-        />
-        TARBİL oturumunu açık tut (Chrome açıkken birkaç dakikada bir sayfa ister; veri göndermez)
-      </label>
-      {enabled && (
-        <div className="muted" style={{ marginTop: 4, fontSize: 12 }}>
+    <div className="card keepalive">
+      <div className="keepalive-head">
+        <div>
+          <strong>TARBİL oturumu</strong>
+          <div className="muted">Açık tutmak için Chrome açıkken birkaç dakikada bir sayfa istenir; veri gönderilmez.</div>
+        </div>
+        <label className="switch" title={enabled ? 'Açık tutma açık' : 'Açık tutma kapalı'}>
+          <input
+            type="checkbox"
+            aria-label="TARBİL oturumunu açık tut"
+            checked={enabled}
+            onChange={async (e) => {
+              const next = e.target.checked;
+              await setKeepAliveEnabled(chromeLocalStore(), next);
+              setEnabled(next);
+            }}
+          />
+          <span className="slider" />
+        </label>
+      </div>
+      {enabled ? (
+        <ul className="keepalive-status">
           {KEEP_ALIVE_ORIGINS.map((origin) => {
             const summary = summarizeOrigin(status[origin], now);
             return (
-              <div key={origin} className={summary.state === 'closed' ? 'warning' : undefined}>
-                {LABELS[origin] ?? origin}: {statusText(summary, time)}
-              </div>
+              <li key={origin}>
+                <span className={`dot ${DOT[summary.state]}`} />
+                <span className="keepalive-site">{LABELS[origin] ?? origin}</span>
+                <span className={summary.state === 'closed' ? 'warning' : 'muted'}>{statusText(summary, time)}</span>
+              </li>
             );
           })}
-        </div>
+        </ul>
+      ) : (
+        <div className="warning">Kapalı: TARBİL boşta kalınca oturumu kapatır.</div>
       )}
     </div>
   );
