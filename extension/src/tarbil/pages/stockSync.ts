@@ -1,5 +1,5 @@
 import type { KeyValueStore } from '../../background/chromeStorage';
-import type { StockSystem } from '../../shared/types';
+import type { StockComparison, StockSystem } from '../../shared/types';
 import type { PageBridge } from '../core/bridge';
 import type { Card } from '../core/card';
 import { views } from '../core/views';
@@ -29,18 +29,44 @@ const time = (ms: number) => new Date(ms).toLocaleString('tr-TR', { day: '2-digi
 /**
  * TARBIL asi/ilac stok sayfasi (spec 2026-10-04 S13): hekim tiklayinca "Ara" + tum satirlar, tablo okunur, Vetly'ye
  * gonderilir. Vetly stoguna isleme hekimin Vetly Stok sayfasindaki onayiyla olur; TARBIL'de baska hicbir sey yapilmaz.
+ * Sayfa acilinca (2026-10-07) tablo ayni yolla okunup Vetly'de KAYDEDILMEDEN karsilastirilir: fark varsa uyari karti,
+ * yoksa kucuk "guncel" satiri; karsilastirma olmazsa eski kart (son gonderim ya da aciklama) gosterilir.
  */
 export function createStockSync(d: StockSyncDeps) {
   let busy = false;
+
+  async function readTable() {
+    await d.bridge.call('ready');
+    await d.bridge.call('loadStockTable', { page: d.kind });
+    return readStockRows(d.doc, d.kind);
+  }
+
+  async function compare(): Promise<StockComparison | null> {
+    try {
+      const lines = await readTable();
+      if (lines.length === 0) return null;
+      const res = await d.send<StockComparison>({ type: 'COMPARE_STOCK_SNAPSHOT', system: SYSTEM[d.kind], lines });
+      return res.ok ? res.data : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function showFallback(): Promise<void> {
+    const last = ((await d.store.get<Record<string, LastUpload>>(LAST_UPLOAD_KEY)) ?? {})[SYSTEM[d.kind]];
+    if (last) {
+      d.card.show(views.stock(`Son gönderim ${time(last.at)} (${last.lines} satır).`, 'muted', RESEND_ACTION));
+      return;
+    }
+    d.card.show(views.stock("Bu sayfadaki stoğu Vetly'ye aktarabilirsiniz (TARBİL'de yalnız arama yapılır).", 'muted', SEND_ACTION));
+  }
 
   async function sendStock(): Promise<void> {
     if (busy) return;
     busy = true;
     try {
       d.card.show(views.stock('TARBİL stoğu okunuyor…', 'muted'));
-      await d.bridge.call('ready');
-      await d.bridge.call('loadStockTable', { page: d.kind });
-      const lines = readStockRows(d.doc, d.kind);
+      const lines = await readTable();
       if (lines.length === 0) {
         d.card.show(views.stock('Stok tablosu tanınmadı ya da boş. TARBİL ekranı değişmiş olabilir; Vetly ekibine haber verin.', 'warn', SEND_ACTION));
         return;
@@ -65,14 +91,30 @@ export function createStockSync(d: StockSyncDeps) {
   });
 
   return {
-    /** Daha once gonderildiyse kisa kart (son gonderim + Yeniden gonder), yoksa aciklamali kart (2026-10-07). */
+    /** Sayfa acilinca otomatik karsilastirma; hekim gonderene kadar Vetly'de hicbir sey kaydedilmez (2026-10-07). */
     async start(): Promise<void> {
-      const last = ((await d.store.get<Record<string, LastUpload>>(LAST_UPLOAD_KEY)) ?? {})[SYSTEM[d.kind]];
-      if (last) {
-        d.card.show(views.stock(`Son gönderim ${time(last.at)} (${last.lines} satır).`, 'muted', RESEND_ACTION));
-        return;
+      if (busy) return;
+      busy = true;
+      try {
+        d.card.show(views.stock('Vetly stoğuyla karşılaştırılıyor…', 'muted'));
+        const c = await compare();
+        if (!c) {
+          await showFallback();
+        } else if (c.newCount === 0 && c.quantityDiffersCount === 0) {
+          d.card.show(views.stock('TARBİL stoğu Vetly ile güncel ✓', 'ok'));
+        } else {
+          d.card.show(views.stock(differenceText(c), 'warn', SEND_ACTION));
+        }
+      } finally {
+        busy = false;
       }
-      d.card.show(views.stock("Bu sayfadaki stoğu Vetly'ye aktarabilirsiniz (TARBİL'de yalnız arama yapılır).", 'muted', SEND_ACTION));
     },
   };
+}
+
+function differenceText(c: StockComparison): string {
+  const parts: string[] = [];
+  if (c.newCount > 0) parts.push(`Vetly'de olmayan ${c.newCount} ürün`);
+  if (c.quantityDiffersCount > 0) parts.push(`Vetly'de miktarı farklı ${c.quantityDiffersCount} ürün`);
+  return `TARBİL stoğunda ${parts.join(' ve ')} var.`;
 }

@@ -116,4 +116,16 @@ describe('router', () => {
     expect(res).toEqual({ ok: true, data: { snapshotId: 's1' } });
     expect(uploaded).toEqual([{ system: 'HBSAPP_VACCINE', lines: [] }]);
   });
+
+  it('compares a TARBIL stock page with Vetly through the API', async () => {
+    const tokens = createTokenStore(memoryStore());
+    const compared: unknown[] = [];
+    const api = { compareStockSnapshot: async (system: string, lines: unknown[]) => { compared.push({ system, lines }); return { newCount: 2, quantityDiffersCount: 0, matchedCount: 5 }; } } as never;
+    const router = createRouter({ api, tokens, outbox: createConfirmationOutbox(memoryStore(), api), session: memoryStore() });
+
+    const res = await router.handle({ type: 'COMPARE_STOCK_SNAPSHOT', system: 'VETILAC_MEDICINE', lines: [] });
+
+    expect(res).toEqual({ ok: true, data: { newCount: 2, quantityDiffersCount: 0, matchedCount: 5 } });
+    expect(compared).toEqual([{ system: 'VETILAC_MEDICINE', lines: [] }]);
+  });
 });

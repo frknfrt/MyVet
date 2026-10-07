@@ -1,5 +1,5 @@
 import type { ErrorCode } from '../shared/messages';
-import type { ConfirmationMethod, ExtensionProfile, StockSnapshotLine, StockSystem, Submission } from '../shared/types';
+import type { ConfirmationMethod, ExtensionProfile, StockComparison, StockSnapshotLine, StockSystem, Submission } from '../shared/types';
 import type { TokenStore } from './chromeStorage';
 
 export class ApiError extends Error {
@@ -64,6 +64,12 @@ export function createVetlyApi({ baseUrl, tokens, fetchFn = fetch }: Options) {
       }),
     uploadStockSnapshot: (system: StockSystem, lines: StockSnapshotLine[]) =>
       request<{ snapshotId: string }>('/api/v1/tarbil-extension/stock-snapshots', {
+        method: 'POST',
+        body: JSON.stringify({ system, lines }),
+      }),
+    /** Kaydetmeden karsilastirma (stok sayfasi acilinca). */
+    compareStockSnapshot: (system: StockSystem, lines: StockSnapshotLine[]) =>
+      request<StockComparison>('/api/v1/tarbil-extension/stock-snapshots/compare', {
         method: 'POST',
         body: JSON.stringify({ system, lines }),
       }),

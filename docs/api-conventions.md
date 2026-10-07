@@ -103,6 +103,7 @@ Her istekte JWT'den çözülen `tenantId`, `TenantContext` (ThreadLocal) üzerin
 - `GET /api/v1/tarbil/diseases` (ADMIN, VET) — TARBİL reçete hastalık ağacı: `[{id, parentId, name, path, selectable}]`, `sort_order` sırasıyla (73 düğüm).
 - `POST /api/v1/vaccination-records` — isteğe `inventoryItemId` (opsiyonel) eklendi: stoktan seçilen aşı; `ADMINISTERED` olunca Vetly stoğundan 1 düşer, iptalde geri eklenir (olayla, `inventory` modülü). Eklentiye giden aşı verisinde `tarbilProductName` alanı var.
 - `POST /api/v1/tarbil-extension/stock-snapshots` (eklenti) — `{system: HBSAPP_VACCINE|VETILAC_MEDICINE, lines[{productName, presentation, lotNumber, expiryDate, quantity, openedQuantity}]}` (en çok 500) → 201 `{snapshotId}`.
+- `POST /api/v1/tarbil-extension/stock-snapshots/compare` (eklenti) — aynı gövde → 200 `{newCount, quantityDiffersCount, matchedCount}`; eşleştirilen personelin şubesinin stoğuyla ürün+lot grupları karşılaştırılır, hiçbir şey kaydedilmez. Şube yoksa 422.
 - `GET /api/v1/tarbil/stock-sync?system=` (ADMIN, VET) — son TARBİL stok görüntüsü, Vetly stoğuyla karşılaştırmalı (`NEW`, `QUANTITY_DIFFERS`, `MATCHED`, `APPLIED`); görüntü yoksa `snapshotId: null`.
 - `POST /api/v1/tarbil/stock-sync/{snapshotId}/apply` (ADMIN, VET) — `{lineIds}` → `{applied}`; kullanıcının ilk şubesine işlenir.
 

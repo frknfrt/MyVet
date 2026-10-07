@@ -46,3 +46,10 @@ export interface StockSnapshotLine {
   quantity: number;
   openedQuantity: number | null;
 }
+
+/** Stok sayfasi karsilastirmasi: urun+lot gruplari sayilir, hicbir sey kaydedilmez. */
+export interface StockComparison {
+  newCount: number;
+  quantityDiffersCount: number;
+  matchedCount: number;
+}
