@@ -7,6 +7,7 @@ import com.vetos.modules.integration.tarbil.api.dto.LearnMappingRequest;
 import com.vetos.modules.integration.tarbil.api.dto.MarkSubmittedRequest;
 import com.vetos.modules.integration.tarbil.api.dto.PairRequest;
 import com.vetos.modules.integration.tarbil.api.dto.PairResponse;
+import com.vetos.modules.integration.tarbil.api.dto.StockComparisonResponse;
 import com.vetos.modules.integration.tarbil.api.dto.StockSnapshotRequest;
 import com.vetos.modules.integration.tarbil.api.dto.StockSnapshotResponse;
 import com.vetos.modules.integration.tarbil.api.dto.TarbilSubmissionResponse;
@@ -17,6 +18,7 @@ import com.vetos.modules.integration.tarbil.application.LearnTarbilMappingUseCas
 import com.vetos.modules.integration.tarbil.application.ListPendingSubmissionsUseCase;
 import com.vetos.modules.integration.tarbil.application.MarkSubmittedUseCase;
 import com.vetos.modules.integration.tarbil.application.PairExtensionUseCase;
+import com.vetos.modules.integration.tarbil.application.CompareStockSnapshotUseCase;
 import com.vetos.modules.integration.tarbil.application.RecordStockSnapshotUseCase;
 import com.vetos.modules.integration.tarbil.domain.TarbilMappingKind;
 import com.vetos.platform.security.AuthenticatedStaffUser;
@@ -45,6 +47,7 @@ public class TarbilExtensionController {
     private final DismissSubmissionUseCase dismissSubmissionUseCase;
     private final LearnTarbilMappingUseCase learnTarbilMappingUseCase;
     private final RecordStockSnapshotUseCase recordStockSnapshotUseCase;
+    private final CompareStockSnapshotUseCase compareStockSnapshotUseCase;
 
     @PostMapping("/pair")
     public PairResponse pair(@Valid @RequestBody PairRequest request) {
@@ -101,4 +104,13 @@ public class TarbilExtensionController {
         return new StockSnapshotResponse(recordStockSnapshotUseCase.execute(
             TenantContext.current(), user.staffUserId(), request.system(), request.toInputs()));
     }
+
+    /** Stok sayfasi acilinca: Vetly stoguyla karsilastirma, hicbir sey kaydedilmez (2026-10-07). */
+    @PostMapping("/stock-snapshots/compare")
+    public StockComparisonResponse compareStockSnapshot(@Valid @RequestBody StockSnapshotRequest request,
+                                                        @AuthenticationPrincipal AuthenticatedStaffUser user) {
+        return StockComparisonResponse.from(compareStockSnapshotUseCase.execute(
+            TenantContext.current(), user.staffUserId(), request.system(), request.toInputs()));
+    }
 }
+

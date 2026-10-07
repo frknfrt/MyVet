@@ -422,5 +422,25 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
         mockMvc.perform(get("/api/v1/branches/" + branchA + "/working-hours").header("Authorization", "Bearer " + jwt))
             .andExpect(status().isOk());
     }
+
+    @Test
+    void extensionComparesTarbilStockWithoutSavingAnything() throws Exception {
+        UUID branchOfStaff = jdbcTemplate.queryForObject("SELECT branch_id FROM staff_users WHERE id = ?", UUID.class, staffA);
+        asTenant(tenantA, () -> inventoryItemRepository.save(
+            InventoryItem.create(tenantA, branchOfStaff, "Biocan R", "Aşı", null, 2, 0, null, "665932", null)));
+        String body = "{\"system\":\"HBSAPP_VACCINE\",\"lines\":["
+            + "{\"productName\":\"Biocan R\",\"presentation\":\"Flakon\",\"lotNumber\":\"665932\",\"expiryDate\":\"2027-01-31\",\"quantity\":2,\"openedQuantity\":null},"
+            + "{\"productName\":\"Nobivac\",\"presentation\":\"Flakon\",\"lotNumber\":\"N1\",\"expiryDate\":\"2027-01-31\",\"quantity\":1,\"openedQuantity\":null}]}";
+
+        mockMvc.perform(post("/api/v1/tarbil-extension/stock-snapshots/compare")
+                .header("Authorization", "Bearer " + tokenA).contentType("application/json").content(body))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.newCount").value(1))
+            .andExpect(jsonPath("$.quantityDiffersCount").value(0))
+            .andExpect(jsonPath("$.matchedCount").value(1));
+
+        Integer snapshots = jdbcTemplate.queryForObject("SELECT count(*) FROM tarbil_stock_snapshot WHERE tenant_id = ?", Integer.class, tenantA);
+        assertThat(snapshots).isZero();
+    }
 }
 
