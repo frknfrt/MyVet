@@ -14,6 +14,9 @@ Kullanıcı kararları (2026-10-09):
 - Muayene tamamlanınca hekime "TARBİL'den stok düş" seçeneği sunulur.
 - Hekim TARBİL'de düşümü ne zaman yaparsa eklenti o zaman Vetly'ye bildirir; Vetly stoğu o anda düşer.
 - Aşı da aynı modele geçer (tutarlılık).
+- Reçete muayene olmadan da yazılabilir (hasta sayfasından). **Vetly'de yazılan her reçete TARBİL'e gider**: stoktan
+  verilen kalemler "Stoktan Düşerek İlaç Reçetesi"ne, eczaneden alınacaklar normal "İlaç Reçetesi"ne. Sıra: önce stoktan
+  düşen reçete (bu tasarım, Faz 1), ardından eczane reçetesi (Faz 2).
 - Hekim her zaman resmi düğmeye kendisi basar (aşı: ürün satırı Kaydet + Onayla; ilaç: Reçeteyi Onayla).
 
 ## 2. Canlı bulgular (2026-10-09, yalnız yapı okundu)
@@ -30,11 +33,14 @@ Kullanıcı kararları (2026-10-09):
 
 ## 3. Kapsam
 
-Bu sürüm:
-1. **İlaç:** muayenede kullanılan, TARBİL'e bağlı stok kalemleri (`EncounterFinalizedEvent.usedItems`).
+**Faz 1 (bu tasarım) — TARBİL stoğunu düşüren her şey:**
+1. **Muayenede kullanılan ilaç:** TARBİL'e bağlı stok kalemleri (`EncounterFinalizedEvent.usedItems`).
 2. **Aşı:** stoktan seçilerek yapılan aşı (`VaccinationRecord.inventoryItemId`), P2 akışı.
+3. **Reçete — kliniğin stoğundan verilen kalemler:** muayeneli ya da muayenesiz Vetly reçetesinde "Kliniğin stoğundan ver"
+   işaretli kalemler (§5.6).
 
-Sonraki adım (aynı altyapı): Vetly reçete kalemine "stoktan ver" (stok ürünü + adet). Bu sürümde yok.
+**Faz 2 (ayrı tasarım) — eczane reçetesi:** reçetenin stoktan verilmeyen kalemleri TARBİL "İlaç Reçetesi Ekle"
+(`ReceiptPage.aspx?type=1`) ile gider; stok etkisi yok. Faz 1'de bu kalemler Vetly'de kalır (bugünkü gibi), TARBİL'e gitmez.
 
 "TARBİL'e bağlı kalem" = `inventory_items.tarbil_product_name` dolu stok kalemi (P1a eşitlemesiyle oluşan / bağlanan).
 Bağlı olmayan kalemler (sarf, TARBİL dışı ürün) bugünkü gibi anında düşer.
@@ -48,8 +54,8 @@ Yeni tablo `pending_stock_deduction` (inventory modülü, `@TenantId`):
 | id, tenant_id | |
 | inventory_item_id | düşülecek stok kalemi |
 | quantity | Vetly'de planlanan adet |
-| reference_type | `ENCOUNTER` \| `VACCINATION` |
-| reference_id | encounter id / vaccination record id |
+| reference_type | `ENCOUNTER` \| `VACCINATION` \| `PRESCRIPTION` |
+| reference_id | encounter / vaccination record / prescription id |
 | status | `PENDING` → `DEDUCTED` \| `CANCELLED` |
 | settled_via | `TARBIL` \| `VETLY_ONLY` (DEDUCTED iken) |
 | settled_quantity, settled_at, settled_by | gerçekleşen |
@@ -105,6 +111,28 @@ MANUAL onayda bildirilen satır yoktur → tüm PENDING satırlar planlanan adet
 - Muayene sayfası kartı, PENDING satır kalmayınca "TARBİL'den düşüldü ✓" olur.
 - `quantity_on_hand` değişmez; bekleyen kalemler ayrı gösterilir (gerekirse "kullanılabilir = eldeki − bekleyen" ileride).
 
+### 5.6 Reçete (muayeneli / muayenesiz)
+
+Vetly değişiklikleri:
+- `prescriptions.encounter_id` isteğe bağlı olur. Hasta sayfasına **"Yeni reçete"** (VET/ADMIN) eklenir; aynı reçete kartı
+  açılır. Muayene sayfasındaki reçete kartı aynen kalır.
+- Reçeteye **TARBİL teşhisi** (`tarbil_disease_id`) eklenir; stoktan verilen kalem varsa zorunlu.
+- Reçete kalemine isteğe bağlı **"Kliniğin stoğundan ver"**: stok kalemi (TARBİL'e bağlı, lot) + adet. Katalog ilacı (doz,
+  sıklık, gün, yol) bugünkü gibi kalır; stok kalemi seçimi katalog ilacıyla ilişkilendirilir (aynı kalemde ikisi birlikte).
+- Reçete yazılınca (`PrescriptionIssuedEvent`):
+  - stoktan verilen kalemler → `pending_stock_deduction` (`reference_type = PRESCRIPTION`, reference = reçete id);
+  - en az bir stoktan verilen kalem varsa TARBİL kuyruğuna `PRESCRIPTION` aktarımı otomatik girer (source = reçete id;
+    sınıf Muayene/Tedavi; tedavi başlangıcı = reçete tarihi). Muayene kartındaki gibi ayrı düğme gerekmez — hekim reçeteyi
+    yazarken stoktan vermeyi zaten seçmiştir. "Yalnız Vetly'den düş" stok sayfasındaki bekleyen listesinden yapılır.
+- Eklenti, muayene kaynağıyla aynı "Stoktan Düşerek İlaç Reçetesi Ekle" akışını kullanır (ürün satırları = stoktan verilen kalemler).
+- Reçete iptali: düşüm öncesi → PENDING → CANCELLED, aktarım reddedilir; düşüm sonrası → Vetly'de iade yok, uyarı:
+  "TARBİL'de reçeteyi iptal edin" (TARBİL › Reçete İptal Et; otomasyonu Faz 2+).
+- Aynı muayenede hem kullanılan ilaç hem stoktan verilen reçete varsa iki ayrı TARBİL reçetesi oluşur (fiziksel olarak ayrı
+  birimler: klinikte uygulanan / sahibine verilen). Birleştirme ilk sürümde yok.
+
+Kaynak türleri: `TarbilSubmission(PRESCRIPTION)` artık iki kaynaktan gelir → `source_kind` (`ENCOUNTER` | `PRESCRIPTION`)
+alanı eklenir; mevcut "PRESCRIPTION → prescriptions.id" yorumu güncellenir.
+
 ## 6. Modül sınırları
 
 - `inventory` → `encounter` olaylarını dinler (bugünkü gibi). `integration` → `inventory`'ye zaten bağımlı (`TarbilStockSyncPort`).
@@ -129,6 +157,7 @@ MANUAL onayda bildirilen satır yoktur → tüm PENDING satırlar planlanan adet
 2. "Reçeteyi Onayla" sonrası başarı ekranı / mesajı (gerçek bir reçetede hekim onayladıktan sonra okunur).
 3. Aşı Onayla sonrası başarı ekranı (P2'den açık).
 4. Teşhis: TARBİL formu çoklu hastalık seçimine izin veriyor; ilk sürüm tek teşhis.
+5. Faz 2 için "İlaç Reçetesi Ekle" (`ReceiptPage.aspx?type=1`) formunun yapısı.
 
 ## 9. Test
 
@@ -136,7 +165,8 @@ MANUAL onayda bildirilen satır yoktur → tüm PENDING satırlar planlanan adet
   idempotent onay; Vetly-only.
 - Entegrasyon: muayene → kart → kuyruk → confirm (lines) → stok hareketi; aşı aynı; kiracı izolasyonu.
 - Eklenti: sayfa tanıma, doldurma adımları (mock Telerik, canlıdan doğrulanmış davranışla), başarı yakalama, onay satırları.
-- Frontend: muayene kartı durumları, stok sayfası bekleyen listesi.
+- Frontend: muayene kartı durumları, stok sayfası bekleyen listesi, hasta sayfasından muayenesiz reçete,
+  "Kliniğin stoğundan ver" kalem alanları ve TARBİL teşhisi zorunluluğu.
 
 ## 10. Geçiş
 
