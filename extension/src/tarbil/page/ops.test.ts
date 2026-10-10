@@ -254,5 +254,113 @@ describe('page ops', () => {
 
     expect(log).toEqual(['clear:cbxNeigbourhood', 'clear:cbxDistrict', 'clear:cbxProvince', 'search', 'results']);
   });
-});
 
+  const RP = 'ctl00_ctl00_ctl00_bodyCPH_ContentPlaceHolder1_cntRECEIPTBodyContent_';
+
+  it('sets the treatment start date on the prescription form', async () => {
+    document.body.innerHTML = `<div id="${RP}dpTreatmentStartDate"></div>`;
+    const log: string[] = [];
+    const picker = { get_selectedDate: () => null, set_selectedDate: (d: Date) => log.push(d.toDateString()) };
+    const env: TelerikEnv = { doc: document, find: (id) => (id === `${RP}dpTreatmentStartDate` ? picker : null), prm: () => null, isReady: () => true };
+
+    await createPageOps(env).setTreatmentDate({ iso: '2026-10-09' });
+
+    expect(log).toEqual([new Date(2026, 9, 9).toDateString()]);
+  });
+
+  it('selects Muayene/Tedavi Reçetesi only when it is not selected', async () => {
+    document.body.innerHTML = `<input type="radio" name="c" id="${RP}rbtnReceiptClass_0"><input type="radio" name="c" id="${RP}rbtnReceiptClass_1" checked>`;
+    const env: TelerikEnv = { doc: document, find: () => null, prm: () => null, isReady: () => true };
+    const ops = createPageOps(env);
+
+    expect(await ops.ensureTreatmentClass({})).toEqual({ changed: true });
+    expect((document.getElementById(`${RP}rbtnReceiptClass_0`) as HTMLInputElement).checked).toBe(true);
+    expect(await ops.ensureTreatmentClass({})).toEqual({ changed: false });
+  });
+
+  it('checks the disease in the tree and presses the add button', async () => {
+    document.body.innerHTML = `<div id="${RP}cbxDisease_i0_treeDisease"></div><div id="${RP}lbxDiagnosedDisease"></div>
+      <input type="image" id="${RP}imgAddDisease">`;
+    const log: string[] = [];
+    let listed = false;
+    document.getElementById(`${RP}imgAddDisease`)!.addEventListener('click', (e) => { e.preventDefault(); log.push('add'); listed = true; });
+    const node = { get_text: () => 'PNÖMONİ', set_checked: (v: boolean) => log.push(`check:${v}`) };
+    const comps: Record<string, Record<string, unknown>> = {
+      [`${RP}cbxDisease_i0_treeDisease`]: { findNodeByValue: (v: string) => (v === 'd1' ? node : null) },
+      [`${RP}lbxDiagnosedDisease`]: { findItemByValue: () => (listed ? {} : null), findItemByText: () => null },
+    };
+    const env: TelerikEnv = { doc: document, find: (id) => comps[id] ?? null, prm: () => null, isReady: () => true };
+
+    expect(await createPageOps(env).addDisease({ value: 'd1' })).toEqual({ added: true, listed: true });
+    expect(log).toEqual(['check:true', 'add']);
+  });
+
+  it('does not add a disease that is already in the diagnosed list', async () => {
+    document.body.innerHTML = `<div id="${RP}cbxDisease_i0_treeDisease"></div><div id="${RP}lbxDiagnosedDisease"></div>
+      <input type="image" id="${RP}imgAddDisease">`;
+    let clicked = 0;
+    document.getElementById(`${RP}imgAddDisease`)!.addEventListener('click', (e) => { e.preventDefault(); clicked++; });
+    const comps: Record<string, Record<string, unknown>> = {
+      [`${RP}cbxDisease_i0_treeDisease`]: { findNodeByValue: () => ({ get_text: () => 'PNÖMONİ', set_checked: () => undefined }) },
+      [`${RP}lbxDiagnosedDisease`]: { findItemByValue: () => null, findItemByText: (t: string) => (t === 'PNÖMONİ' ? {} : null) },
+    };
+    const env: TelerikEnv = { doc: document, find: (id) => comps[id] ?? null, prm: () => null, isReady: () => true };
+
+    expect(await createPageOps(env).addDisease({ value: 'd1' })).toEqual({ added: false, listed: true });
+    expect(clicked).toBe(0);
+  });
+
+  it('rejects a disease that is not in the TARBIL tree', async () => {
+    document.body.innerHTML = `<div id="${RP}cbxDisease_i0_treeDisease"></div><div id="${RP}lbxDiagnosedDisease"></div>`;
+    const comps: Record<string, Record<string, unknown>> = {
+      [`${RP}cbxDisease_i0_treeDisease`]: { findNodeByValue: () => null },
+      [`${RP}lbxDiagnosedDisease`]: { findItemByValue: () => null, findItemByText: () => null },
+    };
+    const env: TelerikEnv = { doc: document, find: (id) => comps[id] ?? null, prm: () => null, isReady: () => true };
+
+    await expect(createPageOps(env).addDisease({ value: 'x' })).rejects.toMatchObject({ code: 'OPTION_NOT_FOUND' });
+  });
+
+  it('searches the medicine stock popup by serial (plain input)', async () => {
+    const P = 'ctl00_ContentPlaceHolder1_ContentPlaceHolderBody_UcPharmacyStockSearchForReceipt_';
+    document.body.innerHTML = `<input id="${P}txtSerialNumber"><a id="${P}btnSearch"></a>`;
+    const prm = instantPrm();
+    const log: string[] = [];
+    const comps: Record<string, Record<string, unknown>> = { [`${P}btnSearch`]: { click: () => { log.push('ara'); prm.fire(); } } };
+    const env: TelerikEnv = { doc: document, find: (id) => comps[id] ?? null, prm: () => prm, isReady: () => true };
+
+    await createPageOps(env).searchMedicineSerial({ serial: 'KV04Z81' });
+
+    expect((document.getElementById(`${P}txtSerialNumber`) as HTMLInputElement).value).toBe('KV04Z81');
+    expect(log).toEqual(['ara']);
+  });
+
+  it('clicks Seç inside the medicine stock popup grid', async () => {
+    const G = 'ctl00_ContentPlaceHolder1_ContentPlaceHolderBody_UcPharmacyStockSearchForReceipt_radGridStock_ctl00';
+    document.body.innerHTML = `<table id="${G}"><tbody><tr><td><a id="${G}_ctl04_SelectlinkButton">Seç</a></td></tr></tbody></table>`;
+    let clicked = 0;
+    document.getElementById(`${G}_ctl04_SelectlinkButton`)!.addEventListener('click', () => clicked++);
+    const env: TelerikEnv = { doc: document, find: () => null, prm: () => null, isReady: () => true };
+
+    await createPageOps(env).selectStockRow({ linkId: `${G}_ctl04_SelectlinkButton` });
+
+    expect(clicked).toBe(1);
+  });
+
+  it('writes the same number into Kullanılacak Adet and Kullanılacak Miktarı', async () => {
+    const R = `${RP}RadGridStock_ctl00_ctl02_ctl03_`;
+    document.body.innerHTML = `<input id="${R}txtStockQuantity"><input id="${R}txtStockAmount">`;
+    const log: string[] = [];
+    const comps: Record<string, Record<string, unknown>> = {
+      [`${R}txtStockQuantity`]: { set_value: (v: string) => log.push(`adet:${v}`) },
+      [`${R}txtStockAmount`]: { set_value: (v: string) => log.push(`miktar:${v}`) },
+    };
+    const env: TelerikEnv = { doc: document, find: (id) => comps[id] ?? null, prm: () => null, isReady: () => true };
+    const ops = createPageOps(env);
+
+    await ops.setStockQuantities({ quantity: 2 });
+    await expect(ops.setStockQuantities({ quantity: 0 })).rejects.toMatchObject({ code: 'BAD_INPUT' });
+
+    expect(log).toEqual(['adet:2', 'miktar:2']);
+  });
+});

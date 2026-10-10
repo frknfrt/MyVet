@@ -161,6 +161,17 @@ export function setText(env: TelerikEnv, suffix: string, value: string): void {
   component(env, suffix).set_value(value);
 }
 
+/** Telerik kutusu varsa onun uzerinden, yoksa duz input (ilac stok penceresinin seri kutusu Telerik olmayabilir). */
+export function setTextLoose(env: TelerikEnv, suffix: string, value: string): void {
+  const id = clientId(env, suffix);
+  const c = env.find(id);
+  if (c && typeof c.set_value === 'function') {
+    c.set_value(value);
+    return;
+  }
+  (env.doc.getElementById(id) as HTMLInputElement).value = value;
+}
+
 export function clickButton(env: TelerikEnv, suffix: string): Promise<{ postback: boolean }> {
   const id = clientId(env, suffix);
   const c = env.find(id);
