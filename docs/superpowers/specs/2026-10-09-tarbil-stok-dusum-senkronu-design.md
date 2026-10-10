@@ -163,6 +163,10 @@ Durum (2026-10-10): **Plan A tamamlandı** (`docs/superpowers/plans/2026-10-09-t
 web ve eklentide reçete aktarımını gösterme + elle onay. **Plan B** = eklentinin "Stoktan Düşerek İlaç Reçetesi Ekle" formunu
 doldurması ve başarı satırlarıyla AUTO onay (yukarıdaki 1–3 canlı inceleme sonrası).
 
+Durum (2026-10-10): **Plan B uygulandı** (`docs/superpowers/plans/2026-10-10-tarbil-recete-doldurma.md`) — eklenti reçete
+formunu doldurur (tarih, sınıf, tür, teşhis, hayvan, ilaç satırları: seri ile stok penceresi, Adet = Miktar = Vetly adedi);
+satır Kaydet ve Reçeteyi Onayla hekimde; başarı yakalanınca kaydedilen satırlar AUTO onayla Vetly'ye gider.
+
 ## 9. Test
 
 - Backend birim: finalize → bağlı/bağlı olmayan ayrımı; settle eşleştirme kuralları (§5.3); MANUAL; iptal öncesi/sonrası;
@@ -211,3 +215,8 @@ yeni kayıtlara uygulanır. Prod'a çıkmadan önce `pending_stock_deduction` bo
 - Kullanıcı (2026-10-10): TARBİL stoktan **Adet**i düşer → eklenti `txtStockQuantity` = Vetly `stockQuantity`.
 - Hâlâ bilinmiyor: Miktar'ın anlamı ve zorunluluğu (sunucu doğrulaması); Kaydet sonrası satır yapısı;
   "Reçeteyi Onayla" sonrası başarı ekranı.
+- **İlk gerçek reçetede canlı doğrulanacaklar (Plan B):** (1) başarı paneli `_UCRECEIPTNotification_pnlNotifiSuccess`
+  (yanlışsa AUTO hiç tetiklenmez; hekim MANUAL ile kapatır); (2) tür/teşhis postback'lerinin birbirini sıfırlayıp
+  sıfırlamadığı (sıra: tarih → sınıf → tür → teşhis → PetVet); (3) satır Kaydet sonrası kaydedilmiş satırın yapısı
+  (`Ürün`, `Seri Numarası`, `Kullanılacak Adet` sütunları); (4) teşhis listesinin (`lbxDiagnosedDisease`) öğe değerinin
+  hastalık id'si mi ad mı olduğu; (5) satır Kaydet'in TARBİL stoğunu düşüp düşmediği (düşmüyorsa eklentiye verilebilir).
