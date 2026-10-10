@@ -28,7 +28,7 @@ function render(submission: Submission) {
 afterEach(() => container?.remove());
 
 describe('SubmissionCard', () => {
-  it('shows a stock prescription with its lines and only manual confirmation', () => {
+  it('shows a stock prescription with its lines and lets the extension fill it', () => {
     const { text, buttons } = render({
       ...base, documentType: 'PRESCRIPTION', vaccineName: 'Reçete', lotNumber: null, administeredDate: null, vaccineKey: '',
       prescription: {
@@ -40,8 +40,8 @@ describe('SubmissionCard', () => {
     expect(text).toContain('Reçete — stoktan düşüm');
     expect(text).toContain('Pnömoni');
     expect(text).toContain('SYNULOX · Seri S1 · 2 adet');
-    expect(text).toContain('Stoktan Düşerek İlaç Reçetesi Ekle');
-    expect(buttons).not.toContain("TARBİL'de doldur");
+    expect(text).not.toContain('yakında');
+    expect(buttons).toContain("TARBİL'de doldur");
     expect(buttons).toContain('Gönderildi olarak işaretle');
   });
 

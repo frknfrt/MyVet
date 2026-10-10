@@ -71,6 +71,10 @@ export function createReceiptFlow(d: ReceiptDeps) {
       return;
     }
     sub = res.data;
+    if (sub.documentType === 'PRESCRIPTION') {
+      d.card.show(views.prescriptionElsewhere(sub));
+      return;
+    }
     if (sub.status === 'SUBMITTED') {
       d.card.show(views.submitted(sub));
       return;
@@ -242,7 +246,7 @@ export function createReceiptFlow(d: ReceiptDeps) {
       const clickedRecently = st.insertClickedAt !== undefined && d.now() - st.insertClickedAt <= SUCCESS_WINDOW_MS;
       const freshSuccess = hasFreshSuccess(d.doc, RECEIPT.successPanel, staleSuccess);
       if (clickedRecently && freshSuccess) {
-        await confirm(s);
+        await confirm(s, st);
         return;
       }
       if (st.step === 'choosingProduct') await checkProductRow(s);
@@ -281,9 +285,14 @@ export function createReceiptFlow(d: ReceiptDeps) {
     d.card.show(views.productReady(s));
   }
 
-  async function confirm(s: Submission): Promise<void> {
+  async function confirm(s: Submission, st: FlowState): Promise<void> {
     finishing = true;
-    const r = await d.send<{ queued?: boolean }>({ type: 'MARK_SUBMITTED', id: s.id, method: 'AUTO', tarbilReference: null });
+    // Formda kaydedilmis urun satirlari (asi: satir basina 1 doz); yoksa backend planlanan adedi duser.
+    const serials = (st.stepData?.savedSerials as string[] | undefined) ?? [];
+    const lines = serials.map((serialNumber) => ({ productName: s.tarbilProductName ?? s.vaccineName, serialNumber, quantity: 1 }));
+    const r = await d.send<{ queued?: boolean }>({
+      type: 'MARK_SUBMITTED', id: s.id, method: 'AUTO', tarbilReference: null, ...(lines.length > 0 ? { lines } : {}),
+    });
     if (!r.ok) {
       finishing = false;
       d.card.show(views.failed(s, r.code));
@@ -301,9 +310,13 @@ export function createReceiptFlow(d: ReceiptDeps) {
     (e) => {
       if (!isConfirmClick(e.target, RECEIPT.insertButtons)) return;
       markStaleSuccess(d.doc, RECEIPT.successPanel, staleSuccess);
+      // Seriler tiklama aninda okunur: onaydan sonra form temizlenebilir.
+      const savedSerials = readSavedProductSerials(d.doc);
       void (async () => {
         const st = await current();
-        if (st && CONFIRM_STEPS.includes(st.step)) await d.flow.update(st.submissionId, { insertClickedAt: d.now() });
+        if (st && CONFIRM_STEPS.includes(st.step)) {
+          await d.flow.update(st.submissionId, { insertClickedAt: d.now(), stepData: { ...st.stepData, savedSerials } });
+        }
       })();
     },
     true,

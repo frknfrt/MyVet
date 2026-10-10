@@ -119,6 +119,13 @@ export const views = {
     ]),
   elsewhere: (s: Submission): CardView =>
     view(s, 'Bu aşıyı "Aşı Uygulama Belgesi Ekle" sayfasında dolduracağız.', 'muted', [{ id: 'open', label: 'Aşı sayfasını aç' }]),
+  prescriptionElsewhere: (s: Submission): CardView => ({
+    lines: [
+      { text: s.patientName, tone: 'strong' },
+      { text: 'Bu bir reçete aktarımı; "Stoktan Düşerek İlaç Reçetesi Ekle" sayfasında doldurulur.', tone: 'muted' },
+    ],
+    actions: [],
+  }),
   stock: (text: string, tone?: Tone, actions: CardAction[] = []): CardView => ({ lines: [{ text: 'TARBİL stoğu', tone: 'strong' }, { text, tone }], actions }),
   stockPopup: (text: string, tone?: Tone): CardView => ({ lines: [{ text: 'Vetly', tone: 'strong' }, { text, tone }], actions: [] }),
   popup: (text: string, tone?: Tone): CardView => ({ lines: [{ text, tone }], actions: [] }),

@@ -25,12 +25,16 @@ export function SubmissionCard({ submission: s, onDone }: { submission: Submissi
     else setNote(res.error);
   }
 
-  async function setActive() {
-    await sendToBackground({ type: 'SET_ACTIVE', id: s.id });
-    setNote("TARBİL aşı sayfası açılıyor. Oturum kapalıysa e-Devlet ile giriş yapın; giriş sonrası form kendiliğinden doldurulur.");
-  }
-
   const isPrescription = s.documentType === 'PRESCRIPTION';
+
+  async function setActive() {
+    await sendToBackground({ type: 'SET_ACTIVE', id: s.id, documentType: s.documentType ?? 'VACCINATION' });
+    setNote(
+      isPrescription
+        ? 'TARBİL reçete sayfası açılıyor. Oturum kapalıysa e-Devlet ile giriş yapın; giriş sonrası form kendiliğinden doldurulur.'
+        : 'TARBİL aşı sayfası açılıyor. Oturum kapalıysa e-Devlet ile giriş yapın; giriş sonrası form kendiliğinden doldurulur.',
+    );
+  }
 
   if (s.status === 'SUBMITTED') {
     return (
@@ -62,8 +66,7 @@ export function SubmissionCard({ submission: s, onDone }: { submission: Submissi
             ))}
           </ul>
           <div className="muted">
-            Otomatik doldurma yakında — TARBİL'de "Stoktan Düşerek İlaç Reçetesi Ekle" ile girip onaylayın, sonra burada
-            gönderildi olarak işaretleyin.
+            Formu ve ilaç satırlarını biz doldururuz; satırdaki Kaydet'e ve Reçeteyi Onayla'ya siz basarsınız.
           </div>
         </>
       ) : (
@@ -77,9 +80,7 @@ export function SubmissionCard({ submission: s, onDone }: { submission: Submissi
         </>
       )}
       <div className="row">
-        {!isPrescription && (
-          <button onClick={setActive} disabled={busy}>TARBİL'de doldur</button>
-        )}
+        <button onClick={setActive} disabled={busy}>TARBİL'de doldur</button>
         <button className="primary" onClick={markSubmitted} disabled={busy}>Gönderildi olarak işaretle</button>
         <button onClick={dismiss} disabled={busy}>Bildirilmeyecek</button>
       </div>

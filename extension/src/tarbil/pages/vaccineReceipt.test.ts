@@ -84,6 +84,35 @@ async function setup(sub: Partial<Submission> = {}, step: FlowStep | null = 'arm
 }
 
 describe('receiptFlow', () => {
+  it('leaves a prescription alone on the vaccine page', async () => {
+    page();
+    const { receipt, calls, text } = await setup({ documentType: 'PRESCRIPTION' });
+
+    await receipt.start();
+
+    expect(calls).toEqual([]);
+    expect(text()).toContain('Stoktan Düşerek İlaç Reçetesi Ekle');
+  });
+
+  it('reports the saved vaccine serial with the confirmation', async () => {
+    page();
+    productGrid({ saved: ['665932'] });
+    const { receipt, sent, flow, mutate } = await setup({ lotNumber: '665932', tarbilProductName: 'Biocan R' }, 'productReady');
+    await receipt.start();
+
+    (document.getElementById(`${P}btnInsert_input`) as HTMLInputElement).click();
+    await vi.waitFor(async () => expect((await flow.get())?.insertClickedAt).toBeDefined());
+    showSuccess();
+    mutate();
+
+    await vi.waitFor(() =>
+      expect(sent).toContainEqual({
+        type: 'MARK_SUBMITTED', id: 's1', method: 'AUTO', tarbilReference: null,
+        lines: [{ productName: 'Biocan R', serialNumber: '665932', quantity: 1 }],
+      }),
+    );
+  });
+
   it('fills date and species, then opens the PetVet search', async () => {
     page();
     const { receipt, calls, flow } = await setup();
