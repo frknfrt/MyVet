@@ -11,14 +11,22 @@ import {
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { FieldWrap, Input, Select } from '../../components/ui/Field';
+import { inventoryApi, InventoryItem } from '../../api/inventoryApi';
 import encounterStyles from './EncounterPage.module.css';
 import styles from './PrescriptionCard.module.css';
+import { StockGivePicker } from './StockGivePicker';
+import { TarbilDiseaseSelect } from './TarbilDiseaseSelect';
 
 interface PrescriptionCardProps {
-  encounterId: string;
+  /** null: hasta sayfasından muayenesiz reçete (spec 2026-10-09 S5.6). */
+  encounterId: string | null;
   patientId: string;
   readOnly: boolean;
+  onChanged?: () => void;
 }
+
+/** Form satırı: "Kliniğin stoğundan ver" işaretliyse stok kalemi + adet gönderilir. */
+type ItemDraft = PrescriptionItemPayload & { giveFromStock: boolean };
 
 const ROUTE_LABELS: Record<DrugRoute, string> = {
   ORAL: 'Ağızdan',
@@ -32,19 +40,31 @@ const STATUS_LABELS: Record<Prescription['status'], string> = {
   CANCELLED: 'İptal Edildi',
 };
 
-function emptyItem(defaultDrugId: string): PrescriptionItemPayload {
-  return { drugId: defaultDrugId, dosage: '', frequency: '', durationDays: 7, route: 'ORAL' };
+function emptyItem(defaultDrugId: string): ItemDraft {
+  return {
+    drugId: defaultDrugId,
+    dosage: '',
+    frequency: '',
+    durationDays: 7,
+    route: 'ORAL',
+    inventoryItemId: null,
+    stockQuantity: null,
+    giveFromStock: false,
+  };
 }
 
 function errorMessageOf(err: unknown): string {
   return err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Beklenmeyen bir hata oluştu';
 }
 
-export function PrescriptionCard({ encounterId, patientId, readOnly }: PrescriptionCardProps) {
+export function PrescriptionCard({ encounterId, patientId, readOnly, onChanged }: PrescriptionCardProps) {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [drugs, setDrugs] = useState<DrugSummary[]>([]);
   const [formOpen, setFormOpen] = useState(false);
-  const [items, setItems] = useState<PrescriptionItemPayload[]>([]);
+  const [items, setItems] = useState<ItemDraft[]>([]);
+  const [tarbilDiseaseId, setTarbilDiseaseId] = useState('');
+  const [stockItems, setStockItems] = useState<InventoryItem[]>([]);
+  const [confirmCancel, setConfirmCancel] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [interactionWarnings, setInteractionWarnings] = useState<DrugInteractionWarning[]>([]);
@@ -57,6 +77,7 @@ export function PrescriptionCard({ encounterId, patientId, readOnly }: Prescript
 
   useEffect(() => {
     clinicalApi.listDrugs().then(setDrugs);
+    inventoryApi.list().then(setStockItems).catch(() => setStockItems([]));
     reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [encounterId, patientId]);
@@ -80,8 +101,32 @@ export function PrescriptionCard({ encounterId, patientId, readOnly }: Prescript
     return drugs.find((d) => d.id === id)?.name ?? id;
   }
 
+  function stockName(id: string | null) {
+    return stockItems.find((s) => s.id === id)?.name ?? 'Stok kalemi';
+  }
+
+  async function cancelPrescription(id: string) {
+    if (confirmCancel !== id) {
+      setConfirmCancel(id);
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await clinicalApi.cancelPrescription(id);
+      setConfirmCancel(null);
+      reload();
+      onChanged?.();
+    } catch (err) {
+      setError(errorMessageOf(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function openForm() {
     setItems([emptyItem(drugs[0]?.id ?? '')]);
+    setTarbilDiseaseId('');
     setFormOpen(true);
     setError(null);
   }
@@ -90,7 +135,7 @@ export function PrescriptionCard({ encounterId, patientId, readOnly }: Prescript
     setItems((prev) => [...prev, emptyItem(drugs[0]?.id ?? '')]);
   }
 
-  function updateItem(index: number, patch: Partial<PrescriptionItemPayload>) {
+  function updateItem(index: number, patch: Partial<ItemDraft>) {
     setItems((prev) => prev.map((it, i) => (i === index ? { ...it, ...patch } : it)));
   }
 
@@ -98,17 +143,30 @@ export function PrescriptionCard({ encounterId, patientId, readOnly }: Prescript
     setItems((prev) => prev.filter((_, i) => i !== index));
   }
 
+  const givesStock = items.some((it) => it.giveFromStock);
+  const stockIncomplete = givesStock && (!tarbilDiseaseId || items.some((it) => it.giveFromStock && !it.inventoryItemId));
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (busy || items.length === 0) return;
+    if (busy || items.length === 0 || stockIncomplete) return;
     setBusy(true);
     setError(null);
     try {
       const controlledSubstance = items.some((it) => drugs.find((d) => d.id === it.drugId)?.isControlled);
-      await clinicalApi.issuePrescription({ patientId, encounterId, controlledSubstance, items });
+      const payloadItems: PrescriptionItemPayload[] = items.map(({ giveFromStock, ...it }) =>
+        giveFromStock ? it : { ...it, inventoryItemId: null, stockQuantity: null },
+      );
+      await clinicalApi.issuePrescription({
+        patientId,
+        encounterId,
+        controlledSubstance,
+        tarbilDiseaseId: givesStock ? tarbilDiseaseId : null,
+        items: payloadItems,
+      });
       setFormOpen(false);
       setItems([]);
       reload();
+      onChanged?.();
     } catch (err) {
       setError(errorMessageOf(err));
     } finally {
@@ -118,12 +176,14 @@ export function PrescriptionCard({ encounterId, patientId, readOnly }: Prescript
 
   return (
     <div className={encounterStyles.card}>
-      <div className={encounterStyles.cardTitle}>Reçeteler</div>
+      <div className={encounterStyles.cardTitle}>{encounterId ? 'Reçeteler' : 'Muayenesiz reçeteler'}</div>
 
       {error && <div className={encounterStyles.aiError}>{error}</div>}
 
       {prescriptions.length === 0 ? (
-        <div className={styles.emptyNote}>Bu muayene için henüz reçete oluşturulmadı.</div>
+        <div className={styles.emptyNote}>
+          {encounterId ? 'Bu muayene için henüz reçete oluşturulmadı.' : 'Muayenesiz reçete yok.'}
+        </div>
       ) : (
         prescriptions.map((p) => (
           <div key={p.id} className={styles.prescriptionGroup}>
@@ -133,11 +193,24 @@ export function PrescriptionCard({ encounterId, patientId, readOnly }: Prescript
                 {STATUS_LABELS[p.status]}
               </Badge>
               {p.controlledSubstance && <Badge tone="warning">Kontrollü İlaç</Badge>}
+              {!readOnly && p.status === 'ACTIVE' && (
+                <button type="button" className={styles.removeBtn} disabled={busy} onClick={() => cancelPrescription(p.id)}>
+                  {confirmCancel === p.id
+                    ? "Emin misiniz? Stoktan verilenler TARBİL'de düşüldüyse reçeteyi TARBİL'de de iptal edin."
+                    : 'İptal et'}
+                </button>
+              )}
             </div>
             {p.items.map((item, i) => (
               <div key={i} className={styles.itemLine}>
                 {item.drugName ?? drugName(item.drugId)} — {item.dosage}, {item.frequency}, {item.durationDays} gün,{' '}
                 <span>{ROUTE_LABELS[item.route as DrugRoute] ?? item.route}</span>
+                {item.inventoryItemId && (
+                  <span className={styles.stockNote}>
+                    {' '}
+                    · Stoktan: {stockName(item.inventoryItemId)} × {item.stockQuantity}
+                  </span>
+                )}
               </div>
             ))}
           </div>
@@ -200,6 +273,39 @@ export function PrescriptionCard({ encounterId, patientId, readOnly }: Prescript
                   ))}
                 </Select>
               </FieldWrap>
+              <label className={styles.stockToggle}>
+                <input
+                  type="checkbox"
+                  aria-label="Kliniğin stoğundan ver"
+                  checked={item.giveFromStock}
+                  onChange={(e) =>
+                    updateItem(
+                      index,
+                      e.target.checked
+                        ? { giveFromStock: true, stockQuantity: 1 }
+                        : { giveFromStock: false, inventoryItemId: null, stockQuantity: null },
+                    )
+                  }
+                />
+                Kliniğin stoğundan ver
+              </label>
+              {item.giveFromStock && (
+                <>
+                  <StockGivePicker
+                    value={item.inventoryItemId ?? null}
+                    onChange={(id) => updateItem(index, { inventoryItemId: id })}
+                  />
+                  <FieldWrap label="Adet">
+                    <Input
+                      type="number"
+                      min={1}
+                      value={item.stockQuantity ?? 1}
+                      onChange={(e) => updateItem(index, { stockQuantity: Number(e.target.value) })}
+                      required
+                    />
+                  </FieldWrap>
+                </>
+              )}
               {items.length > 1 && (
                 <button type="button" className={styles.removeBtn} onClick={() => removeItem(index)}>
                   Kaldır
@@ -222,6 +328,13 @@ export function PrescriptionCard({ encounterId, patientId, readOnly }: Prescript
             </div>
           )}
 
+          {givesStock && (
+            <div className={styles.tarbilDisease}>
+              <TarbilDiseaseSelect value={tarbilDiseaseId} onChange={setTarbilDiseaseId} />
+              <div className={styles.emptyNote}>Stoktan verilen ilaçlar TARBİL'de reçete onaylanınca stoktan düşer.</div>
+            </div>
+          )}
+
           <div className={styles.formActions}>
             <Button type="button" variant="tertiary" onClick={addItemRow}>
               + İlaç Ekle
@@ -230,7 +343,7 @@ export function PrescriptionCard({ encounterId, patientId, readOnly }: Prescript
               <Button type="button" variant="secondary" onClick={() => setFormOpen(false)}>
                 Vazgeç
               </Button>{' '}
-              <Button type="submit" variant="primary" disabled={busy}>
+              <Button type="submit" variant="primary" disabled={busy || stockIncomplete}>
                 {busy ? 'Kaydediliyor...' : 'Reçete Oluştur'}
               </Button>
             </div>

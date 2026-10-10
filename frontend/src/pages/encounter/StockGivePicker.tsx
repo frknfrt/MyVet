@@ -1,0 +1,37 @@
+import { useEffect, useState } from 'react';
+import { inventoryApi, InventoryItem } from '../../api/inventoryApi';
+import { FieldWrap, Select } from '../../components/ui/Field';
+
+const todayIso = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+/**
+ * Reçeteden "kliniğin stoğundan ver" (spec 2026-10-09 S5.6): TARBİL'e bağlı, stokta olan ve SKT'si geçmemiş kalemler.
+ * Stok TARBİL'de reçete onaylanınca düşer.
+ */
+export function StockGivePicker({ value, onChange }: { value: string | null; onChange: (id: string | null) => void }) {
+  const [items, setItems] = useState<InventoryItem[]>([]);
+
+  useEffect(() => {
+    const today = todayIso();
+    inventoryApi
+      .list()
+      .then((all) => setItems(all.filter((i) => i.tarbilProductName && i.quantityOnHand > 0 && !(i.expiryDate && i.expiryDate < today))))
+      .catch(() => setItems([]));
+  }, []);
+
+  return (
+    <FieldWrap label="Stok ürünü">
+      <Select aria-label="Stok ürünü" value={value ?? ''} onChange={(e) => onChange(e.target.value || null)}>
+        <option value="">Seçiniz</option>
+        {items.map((i) => (
+          <option key={i.id} value={i.id}>
+            {`${i.name} · Seri ${i.lotNumber ?? '—'} · ${i.quantityOnHand} adet`}
+          </option>
+        ))}
+      </Select>
+    </FieldWrap>
+  );
+}

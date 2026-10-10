@@ -5,6 +5,7 @@ import { AppShell } from '../../components/layout/AppShell';
 import { ApiError } from '../../api/client';
 import { encounterApi, EncounterDetail } from '../../api/encounterApi';
 import { clinicalApi, Prescription } from '../../api/clinicalApi';
+import { PrescriptionCard } from '../encounter/PrescriptionCard';
 import { labApi, LabResultSummary } from '../../api/labApi';
 import { imagingApi, ImagingRecordSummary } from '../../api/imagingApi';
 import { vaccinationApi, VaccinationScheduleItem } from '../../api/vaccinationApi';
@@ -391,6 +392,10 @@ export function PatientDetailPage() {
             ))
           )}
         </div>
+      )}
+
+      {tab === 'receteler' && !prescriptionsForbidden && (
+        <PrescriptionCard encounterId={null} patientId={patientId} readOnly={!canStartEncounter} onChanged={load} />
       )}
 
       {tab === 'receteler' && (
