@@ -176,3 +176,33 @@ doldurması ve başarı satırlarıyla AUTO onay (yukarıdaki 1–3 canlı incel
 
 Sistem test aşamasında. Mevcut aşı kayıtlarının eski modelle düşülmüş stok hareketleri olduğu gibi kalır; yeni model yalnız
 yeni kayıtlara uygulanır. Prod'a çıkmadan önce `pending_stock_deduction` boş başlar.
+
+## 11. Canlı inceleme bulguları (2026-10-10, Plan B için)
+
+`ReceiptPageNew.aspx?type=1` ("Stoktan Düşerek İlaç Reçetesi Ekle"), hayvan türü Kedi seçili, onaysız; yalnız yapı okundu.
+Önek: `bodyCPH_ContentPlaceHolder1_cntRECEIPTBodyContent_`.
+
+- Üst form: `rbtnReceiptClass_0` Muayene/Tedavi Reçetesi, `_1` Tavsiye Reçetesi; `dpTreatmentStartDate` (dolu gelir);
+  teşhis `cbxDisease` (74 öğe) + `imgAddDisease` ekle, `txtDiseaseOther` + `imgAddOther`, `btnDeleteDisease`;
+  `cbxAnimalType` (34 tür, "Kedi", "Köpek" vb.); hayvan ekleme: `bntPetVet` (PetVet'ten), `btnHaybis`, `btnAnimalMultiple`;
+  hayvan tablosu `ReceiptAddOtherAnimal_RadOtherAnimal` (Küpe/Çip, Doğum, Cinsiyet, Irk, Eşgal, Sil); sahip alanları
+  `txtHoldingNo`, `txtAnimalOwnerName`, `txtPersonIdNo`, `txtAnimalOwnerAddress`. Onay: `btnInsert` / `btnInsert2`
+  ("Reçeteyi Onayla") — yalnız hekim basar.
+- Ürün bölümü `RadGridStock`: "Stok Ekle" `RadGridStock_ctl00_ctl02_ctl00_InitInsertButton` (postback, ekleme satırı açar).
+  Ekleme satırı (`…_ctl00_ctl02_ctl03_`): `txtStockProductName` (kilitli) + `imgSearch` → `openProductStockWindow("")`;
+  gizli `hiddenStockType`; etiketler `lblComPre`, `lblSerialNumber`, `lblExpirydate`, `lblStockQuantityDesc`, `lblStockType`;
+  girilecek alanlar `txtStockQuantity` (Kullanılacak Adet) ve `txtStockAmount` (Kullanılacak Miktarı); satır düğmeleri
+  `PerformInsertButton` (Kaydet) ve `CancelButton` (İptal).
+- `openProductStockWindow`: tedavi başlangıç tarihi boşsa `alert("Tedavi Başlangıç Tarihi Giriniz")`; değilse
+  `window.open('/Modules/RECEIPT/Pages/ModalPages/UcPharmacyStockSearchForReceiptModalPage.aspx?animalid=<türGUID>&typeid=1&date=dd/MM/yyyy')`.
+- Pencere (önek `…UcPharmacyStockSearchForReceipt_`): `rbtnStockType_0` Bütün Stok (seçili) / `_1` Açık Stok;
+  `txtSerialNumber`, `txtProductName`, `txtOldProductName`, `dpExpiryDateBegin/End`, `txtCommercialPresentation`,
+  `txtAtcCode`, `txtProductPermissionNo`, `txtPurificationBegin/End`; `btnSearch`. Tablo `radGridStock_ctl00`
+  (aramadan önce boş; sayfa başına 20, sayfalı): Seç, Ürün Adı, Takdim Şekli, Seri Numarası, Son Kullanma Tarihi, Ürün Miktarı.
+  Seç = `a[id$="SelectlinkButton"]` → `runLinkButton2("<id>,<id>,,,")` → `returnToParent2` (açan sayfada alanları doldurur,
+  `opener.runToParentPageMethod2`) → pencere kapanır.
+- Ana sayfa `runToParentPageMethod2(param)`: `param.split(",")[0]` → `hiddenSelectedStockId`, sonra gizli `updaRadgridField2`
+  tıklanır (postback, ekleme satırı dolar). Aşı penceresiyle aynı desen (`SelectlinkButton`, seri ile arama); eklentinin
+  `selectStockRow` / `productRows` kodu ilaç penceresi için öneki değiştirilerek kullanılabilir.
+- Hâlâ bilinmiyor: Seç sonrası satırın dolu hali; Adet ile Miktar arasındaki ilişki (ör. şişe/ml); Kaydet sonrası satır
+  yapısı ve "Reçeteyi Onayla" sonrası başarı ekranı.
