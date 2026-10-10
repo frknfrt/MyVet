@@ -19,8 +19,9 @@ export type StockPick =
 
 const clean = (s: string | null | undefined) => (s ?? '').replace(/\s+/g, ' ').trim();
 
+/** Bosluksuz, i/ı/İ -> I, buyuk harf (yerel ayarsiz; backend PendingDeductionService ile ayni kural). */
 export function normalizeSerial(s: string | null | undefined): string {
-  return clean(s).replace(/\s+/g, '').toLocaleUpperCase('tr-TR');
+  return clean(s).replace(/\s+/g, '').replace(/[iıİ]/g, 'I').toUpperCase();
 }
 
 const normalizeName = (s: string | null | undefined) => clean(s).toLocaleUpperCase('tr-TR');

@@ -122,6 +122,16 @@ class PendingDeductionServiceTest {
     }
 
     @Test
+    void matchesSerialRegardlessOfTurkishDottedI() {
+        UUID a = item("Synulox", "ki7");
+        PendingStockDeduction p = pending(a, 1);
+
+        service.settle(StockReferenceType.ENCOUNTER, ref, List.of(new ReportedDeductionLine("Synulox", "KI7", 1)), DeductionSettlement.TARBIL, staff);
+
+        assertThat(p.getStatus()).isEqualTo(PendingDeductionStatus.DEDUCTED);
+    }
+
+    @Test
     void doesNotDeductAlreadySettledLinesAgain() {
         UUID a = item("Synulox", "S1");
         PendingStockDeduction p = pending(a, 2);

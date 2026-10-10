@@ -63,6 +63,12 @@ describe('stock popup rows', () => {
   it('normalizes serials', () => {
     expect(normalizeSerial(' ab 12-3 ')).toBe('AB12-3');
   });
+
+  it('normalizes serials without Turkish dotted-I rules', () => {
+    expect(normalizeSerial('ki 7')).toBe('KI7');
+    expect(normalizeSerial('Kİ7')).toBe('KI7');
+    expect(normalizeSerial('kı7')).toBe('KI7');
+  });
 });
 
 describe('product edit row', () => {

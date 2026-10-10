@@ -32,8 +32,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PendingDeductionService {
 
-    private static final Locale TR = Locale.forLanguageTag("tr");
-
     private final PendingStockDeductionRepository repository;
     private final InventoryItemRepository items;
     private final RecordStockMovementUseCase movements;
@@ -123,7 +121,8 @@ public class PendingDeductionService {
             item.map(InventoryItem::getLotNumber).orElse(null), p.getQuantity(), p.getStatus(), p.getSettledQuantity());
     }
 
+    /** Bosluksuz, i/ı/İ -> I, buyuk harf (yerel ayarsiz): Vetly'de "ki7", TARBIL'de "KI7" ayni seri. */
     static String serial(String s) {
-        return s == null ? "" : s.replaceAll("\\s+", "").toUpperCase(TR);
+        return s == null ? "" : s.replaceAll("\\s+", "").replaceAll("[iıİ]", "I").toUpperCase(Locale.ROOT);
     }
 }
