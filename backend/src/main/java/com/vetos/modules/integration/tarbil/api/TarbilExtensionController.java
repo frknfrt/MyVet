@@ -78,7 +78,7 @@ public class TarbilExtensionController {
     public ResponseEntity<TarbilSubmissionResponse> submitted(@PathVariable UUID id, @Valid @RequestBody MarkSubmittedRequest request,
                                                               @AuthenticationPrincipal AuthenticatedStaffUser user) {
         // 204: kaydedildi ama asi Vetly'de artik gosterilemiyor (iptal edilmis).
-        return markSubmittedUseCase.execute(TenantContext.current(), user.staffUserId(), id, request.method(), request.tarbilReference())
+        return markSubmittedUseCase.execute(TenantContext.current(), user.staffUserId(), id, request.method(), request.tarbilReference(), request.toReported())
             .map(view -> ResponseEntity.ok(TarbilSubmissionResponse.from(view)))
             .orElseGet(() -> ResponseEntity.noContent().build());
     }

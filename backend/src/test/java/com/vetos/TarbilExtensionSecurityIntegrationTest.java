@@ -344,6 +344,46 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
             .isEqualTo("CANCELLED");
     }
 
+    /** Stoktan asi kaydeder; asi kaydi id'si ve kalem id'si (spec 2026-10-09 S5.2 testleri). */
+    private UUID[] vaccinateFromStock(int stock) throws Exception {
+        UUID branchA = inRootSession(() -> branchRepository.save(Branch.create(tenantA, "Aşı Şubesi")).getId());
+        String jwt = jwtTokenProvider.generateToken(staffA, tenantA, List.of(branchA), "VET");
+        UUID speciesId = inRootSession(() -> speciesRepository.findAll().get(0).getId());
+        UUID owner = asTenant(tenantA, () -> ownerRepository.save(Owner.register(tenantA, "A Sahip", "05550000000", null, null)).getId());
+        UUID patient = asTenant(tenantA, () -> patientRepository.save(
+            Patient.register(tenantA, owner, speciesId, null, "Pamuk", Sex.FEMALE, null)).getId());
+        UUID item = asTenant(tenantA, () -> inventoryItemRepository.save(
+            InventoryItem.create(tenantA, branchA, "Biocan R", "Aşı", null, stock, 0, LocalDate.of(2027, 1, 31), "665932", null)).getId());
+        String body = "{\"patientId\":\"" + patient + "\",\"vaccineName\":\"Biocan R\",\"lotNumber\":\"665932\","
+            + "\"administeredDate\":\"" + LocalDate.now() + "\",\"status\":\"ADMINISTERED\",\"inventoryItemId\":\"" + item + "\"}";
+        String location = mockMvc.perform(post("/api/v1/vaccination-records").header("Authorization", "Bearer " + jwt)
+                .contentType("application/json").content(body))
+            .andExpect(status().isCreated())
+            .andReturn().getResponse().getHeader("Location");
+        return new UUID[] { UUID.fromString(location.substring(location.lastIndexOf('/') + 1)), item };
+    }
+
+    private Integer stockOf(UUID item) {
+        return jdbcTemplate.queryForObject("SELECT quantity_on_hand FROM inventory_items WHERE id = ?", Integer.class, item);
+    }
+
+    @Test
+    void vaccinationStockIsDeductedOnceWhenTarbilConfirms() throws Exception {
+        UUID[] v = vaccinateFromStock(18);
+        UUID submission = jdbcTemplate.queryForObject("SELECT id FROM tarbil_submission WHERE source_id = ?", UUID.class, v[0]);
+        assertThat(stockOf(v[1])).isEqualTo(18);
+
+        for (int i = 0; i < 2; i++) {
+            mockMvc.perform(post("/api/v1/tarbil-extension/submissions/" + submission + "/submitted")
+                    .header("Authorization", "Bearer " + tokenA).contentType("application/json").content("{\"method\":\"AUTO\"}"))
+                .andExpect(status().isOk());
+        }
+
+        assertThat(stockOf(v[1])).isEqualTo(17);
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM pending_stock_deduction WHERE reference_id = ?", String.class, v[0]))
+            .isEqualTo("DEDUCTED");
+    }
+
     @Test
     void databaseRejectsASecondVaccinationOutMovement() {
         UUID item = asTenant(tenantA, () -> inventoryItemRepository.save(

@@ -12,7 +12,7 @@ import java.util.UUID;
 /**
  * Bir Vetly kaydinin (asi, recete, stok kabul) TARBIL'e aktarim durumu. Sunucu TARBIL'e hicbir sey
  * gondermez; resmi kaydi hekim TARBIL arayuzunde onaylar, eklenti (ya da hekim elle) bunu buraya bildirir.
- * source_id: VACCINATION -> vaccination_records.id, PRESCRIPTION -> prescriptions.id,
+ * source_id: VACCINATION -> vaccination_records.id, PRESCRIPTION -> source_kind'e gore encounters.id ya da prescriptions.id,
  * STOCK_RECEIPT -> stock_receipts.id. Bkz. docs/superpowers/specs/2026-10-04-tarbil-otomasyon-cekirdegi-design.md.
  */
 @Entity
@@ -22,7 +22,6 @@ import java.util.UUID;
 public class TarbilSubmission {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @Column(name = "tenant_id", nullable = false)
@@ -68,8 +67,21 @@ public class TarbilSubmission {
     @Column(name = "dismissed_by_staff_id")
     private UUID dismissedByStaffId;
 
+    /** V78; eski satirlarda belge turuyle doldurulur (spec 2026-10-09 S5.6). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source_kind")
+    private TarbilSourceKind sourceKind;
+
+    @Column(name = "tarbil_disease_id")
+    private UUID tarbilDiseaseId;
+
+    /** Onayda bildirilip Vetly'deki bekleyenlerle eslesmeyen TARBIL satirlari. */
+    @Column(name = "settlement_note")
+    private String settlementNote;
+
     public static TarbilSubmission queue(UUID tenantId, TarbilDocumentType type, UUID patientId, UUID sourceId) {
         TarbilSubmission submission = new TarbilSubmission();
+        submission.id = UUID.randomUUID();
         submission.tenantId = tenantId;
         submission.documentType = type;
         submission.patientId = patientId;
@@ -80,7 +92,33 @@ public class TarbilSubmission {
     }
 
     public static TarbilSubmission queueVaccination(UUID tenantId, UUID patientId, UUID vaccinationRecordId) {
-        return queue(tenantId, TarbilDocumentType.VACCINATION, patientId, vaccinationRecordId);
+        TarbilSubmission submission = queue(tenantId, TarbilDocumentType.VACCINATION, patientId, vaccinationRecordId);
+        submission.sourceKind = TarbilSourceKind.VACCINATION;
+        return submission;
+    }
+
+    /** Stoktan dusen recete: kaynak muayene (kullanilan ilaclar) ya da Vetly recetesi (spec 2026-10-09 S5). */
+    public static TarbilSubmission queuePrescription(UUID tenantId, UUID patientId, TarbilSourceKind kind, UUID sourceId, UUID tarbilDiseaseId) {
+        TarbilSubmission submission = queue(tenantId, TarbilDocumentType.PRESCRIPTION, patientId, sourceId);
+        submission.sourceKind = kind;
+        submission.tarbilDiseaseId = tarbilDiseaseId;
+        return submission;
+    }
+
+    /** source_kind bos olabilir (V78 oncesi / dogrudan queue); belge turunden turetilir. */
+    public TarbilSourceKind sourceKindOrDefault() {
+        if (sourceKind != null) {
+            return sourceKind;
+        }
+        return switch (documentType) {
+            case VACCINATION -> TarbilSourceKind.VACCINATION;
+            case PRESCRIPTION -> TarbilSourceKind.PRESCRIPTION;
+            case STOCK_RECEIPT -> TarbilSourceKind.STOCK_RECEIPT;
+        };
+    }
+
+    public void noteSettlement(String note) {
+        this.settlementNote = note;
     }
 
     /** @return true ise durum degisti; false ise zaten SUBMITTED'di (idempotent, ilk kayit korunur). */
