@@ -4,7 +4,7 @@ import { createConfirmationOutbox } from './confirmationOutbox';
 import { createRouter } from './router';
 import { ApiError } from './vetlyApi';
 
-function setup(markSubmitted: () => Promise<unknown>) {
+function setup(markSubmitted: (...args: unknown[]) => Promise<unknown>) {
   const tokens = createTokenStore(memoryStore());
   const session = memoryStore();
   const api = {
@@ -91,7 +91,7 @@ describe('router', () => {
     let opened = 0;
     const router = createRouter({
       api, tokens, outbox: createConfirmationOutbox(memoryStore(), api), session: memoryStore(),
-      openVaccinePage: async () => { opened++; },
+      openTarbilPage: async () => { opened++; },
     });
 
     const res = await router.handle({ type: 'SET_ACTIVE', id: 's9' });
@@ -127,5 +127,43 @@ describe('router', () => {
 
     expect(res).toEqual({ ok: true, data: { newCount: 2, quantityDiffersCount: 0, matchedCount: 5 } });
     expect(compared).toEqual([{ system: 'VETILAC_MEDICINE', lines: [] }]);
+  });
+
+  it('arms a prescription flow and opens the prescription page', async () => {
+    const tokens = createTokenStore(memoryStore());
+    const api = {} as never;
+    const session = memoryStore();
+    const opened: string[] = [];
+    const router = createRouter({
+      api, tokens, outbox: createConfirmationOutbox(memoryStore(), api), session,
+      openTarbilPage: async (documentType) => { opened.push(documentType); },
+    });
+
+    await router.handle({ type: 'SET_ACTIVE', id: 's9', documentType: 'PRESCRIPTION' });
+
+    expect(await session.get('tarbilFlow')).toMatchObject({ submissionId: 's9', documentType: 'PRESCRIPTION', step: 'armed' });
+    expect(opened).toEqual(['PRESCRIPTION']);
+  });
+
+  it('passes confirmed lines to the API', async () => {
+    const seen: unknown[] = [];
+    const lines = [{ productName: 'SYNULOX', serialNumber: 'S1', quantity: 2 }];
+    const { router } = setup(async (...args: unknown[]) => { seen.push(args); return {}; });
+
+    await router.handle({ type: 'MARK_SUBMITTED', id: 's1', method: 'AUTO', tarbilReference: null, lines });
+
+    expect(seen).toEqual([['s1', 'AUTO', null, lines]]);
+  });
+
+  it('queues confirmed lines when offline', async () => {
+    const lines = [{ productName: 'SYNULOX', serialNumber: 'S1', quantity: 2 }];
+    const enqueued: unknown[] = [];
+    const outbox = { enqueue: async (e: unknown) => { enqueued.push(e); }, size: async () => enqueued.length, flush: async () => 0 };
+    const api = { markSubmitted: async () => { throw new ApiError('OFFLINE', 'offline'); } } as never;
+    const router = createRouter({ api, tokens: createTokenStore(memoryStore()), outbox: outbox as never, session: memoryStore() });
+
+    await router.handle({ type: 'MARK_SUBMITTED', id: 's1', method: 'AUTO', tarbilReference: null, lines });
+
+    expect(enqueued).toEqual([{ id: 's1', method: 'AUTO', tarbilReference: null, lines }]);
   });
 });

@@ -3,7 +3,7 @@ import type { BackgroundRequest, ExternalRequest } from '../shared/messages';
 import { chromeLocalStore, chromeSessionStore, createTokenStore } from './chromeStorage';
 import { createConfirmationOutbox } from './confirmationOutbox';
 import { createRouter } from './router';
-import { openVaccinePage } from './tarbilTab';
+import { openTarbilPage } from './tarbilTab';
 import { allowTarbilPopups } from './tarbilPopups';
 import { createVetlyApi } from './vetlyApi';
 import { KEEP_ALIVE_ALARM, pingAll } from '../tarbil/core/keepAliveStatus';
@@ -21,7 +21,8 @@ const router = createRouter({
   tokens,
   outbox,
   session: chromeSessionStore(),
-  openVaccinePage: () => openVaccinePage(chrome.tabs, (windowId) => chrome.windows.update(windowId, { focused: true })),
+  openTarbilPage: (documentType) =>
+    openTarbilPage(chrome.tabs, (windowId) => chrome.windows.update(windowId, { focused: true }), documentType),
 });
 
 // Arac cubugu simgesine tiklamak yan paneli acar (kullanici hareketi gerektiren tek yol).

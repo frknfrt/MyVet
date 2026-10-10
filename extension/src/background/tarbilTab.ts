@@ -1,4 +1,5 @@
-import { VACCINE_PAGE_URL, pageKind } from '../tarbil/selectors';
+import type { DocumentType } from '../shared/types';
+import { pageKind, pageUrlFor } from '../tarbil/selectors';
 
 /** chrome.tabs'in kullandigimiz kismi (testte sahtesi verilir). */
 export interface TabsApi {
@@ -8,21 +9,29 @@ export interface TabsApi {
 }
 
 /**
- * Asi Uygulama Belgesi Ekle sayfasini one getirir: acik bir asi sayfasi sekmesi varsa ona gecer, yoksa yeni
- * sekmede acar. Oturum kapaliysa TARBIL giris ekranini gosterir; e-Devlet donusunde icerik betigi asi sayfasina
- * gecer (spec S12.2). Baska bir TARBIL sekmesinin adresi DEGISTIRILMEZ -- orada kaydedilmemis is olabilir.
+ * Belge turunun TARBIL sayfasini one getirir: acik bir sekmesi varsa ona gecer, yoksa yeni sekmede acar. Oturum kapaliysa
+ * TARBIL giris ekranini gosterir; e-Devlet donusunde icerik betigi sayfaya gecer (spec S12.2). Baska bir TARBIL sekmesinin
+ * adresi DEGISTIRILMEZ -- orada kaydedilmemis is olabilir.
  */
-export async function openVaccinePage(tabs: TabsApi, focusWindow: (windowId: number) => Promise<unknown>): Promise<void> {
+export async function openTarbilPage(
+  tabs: TabsApi,
+  focusWindow: (windowId: number) => Promise<unknown>,
+  documentType: DocumentType = 'VACCINATION',
+): Promise<void> {
+  const kind = documentType === 'PRESCRIPTION' ? 'prescriptionReceipt' : 'receipt';
   const open = await tabs.query({ url: 'https://hbsapp.tarbil.gov.tr/*' });
-  const receipt = open.find((t) => {
+  const page = open.find((t) => {
     if (t.id === undefined || !t.url) return false;
     const u = new URL(t.url);
-    return pageKind({ pathname: u.pathname, search: u.search }) === 'receipt';
+    return pageKind({ pathname: u.pathname, search: u.search }) === kind;
   });
-  if (receipt?.id !== undefined) {
-    await tabs.update(receipt.id, { active: true });
-    if (receipt.windowId !== undefined) await focusWindow(receipt.windowId);
+  if (page?.id !== undefined) {
+    await tabs.update(page.id, { active: true });
+    if (page.windowId !== undefined) await focusWindow(page.windowId);
     return;
   }
-  await tabs.create({ url: VACCINE_PAGE_URL, active: true });
+  await tabs.create({ url: pageUrlFor(documentType), active: true });
 }
+
+export const openVaccinePage = (tabs: TabsApi, focusWindow: (windowId: number) => Promise<unknown>) =>
+  openTarbilPage(tabs, focusWindow, 'VACCINATION');

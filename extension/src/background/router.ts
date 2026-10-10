@@ -2,6 +2,7 @@ import type { BackgroundRequest, BackgroundResponse, ExtensionState, ExternalReq
 import type { KeyValueStore, TokenStore } from './chromeStorage';
 import type { ConfirmationOutbox } from './confirmationOutbox';
 import { createFlowStore } from '../shared/flowStore';
+import type { DocumentType } from '../shared/types';
 import { ApiError, type VetlyApi } from './vetlyApi';
 
 const ACTIVE_KEY = 'activeSubmissionId';
@@ -12,8 +13,8 @@ interface Deps {
   tokens: TokenStore;
   outbox: ConfirmationOutbox;
   session: KeyValueStore;
-  /** Yan panelden aktarim baslatilinca TARBIL asi sayfasini one getirir (yoksa acar). */
-  openVaccinePage?: () => Promise<void>;
+  /** Yan panelden aktarim baslatilinca belge turunun TARBIL sayfasini one getirir (yoksa acar). */
+  openTarbilPage?: (documentType: DocumentType) => Promise<void>;
 }
 
 function fail(e: unknown): BackgroundResponse<never> {
@@ -21,7 +22,7 @@ function fail(e: unknown): BackgroundResponse<never> {
   return { ok: false, error: 'Beklenmeyen hata', code: 'UNKNOWN' };
 }
 
-export function createRouter({ api, tokens, outbox, session, openVaccinePage }: Deps) {
+export function createRouter({ api, tokens, outbox, session, openTarbilPage }: Deps) {
   const flow = createFlowStore(session);
   async function state(): Promise<ExtensionState> {
     const paired = (await tokens.get()) !== null;
@@ -53,22 +54,24 @@ export function createRouter({ api, tokens, outbox, session, openVaccinePage }: 
             return { ok: true, data: await api.listPending() };
           case 'GET_SUBMISSION':
             return { ok: true, data: await api.getSubmission(req.id) };
-          case 'SET_ACTIVE':
-            await flow.arm(req.id);
+          case 'SET_ACTIVE': {
+            const documentType = req.documentType ?? 'VACCINATION';
+            await flow.arm(req.id, documentType);
             await session.set(ACTIVE_KEY, req.id);
             // Sekme acilamazsa aktarim yine hazir: hekim sayfayi kendisi acinca form doldurulur.
-            await openVaccinePage?.().catch(() => undefined);
+            await openTarbilPage?.(documentType).catch(() => undefined);
             return { ok: true, data: null };
+          }
           case 'GET_ACTIVE': {
             const id = await session.get<string>(ACTIVE_KEY);
             return { ok: true, data: id ? await api.getSubmission(id) : null };
           }
           case 'MARK_SUBMITTED':
             try {
-              return { ok: true, data: await api.markSubmitted(req.id, req.method, req.tarbilReference) };
+              return { ok: true, data: await api.markSubmitted(req.id, req.method, req.tarbilReference, req.lines) };
             } catch (e) {
               if (e instanceof ApiError && (e.code === 'OFFLINE' || e.code === 'UNKNOWN')) {
-                await outbox.enqueue({ id: req.id, method: req.method, tarbilReference: req.tarbilReference });
+                await outbox.enqueue({ id: req.id, method: req.method, tarbilReference: req.tarbilReference, lines: req.lines });
                 return { ok: true, data: { queued: true } };
               }
               throw e;

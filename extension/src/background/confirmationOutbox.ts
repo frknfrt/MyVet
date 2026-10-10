@@ -1,4 +1,4 @@
-import type { ConfirmationMethod } from '../shared/types';
+import type { ConfirmationMethod, ConfirmedLine } from '../shared/types';
 import type { KeyValueStore } from './chromeStorage';
 import { ApiError, type VetlyApi } from './vetlyApi';
 
@@ -6,6 +6,7 @@ export interface OutboxEntry {
   id: string;
   method: ConfirmationMethod;
   tarbilReference: string | null;
+  lines?: ConfirmedLine[];
 }
 
 const KEY = 'confirmationOutbox';
@@ -35,7 +36,7 @@ export function createConfirmationOutbox(store: KeyValueStore, api: Pick<VetlyAp
     for (let i = 0; i < entries.length; i++) {
       const entry = entries[i];
       try {
-        await api.markSubmitted(entry.id, entry.method, entry.tarbilReference);
+        await api.markSubmitted(entry.id, entry.method, entry.tarbilReference, entry.lines);
         sent++;
       } catch (e) {
         const code = e instanceof ApiError ? e.code : 'UNKNOWN';

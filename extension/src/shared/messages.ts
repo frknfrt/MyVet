@@ -1,4 +1,4 @@
-import type { ConfirmationMethod, ExtensionProfile, StockSnapshotLine, StockSystem, Submission } from './types';
+import type { ConfirmationMethod, ConfirmedLine, DocumentType, ExtensionProfile, StockSnapshotLine, StockSystem, Submission } from './types';
 
 export type BackgroundRequest =
   | { type: 'GET_STATE' }
@@ -6,9 +6,9 @@ export type BackgroundRequest =
   | { type: 'UNPAIR' }
   | { type: 'LIST_PENDING' }
   | { type: 'GET_SUBMISSION'; id: string }
-  | { type: 'SET_ACTIVE'; id: string }
+  | { type: 'SET_ACTIVE'; id: string; documentType?: DocumentType }
   | { type: 'GET_ACTIVE' }
-  | { type: 'MARK_SUBMITTED'; id: string; method: ConfirmationMethod; tarbilReference: string | null }
+  | { type: 'MARK_SUBMITTED'; id: string; method: ConfirmationMethod; tarbilReference: string | null; lines?: ConfirmedLine[] }
   | { type: 'UPLOAD_STOCK_SNAPSHOT'; system: StockSystem; lines: StockSnapshotLine[] }
   | { type: 'COMPARE_STOCK_SNAPSHOT'; system: StockSystem; lines: StockSnapshotLine[] }
   | { type: 'DISMISS'; id: string; reason: string };

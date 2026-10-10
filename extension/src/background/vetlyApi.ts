@@ -1,5 +1,5 @@
 import type { ErrorCode } from '../shared/messages';
-import type { ConfirmationMethod, ExtensionProfile, StockComparison, StockSnapshotLine, StockSystem, Submission } from '../shared/types';
+import type { ConfirmationMethod, ConfirmedLine, ExtensionProfile, StockComparison, StockSnapshotLine, StockSystem, Submission } from '../shared/types';
 import type { TokenStore } from './chromeStorage';
 
 export class ApiError extends Error {
@@ -52,10 +52,10 @@ export function createVetlyApi({ baseUrl, tokens, fetchFn = fetch }: Options) {
     getSubmission: (id: string) => request<Submission>(`/api/v1/tarbil-extension/submissions/${id}`),
     getByVaccination: (vaccinationRecordId: string) =>
       request<Submission>(`/api/v1/tarbil-extension/submissions/by-vaccination/${vaccinationRecordId}`),
-    markSubmitted: (id: string, method: ConfirmationMethod, tarbilReference: string | null) =>
+    markSubmitted: (id: string, method: ConfirmationMethod, tarbilReference: string | null, lines?: ConfirmedLine[]) =>
       request<Submission>(`/api/v1/tarbil-extension/submissions/${id}/submitted`, {
         method: 'POST',
-        body: JSON.stringify({ method, tarbilReference }),
+        body: JSON.stringify(lines && lines.length > 0 ? { method, tarbilReference, lines } : { method, tarbilReference }),
       }),
     dismiss: (id: string, reason: string) =>
       request<void>(`/api/v1/tarbil-extension/submissions/${id}/dismiss`, {

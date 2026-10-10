@@ -85,4 +85,16 @@ describe('confirmationOutbox', () => {
     expect(api.calls).toEqual(['a']);
     expect(await outbox.size()).toBe(2);
   });
+
+  it('replays the confirmed lines of a queued prescription', async () => {
+    const seen: unknown[] = [];
+    const api = { markSubmitted: async (...args: unknown[]) => { seen.push(args); return {} as never; } };
+    const outbox = createConfirmationOutbox(memoryStore(), api);
+    const lines = [{ productName: 'SYNULOX', serialNumber: 'S1', quantity: 2 }];
+    await outbox.enqueue({ id: 's1', method: 'AUTO', tarbilReference: null, lines });
+
+    await outbox.flush();
+
+    expect(seen).toEqual([['s1', 'AUTO', null, lines]]);
+  });
 });

@@ -54,4 +54,19 @@ describe('vetlyApi', () => {
     expect(await tokens.get()).toBe('vtx_new');
     expect((calls[0].init.headers as Record<string, string>).Authorization).toBeUndefined();
   });
+
+  it('sends confirmed prescription lines with the submitted call', async () => {
+    const tokens = createTokenStore(memoryStore());
+    await tokens.set('vtx_abc');
+    const { fn, calls } = fakeFetch(200, {});
+    const api = createVetlyApi({ baseUrl: 'https://x', tokens, fetchFn: fn });
+
+    await api.markSubmitted('s1', 'AUTO', null, [{ productName: 'SYNULOX', serialNumber: 'S1', quantity: 2 }]);
+    await api.markSubmitted('s2', 'MANUAL', null);
+
+    expect(JSON.parse(calls[0].init.body as string)).toEqual({
+      method: 'AUTO', tarbilReference: null, lines: [{ productName: 'SYNULOX', serialNumber: 'S1', quantity: 2 }],
+    });
+    expect(JSON.parse(calls[1].init.body as string)).toEqual({ method: 'MANUAL', tarbilReference: null });
+  });
 });
