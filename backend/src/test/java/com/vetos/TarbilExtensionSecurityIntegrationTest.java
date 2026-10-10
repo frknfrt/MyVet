@@ -385,6 +385,29 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
     }
 
     @Test
+    void tarbilConfirmationAfterVetlyOnlyDoesNotDeductAgain() throws Exception {
+        UUID[] v = vaccinateFromStock(18);
+        UUID submission = jdbcTemplate.queryForObject("SELECT id FROM tarbil_submission WHERE source_id = ?", UUID.class, v[0]);
+
+        mockMvc.perform(get("/api/v1/inventory/pending-deductions").header("Authorization", "Bearer " + jwtA))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[?(@.referenceId == '" + v[0] + "')]").isNotEmpty());
+
+        mockMvc.perform(post("/api/v1/inventory/pending-deductions/VACCINATION/" + v[0] + "/settle-vetly-only")
+                .header("Authorization", "Bearer " + jwtA))
+            .andExpect(status().isNoContent());
+        assertThat(stockOf(v[1])).isEqualTo(17);
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM tarbil_submission WHERE id = ?", String.class, submission)).isEqualTo("DISMISSED");
+        assertThat(jdbcTemplate.queryForObject("SELECT dismissed_reason FROM tarbil_submission WHERE id = ?", String.class, submission))
+            .isEqualTo("Yalnız Vetly'den düşüldü");
+
+        mockMvc.perform(post("/api/v1/tarbil-extension/submissions/" + submission + "/submitted")
+                .header("Authorization", "Bearer " + tokenA).contentType("application/json").content("{\"method\":\"AUTO\"}"))
+            .andExpect(status().isOk());
+        assertThat(stockOf(v[1])).isEqualTo(17);
+    }
+
+    @Test
     void databaseRejectsASecondVaccinationOutMovement() {
         UUID item = asTenant(tenantA, () -> inventoryItemRepository.save(
             InventoryItem.create(tenantA, inRootSession(() -> branchRepository.save(Branch.create(tenantA, "Kilit Şubesi")).getId()),

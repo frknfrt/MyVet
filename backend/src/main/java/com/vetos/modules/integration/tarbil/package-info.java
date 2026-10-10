@@ -2,7 +2,7 @@
     displayName = "Integration: TARBIL",
     allowedDependencies = {
         "modules.patient::domain", "modules.encounter::domain", "modules.encounter::domain.event",
-        "modules.tenant::domain", "modules.inventory::domain",
+        "modules.tenant::domain", "modules.inventory::domain", "modules.inventory::domain.event",
         "platform::security", "platform::tenancy", "platform::event", "platform::exception"
     }
 )
