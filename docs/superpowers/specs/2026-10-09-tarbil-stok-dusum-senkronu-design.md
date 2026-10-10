@@ -204,5 +204,9 @@ yeni kayıtlara uygulanır. Prod'a çıkmadan önce `pending_stock_deduction` bo
 - Ana sayfa `runToParentPageMethod2(param)`: `param.split(",")[0]` → `hiddenSelectedStockId`, sonra gizli `updaRadgridField2`
   tıklanır (postback, ekleme satırı dolar). Aşı penceresiyle aynı desen (`SelectlinkButton`, seri ile arama); eklentinin
   `selectStockRow` / `productRows` kodu ilaç penceresi için öneki değiştirilerek kullanılabilir.
-- Hâlâ bilinmiyor: Seç sonrası satırın dolu hali; Adet ile Miktar arasındaki ilişki (ör. şişe/ml); Kaydet sonrası satır
-  yapısı ve "Reçeteyi Onayla" sonrası başarı ekranı.
+- Seç sonrası ekleme satırı (2026-10-10): `txtStockProductName` (kilitli) ürün adıyla, `lblComPre` takdim şekliyle,
+  `lblSerialNumber` seriyle, `lblExpirydate` SKT ile, `lblStockQuantityDesc` "<n> Adet" biçiminde stokla, `lblStockType`
+  "Bütün Stok" ile dolar; `hiddenStockType` = 0. `txtStockQuantity` (Adet) RadNumericTextBox, tam sayı, min 0;
+  `txtStockAmount` (Miktar) RadNumericTextBox, 2 ondalık, min 0,01. İki alanda istemci tarafı hesap/olay yok.
+- Hâlâ bilinmiyor: Adet ile Miktar'ın anlamı ve zorunluluğu (sunucu doğrulaması); Kaydet sonrası satır yapısı;
+  "Reçeteyi Onayla" sonrası başarı ekranı.
