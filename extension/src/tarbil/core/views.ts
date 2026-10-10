@@ -1,7 +1,8 @@
 import type { Submission } from '../../shared/types';
 import type { CardAction, CardLine, CardView, Tone } from './card';
 
-function trDate(iso: string): string {
+function trDate(iso: string | null): string {
+  if (!iso) return '—';
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
   return m ? `${m[3]}.${m[2]}.${m[1]}` : iso;
 }

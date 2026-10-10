@@ -30,6 +30,8 @@ export function SubmissionCard({ submission: s, onDone }: { submission: Submissi
     setNote("TARBİL aşı sayfası açılıyor. Oturum kapalıysa e-Devlet ile giriş yapın; giriş sonrası form kendiliğinden doldurulur.");
   }
 
+  const isPrescription = s.documentType === 'PRESCRIPTION';
+
   if (s.status === 'SUBMITTED') {
     return (
       <div className="card">
@@ -42,6 +44,7 @@ export function SubmissionCard({ submission: s, onDone }: { submission: Submissi
   return (
     <div className="card">
       <strong>{s.patientName}</strong>
+      {isPrescription && <div>Reçete — stoktan düşüm</div>}
       <div className="muted">
         {[s.speciesName, s.breedName, s.sex ? SEX[s.sex] : null].filter(Boolean).join(' · ')}
       </div>
@@ -50,13 +53,33 @@ export function SubmissionCard({ submission: s, onDone }: { submission: Submissi
       {!s.microchipNumber && !s.passportNumber && (
         <div className="warning">Çip ve pasaport numarası yok. Hayvan TARBİL'de kayıtlı değilse önce kimliklendirme gerekir.</div>
       )}
-      <div>
-        {s.vaccineName}
-        {s.lotNumber && ` · Lot ${s.lotNumber}`} · {new Date(s.administeredDate).toLocaleDateString('tr-TR')}
-      </div>
-      {!s.vaccineMapping && <div className="muted">İlk kez aktarılıyor: aşı ürününü ve hastalığı TARBİL'de siz seçeceksiniz.</div>}
+      {isPrescription ? (
+        <>
+          <div className="muted">Teşhis: {s.prescription?.tarbilDiseaseName ?? '—'}</div>
+          <ul>
+            {(s.prescription?.lines ?? []).map((l, i) => (
+              <li key={i}>{`${l.tarbilProductName ?? l.itemName} · Seri ${l.lotNumber ?? '—'} · ${l.quantity} adet`}</li>
+            ))}
+          </ul>
+          <div className="muted">
+            Otomatik doldurma yakında — TARBİL'de "Stoktan Düşerek İlaç Reçetesi Ekle" ile girip onaylayın, sonra burada
+            gönderildi olarak işaretleyin.
+          </div>
+        </>
+      ) : (
+        <>
+          <div>
+            {s.vaccineName}
+            {s.lotNumber && ` · Lot ${s.lotNumber}`}
+            {s.administeredDate && ` · ${new Date(s.administeredDate).toLocaleDateString('tr-TR')}`}
+          </div>
+          {!s.vaccineMapping && <div className="muted">İlk kez aktarılıyor: aşı ürününü ve hastalığı TARBİL'de siz seçeceksiniz.</div>}
+        </>
+      )}
       <div className="row">
-        <button onClick={setActive} disabled={busy}>TARBİL'de doldur</button>
+        {!isPrescription && (
+          <button onClick={setActive} disabled={busy}>TARBİL'de doldur</button>
+        )}
         <button className="primary" onClick={markSubmitted} disabled={busy}>Gönderildi olarak işaretle</button>
         <button onClick={dismiss} disabled={busy}>Bildirilmeyecek</button>
       </div>

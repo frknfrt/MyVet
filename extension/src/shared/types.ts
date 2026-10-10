@@ -17,7 +17,8 @@ export interface Submission {
   lotNumber: string | null;
   /** Stoktan secilen asinin TARBIL urun adi (spec 2026-10-04 P2); stok baglantisi yoksa null. */
   tarbilProductName: string | null;
-  administeredDate: string;
+  /** Reçete aktarımında null. */
+  administeredDate: string | null;
   submittedAt: string | null;
   confirmationMethod: ConfirmationMethod | null;
   tarbilReference: string | null;
@@ -26,6 +27,17 @@ export interface Submission {
   speciesMapping: Record<string, unknown> | null;
   /** Backend P0'dan itibaren gelir; eski yanitlarda yoksa VACCINATION sayilir. */
   documentType?: DocumentType;
+  /** Stoktan düşen reçete (spec 2026-10-09 S7); aşıda yok/null. */
+  prescription?: PrescriptionPayload | null;
+}
+
+export interface PrescriptionPayload {
+  sourceKind: 'ENCOUNTER' | 'PRESCRIPTION';
+  tarbilDiseaseId: string | null;
+  tarbilDiseaseName: string | null;
+  treatmentStartDate: string;
+  /** Yalnız TARBİL düşümü bekleyen satırlar. */
+  lines: { itemName: string; tarbilProductName: string | null; lotNumber: string | null; quantity: number }[];
 }
 
 export interface ExtensionProfile {
