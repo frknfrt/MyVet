@@ -159,6 +159,10 @@ alanı eklenir; mevcut "PRESCRIPTION → prescriptions.id" yorumu güncellenir.
 4. Teşhis: TARBİL formu çoklu hastalık seçimine izin veriyor; ilk sürüm tek teşhis.
 5. Faz 2 için "İlaç Reçetesi Ekle" (`ReceiptPage.aspx?type=1`) formunun yapısı.
 
+Durum (2026-10-10): **Plan A tamamlandı** (`docs/superpowers/plans/2026-10-09-tarbil-stok-dusum-senkronu.md`) — backend,
+web ve eklentide reçete aktarımını gösterme + elle onay. **Plan B** = eklentinin "Stoktan Düşerek İlaç Reçetesi Ekle" formunu
+doldurması ve başarı satırlarıyla AUTO onay (yukarıdaki 1–3 canlı inceleme sonrası).
+
 ## 9. Test
 
 - Backend birim: finalize → bağlı/bağlı olmayan ayrımı; settle eşleştirme kuralları (§5.3); MANUAL; iptal öncesi/sonrası;
