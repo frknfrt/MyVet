@@ -115,9 +115,15 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
             jdbcTemplate.update("DELETE FROM tarbil_value_mapping WHERE tenant_id = ?", t);
             jdbcTemplate.update("DELETE FROM tarbil_stock_snapshot_line WHERE tenant_id = ?", t);
             jdbcTemplate.update("DELETE FROM tarbil_stock_snapshot WHERE tenant_id = ?", t);
+            jdbcTemplate.update("DELETE FROM invoice_lines WHERE invoice_id IN (SELECT id FROM invoices WHERE tenant_id = ?)", t);
+            jdbcTemplate.update("DELETE FROM invoices WHERE tenant_id = ?", t);
+            jdbcTemplate.update("DELETE FROM encounter_inventory_usage WHERE encounter_id IN (SELECT id FROM encounters WHERE tenant_id = ?)", t);
+            jdbcTemplate.update("DELETE FROM prescription_items WHERE tenant_id = ?", t);
+            jdbcTemplate.update("DELETE FROM prescriptions WHERE tenant_id = ?", t);
             jdbcTemplate.update("DELETE FROM stock_movements WHERE tenant_id = ?", t);
             jdbcTemplate.update("DELETE FROM inventory_items WHERE tenant_id = ?", t);
             jdbcTemplate.update("DELETE FROM vaccination_records WHERE tenant_id = ?", t);
+            jdbcTemplate.update("DELETE FROM encounters WHERE tenant_id = ?", t);
             jdbcTemplate.update("DELETE FROM patients WHERE owner_id IN (SELECT id FROM owners WHERE tenant_id = ?)", t);
             jdbcTemplate.update("DELETE FROM owners WHERE tenant_id = ?", t);
             jdbcTemplate.update("DELETE FROM staff_invites WHERE tenant_id = ?", t);
@@ -405,6 +411,82 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
                 .header("Authorization", "Bearer " + tokenA).contentType("application/json").content("{\"method\":\"AUTO\"}"))
             .andExpect(status().isOk());
         assertThat(stockOf(v[1])).isEqualTo(17);
+    }
+
+    /** Muayene: TARBIL'e bagli kalem kullanilip kapatilir; [encounterId, itemId, jwt'nin subesi]. */
+    private UUID[] finalizedEncounterUsingLinkedItem(int stock, int used) throws Exception {
+        UUID branchA = jdbcTemplate.queryForObject("SELECT branch_id FROM staff_users WHERE id = ?", UUID.class, staffA);
+        UUID speciesId = inRootSession(() -> speciesRepository.findAll().get(0).getId());
+        UUID owner = asTenant(tenantA, () -> ownerRepository.save(Owner.register(tenantA, "M Sahip", "05550000001", null, null)).getId());
+        UUID patient = asTenant(tenantA, () -> patientRepository.save(
+            Patient.register(tenantA, owner, speciesId, null, "Karabaş", Sex.MALE, null)).getId());
+        UUID item = asTenant(tenantA, () -> {
+            InventoryItem i = InventoryItem.create(tenantA, branchA, "Synulox", "İlaç", null, stock, 0, LocalDate.of(2027, 5, 1), "SY1", null);
+            i.linkTarbil("VETILAC_MEDICINE", "SYNULOX 250 MG", "Kutu");
+            return inventoryItemRepository.save(i).getId();
+        });
+        String location = mockMvc.perform(post("/api/v1/encounters").header("Authorization", "Bearer " + jwtA)
+                .contentType("application/json").content("{\"patientId\":\"" + patient + "\"}"))
+            .andExpect(status().isCreated()).andReturn().getResponse().getHeader("Location");
+        UUID encounter = UUID.fromString(location.substring(location.lastIndexOf('/') + 1));
+        mockMvc.perform(post("/api/v1/encounters/" + encounter + "/materials").header("Authorization", "Bearer " + jwtA)
+                .contentType("application/json").content("{\"inventoryItemId\":\"" + item + "\",\"quantity\":" + used + "}"))
+            .andExpect(status().isCreated());
+        mockMvc.perform(post("/api/v1/encounters/" + encounter + "/finalize").header("Authorization", "Bearer " + jwtA))
+            .andExpect(status().is2xxSuccessful());
+        return new UUID[] { encounter, item };
+    }
+
+    private UUID selectableDisease() {
+        return jdbcTemplate.queryForObject("SELECT id FROM tarbil_disease WHERE selectable ORDER BY sort_order LIMIT 1", UUID.class);
+    }
+
+    @Test
+    void encounterMedicineIsDeductedAfterTarbilConfirmation() throws Exception {
+        UUID[] e = finalizedEncounterUsingLinkedItem(10, 2);
+        assertThat(stockOf(e[1])).isEqualTo(10);
+
+        mockMvc.perform(get("/api/v1/tarbil/encounters/" + e[0] + "/deduction").header("Authorization", "Bearer " + jwtA))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.lines[0].status").value("PENDING"))
+            .andExpect(jsonPath("$.lines[0].quantity").value(2))
+            .andExpect(jsonPath("$.submissionId").doesNotExist());
+
+        String created = mockMvc.perform(post("/api/v1/tarbil/encounters/" + e[0] + "/deduction").header("Authorization", "Bearer " + jwtA)
+                .contentType("application/json").content("{\"tarbilDiseaseId\":\"" + selectableDisease() + "\"}"))
+            .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        UUID submission = UUID.fromString(created.replaceAll(".*\"submissionId\":\"([^\"]+)\".*", "$1"));
+        assertThat(jdbcTemplate.queryForObject("SELECT source_kind FROM tarbil_submission WHERE id = ?", String.class, submission)).isEqualTo("ENCOUNTER");
+
+        mockMvc.perform(post("/api/v1/tarbil-extension/submissions/" + submission + "/submitted")
+                .header("Authorization", "Bearer " + tokenA).contentType("application/json").content("{\"method\":\"MANUAL\"}"))
+            .andExpect(status().is2xxSuccessful());
+        assertThat(stockOf(e[1])).isEqualTo(8);
+    }
+
+    @Test
+    void queueWithoutPendingLinesConflicts() throws Exception {
+        UUID[] e = finalizedEncounterUsingLinkedItem(10, 1);
+        mockMvc.perform(post("/api/v1/inventory/pending-deductions/ENCOUNTER/" + e[0] + "/settle-vetly-only").header("Authorization", "Bearer " + jwtA))
+            .andExpect(status().isNoContent());
+
+        mockMvc.perform(post("/api/v1/tarbil/encounters/" + e[0] + "/deduction").header("Authorization", "Bearer " + jwtA)
+                .contentType("application/json").content("{\"tarbilDiseaseId\":\"" + selectableDisease() + "\"}"))
+            .andExpect(status().isConflict());
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM tarbil_submission WHERE source_id = ?", Integer.class, e[0])).isZero();
+    }
+
+    @Test
+    void foreignEncounterDeductionIsNotFound() throws Exception {
+        UUID[] e = finalizedEncounterUsingLinkedItem(10, 1);
+        UUID staffB = createStaff(tenantB);
+        String jwtB = jwtTokenProvider.generateToken(staffB, tenantB, List.of(), "VET");
+
+        mockMvc.perform(get("/api/v1/tarbil/encounters/" + e[0] + "/deduction").header("Authorization", "Bearer " + jwtB))
+            .andExpect(status().isNotFound());
+        mockMvc.perform(post("/api/v1/tarbil/encounters/" + e[0] + "/deduction").header("Authorization", "Bearer " + jwtB)
+                .contentType("application/json").content("{\"tarbilDiseaseId\":\"" + selectableDisease() + "\"}"))
+            .andExpect(status().isNotFound());
     }
 
     @Test

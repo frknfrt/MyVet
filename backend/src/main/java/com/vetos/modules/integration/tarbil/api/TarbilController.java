@@ -5,6 +5,8 @@ import com.vetos.modules.integration.tarbil.api.dto.TarbilDiseaseResponse;
 import com.vetos.modules.integration.tarbil.api.dto.ApplyStockSyncRequest;
 import com.vetos.modules.integration.tarbil.api.dto.ApplyStockSyncResponse;
 import com.vetos.modules.integration.tarbil.api.dto.DismissRequest;
+import com.vetos.modules.integration.tarbil.api.dto.EncounterTarbilDeductionResponse;
+import com.vetos.modules.integration.tarbil.api.dto.QueueEncounterDeductionRequest;
 import com.vetos.modules.integration.tarbil.api.dto.StockSyncResponse;
 import com.vetos.modules.integration.tarbil.api.dto.ExtensionTokenResponse;
 import com.vetos.modules.integration.tarbil.api.dto.PairingCodeResponse;
@@ -13,7 +15,9 @@ import com.vetos.modules.integration.tarbil.api.dto.TarbilStatusResponse;
 import com.vetos.modules.integration.tarbil.api.dto.TarbilSyncLogResponse;
 import com.vetos.modules.integration.tarbil.application.ApplyStockSyncUseCase;
 import com.vetos.modules.integration.tarbil.application.CreatePairingCodeUseCase;
+import com.vetos.modules.integration.tarbil.application.GetEncounterTarbilDeductionUseCase;
 import com.vetos.modules.integration.tarbil.application.GetStockSyncViewUseCase;
+import com.vetos.modules.integration.tarbil.application.QueueEncounterDeductionUseCase;
 import com.vetos.modules.integration.tarbil.application.DeleteTarbilMappingUseCase;
 import com.vetos.modules.integration.tarbil.application.DismissSubmissionUseCase;
 import com.vetos.modules.integration.tarbil.application.GetTarbilStatusSummaryUseCase;
@@ -34,6 +38,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /** api-conventions.md rol matrisi: /tarbil/** -> ADMIN, VET (aktarimi hekimler yapar). */
@@ -55,6 +60,8 @@ public class TarbilController {
     private final ListTarbilDiseasesUseCase listTarbilDiseasesUseCase;
     private final GetStockSyncViewUseCase getStockSyncViewUseCase;
     private final ApplyStockSyncUseCase applyStockSyncUseCase;
+    private final QueueEncounterDeductionUseCase queueEncounterDeductionUseCase;
+    private final GetEncounterTarbilDeductionUseCase getEncounterTarbilDeductionUseCase;
 
     @GetMapping("/status")
     public TarbilStatusResponse status() {
@@ -124,6 +131,20 @@ public class TarbilController {
     public ApplyStockSyncResponse applyStockSync(@PathVariable UUID snapshotId, @Valid @RequestBody ApplyStockSyncRequest request,
                                                  @AuthenticationPrincipal AuthenticatedStaffUser user) {
         return new ApplyStockSyncResponse(applyStockSyncUseCase.execute(TenantContext.current(), firstBranch(user), snapshotId, request.lineIds()));
+    }
+
+    /** Muayene karti "TARBIL'den stok dus" (spec 2026-10-09 S5.1): stoktan dusen recete aktarimi kuyruga girer. */
+    @PostMapping("/encounters/{encounterId}/deduction")
+    @ResponseStatus(HttpStatus.CREATED)
+    public Map<String, UUID> queueEncounterDeduction(@PathVariable UUID encounterId,
+                                                     @Valid @RequestBody QueueEncounterDeductionRequest request) {
+        return Map.of("submissionId", queueEncounterDeductionUseCase.execute(encounterId, request.tarbilDiseaseId()));
+    }
+
+    @GetMapping("/encounters/{encounterId}/deduction")
+    @PreAuthorize("hasAnyRole('ADMIN','VET','TECHNICIAN')")
+    public EncounterTarbilDeductionResponse encounterDeduction(@PathVariable UUID encounterId) {
+        return EncounterTarbilDeductionResponse.from(getEncounterTarbilDeductionUseCase.execute(encounterId));
     }
 
     /** Spec 2026-10-04 S13: stok kullanicinin ilk subesine islenir (cok subeli secim sonraki is). */
