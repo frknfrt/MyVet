@@ -25,6 +25,7 @@ const submission = {
     lines: [
       { itemName: 'Advantage', tarbilProductName: 'Advantage % 10', lotNumber: 'KV04Z81', quantity: 1 },
       { itemName: 'Synulox', tarbilProductName: 'SYNULOX', lotNumber: 'S1', quantity: 2 },
+      { itemName: 'Ketofen', tarbilProductName: 'KETOFEN', lotNumber: 'ki7', quantity: 1 },
     ],
   },
 } as Submission;
@@ -71,5 +72,15 @@ describe('runMedicineStockPopupFlow', () => {
     await runMedicineStockPopupFlow(deps);
 
     expect(calls).toEqual([]);
+  });
+
+  it('searches TARBIL with the normalized serial', async () => {
+    popup([['KETOFEN', 'KI7', '31.01.2027']]);
+    const { deps, calls } = await setup('PRESCRIPTION', 2);
+
+    await runMedicineStockPopupFlow(deps);
+
+    expect(calls[1].args).toEqual({ serial: 'KI7' });
+    expect(calls.map((c) => c.op)).toContain('selectStockRow');
   });
 });

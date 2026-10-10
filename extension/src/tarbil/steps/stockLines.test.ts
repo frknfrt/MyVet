@@ -69,4 +69,10 @@ describe('stock lines', () => {
       { productName: 'Advantage % 10', serial: 'KV04Z81', expiryDate: '2027-01-31', linkId: `${G}_ctl04_SelectlinkButton` },
     ]);
   });
+
+  it('reads only whole quantities and never inflates a decimal display', () => {
+    stockGrid([['A', 'X1', '1,00'], ['B', 'X2', '2,50'], ['C', 'X3', '3 Adet'], ['D', 'X4', '1.000']]);
+
+    expect(readSavedStockLines(document).map((l) => l.quantity)).toEqual([1, null, 3, null]);
+  });
 });

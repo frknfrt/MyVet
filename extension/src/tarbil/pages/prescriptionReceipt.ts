@@ -65,11 +65,31 @@ export function createPrescriptionFlow(d: ReceiptDeps) {
     const st = await current();
     if (st?.step === 'armed') return fill();
     if (st && (WAITING_FOR_ANIMAL.includes(st.step) || CONFIRM_STEPS.includes(st.step))) {
-      d.card.show(views.progress(sub, 'Kaldığı yerden devam ediliyor…'));
+      d.card.show(stepView(sub, st));
       watch();
       return;
     }
     d.card.show(views.idle(sub));
+  }
+
+  /** Sayfa yeniden yuklenince (tam postback, F5) adimin karti: aciklama ve eylemler kaybolmasin. */
+  function stepView(s: Submission, st: FlowState) {
+    const line = s.prescription?.lines[Number(st.stepData?.lineIndex)];
+    switch (st.step) {
+      case 'searching':
+        return views.searching(s);
+      case 'needsVet':
+        return views.needsVet(s, st.message ?? '');
+      case 'choosingProduct':
+        // Onceki sayfanin pencere zamanlayicisi gitti: ekleme satiri bossa stok penceresi yeniden acilabilsin.
+        return readStockEditRow(d.doc)?.serial ? views.progress(s, 'Seçilen ilaç kontrol ediliyor…') : views.stockWindowBlocked(s);
+      case 'productReady':
+        return line ? views.lineReady(s, line) : views.progress(s, 'Kaldığı yerden devam ediliyor…');
+      case 'awaitingConfirm':
+        return st.message ? views.lineNeedsVet(s, st.message) : views.allLinesReady(s);
+      default:
+        return views.progress(s, 'Kaldığı yerden devam ediliyor…');
+    }
   }
 
   async function fill(): Promise<void> {
@@ -268,7 +288,7 @@ export function createPrescriptionFlow(d: ReceiptDeps) {
     const r = await d.send<{ queued?: boolean }>({ type: 'MARK_SUBMITTED', id: s.id, method: 'AUTO', tarbilReference: null, lines });
     if (!r.ok) {
       finishing = false;
-      d.card.show(views.failed(s, r.code));
+      d.card.show(views.confirmFailed(s, r.code));
       return;
     }
     await d.flow.update(s.id, { step: 'done' });

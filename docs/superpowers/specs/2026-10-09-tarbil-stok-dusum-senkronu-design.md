@@ -219,4 +219,6 @@ yeni kayıtlara uygulanır. Prod'a çıkmadan önce `pending_stock_deduction` bo
   (yanlışsa AUTO hiç tetiklenmez; hekim MANUAL ile kapatır); (2) tür/teşhis postback'lerinin birbirini sıfırlayıp
   sıfırlamadığı (sıra: tarih → sınıf → tür → teşhis → PetVet); (3) satır Kaydet sonrası kaydedilmiş satırın yapısı
   (`Ürün`, `Seri Numarası`, `Kullanılacak Adet` sütunları); (4) teşhis listesinin (`lbxDiagnosedDisease`) öğe değerinin
-  hastalık id'si mi ad mı olduğu; (5) satır Kaydet'in TARBİL stoğunu düşüp düşmediği (düşmüyorsa eklentiye verilebilir).
+  hastalık id'si mi ad mı olduğu; (5) satır Kaydet'in TARBİL stoğunu düşüp düşmediği (düşmüyorsa eklentiye verilebilir);
+  (6) kaydedilmiş satırda adedin nasıl yazıldığı ("1", "1,00"; eklenti yalnız tam sayı okur, gerisini plan adedine düşürür);
+  (7) satır Kaydet sonrası ekleme satırının boşalıp boşalmadığı (dolu kalırsa sonraki ilaç "Yanlış ürün" der).

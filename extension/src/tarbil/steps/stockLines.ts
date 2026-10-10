@@ -34,7 +34,9 @@ export function readSavedStockLines(doc: Document): SavedStockLine[] {
   return Array.from(table.tBodies[0]?.rows ?? [])
     .filter((r) => r.id.startsWith(`${table.id}__`) && !r.classList.contains('rgEditRow'))
     .map((r) => {
-      const n = Number.parseInt(clean(r.cells[quantity]?.textContent).replace(/\D/g, ''), 10);
+      // Yalniz tam sayi ("1", "3 Adet", "1,00"); "2,50" ya da belirsiz "1.000" okunamaz sayilir (plan adedine duser, sisirilmez).
+      const m = /^(\d+)(?:[.,]00?)?(?:\s*Adet)?$/i.exec(clean(r.cells[quantity]?.textContent));
+      const n = m ? Number.parseInt(m[1], 10) : Number.NaN;
       return {
         productName: clean(r.cells[name]?.textContent),
         serial: normalizeSerial(r.cells[serial]?.textContent),

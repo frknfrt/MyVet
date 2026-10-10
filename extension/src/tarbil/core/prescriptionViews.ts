@@ -16,6 +16,9 @@ const FALLBACK: CardAction[] = [
   { id: 'dismiss', label: 'Bildirilmeyecek' },
 ];
 
+/** Sorunlu satirdan sonra: kaydedilmis satirlardan siradaki ilac yeniden hesaplanir. */
+const CONTINUE: CardAction[] = [{ id: 'stockWindow', label: 'Devam et' }, ...FALLBACK];
+
 const view = (s: Submission, text: string, tone: Tone | undefined, actions: CardAction[] = FALLBACK): CardView => ({
   lines: [...header(s), { text, tone }],
   actions,
@@ -67,9 +70,12 @@ export const prescriptionViews = {
   lineReady: (s: Submission, line: PlannedLine): CardView =>
     view(s, `✓ Satır hazır: ${lineText(line)} (Adet ve Miktar ${line.quantity}). Satırdaki Kaydet'e siz basın; sonraki ilaca geçeceğiz.`, 'ok'),
   wrongLine: (s: Submission, line: PlannedLine | undefined): CardView =>
-    view(s, `Yanlış ürün seçildi: satırın serisi ${line?.lotNumber ?? '—'} olmalı. Satırı İptal edip doğru seriyi seçin.`, 'warn'),
+    view(s, `Yanlış ürün seçildi: satırın serisi ${line?.lotNumber ?? '—'} olmalı. Satırı İptal edip "Devam et"e basın.`, 'warn', CONTINUE),
   lineNeedsVet: (s: Submission, message: string): CardView =>
-    view(s, `${message} İlacı "Stok Ekle"den kendiniz ekleyin; tüm ilaçlar eklenince Reçeteyi Onayla'ya basın.`, 'warn'),
+    view(s, `${message} İlacı "Stok Ekle"den kendiniz ekleyin ya da satırı kaydettikten sonra "Devam et"e basın; tüm ilaçlar eklenince Reçeteyi Onayla'ya basın.`, 'warn', CONTINUE),
+  /** TARBIL kaydi tamam ama Vetly reddetti: formu yeniden doldurmak mukerrer recete riskidir, yalniz elle kapatma. */
+  confirmFailed: (s: Submission, code: string): CardView =>
+    view(s, `TARBİL'e kaydedildi ama Vetly'ye işlenemedi (${code}). Formu tekrar doldurmayın; aşağıdan kapatın.`, 'warn'),
   allLinesReady: (s: Submission): CardView =>
     view(s, "✓ Tüm ilaçlar eklendi. Teşhis, hayvan ve satırları kontrol edip Reçeteyi Onayla'ya basın. Kaydı yakalayıp Vetly'ye işleyeceğiz.", 'ok'),
   done: (s: Submission, queued: boolean): CardView =>

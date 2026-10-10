@@ -1,6 +1,6 @@
 import type { Submission } from '../../shared/types';
 import { views } from '../core/views';
-import { pickStockRow } from '../steps/productRows';
+import { normalizeSerial, pickStockRow } from '../steps/productRows';
 import { readMedicinePopupRows } from '../steps/stockLines';
 import { PRODUCT_HANDOFF_MS, type StockPopupDeps } from './stockPopup';
 
@@ -19,7 +19,8 @@ export async function runMedicineStockPopupFlow(d: StockPopupDeps): Promise<void
   const s = res.ok ? res.data : null;
   const line = s?.prescription?.lines[Number(state.stepData?.lineIndex)];
   if (!s || s.id !== state.submissionId || !line?.lotNumber) return;
-  const serial = line.lotNumber;
+  // TARBIL aramasi sunucuda (Turkce harmanlama olabilir): Vetly'deki "ki7" yerine "KI7" aranir.
+  const serial = normalizeSerial(line.lotNumber);
 
   const handOver = async (message: string) => {
     await d.flow.update(s.id, { step: 'awaitingConfirm', message });

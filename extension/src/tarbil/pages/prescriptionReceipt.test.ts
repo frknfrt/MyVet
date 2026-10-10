@@ -53,7 +53,7 @@ const base = {
 } satisfies Submission;
 
 async function setup(sub: Partial<Submission> = {}, step: FlowStep | null = 'armed', stepData?: Record<string, unknown>,
-  results: Record<string, unknown> = { addDisease: { added: true, listed: true } }) {
+  results: Record<string, unknown> = { addDisease: { added: true, listed: true } }, failing: string[] = []) {
   let t = 100_000;
   const now = () => t;
   const flow = createFlowStore(memoryStore(), now);
@@ -65,7 +65,10 @@ async function setup(sub: Partial<Submission> = {}, step: FlowStep | null = 'arm
   const bridge = { call: async (op: string, args?: unknown) => { calls.push({ op, args }); return results[op] as never; } };
   const sent: BackgroundRequest[] = [];
   const submission = { ...base, ...sub };
-  const send = (async (req: BackgroundRequest) => { sent.push(req); return { ok: true, data: submission }; }) as Send;
+  const send = (async (req: BackgroundRequest) => {
+    sent.push(req);
+    return failing.includes(req.type) ? { ok: false, code: 'CONFLICT', error: 'x' } : { ok: true, data: submission };
+  }) as Send;
   const shown: CardView[] = [];
   let action: (id: string) => void = () => undefined;
   const card = { show: (v: CardView) => shown.push(v), hide: () => undefined, onAction: (h: (id: string) => void) => { action = h; } };
@@ -77,7 +80,8 @@ async function setup(sub: Partial<Submission> = {}, step: FlowStep | null = 'arm
     reload: () => undefined,
   });
   const text = () => shown.at(-1)?.lines.map((l) => l.text).join(' ') ?? '';
-  return { prescription: flowUnderTest, flow, calls, sent, text, mutate: () => observer(), act: (id: string) => action(id) };
+  const actions = () => shown.at(-1)?.actions.map((a) => a.label) ?? [];
+  return { prescription: flowUnderTest, flow, calls, sent, text, actions, mutate: () => observer(), act: (id: string) => action(id) };
 }
 
 describe('prescriptionFlow', () => {
@@ -267,5 +271,61 @@ describe('prescriptionFlow', () => {
     act('fill');
 
     await vi.waitFor(async () => expect((await flow.get())?.documentType).toBe('PRESCRIPTION'));
+  });
+
+  it('offers the stock window again when the page reloads while choosing a product', async () => {
+    page();
+    addAnimalRow(CHIP);
+    stockGrid();
+    const { prescription, actions } = await setup({}, 'choosingProduct', { lineIndex: 0 });
+
+    await prescription.start();
+
+    await vi.waitFor(() => expect(actions()).toContain('Stok penceresini aç'));
+  });
+
+  it('keeps the hand-over message after a reload', async () => {
+    page();
+    addAnimalRow(CHIP);
+    const { prescription, flow, text } = await setup({}, 'choosingProduct', { lineIndex: 0 });
+    await flow.update('s1', { step: 'awaitingConfirm', message: 'Seri KV04Z81 TARBİL stoğunuzda bulunamadı.' });
+
+    await prescription.start();
+
+    await vi.waitFor(() => expect(text()).toContain('bulunamadı'));
+  });
+
+  it('continues with the line after a wrong selection was cancelled', async () => {
+    page();
+    addAnimalRow(CHIP);
+    const { prescription, flow, calls, mutate, act, actions } = await setup({}, 'choosingProduct', { lineIndex: 0 });
+    await prescription.start();
+    stockGrid({ edit: 'XX1' });
+    mutate();
+    await vi.waitFor(async () => expect((await flow.get())?.step).toBe('awaitingConfirm'));
+    expect(actions()).toContain('Devam et');
+
+    stockGrid();
+    act('stockWindow');
+
+    await vi.waitFor(async () => expect((await flow.get())?.step).toBe('choosingProduct'));
+    expect(calls.filter((c) => c.op === 'clickAllowed').map((c) => (c.args as { button: string }).button)).toEqual(['addStock', 'stockSearch']);
+  });
+
+  it('does not offer to refill the form when Vetly rejects the confirmation', async () => {
+    page();
+    addAnimalRow(CHIP);
+    stockGrid({ saved: [['Advantage % 10', 'KV04Z81', '1'], ['SYNULOX', 'S1', '2']] });
+    const { prescription, flow, mutate, actions, sent } = await setup({}, 'awaitingConfirm', undefined, undefined, ['MARK_SUBMITTED']);
+    await prescription.start();
+
+    document.getElementById(`${P}btnInsert_input`)!.click();
+    await vi.waitFor(async () => expect((await flow.get())?.insertClickedAt).toBeDefined());
+    showSuccess();
+    mutate();
+
+    await vi.waitFor(() => expect(sent.some((r) => r.type === 'MARK_SUBMITTED')).toBe(true));
+    await vi.waitFor(() => expect(actions()).toContain('Kaydedildi olarak işaretle'));
+    expect(actions()).not.toContain('Yeniden dene');
   });
 });
