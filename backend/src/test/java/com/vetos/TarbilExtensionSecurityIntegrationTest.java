@@ -552,6 +552,52 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
             .andExpect(status().isUnprocessableEntity());
     }
 
+    /** Hastali, gecerli teshisli recete govdesi; stok kalemi ve teshis parametre. */
+    private String stockPrescriptionBody(UUID inventoryItemId, UUID diseaseId) {
+        UUID speciesId = inRootSession(() -> speciesRepository.findAll().get(0).getId());
+        UUID owner = asTenant(tenantA, () -> ownerRepository.save(Owner.register(tenantA, "V Sahip", "05550000003", null, null)).getId());
+        UUID patient = asTenant(tenantA, () -> patientRepository.save(
+            Patient.register(tenantA, owner, speciesId, null, "Duman", Sex.MALE, null)).getId());
+        UUID drug = jdbcTemplate.queryForObject("SELECT id FROM drug_catalog ORDER BY name LIMIT 1", UUID.class);
+        return "{\"patientId\":\"" + patient + "\",\"controlledSubstance\":false,\"tarbilDiseaseId\":\"" + diseaseId + "\","
+            + "\"items\":[{\"drugId\":\"" + drug + "\",\"dosage\":\"1\",\"frequency\":\"1\",\"durationDays\":1,\"route\":\"ORAL\","
+            + "\"inventoryItemId\":\"" + inventoryItemId + "\",\"stockQuantity\":1}]}";
+    }
+
+    @Test
+    void prescriptionStockItemMustBeAnExistingTarbilLinkedItemOfThisClinic() throws Exception {
+        UUID branchB = inRootSession(() -> branchRepository.save(Branch.create(tenantB, "B Şube")).getId());
+        UUID foreignItem = asTenant(tenantB, () -> {
+            InventoryItem i = InventoryItem.create(tenantB, branchB, "Metacam", "İlaç", null, 5, 0, null, "MC1", null);
+            i.linkTarbil("VETILAC_MEDICINE", "METACAM", "Şişe");
+            return inventoryItemRepository.save(i).getId();
+        });
+        UUID branchA = jdbcTemplate.queryForObject("SELECT branch_id FROM staff_users WHERE id = ?", UUID.class, staffA);
+        UUID unlinkedItem = asTenant(tenantA, () -> inventoryItemRepository.save(
+            InventoryItem.create(tenantA, branchA, "Gazlı bez", "Sarf", null, 5, 0, null, null, null)).getId());
+
+        for (UUID item : List.of(UUID.randomUUID(), foreignItem, unlinkedItem)) {
+            mockMvc.perform(post("/api/v1/prescriptions").header("Authorization", "Bearer " + jwtA)
+                    .contentType("application/json").content(stockPrescriptionBody(item, selectableDisease())))
+                .andExpect(status().isUnprocessableEntity());
+        }
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM prescriptions WHERE tenant_id = ?", Integer.class, tenantA)).isZero();
+    }
+
+    @Test
+    void prescriptionTarbilDiseaseMustExist() throws Exception {
+        UUID branchA = jdbcTemplate.queryForObject("SELECT branch_id FROM staff_users WHERE id = ?", UUID.class, staffA);
+        UUID item = asTenant(tenantA, () -> {
+            InventoryItem i = InventoryItem.create(tenantA, branchA, "Metacam", "İlaç", null, 5, 0, null, "MC2", null);
+            i.linkTarbil("VETILAC_MEDICINE", "METACAM", "Şişe");
+            return inventoryItemRepository.save(i).getId();
+        });
+
+        mockMvc.perform(post("/api/v1/prescriptions").header("Authorization", "Bearer " + jwtA)
+                .contentType("application/json").content(stockPrescriptionBody(item, UUID.randomUUID())))
+            .andExpect(status().isUnprocessableEntity());
+    }
+
     @Test
     void databaseRejectsASecondVaccinationOutMovement() {
         UUID item = asTenant(tenantA, () -> inventoryItemRepository.save(
