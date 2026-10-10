@@ -13,6 +13,7 @@ import { MaterialsUsedCard } from './MaterialsUsedCard';
 import { PatientHeaderBar } from './PatientHeaderBar';
 import { PhysicalExamCard } from './PhysicalExamCard';
 import { PrescriptionCard } from './PrescriptionCard';
+import { TarbilDeductionCard } from './TarbilDeductionCard';
 import styles from './EncounterPage.module.css';
 
 type VitalsForm = { weightKg: string; temperatureC: string; heartRate: string; respiratoryRate: string };
@@ -525,6 +526,10 @@ export function EncounterPage() {
           </div>
 
           <MaterialsUsedCard encounterId={encounter.id} readOnly={isReadOnly} />
+
+          {(encounter.status === 'FINALIZED' || encounter.status === 'AMENDED') && (
+            <TarbilDeductionCard encounterId={encounter.id} canAct={session?.role === 'VET' || session?.role === 'ADMIN'} />
+          )}
 
           <PrescriptionCard encounterId={encounter.id} patientId={encounter.patientId} readOnly={isReadOnly} />
         </div>

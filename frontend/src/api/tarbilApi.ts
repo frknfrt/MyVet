@@ -71,6 +71,28 @@ export interface TarbilStockSync {
   lines: TarbilStockSyncLine[];
 }
 
+export interface TarbilDiseaseOption {
+  id: string;
+  parentId: string | null;
+  name: string;
+  path: string;
+  selectable: boolean;
+}
+
+export interface EncounterDeductionLine {
+  itemName: string;
+  lotNumber: string | null;
+  quantity: number;
+  status: 'PENDING' | 'DEDUCTED' | 'CANCELLED';
+  settledQuantity: number | null;
+}
+
+export interface EncounterDeduction {
+  lines: EncounterDeductionLine[];
+  submissionId: string | null;
+  submissionStatus: TarbilSyncStatus | null;
+}
+
 export const tarbilApi = {
   status: () => apiClient.get<TarbilStatus>('/api/v1/tarbil/status'),
   syncLogs: () => apiClient.get<TarbilSyncLog[]>('/api/v1/tarbil/sync-logs'),
@@ -84,4 +106,9 @@ export const tarbilApi = {
   applyStockSync: (snapshotId: string, lineIds: string[]) =>
     apiClient.post<{ applied: number }>(`/api/v1/tarbil/stock-sync/${snapshotId}/apply`, { lineIds }),
   deleteMapping: (id: string) => apiClient.delete<void>(`/api/v1/tarbil/mappings/${id}`),
+  listDiseases: () => apiClient.get<TarbilDiseaseOption[]>('/api/v1/tarbil/diseases'),
+  getEncounterDeduction: (encounterId: string) =>
+    apiClient.get<EncounterDeduction>(`/api/v1/tarbil/encounters/${encounterId}/deduction`),
+  queueEncounterDeduction: (encounterId: string, tarbilDiseaseId: string) =>
+    apiClient.post<{ submissionId: string }>(`/api/v1/tarbil/encounters/${encounterId}/deduction`, { tarbilDiseaseId }),
 };

@@ -16,12 +16,13 @@ public record InventoryItemResponse(
     boolean belowReorderThreshold,
     LocalDate expiryDate,
     String lotNumber,
-    BigDecimal unitCost
+    BigDecimal unitCost,
+    String tarbilProductName
 ) {
     public static InventoryItemResponse from(InventoryItemDetail d) {
         return new InventoryItemResponse(
             d.id(), d.name(), d.category(), d.skuBarcode(), d.quantityOnHand(), d.reorderThreshold(),
-            d.belowReorderThreshold(), d.expiryDate(), d.lotNumber(), d.unitCost()
+            d.belowReorderThreshold(), d.expiryDate(), d.lotNumber(), d.unitCost(), d.tarbilProductName()
         );
     }
 }

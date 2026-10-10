@@ -20,7 +20,8 @@ public class ListInventoryItemsUseCase {
         return inventoryItemRepository.findByBranchId(branchId).stream()
             .map(item -> new InventoryItemDetail(
                 item.getId(), item.getName(), item.getCategory(), item.getSkuBarcode(), item.getQuantityOnHand(),
-                item.getReorderThreshold(), item.isBelowReorderThreshold(), item.getExpiryDate(), item.getLotNumber(), item.getUnitCost()
+                item.getReorderThreshold(), item.isBelowReorderThreshold(), item.getExpiryDate(), item.getLotNumber(), item.getUnitCost(),
+                item.getTarbilProductName()
             ))
             .toList();
     }

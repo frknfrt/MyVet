@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button';
 import { inventoryApi, InventoryItem } from '../../api/inventoryApi';
 import { ItemDetailModal } from './ItemDetailModal';
 import { NewInventoryItemModal } from './NewInventoryItemModal';
+import { PendingDeductionsPanel } from './PendingDeductionsPanel';
 import { TarbilStockSyncPanel } from './TarbilStockSyncPanel';
 import styles from './InventoryPage.module.css';
 
@@ -99,6 +100,7 @@ export function InventoryPage() {
         )}
       </div>
 
+      <PendingDeductionsPanel canAct={canTarbilSync} onSettled={load} />
       {canTarbilSync && <TarbilStockSyncPanel onApplied={load} />}
       <ItemDetailModal item={selected} onClose={() => setSelected(null)} onChanged={load} />
       <NewInventoryItemModal open={createOpen} onClose={() => setCreateOpen(false)} onCreated={load} />

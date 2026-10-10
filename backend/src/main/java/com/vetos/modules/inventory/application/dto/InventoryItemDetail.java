@@ -14,5 +14,7 @@ public record InventoryItemDetail(
     boolean belowReorderThreshold,
     LocalDate expiryDate,
     String lotNumber,
-    BigDecimal unitCost
+    BigDecimal unitCost,
+    /** TARBIL urun adi; doluysa kalem TARBIL dusumunu bekler (spec 2026-10-09). */
+    String tarbilProductName
 ) {}

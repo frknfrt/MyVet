@@ -14,6 +14,21 @@ export interface InventoryItem {
   expiryDate: string | null;
   lotNumber: string | null;
   unitCost: number | null;
+  /** TARBİL ürün adı; doluysa kalem TARBİL düşümünü bekler (spec 2026-10-09). */
+  tarbilProductName: string | null;
+}
+
+export type PendingDeductionReference = 'ENCOUNTER' | 'VACCINATION' | 'PRESCRIPTION';
+
+export interface PendingDeduction {
+  id: string;
+  inventoryItemId: string;
+  itemName: string;
+  lotNumber: string | null;
+  quantity: number;
+  referenceType: PendingDeductionReference;
+  referenceId: string;
+  createdAt: string;
 }
 
 export interface CreateInventoryItemPayload {
@@ -42,4 +57,7 @@ export const inventoryApi = {
   recordMovement: (id: string, payload: { movementType: StockMovementType; quantity: number }) =>
     apiClient.post<void>(`/api/v1/inventory-items/${id}/movements`, payload),
   listMovements: (id: string) => apiClient.get<StockMovement[]>(`/api/v1/inventory-items/${id}/movements`),
+  listPendingDeductions: () => apiClient.get<PendingDeduction[]>('/api/v1/inventory/pending-deductions'),
+  settleVetlyOnly: (referenceType: PendingDeductionReference, referenceId: string) =>
+    apiClient.post<void>(`/api/v1/inventory/pending-deductions/${referenceType}/${referenceId}/settle-vetly-only`),
 };
