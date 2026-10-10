@@ -489,6 +489,65 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
             .andExpect(status().isNotFound());
     }
 
+    /** Muayenesiz recete, TARBIL'e bagli kalemden stoktan ver; [prescriptionId, itemId]. */
+    private UUID[] prescriptionGivingFromStock(int stock, int given) throws Exception {
+        UUID branchA = jdbcTemplate.queryForObject("SELECT branch_id FROM staff_users WHERE id = ?", UUID.class, staffA);
+        UUID speciesId = inRootSession(() -> speciesRepository.findAll().get(0).getId());
+        UUID owner = asTenant(tenantA, () -> ownerRepository.save(Owner.register(tenantA, "R Sahip", "05550000002", null, null)).getId());
+        UUID patient = asTenant(tenantA, () -> patientRepository.save(
+            Patient.register(tenantA, owner, speciesId, null, "Boncuk", Sex.FEMALE, null)).getId());
+        UUID item = asTenant(tenantA, () -> {
+            InventoryItem i = InventoryItem.create(tenantA, branchA, "Metacam", "İlaç", null, stock, 0, LocalDate.of(2027, 5, 1), "MC7", null);
+            i.linkTarbil("VETILAC_MEDICINE", "METACAM", "Şişe");
+            return inventoryItemRepository.save(i).getId();
+        });
+        UUID drug = jdbcTemplate.queryForObject("SELECT id FROM drug_catalog ORDER BY name LIMIT 1", UUID.class);
+        String body = "{\"patientId\":\"" + patient + "\",\"controlledSubstance\":false,\"tarbilDiseaseId\":\"" + selectableDisease() + "\","
+            + "\"items\":[{\"drugId\":\"" + drug + "\",\"dosage\":\"1 ml\",\"frequency\":\"1x1\",\"durationDays\":3,\"route\":\"ORAL\","
+            + "\"inventoryItemId\":\"" + item + "\",\"stockQuantity\":" + given + "}]}";
+        String location = mockMvc.perform(post("/api/v1/prescriptions").header("Authorization", "Bearer " + jwtA)
+                .contentType("application/json").content(body))
+            .andExpect(status().isCreated()).andReturn().getResponse().getHeader("Location");
+        return new UUID[] { UUID.fromString(location.substring(location.lastIndexOf('/') + 1)), item };
+    }
+
+    @Test
+    void prescriptionWithoutEncounterGivesStockAfterTarbilConfirmation() throws Exception {
+        UUID[] rx = prescriptionGivingFromStock(10, 2);
+        assertThat(stockOf(rx[1])).isEqualTo(10);
+        UUID submission = jdbcTemplate.queryForObject(
+            "SELECT id FROM tarbil_submission WHERE source_id = ? AND document_type = 'PRESCRIPTION' AND source_kind = 'PRESCRIPTION'", UUID.class, rx[0]);
+
+        mockMvc.perform(post("/api/v1/tarbil-extension/submissions/" + submission + "/submitted")
+                .header("Authorization", "Bearer " + tokenA).contentType("application/json").content("{\"method\":\"MANUAL\"}"))
+            .andExpect(status().is2xxSuccessful());
+        assertThat(stockOf(rx[1])).isEqualTo(8);
+    }
+
+    @Test
+    void cancellingAPrescriptionClosesItsPendingDeductionAndSubmission() throws Exception {
+        UUID[] rx = prescriptionGivingFromStock(10, 1);
+
+        mockMvc.perform(post("/api/v1/prescriptions/" + rx[0] + "/cancel").header("Authorization", "Bearer " + jwtA))
+            .andExpect(status().isNoContent());
+        mockMvc.perform(post("/api/v1/prescriptions/" + rx[0] + "/cancel").header("Authorization", "Bearer " + jwtA))
+            .andExpect(status().isConflict());
+
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM pending_stock_deduction WHERE reference_id = ?", String.class, rx[0])).isEqualTo("CANCELLED");
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM tarbil_submission WHERE source_id = ?", String.class, rx[0])).isEqualTo("DISMISSED");
+        assertThat(stockOf(rx[1])).isEqualTo(10);
+    }
+
+    @Test
+    void stockGivingPrescriptionWithoutDiagnosisIsRejected() throws Exception {
+        UUID drug = jdbcTemplate.queryForObject("SELECT id FROM drug_catalog ORDER BY name LIMIT 1", UUID.class);
+        String body = "{\"patientId\":\"" + UUID.randomUUID() + "\",\"controlledSubstance\":false,"
+            + "\"items\":[{\"drugId\":\"" + drug + "\",\"dosage\":\"1\",\"frequency\":\"1\",\"durationDays\":1,\"route\":\"ORAL\","
+            + "\"inventoryItemId\":\"" + UUID.randomUUID() + "\",\"stockQuantity\":1}]}";
+        mockMvc.perform(post("/api/v1/prescriptions").header("Authorization", "Bearer " + jwtA).contentType("application/json").content(body))
+            .andExpect(status().isUnprocessableEntity());
+    }
+
     @Test
     void databaseRejectsASecondVaccinationOutMovement() {
         UUID item = asTenant(tenantA, () -> inventoryItemRepository.save(

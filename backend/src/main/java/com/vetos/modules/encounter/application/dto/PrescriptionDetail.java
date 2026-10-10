@@ -13,7 +13,9 @@ public record PrescriptionDetail(
     LocalDate issuedDate,
     PrescriptionStatus status,
     boolean controlledSubstance,
+    UUID tarbilDiseaseId,
     List<PrescriptionItemDetail> items
 ) {
-    public record PrescriptionItemDetail(UUID drugId, String drugName, String dosage, String frequency, int durationDays, String route) {}
+    public record PrescriptionItemDetail(UUID drugId, String drugName, String dosage, String frequency, int durationDays, String route,
+                                         UUID inventoryItemId, Integer stockQuantity) {}
 }

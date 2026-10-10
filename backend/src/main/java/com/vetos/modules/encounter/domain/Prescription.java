@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 import java.util.UUID;
 
+/** Recete; muayeneye bagli olmak zorunda degil (spec 2026-10-09 S5.6). Stoktan verilen kalem varsa TARBIL teshisi tasir. */
 @Entity
 @Table(name = "prescriptions")
 @Getter
@@ -15,7 +16,6 @@ import java.util.UUID;
 public class Prescription {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @org.hibernate.annotations.TenantId
@@ -25,7 +25,8 @@ public class Prescription {
     @Column(name = "patient_id", nullable = false)
     private UUID patientId;
 
-    @Column(name = "encounter_id", nullable = false)
+    /** Muayenesiz recetede null. */
+    @Column(name = "encounter_id")
     private UUID encounterId;
 
     @Column(name = "prescribing_staff_id", nullable = false)
@@ -44,10 +45,21 @@ public class Prescription {
     @Column(name = "pharmacy_integration_ref")
     private String pharmacyIntegrationRef;
 
+    /** tarbil_disease.id (integration modulune Java bagimliligi yok, yalniz deger). */
+    @Column(name = "tarbil_disease_id")
+    private UUID tarbilDiseaseId;
+
     public static Prescription issue(
         UUID tenantId, UUID patientId, UUID encounterId, UUID prescribingStaffId, boolean controlledSubstance
     ) {
+        return issue(tenantId, patientId, encounterId, prescribingStaffId, controlledSubstance, null);
+    }
+
+    public static Prescription issue(
+        UUID tenantId, UUID patientId, UUID encounterId, UUID prescribingStaffId, boolean controlledSubstance, UUID tarbilDiseaseId
+    ) {
         Prescription prescription = new Prescription();
+        prescription.id = UUID.randomUUID();
         prescription.tenantId = tenantId;
         prescription.patientId = patientId;
         prescription.encounterId = encounterId;
@@ -55,6 +67,7 @@ public class Prescription {
         prescription.issuedDate = LocalDate.now();
         prescription.status = PrescriptionStatus.ACTIVE;
         prescription.controlledSubstance = controlledSubstance;
+        prescription.tarbilDiseaseId = tarbilDiseaseId;
         return prescription;
     }
 
@@ -62,7 +75,12 @@ public class Prescription {
         this.status = PrescriptionStatus.FULFILLED;
     }
 
-    public void cancel() {
+    /** @return false ise recete aktif degildi (degisiklik yok). */
+    public boolean cancel() {
+        if (status != PrescriptionStatus.ACTIVE) {
+            return false;
+        }
         this.status = PrescriptionStatus.CANCELLED;
+        return true;
     }
 }

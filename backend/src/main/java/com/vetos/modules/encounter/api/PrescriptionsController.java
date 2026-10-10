@@ -2,6 +2,7 @@ package com.vetos.modules.encounter.api;
 
 import com.vetos.modules.encounter.api.dto.IssuePrescriptionRequest;
 import com.vetos.modules.encounter.api.dto.PrescriptionResponse;
+import com.vetos.modules.encounter.application.CancelPrescriptionUseCase;
 import com.vetos.modules.encounter.application.GetPrescriptionUseCase;
 import com.vetos.modules.encounter.application.IssuePrescriptionUseCase;
 import com.vetos.modules.encounter.application.ListPrescriptionsByPatientUseCase;
@@ -27,6 +28,7 @@ public class PrescriptionsController {
     private final IssuePrescriptionUseCase issuePrescriptionUseCase;
     private final GetPrescriptionUseCase getPrescriptionUseCase;
     private final ListPrescriptionsByPatientUseCase listPrescriptionsByPatientUseCase;
+    private final CancelPrescriptionUseCase cancelPrescriptionUseCase;
 
     @PostMapping
     public ResponseEntity<Void> issue(
@@ -35,8 +37,10 @@ public class PrescriptionsController {
     ) {
         UUID id = issuePrescriptionUseCase.execute(new IssuePrescriptionCommand(
             request.patientId(), request.encounterId(), principal.staffUserId(), request.controlledSubstance(),
+            request.tarbilDiseaseId(),
             request.items().stream()
-                .map(i -> new PrescriptionItemInput(i.drugId(), i.dosage(), i.frequency(), i.durationDays(), i.route()))
+                .map(i -> new PrescriptionItemInput(i.drugId(), i.dosage(), i.frequency(), i.durationDays(), i.route(),
+                    i.inventoryItemId(), i.stockQuantity()))
                 .toList()
         ));
         return ResponseEntity.created(java.net.URI.create("/api/v1/prescriptions/" + id)).build();
@@ -53,4 +57,12 @@ public class PrescriptionsController {
     public List<PrescriptionResponse> listByPatient(@RequestParam UUID patientId) {
         return listPrescriptionsByPatientUseCase.execute(patientId).stream().map(PrescriptionResponse::from).toList();
     }
+
+    @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasAnyRole('VET', 'ADMIN')")
+    public ResponseEntity<Void> cancel(@PathVariable UUID id) {
+        cancelPrescriptionUseCase.execute(id);
+        return ResponseEntity.noContent().build();
+    }
 }
+

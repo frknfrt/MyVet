@@ -33,13 +33,15 @@ public class ListPrescriptionsByPatientUseCase {
             .map(item -> new PrescriptionDetail.PrescriptionItemDetail(
                 item.getDrugId(),
                 drugCatalogRepository.findById(item.getDrugId()).map(DrugCatalog::getName).orElse(null),
-                item.getDosage(), item.getFrequency(), item.getDurationDays(), item.getRoute().name()
+                item.getDosage(), item.getFrequency(), item.getDurationDays(), item.getRoute().name(),
+                item.getInventoryItemId(), item.getStockQuantity()
             ))
             .toList();
 
         return new PrescriptionDetail(
             prescription.getId(), prescription.getPatientId(), prescription.getEncounterId(),
-            prescription.getIssuedDate(), prescription.getStatus(), prescription.isControlledSubstance(), items
+            prescription.getIssuedDate(), prescription.getStatus(), prescription.isControlledSubstance(),
+            prescription.getTarbilDiseaseId(), items
         );
     }
 }

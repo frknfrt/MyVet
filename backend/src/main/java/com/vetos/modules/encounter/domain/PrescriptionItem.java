@@ -40,7 +40,19 @@ public class PrescriptionItem {
     @Column(nullable = false)
     private DrugRoute route;
 
+    /** "Klinigin stogundan ver" (spec 2026-10-09 S5.6): stok kalemi ve adet birlikte dolu ya da birlikte bos. */
+    @Column(name = "inventory_item_id")
+    private UUID inventoryItemId;
+
+    @Column(name = "stock_quantity")
+    private Integer stockQuantity;
+
     public static PrescriptionItem add(UUID tenantId, UUID prescriptionId, UUID drugId, String dosage, String frequency, int durationDays, DrugRoute route) {
+        return add(tenantId, prescriptionId, drugId, dosage, frequency, durationDays, route, null, null);
+    }
+
+    public static PrescriptionItem add(UUID tenantId, UUID prescriptionId, UUID drugId, String dosage, String frequency, int durationDays,
+                                       DrugRoute route, UUID inventoryItemId, Integer stockQuantity) {
         PrescriptionItem item = new PrescriptionItem();
         item.tenantId = tenantId;
         item.prescriptionId = prescriptionId;
@@ -49,6 +61,8 @@ public class PrescriptionItem {
         item.frequency = frequency;
         item.durationDays = durationDays;
         item.route = route;
+        item.inventoryItemId = inventoryItemId;
+        item.stockQuantity = stockQuantity;
         return item;
     }
 }

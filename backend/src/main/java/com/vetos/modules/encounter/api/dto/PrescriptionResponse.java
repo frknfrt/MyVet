@@ -14,9 +14,10 @@ public record PrescriptionResponse(
     LocalDate issuedDate,
     PrescriptionStatus status,
     boolean controlledSubstance,
+    UUID tarbilDiseaseId,
     List<PrescriptionDetail.PrescriptionItemDetail> items
 ) {
     public static PrescriptionResponse from(PrescriptionDetail d) {
-        return new PrescriptionResponse(d.id(), d.patientId(), d.encounterId(), d.issuedDate(), d.status(), d.controlledSubstance(), d.items());
+        return new PrescriptionResponse(d.id(), d.patientId(), d.encounterId(), d.issuedDate(), d.status(), d.controlledSubstance(), d.tarbilDiseaseId(), d.items());
     }
 }
