@@ -41,6 +41,10 @@ class MarkSubmittedUseCaseTest {
     @Mock private TarbilSubmissionRepository syncLogRepository;
 
     @Mock private InventoryItemLookupPort inventoryItemLookupPort;
+
+    @Mock private com.vetos.modules.inventory.domain.TarbilStockDeductionPort assemblerDeductions;
+
+    @Mock private com.vetos.modules.integration.tarbil.domain.TarbilDiseaseRepository diseaseRepository;
     @Mock private TarbilValueMappingRepository mappingRepository;
     @Mock private VaccinationLookupPort vaccinationLookupPort;
     @Mock private PatientLookupPort patientLookupPort;
@@ -52,7 +56,8 @@ class MarkSubmittedUseCaseTest {
     private MarkSubmittedUseCase useCase() {
         lenient().when(deductions.settleFromTarbil(any(), any(), any(), any())).thenReturn(new DeductionSettlementResult(0, List.of()));
         return new MarkSubmittedUseCase(syncLogRepository,
-            new TarbilSubmissionAssembler(vaccinationLookupPort, patientLookupPort, mappingRepository, inventoryItemLookupPort),
+            new TarbilSubmissionAssembler(vaccinationLookupPort, patientLookupPort, mappingRepository, inventoryItemLookupPort,
+                assemblerDeductions, diseaseRepository),
             deductions);
     }
 

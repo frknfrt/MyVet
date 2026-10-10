@@ -5,6 +5,8 @@ import com.vetos.modules.integration.tarbil.domain.TarbilDiseaseRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
+import java.util.UUID;
 import java.util.List;
 
 @Component
@@ -16,5 +18,10 @@ class TarbilDiseaseRepositoryAdapter implements TarbilDiseaseRepository {
     @Override
     public List<TarbilDisease> findAllOrdered() {
         return jpaRepository.findAllByOrderBySortOrderAsc();
+    }
+
+    @Override
+    public Optional<TarbilDisease> findById(UUID id) {
+        return jpaRepository.findById(id);
     }
 }

@@ -28,13 +28,18 @@ class GetSubmissionUseCaseTest {
     @Mock private TarbilSubmissionRepository syncLogRepository;
 
     @Mock private InventoryItemLookupPort inventoryItemLookupPort;
+
+    @Mock private com.vetos.modules.inventory.domain.TarbilStockDeductionPort assemblerDeductions;
+
+    @Mock private com.vetos.modules.integration.tarbil.domain.TarbilDiseaseRepository diseaseRepository;
     @Mock private TarbilValueMappingRepository mappingRepository;
     @Mock private VaccinationLookupPort vaccinationLookupPort;
     @Mock private PatientLookupPort patientLookupPort;
 
     private GetSubmissionUseCase useCase() {
         return new GetSubmissionUseCase(syncLogRepository,
-            new TarbilSubmissionAssembler(vaccinationLookupPort, patientLookupPort, mappingRepository, inventoryItemLookupPort));
+            new TarbilSubmissionAssembler(vaccinationLookupPort, patientLookupPort, mappingRepository, inventoryItemLookupPort,
+                assemblerDeductions, diseaseRepository));
     }
 
     @Test

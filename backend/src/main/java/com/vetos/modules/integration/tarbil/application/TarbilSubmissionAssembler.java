@@ -14,6 +14,15 @@ import com.vetos.modules.integration.tarbil.domain.VaccineKeyNormalizer;
 import com.vetos.modules.inventory.domain.InventoryItemLookupPort;
 import com.vetos.modules.patient.domain.PatientLookupPort;
 import com.vetos.modules.patient.domain.PatientTarbilProfile;
+import com.vetos.modules.integration.tarbil.domain.TarbilDisease;
+import com.vetos.modules.integration.tarbil.domain.TarbilDiseaseRepository;
+import com.vetos.modules.inventory.domain.PendingDeductionLine;
+import com.vetos.modules.inventory.domain.PendingDeductionStatus;
+import com.vetos.modules.inventory.domain.StockReferenceType;
+import com.vetos.modules.inventory.domain.TarbilStockDeductionPort;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -28,6 +37,8 @@ class TarbilSubmissionAssembler {
     private final PatientLookupPort patientLookupPort;
     private final TarbilValueMappingRepository mappingRepository;
     private final InventoryItemLookupPort inventoryItemLookupPort;
+    private final TarbilStockDeductionPort stockDeductionPort;
+    private final TarbilDiseaseRepository diseaseRepository;
 
     /** Eklenti ve web ekrani ayni kurali kullansin: ayni kiracida, iptal edilmemis asi. Asi disi satirlar burada yok sayilir. */
     Optional<VaccinationTarbilView> liveVaccination(TarbilSubmission log) {
@@ -41,10 +52,30 @@ class TarbilSubmissionAssembler {
 
     /** Bekleyen satir ancak asisi canliysa "bekliyor" sayilir; gonderilmis/bildirilmeyecek satirlar gecmis olarak kalir. */
     boolean isVisible(TarbilSubmission log) {
-        return log.getStatus() != TarbilSyncStatus.PENDING || liveVaccination(log).isPresent();
+        if (log.getStatus() != TarbilSyncStatus.PENDING) {
+            return true;
+        }
+        if (log.getDocumentType() == TarbilDocumentType.PRESCRIPTION) {
+            return !pendingLines(log).isEmpty();
+        }
+        return liveVaccination(log).isPresent();
+    }
+
+    /** Stoktan dusen recetenin TARBIL dusumu bekleyen satirlari (spec 2026-10-09 S7). */
+    private List<PendingDeductionLine> pendingLines(TarbilSubmission log) {
+        StockReferenceType ref = log.sourceKindOrDefault().stockReference();
+        if (log.getDocumentType() != TarbilDocumentType.PRESCRIPTION || ref == null) {
+            return List.of();
+        }
+        return stockDeductionPort.listForReference(ref, log.getSourceId()).stream()
+            .filter(l -> l.status() == PendingDeductionStatus.PENDING)
+            .toList();
     }
 
     Optional<TarbilSubmissionView> assemble(TarbilSubmission log) {
+        if (log.getDocumentType() == TarbilDocumentType.PRESCRIPTION) {
+            return isVisible(log) ? Optional.of(assemblePrescription(log)) : Optional.empty();
+        }
         Optional<VaccinationTarbilView> vaccination = liveVaccination(log);
         if (vaccination.isEmpty()) {
             return Optional.empty();
@@ -71,7 +102,36 @@ class TarbilSubmissionAssembler {
             v.vaccineName(), v.lotNumber(), inventoryItemLookupPort.findTarbilProductName(v.inventoryItemId()).orElse(null),
             v.administeredDate(),
             log.getSubmittedAt(), log.getConfirmationMethod(), log.getTarbilReference(),
-            vaccineKey, vaccineMapping, speciesMapping, log.getDocumentType()
+            vaccineKey, vaccineMapping, speciesMapping, log.getDocumentType(), null
         ));
     }
+
+    private TarbilSubmissionView assemblePrescription(TarbilSubmission log) {
+        Optional<PatientTarbilProfile> patient = Optional.ofNullable(log.getPatientId()).flatMap(patientLookupPort::findTarbilProfile);
+        String speciesMapping = patient.map(PatientTarbilProfile::speciesId)
+            .flatMap(sid -> mappingRepository.findByTenantIdAndKindAndVetlyKey(log.getTenantId(), TarbilMappingKind.SPECIES, sid.toString()))
+            .map(TarbilValueMapping::getTarbilFields).orElse(null);
+        var payload = new TarbilSubmissionView.PrescriptionPayload(
+            log.sourceKindOrDefault().name(), log.getTarbilDiseaseId(),
+            log.getTarbilDiseaseId() == null ? null : diseaseRepository.findById(log.getTarbilDiseaseId()).map(TarbilDisease::getName).orElse(null),
+            LocalDate.ofInstant(log.getQueuedAt(), ISTANBUL),
+            pendingLines(log).stream()
+                .map(l -> new TarbilSubmissionView.PrescriptionPayload.Line(l.itemName(), l.tarbilProductName(), l.lotNumber(), l.quantity()))
+                .toList());
+        return new TarbilSubmissionView(
+            log.getId(), log.getSourceId(), log.getStatus(),
+            patient.map(PatientTarbilProfile::name).orElse("—"),
+            patient.map(PatientTarbilProfile::microchipNumber).orElse(null),
+            patient.map(PatientTarbilProfile::passportNumber).orElse(null),
+            patient.map(PatientTarbilProfile::speciesId).orElse(null),
+            patient.map(PatientTarbilProfile::speciesName).orElse(null),
+            patient.map(PatientTarbilProfile::breedName).orElse(null),
+            patient.map(PatientTarbilProfile::sex).map(Enum::name).orElse(null),
+            patient.map(PatientTarbilProfile::birthDate).orElse(null),
+            "Reçete", null, null, null,
+            log.getSubmittedAt(), log.getConfirmationMethod(), log.getTarbilReference(),
+            "", null, speciesMapping, log.getDocumentType(), payload);
+    }
+
+    private static final ZoneId ISTANBUL = ZoneId.of("Europe/Istanbul");
 }

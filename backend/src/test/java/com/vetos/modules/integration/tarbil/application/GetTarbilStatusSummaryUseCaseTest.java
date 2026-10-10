@@ -32,6 +32,10 @@ class GetTarbilStatusSummaryUseCaseTest {
     @Mock private TarbilSubmissionRepository syncLogRepository;
 
     @Mock private InventoryItemLookupPort inventoryItemLookupPort;
+
+    @Mock private com.vetos.modules.inventory.domain.TarbilStockDeductionPort assemblerDeductions;
+
+    @Mock private com.vetos.modules.integration.tarbil.domain.TarbilDiseaseRepository diseaseRepository;
     @Mock private TarbilValueMappingRepository mappingRepository;
     @Mock private VaccinationLookupPort vaccinationLookupPort;
     @Mock private PatientLookupPort patientLookupPort;
@@ -39,7 +43,8 @@ class GetTarbilStatusSummaryUseCaseTest {
     private final UUID tenantId = UUID.randomUUID();
 
     private TarbilSubmissionAssembler assembler() {
-        return new TarbilSubmissionAssembler(vaccinationLookupPort, patientLookupPort, mappingRepository, inventoryItemLookupPort);
+        return new TarbilSubmissionAssembler(vaccinationLookupPort, patientLookupPort, mappingRepository, inventoryItemLookupPort,
+                assemblerDeductions, diseaseRepository);
     }
 
     private TarbilSubmission pendingWith(VaccinationStatus status) {

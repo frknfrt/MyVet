@@ -460,7 +460,8 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
 
         mockMvc.perform(post("/api/v1/tarbil-extension/submissions/" + submission + "/submitted")
                 .header("Authorization", "Bearer " + tokenA).contentType("application/json").content("{\"method\":\"MANUAL\"}"))
-            .andExpect(status().is2xxSuccessful());
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.documentType").value("PRESCRIPTION"));
         assertThat(stockOf(e[1])).isEqualTo(8);
     }
 
@@ -517,6 +518,10 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
         assertThat(stockOf(rx[1])).isEqualTo(10);
         UUID submission = jdbcTemplate.queryForObject(
             "SELECT id FROM tarbil_submission WHERE source_id = ? AND document_type = 'PRESCRIPTION' AND source_kind = 'PRESCRIPTION'", UUID.class, rx[0]);
+        mockMvc.perform(get("/api/v1/tarbil-extension/pending").header("Authorization", "Bearer " + tokenA))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[?(@.id == '" + submission + "')].prescription.lines[0].tarbilProductName").value("METACAM"))
+            .andExpect(jsonPath("$[?(@.id == '" + submission + "')].prescription.lines[0].quantity").value(2));
 
         mockMvc.perform(post("/api/v1/tarbil-extension/submissions/" + submission + "/submitted")
                 .header("Authorization", "Bearer " + tokenA).contentType("application/json").content("{\"method\":\"MANUAL\"}"))

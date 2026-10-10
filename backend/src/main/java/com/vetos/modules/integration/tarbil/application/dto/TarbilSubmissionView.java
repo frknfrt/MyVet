@@ -6,6 +6,7 @@ import com.vetos.modules.integration.tarbil.domain.TarbilSyncStatus;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 /** Eklentiye giden aktarim verisi -- sahip TC/adres/telefon BILINCLI olarak yok (spec S4). */
@@ -16,5 +17,12 @@ public record TarbilSubmissionView(
     String vaccineName, String lotNumber, String tarbilProductName, LocalDate administeredDate,
     Instant submittedAt, TarbilConfirmationMethod confirmationMethod, String tarbilReference,
     String vaccineKey, String vaccineMappingJson, String speciesMappingJson,
-    TarbilDocumentType documentType
-) {}
+    TarbilDocumentType documentType,
+    PrescriptionPayload prescription
+) {
+    /** Stoktan dusen recete (spec 2026-10-09 S7); asida null. lines yalniz TARBIL dusumu bekleyen satirlar. */
+    public record PrescriptionPayload(String sourceKind, UUID tarbilDiseaseId, String tarbilDiseaseName,
+                                      LocalDate treatmentStartDate, List<Line> lines) {
+        public record Line(String itemName, String tarbilProductName, String lotNumber, int quantity) {}
+    }
+}
