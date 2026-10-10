@@ -403,9 +403,8 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
                 .header("Authorization", "Bearer " + jwtA))
             .andExpect(status().isNoContent());
         assertThat(stockOf(v[1])).isEqualTo(17);
-        assertThat(jdbcTemplate.queryForObject("SELECT status FROM tarbil_submission WHERE id = ?", String.class, submission)).isEqualTo("DISMISSED");
-        assertThat(jdbcTemplate.queryForObject("SELECT dismissed_reason FROM tarbil_submission WHERE id = ?", String.class, submission))
-            .isEqualTo("Yalnız Vetly'den düşüldü");
+        // Asi kaydinin kendisi TARBIL'e bildirilmeli: Vetly'den dusmek aktarimi reddetmez (review 2026-10-10).
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM tarbil_submission WHERE id = ?", String.class, submission)).isEqualTo("PENDING");
 
         mockMvc.perform(post("/api/v1/tarbil-extension/submissions/" + submission + "/submitted")
                 .header("Authorization", "Bearer " + tokenA).contentType("application/json").content("{\"method\":\"AUTO\"}"))

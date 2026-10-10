@@ -12,7 +12,10 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 
-/** "Yalniz Vetly'den dus" sonrasi bekleyen TARBIL aktarimi reddedilir (spec 2026-10-09 S5.1). Ayni islem icinde. */
+/**
+ * "Yalniz Vetly'den dus" sonrasi bekleyen stoktan dusen recete aktarimi reddedilir (spec 2026-10-09 S5.1). Asi aktarimina
+ * dokunulmaz: asinin kendisi TARBIL'e bildirilmeli, Vetly'den dusmek yalniz stogu kapatir (review 2026-10-10).
+ */
 @Component
 @RequiredArgsConstructor
 class VetlyOnlyDeductionListener {
@@ -23,9 +26,10 @@ class VetlyOnlyDeductionListener {
 
     @EventListener
     void on(PendingDeductionSettledVetlyOnlyEvent event) {
-        TarbilDocumentType document = event.referenceType() == StockReferenceType.VACCINATION
-            ? TarbilDocumentType.VACCINATION : TarbilDocumentType.PRESCRIPTION;
-        repository.findByDocumentTypeAndSourceId(document, event.referenceId())
+        if (event.referenceType() == StockReferenceType.VACCINATION) {
+            return;
+        }
+        repository.findByDocumentTypeAndSourceId(TarbilDocumentType.PRESCRIPTION, event.referenceId())
             .filter(s -> s.getTenantId().equals(TenantContext.current()))
             .filter(s -> s.getStatus() == TarbilSyncStatus.PENDING)
             .ifPresent(s -> {
