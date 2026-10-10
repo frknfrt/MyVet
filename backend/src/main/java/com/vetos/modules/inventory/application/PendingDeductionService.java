@@ -101,11 +101,13 @@ public class PendingDeductionService {
         return repository.findByReference(type, referenceId).stream().anyMatch(p -> p.getStatus() == PendingDeductionStatus.DEDUCTED);
     }
 
+    /** Kosullu UPDATE'i kazanan istek hareketi yazar; kaybeden (es zamanli onay) hicbir sey yapmaz. */
     private int deduct(PendingStockDeduction p, int quantity, DeductionSettlement via, UUID staffId, Instant now) {
-        if (!p.settle(quantity, via, staffId, now)) {
+        if (p.getStatus() != PendingDeductionStatus.PENDING
+            || !repository.claimForSettlement(p.getId(), quantity, via, staffId, now)) {
             return 0;
         }
-        repository.save(p);
+        p.settle(quantity, via, staffId, now);
         movements.execute(p.getInventoryItemId(), StockMovementType.OUT, quantity, p.getReferenceType(), p.getReferenceId());
         return 1;
     }

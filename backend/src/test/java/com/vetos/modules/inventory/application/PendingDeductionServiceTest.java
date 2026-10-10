@@ -33,6 +33,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class PendingDeductionServiceTest {
@@ -65,6 +66,19 @@ class PendingDeductionServiceTest {
         service = new PendingDeductionService(repository, items, movements);
         lenient().when(repository.findByReference(StockReferenceType.ENCOUNTER, ref)).thenReturn(rows);
         lenient().when(repository.save(any())).thenAnswer(a -> a.getArgument(0));
+        lenient().when(repository.claimForSettlement(any(), anyInt(), any(), any(), any())).thenReturn(true);
+    }
+
+    @Test
+    void concurrentSettlementThatLostTheClaimWritesNoMovement() {
+        UUID a = item("Synulox", "S1");
+        PendingStockDeduction p = pending(a, 2);
+        when(repository.claimForSettlement(eq(p.getId()), anyInt(), any(), any(), any())).thenReturn(false);
+
+        DeductionSettlementResult r = service.settle(StockReferenceType.ENCOUNTER, ref, null, DeductionSettlement.TARBIL, staff);
+
+        assertThat(r.settledCount()).isZero();
+        verifyNoInteractions(movements);
     }
 
     @Test
