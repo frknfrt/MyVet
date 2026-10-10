@@ -208,5 +208,6 @@ yeni kayıtlara uygulanır. Prod'a çıkmadan önce `pending_stock_deduction` bo
   `lblSerialNumber` seriyle, `lblExpirydate` SKT ile, `lblStockQuantityDesc` "<n> Adet" biçiminde stokla, `lblStockType`
   "Bütün Stok" ile dolar; `hiddenStockType` = 0. `txtStockQuantity` (Adet) RadNumericTextBox, tam sayı, min 0;
   `txtStockAmount` (Miktar) RadNumericTextBox, 2 ondalık, min 0,01. İki alanda istemci tarafı hesap/olay yok.
-- Hâlâ bilinmiyor: Adet ile Miktar'ın anlamı ve zorunluluğu (sunucu doğrulaması); Kaydet sonrası satır yapısı;
+- Kullanıcı (2026-10-10): TARBİL stoktan **Adet**i düşer → eklenti `txtStockQuantity` = Vetly `stockQuantity`.
+- Hâlâ bilinmiyor: Miktar'ın anlamı ve zorunluluğu (sunucu doğrulaması); Kaydet sonrası satır yapısı;
   "Reçeteyi Onayla" sonrası başarı ekranı.
