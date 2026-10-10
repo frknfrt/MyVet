@@ -40,6 +40,15 @@ export interface PrescriptionPayload {
   lines: { itemName: string; tarbilProductName: string | null; lotNumber: string | null; quantity: number }[];
 }
 
+export type PlannedLine = PrescriptionPayload['lines'][number];
+
+/** TARBIL'de kaydedilmis recete satiri; onayla birlikte Vetly'ye gider (POST .../submitted lines). */
+export interface ConfirmedLine {
+  productName: string;
+  serialNumber: string;
+  quantity: number;
+}
+
 export interface ExtensionProfile {
   clinicName: string;
   staffName: string;

@@ -32,7 +32,7 @@ function isoDate(s: string | null | undefined): string | null {
   return m ? `${m[3]}-${m[2]}-${m[1]}` : null;
 }
 
-function headerIndex(table: HTMLTableElement, name: string, fallback: number): number {
+export function headerIndex(table: HTMLTableElement, name: string, fallback: number): number {
   const rows = table.tHead?.rows;
   if (!rows) return fallback;
   for (const row of Array.from(rows)) {
@@ -42,10 +42,11 @@ function headerIndex(table: HTMLTableElement, name: string, fallback: number): n
   return fallback;
 }
 
-export function readStockPopupRows(doc: Document): StockPopupRow[] {
-  const table = doc.querySelector<HTMLTableElement>(`table${bySuffix(VACCINE_STOCK_POPUP.grid)}`);
+/** Stok penceresi tablosu (asi ya da ilac): urun adi basligi pencereye gore degisir. */
+export function readPopupRows(doc: Document, gridSuffix: string, nameHeader: string): StockPopupRow[] {
+  const table = doc.querySelector<HTMLTableElement>(`table${bySuffix(gridSuffix)}`);
   if (!table) return [];
-  const name = headerIndex(table, 'Aşı Adı', 1);
+  const name = headerIndex(table, nameHeader, 1);
   const serial = headerIndex(table, 'Seri Numarası', 3);
   const expiry = headerIndex(table, 'Son Kullanma Tarihi', 4);
   return Array.from(table.tBodies[0]?.rows ?? [])
@@ -57,6 +58,10 @@ export function readStockPopupRows(doc: Document): StockPopupRow[] {
       linkId: r.querySelector<HTMLAnchorElement>('a[id$="SelectlinkButton"]')?.id ?? '',
     }))
     .filter((r) => r.serial && r.linkId);
+}
+
+export function readStockPopupRows(doc: Document): StockPopupRow[] {
+  return readPopupRows(doc, VACCINE_STOCK_POPUP.grid, 'Aşı Adı');
 }
 
 /**
