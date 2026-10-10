@@ -10,6 +10,32 @@ const SOURCE: Record<PendingDeductionReference, string> = {
   PRESCRIPTION: 'Reçete',
 };
 
+const ALL_OF: Record<PendingDeductionReference, string> = {
+  ENCOUNTER: 'Bu muayenenin tüm kalemlerini',
+  VACCINATION: 'Bu aşıyı',
+  PRESCRIPTION: 'Bu reçetenin tüm kalemlerini',
+};
+
+interface Group {
+  key: string;
+  referenceType: PendingDeductionReference;
+  referenceId: string;
+  createdAt: string;
+  rows: PendingDeduction[];
+}
+
+/** Aynı kaynağın (muayene/aşı/reçete) satırları birlikte düşer; düğme bu yüzden kaynak başına tektir (review 2026-10-10). */
+function groupBySource(rows: PendingDeduction[]): Group[] {
+  const groups = new Map<string, Group>();
+  for (const r of rows) {
+    const key = `${r.referenceType}:${r.referenceId}`;
+    const g = groups.get(key) ?? { key, referenceType: r.referenceType, referenceId: r.referenceId, createdAt: r.createdAt, rows: [] };
+    g.rows.push(r);
+    groups.set(key, g);
+  }
+  return [...groups.values()];
+}
+
 /** TARBİL düşümü bekleyen kalemler (spec 2026-10-09 S5.5); liste boşsa çizilmez. */
 export function PendingDeductionsPanel({ canAct, onSettled }: { canAct: boolean; onSettled: () => void }) {
   const [rows, setRows] = useState<PendingDeduction[]>([]);
@@ -30,16 +56,15 @@ export function PendingDeductionsPanel({ canAct, onSettled }: { canAct: boolean;
 
   if (rows.length === 0) return null;
 
-  async function settle(row: PendingDeduction) {
-    const key = `${row.referenceType}:${row.referenceId}`;
-    if (confirming !== key) {
-      setConfirming(key);
+  async function settle(group: Group) {
+    if (confirming !== group.key) {
+      setConfirming(group.key);
       return;
     }
     setBusy(true);
     setError(null);
     try {
-      await inventoryApi.settleVetlyOnly(row.referenceType, row.referenceId);
+      await inventoryApi.settleVetlyOnly(group.referenceType, group.referenceId);
       setConfirming(null);
       await load();
       onSettled();
@@ -57,39 +82,33 @@ export function PendingDeductionsPanel({ canAct, onSettled }: { canAct: boolean;
         Bu kalemler TARBİL'de düşüm onaylanınca Vetly stoğundan düşer. TARBİL'e gitmeyecekseniz yalnız Vetly'den düşebilirsiniz.
       </div>
       {error && <div className={styles.error}>{error}</div>}
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            <th>Kalem</th>
-            <th>Seri</th>
-            <th>Adet</th>
-            <th>Kaynak</th>
-            <th>Tarih</th>
-            {canAct && <th />}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => {
-            const key = `${r.referenceType}:${r.referenceId}`;
-            return (
-              <tr key={r.id}>
-                <td>{r.itemName}</td>
-                <td>{r.lotNumber ?? '—'}</td>
-                <td>{r.quantity}</td>
-                <td>{SOURCE[r.referenceType]}</td>
-                <td>{new Date(r.createdAt).toLocaleDateString('tr-TR')}</td>
-                {canAct && (
-                  <td>
-                    <Button variant="tertiary" disabled={busy} onClick={() => settle(r)}>
-                      {confirming === key ? 'Emin misiniz?' : "Yalnız Vetly'den düş"}
-                    </Button>
-                  </td>
-                )}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      {groupBySource(rows).map((g) => (
+        <div key={g.key} className={styles.group}>
+          <div className={styles.groupHead}>
+            <span>
+              {SOURCE[g.referenceType]} · {new Date(g.createdAt).toLocaleDateString('tr-TR')}
+            </span>
+            {canAct && (
+              <Button variant="tertiary" disabled={busy} onClick={() => settle(g)}>
+                {confirming === g.key
+                  ? `Emin misiniz? ${ALL_OF[g.referenceType]} yalnız Vetly'den düş`
+                  : `${ALL_OF[g.referenceType]} yalnız Vetly'den düş`}
+              </Button>
+            )}
+          </div>
+          <table className={styles.table}>
+            <tbody>
+              {g.rows.map((r) => (
+                <tr key={r.id}>
+                  <td>{r.itemName}</td>
+                  <td>Seri {r.lotNumber ?? '—'}</td>
+                  <td>{r.quantity} adet</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
     </section>
   );
 }
