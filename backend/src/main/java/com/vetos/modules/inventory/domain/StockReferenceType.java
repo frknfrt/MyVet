@@ -1,3 +1,3 @@
 package com.vetos.modules.inventory.domain;
 
-public enum StockReferenceType { ENCOUNTER, PURCHASE_ORDER, MANUAL, TARBIL_SYNC, VACCINATION }
+public enum StockReferenceType { ENCOUNTER, PURCHASE_ORDER, MANUAL, TARBIL_SYNC, VACCINATION, PRESCRIPTION }
