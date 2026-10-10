@@ -109,6 +109,7 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
     @AfterEach
     void tearDown() {
         for (UUID t : List.of(tenantA, tenantB)) {
+            jdbcTemplate.update("DELETE FROM pending_stock_deduction WHERE tenant_id = ?", t);
             jdbcTemplate.update("DELETE FROM tarbil_submission WHERE tenant_id = ?", t);
             jdbcTemplate.update("DELETE FROM tarbil_extension_token WHERE tenant_id = ?", t);
             jdbcTemplate.update("DELETE FROM tarbil_value_mapping WHERE tenant_id = ?", t);
@@ -313,7 +314,7 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
     }
 
     @Test
-    void vaccinationFromStockDeductsOneAndCancellationReturnsIt() throws Exception {
+    void vaccinationFromStockWaitsForTarbilAndCancellationClosesIt() throws Exception {
         UUID branchA = inRootSession(() -> branchRepository.save(Branch.create(tenantA, "Aşı Şubesi")).getId());
         String jwt = jwtTokenProvider.generateToken(staffA, tenantA, List.of(branchA), "VET");
         UUID speciesId = inRootSession(() -> speciesRepository.findAll().get(0).getId());
@@ -329,13 +330,18 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
                 .contentType("application/json").content(body))
             .andExpect(status().isCreated())
             .andReturn().getResponse().getHeader("Location");
+        UUID vid = UUID.fromString(location.substring(location.lastIndexOf('/') + 1));
         Integer afterRecord = jdbcTemplate.queryForObject("SELECT quantity_on_hand FROM inventory_items WHERE id = ?", Integer.class, item);
-        assertThat(afterRecord).isEqualTo(17);
+        assertThat(afterRecord).isEqualTo(18);
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM pending_stock_deduction WHERE reference_id = ?", String.class, vid))
+            .isEqualTo("PENDING");
 
         mockMvc.perform(post(location + "/cancel").header("Authorization", "Bearer " + jwt))
             .andExpect(status().is2xxSuccessful());
         Integer afterCancel = jdbcTemplate.queryForObject("SELECT quantity_on_hand FROM inventory_items WHERE id = ?", Integer.class, item);
         assertThat(afterCancel).isEqualTo(18);
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM pending_stock_deduction WHERE reference_id = ?", String.class, vid))
+            .isEqualTo("CANCELLED");
     }
 
     @Test

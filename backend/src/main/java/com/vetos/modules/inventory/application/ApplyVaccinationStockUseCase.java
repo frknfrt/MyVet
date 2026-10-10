@@ -14,9 +14,10 @@ import java.util.Locale;
 import java.util.UUID;
 
 /**
- * Stoktan secilen asi (spec 2026-10-04 P2 S3.3): uygulaninca 1 OUT, iptalde (yalniz dusulmusse) 1 IN.
- * Ayni asi kaydi icin her yonde en fazla bir hareket (V77 tekil indeks es zamanli istekte de korur); stok 0'da eksiye
- * dusmez ve kayit yine olusur. Kalem asi degilse ya da serisi asi kaydinin serisiyle ayni degilse dusulmez.
+ * Stoktan secilen asi (spec 2026-10-09 S5.2): uygulaninca stok dusmez, TARBIL dusumunu bekler (1 adet); OUT, TARBIL
+ * onayi gelince PendingDeductionService ile yazilir (V77: bir asiya bir OUT). Iptalde bekleyen kapanir; TARBIL'de dusmusse
+ * iade yok (TARBIL esastir). Eski modelle dusulmus kayitlarda (OUT var, bekleyen yok) iptal 1 IN yazar.
+ * Kalem asi degilse ya da serisi asi kaydinin serisiyle ayni degilse bekleme acilmaz.
  */
 @Service
 @RequiredArgsConstructor
@@ -24,6 +25,7 @@ public class ApplyVaccinationStockUseCase {
 
     private final InventoryItemRepository items;
     private final StockMovementRepository movements;
+    private final PendingDeductionService pending;
 
     @Transactional
     public void administered(UUID vaccinationRecordId, UUID inventoryItemId, String lotNumber) {
@@ -32,19 +34,20 @@ public class ApplyVaccinationStockUseCase {
             return;
         }
         items.findById(inventoryItemId)
-            .filter(i -> i.getQuantityOnHand() > 0 && isVaccine(i) && serial(i.getLotNumber()).equals(serial(lotNumber)))
-            .ifPresent(item -> {
-                item.adjustQuantity(-1);
-                items.save(item);
-                movements.save(StockMovement.record(item.getTenantId(), item.getId(), StockMovementType.OUT, 1,
-                    StockReferenceType.VACCINATION, vaccinationRecordId));
-            });
+            .filter(i -> isVaccine(i) && serial(i.getLotNumber()).equals(serial(lotNumber)))
+            .ifPresent(item -> pending.open(inventoryItemId, 1, StockReferenceType.VACCINATION, vaccinationRecordId));
     }
 
     @Transactional
     public void cancelled(UUID vaccinationRecordId, UUID inventoryItemId) {
-        if (inventoryItemId == null
-            || !movements.existsByReference(vaccinationRecordId, StockReferenceType.VACCINATION, StockMovementType.OUT)
+        if (inventoryItemId == null) {
+            return;
+        }
+        if (!pending.lines(StockReferenceType.VACCINATION, vaccinationRecordId).isEmpty()) {
+            pending.cancel(StockReferenceType.VACCINATION, vaccinationRecordId);
+            return;
+        }
+        if (!movements.existsByReference(vaccinationRecordId, StockReferenceType.VACCINATION, StockMovementType.OUT)
             || movements.existsByReference(vaccinationRecordId, StockReferenceType.VACCINATION, StockMovementType.IN)) {
             return;
         }
