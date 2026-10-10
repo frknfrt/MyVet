@@ -96,6 +96,35 @@ class QueueEncounterDeductionUseCaseTest {
     }
 
     @Test
+    void restoresADismissedSubmissionWithTheNewDiagnosis() {
+        finalized();
+        when(deductions.listForReference(StockReferenceType.ENCOUNTER, encounter)).thenReturn(List.of(line(PendingDeductionStatus.PENDING)));
+        TarbilSubmission existing = TarbilSubmission.queuePrescription(tenant, patient, TarbilSourceKind.ENCOUNTER, encounter, UUID.randomUUID());
+        existing.dismiss(UUID.randomUUID(), "Bildirim gerekmiyor", java.time.Instant.now());
+        when(submissions.findByDocumentTypeAndSourceId(TarbilDocumentType.PRESCRIPTION, encounter)).thenReturn(Optional.of(existing));
+
+        assertThat(useCase().execute(encounter, disease)).isEqualTo(existing.getId());
+
+        assertThat(existing.getStatus()).isEqualTo(com.vetos.modules.integration.tarbil.domain.TarbilSyncStatus.PENDING);
+        assertThat(existing.getTarbilDiseaseId()).isEqualTo(disease);
+        verify(submissions).save(existing);
+    }
+
+    @Test
+    void submittedSubmissionWithRemainingLinesConflicts() {
+        finalized();
+        when(deductions.listForReference(StockReferenceType.ENCOUNTER, encounter)).thenReturn(List.of(line(PendingDeductionStatus.PENDING)));
+        TarbilSubmission existing = TarbilSubmission.queuePrescription(tenant, patient, TarbilSourceKind.ENCOUNTER, encounter, disease);
+        existing.markSubmitted(UUID.randomUUID(), com.vetos.modules.integration.tarbil.domain.TarbilConfirmationMethod.AUTO, null, java.time.Instant.now());
+        when(submissions.findByDocumentTypeAndSourceId(TarbilDocumentType.PRESCRIPTION, encounter)).thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> useCase().execute(encounter, disease))
+            .isInstanceOf(TarbilNothingToDeductConflictException.class)
+            .hasMessageContaining("Yalnız Vetly'den düş");
+        verify(submissions, never()).save(any());
+    }
+
+    @Test
     void queueWithoutPendingLinesConflicts() {
         finalized();
         when(deductions.listForReference(StockReferenceType.ENCOUNTER, encounter)).thenReturn(List.of(line(PendingDeductionStatus.DEDUCTED)));

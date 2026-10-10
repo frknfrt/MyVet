@@ -117,6 +117,11 @@ public class TarbilSubmission {
         };
     }
 
+    /** Reddedilmis muayene aktarimi yeniden kuyruga alinirken hekimin yeni sectigi teshis (review 2026-10-10). */
+    public void changeTarbilDisease(UUID tarbilDiseaseId) {
+        this.tarbilDiseaseId = tarbilDiseaseId;
+    }
+
     public void noteSettlement(String note) {
         this.settlementNote = note;
     }

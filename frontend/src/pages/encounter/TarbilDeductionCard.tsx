@@ -55,6 +55,14 @@ export function TarbilDeductionCard({ encounterId, canAct }: { encounterId: stri
       {error && <div className={encounterStyles.aiError}>{error}</div>}
       {pending.length === 0 ? (
         <div className={styles.done}>TARBİL'den düşüldü ✓</div>
+      ) : data.submissionStatus === 'SUBMITTED' ? (
+        <div className={styles.note}>
+          Reçete TARBİL'e gönderildi ama {pending.length} kalem TARBİL'de onaylanmadı. Bu kalemleri yalnız Vetly'den düşebilirsiniz.
+        </div>
+      ) : data.submissionStatus === 'DISMISSED' ? (
+        <div className={styles.note}>
+          TARBİL aktarımı "Bildirilmeyecek" olarak işaretlendi. Yeniden göndermek için teşhis seçin ya da yalnız Vetly'den düşün.
+        </div>
       ) : data.submissionStatus === 'PENDING' ? (
         <div className={styles.note}>TARBİL'e aktarılmayı bekliyor — eklentiden "TARBİL'e aktar" deyin.</div>
       ) : (
@@ -73,7 +81,7 @@ export function TarbilDeductionCard({ encounterId, canAct }: { encounterId: stri
       )}
       {canAct && pending.length > 0 && (
         <div className={styles.actions}>
-          {data.submissionStatus !== 'PENDING' && (
+          {(data.submissionStatus === null || data.submissionStatus === 'DISMISSED') && (
             <>
               <TarbilDiseaseSelect value={disease} onChange={setDisease} />
               <Button
@@ -81,7 +89,7 @@ export function TarbilDeductionCard({ encounterId, canAct }: { encounterId: stri
                 disabled={!disease || busy}
                 onClick={() => run(() => tarbilApi.queueEncounterDeduction(encounterId, disease))}
               >
-                TARBİL'den stok düş
+                {data.submissionStatus === 'DISMISSED' ? "TARBİL'e yeniden gönder" : "TARBİL'den stok düş"}
               </Button>
             </>
           )}

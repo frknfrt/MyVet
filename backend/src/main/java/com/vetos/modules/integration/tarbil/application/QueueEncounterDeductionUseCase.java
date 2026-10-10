@@ -16,12 +16,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
  * Muayene karti "TARBIL'den stok dus" (spec 2026-10-09 S5.1): muayenede kullanilan TARBIL'e bagli ilaclar icin stoktan
- * dusen recete aktarimi kuyruga girer. Idempotent: ayni muayene icin mevcut aktarimin id'si doner. Kiraci disi muayene
- * EncounterLookupPort'ta 404 olur (filtreli oturum).
+ * dusen recete aktarimi kuyruga girer. Idempotent: bekleyen aktarim varsa id'si doner; reddedilmis (Bildirilmeyecek)
+ * aktarim yeni teshisle geri acilir; gonderilmis aktarimda kalan kalemler icin 409 (ikinci aktarim yok, Plan B).
+ * Kiraci disi muayene EncounterLookupPort'ta 404 olur (filtreli oturum).
  */
 @Service
 @RequiredArgsConstructor
@@ -42,10 +44,23 @@ public class QueueEncounterDeductionUseCase {
         if (!anyPending) {
             throw new TarbilNothingToDeductConflictException("TARBİL düşümü bekleyen ilaç yok");
         }
-        return submissions.findByDocumentTypeAndSourceId(TarbilDocumentType.PRESCRIPTION, encounterId)
-            .filter(s -> s.getTenantId().equals(TenantContext.current()))
-            .map(TarbilSubmission::getId)
-            .orElseGet(() -> submissions.save(TarbilSubmission.queuePrescription(
-                TenantContext.current(), encounter.patientId(), TarbilSourceKind.ENCOUNTER, encounterId, tarbilDiseaseId)).getId());
+        Optional<TarbilSubmission> existing = submissions.findByDocumentTypeAndSourceId(TarbilDocumentType.PRESCRIPTION, encounterId)
+            .filter(s -> s.getTenantId().equals(TenantContext.current()));
+        if (existing.isEmpty()) {
+            return submissions.save(TarbilSubmission.queuePrescription(
+                TenantContext.current(), encounter.patientId(), TarbilSourceKind.ENCOUNTER, encounterId, tarbilDiseaseId)).getId();
+        }
+        TarbilSubmission submission = existing.get();
+        switch (submission.getStatus()) {
+            case DISMISSED -> {
+                submission.restore();
+                submission.changeTarbilDisease(tarbilDiseaseId);
+                submissions.save(submission);
+            }
+            case SUBMITTED -> throw new TarbilNothingToDeductConflictException(
+                "Bu muayenenin reçetesi TARBİL'e gönderildi; kalan kalemler için Yalnız Vetly'den düş'ü kullanın");
+            case PENDING -> { }
+        }
+        return submission.getId();
     }
 }
