@@ -1,8 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { ALLOWED_BUTTONS, FORBIDDEN_BUTTON_PATTERNS, allowedButtonSuffix } from './allowlist';
 import { RECEIPT } from './vaccineReceipt';
+import { PRESCRIPTION_RECEIPT } from './prescriptionReceipt';
 
 describe('button allowlist', () => {
+  it('treats Reçeteyi Onayla and the stock row Kaydet as forbidden', () => {
+    for (const suffix of PRESCRIPTION_RECEIPT.insertButtons) {
+      expect(FORBIDDEN_BUTTON_PATTERNS.some((re) => re.test(suffix)), suffix).toBe(true);
+    }
+    expect(FORBIDDEN_BUTTON_PATTERNS.some((re) => re.test('RadGridStock_ctl00_ctl02_ctl03_PerformInsertButton'))).toBe(true);
+  });
+  it('allows the prescription form helpers and the medicine stock popup search', () => {
+    expect(allowedButtonSuffix('prescriptionReceipt', 'petVet')).toBe('_ReceiptAddOtherAnimal_RadOtherAnimal_ctl00_ctl02_ctl00_bntPetVet');
+    expect(allowedButtonSuffix('prescriptionReceipt', 'addDisease')).toBe('_cntRECEIPTBodyContent_imgAddDisease');
+    expect(allowedButtonSuffix('prescriptionReceipt', 'addStock')).toBe('_RadGridStock_ctl00_ctl02_ctl00_InitInsertButton');
+    expect(allowedButtonSuffix('prescriptionReceipt', 'stockSearch')).toBe('_RadGridStock_ctl00_ctl02_ctl03_imgSearch');
+    expect(allowedButtonSuffix('medicineStockPopup', 'search')).toBe('_UcPharmacyStockSearchForReceipt_btnSearch');
+    expect(allowedButtonSuffix('prescriptionReceipt', 'insert')).toBeNull();
+  });
+
   it('contains no button that finalizes an official record', () => {
     const all = Object.values(ALLOWED_BUTTONS).flatMap((page) => Object.values(page));
     for (const suffix of all) {

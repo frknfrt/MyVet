@@ -1,5 +1,6 @@
 import { SEARCH } from './shared';
-import { MEDICINE_STOCK, VACCINE_STOCK, VACCINE_STOCK_POPUP } from './stock';
+import { PRESCRIPTION_RECEIPT } from './prescriptionReceipt';
+import { MEDICINE_STOCK, MEDICINE_STOCK_POPUP, VACCINE_STOCK, VACCINE_STOCK_POPUP } from './stock';
 import { RECEIPT } from './vaccineReceipt';
 
 /**
@@ -12,6 +13,13 @@ export const ALLOWED_BUTTONS = {
   animalSearch: { search: SEARCH.search, transfer: SEARCH.transfer },
   vaccineStock: { search: VACCINE_STOCK.search },
   medicineStock: { search: MEDICINE_STOCK.search },
+  prescriptionReceipt: {
+    petVet: PRESCRIPTION_RECEIPT.petVet,
+    addDisease: PRESCRIPTION_RECEIPT.addDisease,
+    addStock: PRESCRIPTION_RECEIPT.addStock,
+    stockSearch: PRESCRIPTION_RECEIPT.stockSearch,
+  },
+  medicineStockPopup: { search: MEDICINE_STOCK_POPUP.search },
 } as const;
 
 // PerformInsertButton: asi urun satiri "Kaydet" -- TARBIL stogundan duser (2026-10-04 hekim bildirdi), resmi islem sayilir.

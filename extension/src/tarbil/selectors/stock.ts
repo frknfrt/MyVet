@@ -21,3 +21,10 @@ export const VACCINE_STOCK_POPUP = {
   search: '_UcVaccineStockSearch_btnSearch',
   grid: '_UcVaccineStockSearch_radGridStock_ctl00',
 } as const;
+
+/** hbsapp ilac recetesi stok penceresi (UcPharmacyStockSearchForReceiptModalPage.aspx; 2026-10-10 canli). "Sec" pencereyi kapatir. */
+export const MEDICINE_STOCK_POPUP = {
+  serial: '_UcPharmacyStockSearchForReceipt_txtSerialNumber',
+  search: '_UcPharmacyStockSearchForReceipt_btnSearch',
+  grid: '_UcPharmacyStockSearchForReceipt_radGridStock_ctl00',
+} as const;
