@@ -4,7 +4,8 @@ export type PrescriptionStatus = 'ACTIVE' | 'FULFILLED' | 'CANCELLED';
 export type DrugRoute = 'ORAL' | 'TOPICAL' | 'INJECTABLE';
 
 export interface PrescriptionItem {
-  drugId: string;
+  /** Stoktan verilen kalemde null: ilaç stok ürünüdür (spec 2026-10-12). */
+  drugId: string | null;
   drugName: string | null;
   dosage: string;
   frequency: string;
@@ -53,7 +54,9 @@ export interface DrugInteractionWarning {
 }
 
 export interface PrescriptionItemPayload {
-  drugId: string;
+  /** Stoktan verilen kalemde null; ad drugName'de. */
+  drugId: string | null;
+  drugName?: string | null;
   dosage: string;
   frequency: string;
   durationDays: number;

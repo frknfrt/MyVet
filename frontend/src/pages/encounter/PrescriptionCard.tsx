@@ -43,6 +43,7 @@ const STATUS_LABELS: Record<Prescription['status'], string> = {
 function emptyItem(defaultDrugId: string): ItemDraft {
   return {
     drugId: defaultDrugId,
+    drugName: null,
     dosage: '',
     frequency: '',
     durationDays: 7,
@@ -83,7 +84,8 @@ export function PrescriptionCard({ encounterId, patientId, readOnly, onChanged }
   }, [encounterId, patientId]);
 
   useEffect(() => {
-    const drugIds = [...new Set(items.map((it) => it.drugId).filter(Boolean))];
+    // Etkileşim katalog bilgisine dayanır: stoktan verilen kalemler katılmaz (spec 2026-10-12).
+    const drugIds = [...new Set(items.filter((it) => !it.giveFromStock && it.drugId).map((it) => it.drugId as string))];
     if (drugIds.length < 2) {
       setInteractionWarnings([]);
       return;
@@ -97,8 +99,8 @@ export function PrescriptionCard({ encounterId, patientId, readOnly, onChanged }
     };
   }, [items]);
 
-  function drugName(id: string) {
-    return drugs.find((d) => d.id === id)?.name ?? id;
+  function drugName(id: string | null) {
+    return (id && drugs.find((d) => d.id === id)?.name) ?? '—';
   }
 
   function stockName(id: string | null) {
@@ -152,9 +154,12 @@ export function PrescriptionCard({ encounterId, patientId, readOnly, onChanged }
     setBusy(true);
     setError(null);
     try {
-      const controlledSubstance = items.some((it) => drugs.find((d) => d.id === it.drugId)?.isControlled);
+      const controlledSubstance = items.some((it) => !it.giveFromStock && drugs.find((d) => d.id === it.drugId)?.isControlled);
+      // Stoktan verilen kalemin ilacı stok ürünüdür: katalog ilacı gönderilmez, ad stok ürününden (spec 2026-10-12).
       const payloadItems: PrescriptionItemPayload[] = items.map(({ giveFromStock, ...it }) =>
-        giveFromStock ? it : { ...it, inventoryItemId: null, stockQuantity: null },
+        giveFromStock
+          ? { ...it, drugId: null }
+          : { ...it, drugName: null, inventoryItemId: null, stockQuantity: null },
       );
       await clinicalApi.issuePrescription({
         patientId,
@@ -229,16 +234,18 @@ export function PrescriptionCard({ encounterId, patientId, readOnly, onChanged }
         <form className={styles.form} onSubmit={handleSubmit}>
           {items.map((item, index) => (
             <div key={index} className={styles.itemRow}>
-              <FieldWrap label="İlaç">
-                <Select value={item.drugId} onChange={(e) => updateItem(index, { drugId: e.target.value })}>
-                  {drugs.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                      {d.isControlled ? ' (kontrollü)' : ''}
-                    </option>
-                  ))}
-                </Select>
-              </FieldWrap>
+              {!item.giveFromStock && (
+                <FieldWrap label="İlaç">
+                  <Select value={item.drugId ?? ''} onChange={(e) => updateItem(index, { drugId: e.target.value })}>
+                    {drugs.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                        {d.isControlled ? ' (kontrollü)' : ''}
+                      </option>
+                    ))}
+                  </Select>
+                </FieldWrap>
+              )}
               <FieldWrap label="Dozaj">
                 <Input
                   value={item.dosage}
@@ -282,8 +289,8 @@ export function PrescriptionCard({ encounterId, patientId, readOnly, onChanged }
                     updateItem(
                       index,
                       e.target.checked
-                        ? { giveFromStock: true, stockQuantity: 1 }
-                        : { giveFromStock: false, inventoryItemId: null, stockQuantity: null },
+                        ? { giveFromStock: true, stockQuantity: 1, drugId: null }
+                        : { giveFromStock: false, inventoryItemId: null, stockQuantity: null, drugName: null, drugId: drugs[0]?.id ?? '' },
                     )
                   }
                 />
@@ -293,7 +300,7 @@ export function PrescriptionCard({ encounterId, patientId, readOnly, onChanged }
                 <>
                   <StockGivePicker
                     value={item.inventoryItemId ?? null}
-                    onChange={(id) => updateItem(index, { inventoryItemId: id })}
+                    onChange={(id, name) => updateItem(index, { inventoryItemId: id, drugName: name })}
                   />
                   <FieldWrap label="Adet">
                     <Input

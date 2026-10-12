@@ -11,7 +11,7 @@ const todayIso = () => {
  * Reçeteden "kliniğin stoğundan ver" (spec 2026-10-09 S5.6): TARBİL'e bağlı, stokta olan ve SKT'si geçmemiş kalemler.
  * Stok TARBİL'de reçete onaylanınca düşer.
  */
-export function StockGivePicker({ value, onChange }: { value: string | null; onChange: (id: string | null) => void }) {
+export function StockGivePicker({ value, onChange }: { value: string | null; onChange: (id: string | null, name: string | null) => void }) {
   const [items, setItems] = useState<InventoryItem[]>([]);
 
   useEffect(() => {
@@ -24,7 +24,14 @@ export function StockGivePicker({ value, onChange }: { value: string | null; onC
 
   return (
     <FieldWrap label="Stok ürünü">
-      <Select aria-label="Stok ürünü" value={value ?? ''} onChange={(e) => onChange(e.target.value || null)}>
+      <Select
+        aria-label="Stok ürünü"
+        value={value ?? ''}
+        onChange={(e) => {
+          const picked = items.find((i) => i.id === e.target.value);
+          onChange(picked?.id ?? null, picked?.name ?? null);
+        }}
+      >
         <option value="">Seçiniz</option>
         {items.map((i) => (
           <option key={i.id} value={i.id}>
