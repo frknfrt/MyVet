@@ -9,7 +9,7 @@ health 2/5 · observability 1.5/5 · rate limit 3/5 · versioning 3/5 · logging
 
 ---
 
-## Faz 1 — Hızlı risk kapatma (platform, küçük, bağımsız)  ← **ŞİMDİ**
+## Faz 1 — Hızlı risk kapatma (platform, küçük, bağımsız)  ✅ tamamlandı (2026-10-12)
 Plan: `2026-10-12-faz1-risk-kapatma.md`
 
 | # | İş | Neden önce | Başlık |
@@ -19,9 +19,11 @@ Plan: `2026-10-12-faz1-risk-kapatma.md`
 | 1.3 | requestId uçtan uca: gelen `X-Request-Id`'yi güvenli biçimdeyse kabul, yanıt header'ına yaz, `ErrorResponse.requestId` alanı, CORS expose | Kullanıcının gördüğü hatayı loga bağlamanın tek yolu | Observability, Exception |
 | 1.4 | `@Async` executor'a MDC taşıyan `TaskDecorator`; graceful shutdown | Outbox loglarında requestId/tenantId kayboluyor; deploy'da yarım kalan gönderimler | Observability, Resilience |
 
+**Faz 1'den ertelenenler (final review, minor):** platform-admin CORS'ta `X-Request-Id`/`Location` expose; okuma zaman aşımı soket-başına (toplam süre sınırı Faz 5 TimeLimiter); nginx `client_max_body_size` kontrolü (1 MB varsayılanı 15 MB yüklemeleri Spring'den önce kesebilir); kapanış süresi yorumu (web drain 30 sn + executor 30 sn) ve executor/DataSource yok edilme sırası; unsafe requestId testinde yanıt header'ı doğrulaması.
+
 **Çıkış kriteri:** Tüm birim testleri yeşil, `./mvnw test` yeşil, elle: geçersiz UUID'li bir GET 400 döner ve yanıtta `requestId` + `X-Request-Id` header'ı aynıdır.
 
-## Faz 2 — Plan özelliklerinin (feature flag) gerçekten uygulanması
+## Faz 2 — Plan özelliklerinin (feature flag) gerçekten uygulanması  ← **SIRADAKİ** (önce brainstorming)
 **Ön koşul: tasarım kararı (brainstorming).** `PlanFeatureFlag` bugün sadece admin panelinde; modüllerde engelleme yok.
 
 Karar verilecekler:
