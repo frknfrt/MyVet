@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.List;
@@ -113,6 +114,13 @@ public class GlobalExceptionHandler {
             .body(ErrorResponse.of("PAYLOAD_TOO_LARGE", "Dosya boyutu siniri asildi", request.getRequestURI()));
     }
 
+    /** Dosya yukleme ucuna multipart olmayan istek -- MaxUploadSizeExceededException'in ust sinifi, o daha ozel handler'a gider. */
+    @ExceptionHandler(MultipartException.class)
+    public ResponseEntity<ErrorResponse> handleMultipart(MultipartException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .body(ErrorResponse.of("INVALID_MULTIPART", "Istek gecerli bir dosya yukleme (multipart) istegi degil", request.getRequestURI()));
+    }
+
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ErrorResponse> handleNoResource(NoResourceFoundException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -121,6 +129,16 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpected(Exception ex, HttpServletRequest request) {
+        // Spring MVC'nin kendi istemci hatalari (eksik multipart parcasi, eksik header,
+        // 406 vb.) Spring'in ErrorResponse arayuzunu uygular ve kendi 4xx durumunu tasir --
+        // ozel handler'i olmayanlar da 500 + ERROR log yerine o durumla doner.
+        if (ex instanceof org.springframework.web.ErrorResponse springError
+            && springError.getStatusCode().is4xxClientError()) {
+            log.warn("Istemci hatasi: {} {} -> {} ({})", request.getMethod(), request.getRequestURI(),
+                springError.getStatusCode().value(), ex.getClass().getSimpleName());
+            return ResponseEntity.status(springError.getStatusCode())
+                .body(ErrorResponse.of("CLIENT_ERROR", "Istek gecersiz", request.getRequestURI()));
+        }
         log.error("Beklenmeyen hata: {} {}", request.getMethod(), request.getRequestURI(), ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
             .body(ErrorResponse.of("INTERNAL_ERROR", "Beklenmeyen bir hata olustu", request.getRequestURI()));

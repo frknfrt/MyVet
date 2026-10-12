@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.Map;
@@ -21,6 +22,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -54,6 +56,11 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/probe/no-resource")
         String noResource() throws NoResourceFoundException {
             throw new NoResourceFoundException(HttpMethod.GET, "probe/no-resource");
+        }
+
+        @PostMapping("/probe/upload")
+        String upload(@RequestParam("file") MultipartFile file) {
+            return file.getOriginalFilename();
         }
 
         @GetMapping("/probe/boom")
@@ -116,5 +123,19 @@ class GlobalExceptionHandlerTest {
             .andExpect(status().isInternalServerError())
             .andExpect(jsonPath("$.errorCode").value("INTERNAL_ERROR"))
             .andExpect(jsonPath("$.message").value(not(containsString("gizli"))));
+    }
+
+    @Test
+    void should_return400_when_multipartFilePartMissing() throws Exception {
+        mockMvc.perform(multipart("/probe/upload"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.errorCode").value("CLIENT_ERROR"));
+    }
+
+    @Test
+    void should_return400_when_uploadRequestIsNotMultipart() throws Exception {
+        mockMvc.perform(post("/probe/upload").contentType(MediaType.APPLICATION_JSON).content("{}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.errorCode").value("INVALID_MULTIPART"));
     }
 }
