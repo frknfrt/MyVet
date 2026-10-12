@@ -4,15 +4,23 @@ import com.vetos.platform.exception.DomainException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * Tek global hata yakalayici. Butun DomainException alt siniflari buradan
@@ -64,6 +72,51 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleNotReadable(HttpMessageNotReadableException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
             .body(ErrorResponse.of("MALFORMED_REQUEST_BODY", "Istek govdesi okunamadi veya gecersiz bicimde", request.getRequestURI()));
+    }
+
+    /**
+     * Asagidaki handler'lar olmadan bu istemci hatalarinin hepsi genel Exception
+     * handler'ina dusup 500 + ERROR log uretiyordu -- hem api-conventions.md'deki
+     * 4xx sozlesmesini bozuyor hem de gercek sunucu hatalarini loglarda gomuyordu.
+     */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingParameter(MissingServletRequestParameterException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .body(ErrorResponse.of("MISSING_PARAMETER", "Zorunlu parametre eksik: " + ex.getParameterName(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .body(ErrorResponse.of("INVALID_PARAMETER", "Gecersiz parametre degeri: " + ex.getName(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
+        ResponseEntity.BodyBuilder builder = ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED);
+        Set<HttpMethod> supported = ex.getSupportedHttpMethods();
+        if (supported != null && !supported.isEmpty()) {
+            builder.allow(supported.toArray(HttpMethod[]::new));
+        }
+        return builder.body(ErrorResponse.of("METHOD_NOT_ALLOWED", "Bu uc nokta " + ex.getMethod() + " istegini desteklemiyor", request.getRequestURI()));
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+            .body(ErrorResponse.of("UNSUPPORTED_MEDIA_TYPE", "Desteklenmeyen icerik tipi", request.getRequestURI()));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUploadSize(MaxUploadSizeExceededException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+            .body(ErrorResponse.of("PAYLOAD_TOO_LARGE", "Dosya boyutu siniri asildi", request.getRequestURI()));
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResource(NoResourceFoundException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(ErrorResponse.of("NOT_FOUND", "Istenen kaynak bulunamadi", request.getRequestURI()));
     }
 
     @ExceptionHandler(Exception.class)
