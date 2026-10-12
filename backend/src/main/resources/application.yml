@@ -32,6 +32,11 @@ spring:
         # yavas bir is digerlerini geciktirir -- havuzu buyutuyoruz.
         size: 4
 
+  lifecycle:
+    # server.shutdown=graceful ile: devam eden HTTP istekleri ve async gorevler
+    # icin en fazla bu kadar beklenir (VPS'teki systemd TimeoutStopSec'ten kisa olmali).
+    timeout-per-shutdown-phase: 30s
+
 management:
   endpoints:
     web:
@@ -138,6 +143,7 @@ server:
   # degiskeninde belirttikleri porta baglanmasini bekliyor -- SERVER_PORT
   # yerel/diger ortamlar icin geriye donuk uyumluluk olarak korunuyor.
   port: ${PORT:${SERVER_PORT:8080}}
+  shutdown: graceful
 
 logging:
   level:
