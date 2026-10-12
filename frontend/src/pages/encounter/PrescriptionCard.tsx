@@ -233,91 +233,100 @@ export function PrescriptionCard({ encounterId, patientId, readOnly, onChanged }
       {!readOnly && formOpen && (
         <form className={styles.form} onSubmit={handleSubmit}>
           {items.map((item, index) => (
-            <div key={index} className={styles.itemRow}>
-              {!item.giveFromStock && (
-                <FieldWrap label="İlaç">
-                  <Select value={item.drugId ?? ''} onChange={(e) => updateItem(index, { drugId: e.target.value })}>
-                    {drugs.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name}
-                        {d.isControlled ? ' (kontrollü)' : ''}
+            <div key={index} className={styles.itemCard}>
+              {/* Kalem başlığı: sıra, stoktan verme seçimi, kaldır. Alan sayısı seçime göre değişse de satırlar kaymaz. */}
+              <div className={styles.itemHead}>
+                <span className={styles.itemNo}>İlaç {index + 1}</span>
+                <label className={styles.stockToggle}>
+                  <input
+                    type="checkbox"
+                    aria-label="Kliniğin stoğundan ver"
+                    checked={item.giveFromStock}
+                    onChange={(e) =>
+                      updateItem(
+                        index,
+                        e.target.checked
+                          ? { giveFromStock: true, stockQuantity: 1, drugId: null }
+                          : { giveFromStock: false, inventoryItemId: null, stockQuantity: null, drugName: null, drugId: drugs[0]?.id ?? '' },
+                      )
+                    }
+                  />
+                  Kliniğin stoğundan ver
+                </label>
+                {items.length > 1 && (
+                  <button type="button" className={styles.removeBtn} onClick={() => removeItem(index)}>
+                    Kaldır
+                  </button>
+                )}
+              </div>
+              {/* Ne veriliyor: katalog ilacı ya da stok ürünü + adet. */}
+              <div className={item.giveFromStock ? `${styles.whatRow} ${styles.withQty}` : styles.whatRow}>
+                {item.giveFromStock ? (
+                  <>
+                    <StockGivePicker
+                      value={item.inventoryItemId ?? null}
+                      onChange={(id, name) => updateItem(index, { inventoryItemId: id, drugName: name })}
+                    />
+                    <FieldWrap label="Adet">
+                      <Input
+                        type="number"
+                        min={1}
+                        value={item.stockQuantity ?? 1}
+                        onChange={(e) => updateItem(index, { stockQuantity: Number(e.target.value) })}
+                        required
+                      />
+                    </FieldWrap>
+                  </>
+                ) : (
+                  <FieldWrap label="İlaç">
+                    <Select value={item.drugId ?? ''} onChange={(e) => updateItem(index, { drugId: e.target.value })}>
+                      {drugs.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name}
+                          {d.isControlled ? ' (kontrollü)' : ''}
+                        </option>
+                      ))}
+                    </Select>
+                  </FieldWrap>
+                )}
+              </div>
+              {/* Nasıl kullanılacak. */}
+              <div className={styles.howRow}>
+                <FieldWrap label="Dozaj">
+                  <Input
+                    value={item.dosage}
+                    onChange={(e) => updateItem(index, { dosage: e.target.value })}
+                    placeholder="Örn. 10 mg/kg"
+                    required
+                  />
+                </FieldWrap>
+                <FieldWrap label="Sıklık">
+                  <Input
+                    value={item.frequency}
+                    onChange={(e) => updateItem(index, { frequency: e.target.value })}
+                    placeholder="Örn. Günde 2 kez"
+                    required
+                  />
+                </FieldWrap>
+                <FieldWrap label="Süre (gün)">
+                  <Input
+                    type="number"
+                    min={1}
+                    value={item.durationDays}
+                    onChange={(e) => updateItem(index, { durationDays: Number(e.target.value) })}
+                    required
+                  />
+                </FieldWrap>
+                <FieldWrap label="Uygulama">
+                  <Select value={item.route} onChange={(e) => updateItem(index, { route: e.target.value as DrugRoute })}>
+                    {(Object.keys(ROUTE_LABELS) as DrugRoute[]).map((route) => (
+                      <option key={route} value={route}>
+                        {ROUTE_LABELS[route]}
                       </option>
                     ))}
                   </Select>
                 </FieldWrap>
-              )}
-              <FieldWrap label="Dozaj">
-                <Input
-                  value={item.dosage}
-                  onChange={(e) => updateItem(index, { dosage: e.target.value })}
-                  placeholder="Örn. 10 mg/kg"
-                  required
-                />
-              </FieldWrap>
-              <FieldWrap label="Sıklık">
-                <Input
-                  value={item.frequency}
-                  onChange={(e) => updateItem(index, { frequency: e.target.value })}
-                  placeholder="Örn. Günde 2 kez"
-                  required
-                />
-              </FieldWrap>
-              <FieldWrap label="Süre (gün)">
-                <Input
-                  type="number"
-                  min={1}
-                  value={item.durationDays}
-                  onChange={(e) => updateItem(index, { durationDays: Number(e.target.value) })}
-                  required
-                />
-              </FieldWrap>
-              <FieldWrap label="Uygulama">
-                <Select value={item.route} onChange={(e) => updateItem(index, { route: e.target.value as DrugRoute })}>
-                  {(Object.keys(ROUTE_LABELS) as DrugRoute[]).map((route) => (
-                    <option key={route} value={route}>
-                      {ROUTE_LABELS[route]}
-                    </option>
-                  ))}
-                </Select>
-              </FieldWrap>
-              <label className={styles.stockToggle}>
-                <input
-                  type="checkbox"
-                  aria-label="Kliniğin stoğundan ver"
-                  checked={item.giveFromStock}
-                  onChange={(e) =>
-                    updateItem(
-                      index,
-                      e.target.checked
-                        ? { giveFromStock: true, stockQuantity: 1, drugId: null }
-                        : { giveFromStock: false, inventoryItemId: null, stockQuantity: null, drugName: null, drugId: drugs[0]?.id ?? '' },
-                    )
-                  }
-                />
-                Kliniğin stoğundan ver
-              </label>
-              {item.giveFromStock && (
-                <>
-                  <StockGivePicker
-                    value={item.inventoryItemId ?? null}
-                    onChange={(id, name) => updateItem(index, { inventoryItemId: id, drugName: name })}
-                  />
-                  <FieldWrap label="Adet">
-                    <Input
-                      type="number"
-                      min={1}
-                      value={item.stockQuantity ?? 1}
-                      onChange={(e) => updateItem(index, { stockQuantity: Number(e.target.value) })}
-                      required
-                    />
-                  </FieldWrap>
-                </>
-              )}
-              {items.length > 1 && (
-                <button type="button" className={styles.removeBtn} onClick={() => removeItem(index)}>
-                  Kaldır
-                </button>
-              )}
+              </div>
             </div>
           ))}
 
