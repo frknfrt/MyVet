@@ -98,7 +98,8 @@ public class SecurityConfig {
         // gorunmez (CORS-safelisted response header degil) -- postForId (Yeni
         // Randevu, Muayene Baslat, Yeni Stok Kalemi, Kasa Ac, widget randevu
         // talebi) bu yuzden tarayicida sessizce basarisiz oluyordu.
-        configuration.setExposedHeaders(List.of("Location"));
+        // X-Request-Id: kullanici hata bildirirken frontend bu id'yi gosterebilsin diye.
+        configuration.setExposedHeaders(List.of("Location", "X-Request-Id"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

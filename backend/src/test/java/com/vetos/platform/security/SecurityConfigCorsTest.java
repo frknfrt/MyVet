@@ -59,4 +59,13 @@ class SecurityConfigCorsTest {
         assertThat(resolveConfig(source).getAllowedOriginPatterns())
             .contains("https://vetly.example.com", "https://app.vetly.example.com");
     }
+
+    @Test
+    void should_exposeRequestIdHeader_soFrontendCanReportIt() {
+        when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
+
+        CorsConfigurationSource source = aSecurityConfig().corsConfigurationSource(environment);
+
+        assertThat(resolveConfig(source).getExposedHeaders()).contains("Location", "X-Request-Id");
+    }
 }
