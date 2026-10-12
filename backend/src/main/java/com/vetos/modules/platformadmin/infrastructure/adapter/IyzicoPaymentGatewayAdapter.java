@@ -6,14 +6,17 @@ import com.vetos.modules.platformadmin.domain.CheckoutResult;
 import com.vetos.modules.platformadmin.domain.CheckoutSession;
 import com.vetos.modules.platformadmin.domain.PaymentGatewayPort;
 import com.vetos.modules.platformadmin.domain.exception.PaymentGatewayException;
+import com.vetos.platform.http.OutboundHttp;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.time.Duration;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
@@ -43,6 +46,8 @@ import java.util.UUID;
 @Slf4j
 class IyzicoPaymentGatewayAdapter implements PaymentGatewayPort {
 
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
+    private static final Duration READ_TIMEOUT = Duration.ofSeconds(30);
     private static final String INITIALIZE_PATH = "/payment/iyzipos/checkoutform/initialize/auth/ecom";
     private static final String RETRIEVE_PATH = "/payment/iyzipos/checkoutform/auth/ecom/detail";
     private static final String SIMULATED_TOKEN_PREFIX = "SIMULATED-";
@@ -65,7 +70,7 @@ class IyzicoPaymentGatewayAdapter implements PaymentGatewayPort {
         this.secretKey = secretKey;
         this.baseUrl = baseUrl;
         this.callbackBaseUrl = callbackBaseUrl;
-        this.restClient = RestClient.create();
+        this.restClient = OutboundHttp.restClient(CONNECT_TIMEOUT, READ_TIMEOUT);
     }
 
     @Override
@@ -92,6 +97,11 @@ class IyzicoPaymentGatewayAdapter implements PaymentGatewayPort {
         } catch (RestClientResponseException e) {
             log.warn("iyzico checkout baslatilamadi: durum={}, govde={}", e.getStatusCode(), e.getResponseBodyAsString());
             throw new PaymentGatewayException("iyzico checkout baslatilamadi", e);
+        } catch (RestClientException e) {
+            // Baglanti hatasi / zaman asimi -- yakalanmazsa GlobalExceptionHandler'da
+            // 500 INTERNAL_ERROR'a dusuyordu; kullanici "tekrar deneyin" gormeli.
+            log.warn("iyzico'ya ulasilamadi: {}", e.getMessage());
+            throw new PaymentGatewayException("iyzico'ya ulasilamadi", e);
         }
 
         // iyzico is-seviyesi hatalari HTTP 200 + {"status":"failure",...} olarak

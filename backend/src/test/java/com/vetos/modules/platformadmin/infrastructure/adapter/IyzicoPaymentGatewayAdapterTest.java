@@ -138,12 +138,13 @@ class IyzicoPaymentGatewayAdapterTest {
         assertThat(capturedBodies.get(RETRIEVE_PATH)).contains(simulatedToken);
     }
 
-    /** initializeCheckout de yapilandirilmisken simulasyon URL'i uretmemeli. */
+    /** initializeCheckout de yapilandirilmisken simulasyon URL'i uretmemeli; gateway'e ulasilamazsa 500 yerine PAYMENT_GATEWAY_ERROR. */
     @Test
     void should_notReturnSimulatedCheckoutFormUrl_when_configured() {
         assertThatThrownBy(() -> unreachableConfiguredAdapter.initializeCheckout(
             UUID.randomUUID().toString(), new BigDecimal("500.00"), "Test Klinik", "test@example.com"))
-            .isInstanceOf(RestClientException.class);
+            .isInstanceOf(PaymentGatewayException.class)
+            .hasCauseInstanceOf(RestClientException.class);
     }
 
     // ------------------------------------------- BULGU 2: HTTP 200 + status=failure

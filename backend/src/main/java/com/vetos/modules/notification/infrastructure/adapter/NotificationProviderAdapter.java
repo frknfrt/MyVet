@@ -6,6 +6,7 @@ import com.vetos.modules.notification.domain.NotificationChannel;
 import com.vetos.modules.notification.domain.NotificationSendOutcome;
 import com.vetos.modules.notification.domain.NotificationSendPort;
 import com.vetos.modules.notification.domain.NotificationSendRequest;
+import com.vetos.platform.http.OutboundHttp;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +38,8 @@ import java.util.Map;
 @Slf4j
 class NotificationProviderAdapter implements NotificationSendPort {
 
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
+    private static final Duration READ_TIMEOUT = Duration.ofSeconds(15);
     private static final double SIMULATED_FAILURE_RATE = 0.1;
 
     private final String metaAccessToken;
@@ -86,7 +90,7 @@ class NotificationProviderAdapter implements NotificationSendPort {
         this.iletiMerkeziSender = iletiMerkeziSender;
         this.metaGraphApiBaseUrl = metaGraphApiBaseUrl;
         this.iletiMerkeziSendUrl = iletiMerkeziSendUrl;
-        this.restClient = RestClient.create();
+        this.restClient = OutboundHttp.restClient(CONNECT_TIMEOUT, READ_TIMEOUT);
     }
 
     @Override

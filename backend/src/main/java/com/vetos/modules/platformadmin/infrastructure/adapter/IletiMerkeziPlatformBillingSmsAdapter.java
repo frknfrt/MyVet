@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vetos.modules.platformadmin.domain.PlatformBillingSmsPort;
 import com.vetos.modules.platformadmin.domain.PlatformInvoice;
+import com.vetos.platform.http.OutboundHttp;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
+import java.time.Duration;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -34,6 +36,8 @@ import java.util.Map;
 @Slf4j
 class IletiMerkeziPlatformBillingSmsAdapter implements PlatformBillingSmsPort {
 
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
+    private static final Duration READ_TIMEOUT = Duration.ofSeconds(15);
     private static final DateTimeFormatter DUE_DATE_FORMAT = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
     private final String apiKey;
@@ -58,7 +62,7 @@ class IletiMerkeziPlatformBillingSmsAdapter implements PlatformBillingSmsPort {
         this.hash = hash;
         this.sender = sender;
         this.sendUrl = sendUrl;
-        this.restClient = RestClient.create();
+        this.restClient = OutboundHttp.restClient(CONNECT_TIMEOUT, READ_TIMEOUT);
     }
 
     private boolean isConfigured() {
