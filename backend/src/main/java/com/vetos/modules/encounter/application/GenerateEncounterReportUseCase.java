@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -55,9 +56,7 @@ public class GenerateEncounterReportUseCase {
         for (Prescription prescription : prescriptionRepository.findByEncounterId(encounterId)) {
             if (prescription.getStatus() == PrescriptionStatus.CANCELLED) continue;
             for (PrescriptionItem item : prescriptionItemRepository.findByPrescriptionId(prescription.getId())) {
-                String drugName = drugCatalogRepository.findById(item.getDrugId())
-                    .map(d -> d.getName())
-                    .orElse("Bilinmeyen ilac");
+                String drugName = Optional.ofNullable(PrescriptionItemNames.of(item, drugCatalogRepository)).orElse("Bilinmeyen ilac");
                 prescriptionLines.add(new EncounterReportData.PrescriptionLine(
                     drugName, item.getDosage(), item.getFrequency(), item.getDurationDays(), item.getRoute()
                 ));

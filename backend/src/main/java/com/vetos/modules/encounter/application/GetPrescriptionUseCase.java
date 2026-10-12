@@ -1,7 +1,6 @@
 package com.vetos.modules.encounter.application;
 
 import com.vetos.modules.encounter.application.dto.PrescriptionDetail;
-import com.vetos.modules.encounter.domain.DrugCatalog;
 import com.vetos.modules.encounter.domain.DrugCatalogRepository;
 import com.vetos.modules.encounter.domain.Prescription;
 import com.vetos.modules.encounter.domain.PrescriptionItemRepository;
@@ -29,7 +28,7 @@ public class GetPrescriptionUseCase {
         var items = prescriptionItemRepository.findByPrescriptionId(prescriptionId).stream()
             .map(item -> new PrescriptionDetail.PrescriptionItemDetail(
                 item.getDrugId(),
-                drugCatalogRepository.findById(item.getDrugId()).map(DrugCatalog::getName).orElse(null),
+                PrescriptionItemNames.of(item, drugCatalogRepository),
                 item.getDosage(), item.getFrequency(), item.getDurationDays(), item.getRoute().name(),
                 item.getInventoryItemId(), item.getStockQuantity()
             ))

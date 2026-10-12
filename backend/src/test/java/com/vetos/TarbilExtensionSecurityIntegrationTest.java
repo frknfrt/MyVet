@@ -529,6 +529,16 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
     }
 
     @Test
+    void stockGivenItemIsListedUnderItsStockName() throws Exception {
+        UUID[] rx = prescriptionGivingFromStock(10, 1);
+
+        mockMvc.perform(get("/api/v1/prescriptions/" + rx[0]).header("Authorization", "Bearer " + jwtA))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items[0].drugId").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.items[0].drugName").value("Metacam"));
+    }
+
+    @Test
     void cancellingAPrescriptionClosesItsPendingDeductionAndSubmission() throws Exception {
         UUID[] rx = prescriptionGivingFromStock(10, 1);
 
