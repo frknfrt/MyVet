@@ -25,7 +25,10 @@ class PrescriptionStockEventListener {
     @EventListener
     void onIssued(PrescriptionIssuedEvent event) {
         for (PrescriptionIssuedEvent.StockItem stockItem : event.stockItems()) {
-            boolean valid = items.findById(stockItem.inventoryItemId()).map(i -> i.getTarbilProductName() != null).orElse(false);
+            // Bu kiracida (filtreli oturum), TARBIL'e bagli ve recetede yazilan adla ayni kalem (spec 2026-10-12).
+            boolean valid = items.findById(stockItem.inventoryItemId())
+                .map(i -> i.getTarbilProductName() != null && i.getName().trim().equals(stockItem.name()))
+                .orElse(false);
             if (!valid) {
                 throw new InvalidPrescriptionStockItemException();
             }

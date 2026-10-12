@@ -8,5 +8,6 @@ import java.util.UUID;
  * integration bos degilse stoktan dusen recete aktarimini kuyruga alir.
  */
 public record PrescriptionIssuedEvent(UUID prescriptionId, UUID patientId, UUID tarbilDiseaseId, List<StockItem> stockItems) {
-    public record StockItem(UUID inventoryItemId, int quantity) {}
+    /** name: recetede yazilan stok urunu adi; inventory kalemin adiyla dogrular (spec 2026-10-12). */
+    public record StockItem(UUID inventoryItemId, int quantity, String name) {}
 }

@@ -39,7 +39,7 @@ public class PrescriptionsController {
             request.patientId(), request.encounterId(), principal.staffUserId(), request.controlledSubstance(),
             request.tarbilDiseaseId(),
             request.items().stream()
-                .map(i -> new PrescriptionItemInput(i.drugId(), i.dosage(), i.frequency(), i.durationDays(), i.route(),
+                .map(i -> new PrescriptionItemInput(i.drugId(), i.drugName(), i.dosage(), i.frequency(), i.durationDays(), i.route(),
                     i.inventoryItemId(), i.stockQuantity()))
                 .toList()
         ));

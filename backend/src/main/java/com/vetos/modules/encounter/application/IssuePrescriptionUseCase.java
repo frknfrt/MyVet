@@ -35,14 +35,13 @@ public class IssuePrescriptionUseCase {
     @Transactional
     public UUID execute(IssuePrescriptionCommand command) {
         for (PrescriptionItemInput item : command.items()) {
-            if ((item.inventoryItemId() == null) != (item.stockQuantity() == null)
-                || (item.stockQuantity() != null && item.stockQuantity() <= 0)) {
+            if (!validItem(item)) {
                 throw new InvalidPrescriptionItemException();
             }
         }
         List<PrescriptionIssuedEvent.StockItem> stockItems = command.items().stream()
             .filter(i -> i.inventoryItemId() != null)
-            .map(i -> new PrescriptionIssuedEvent.StockItem(i.inventoryItemId(), i.stockQuantity()))
+            .map(i -> new PrescriptionIssuedEvent.StockItem(i.inventoryItemId(), i.stockQuantity(), i.drugName().trim()))
             .toList();
         if (!stockItems.isEmpty() && command.tarbilDiseaseId() == null) {
             throw new PrescriptionTarbilDiseaseRequiredException();
@@ -59,10 +58,23 @@ public class IssuePrescriptionUseCase {
             command.prescribingStaffId(), command.controlledSubstance(), command.tarbilDiseaseId()
         ));
         command.items().forEach(item -> prescriptionItemRepository.save(PrescriptionItem.add(
-            prescription.getTenantId(), prescription.getId(), item.drugId(), item.dosage(),
-            item.frequency(), item.durationDays(), item.route(), item.inventoryItemId(), item.stockQuantity()
+            prescription.getTenantId(), prescription.getId(), item.drugId(), item.drugName() == null ? null : item.drugName().trim(),
+            item.dosage(), item.frequency(), item.durationDays(), item.route(), item.inventoryItemId(), item.stockQuantity()
         )));
         eventPublisher.publish(new PrescriptionIssuedEvent(prescription.getId(), command.patientId(), command.tarbilDiseaseId(), stockItems));
         return prescription.getId();
+    }
+
+    /**
+     * Stok kalemi ve adedi birlikte; stoktan verilen kalemde ilac stok urunudur (ad dolu, katalog ilaci yok), digerlerinde
+     * katalog ilaci zorunlu ve ad yok (spec 2026-10-12).
+     */
+    private static boolean validItem(PrescriptionItemInput item) {
+        if ((item.inventoryItemId() == null) != (item.stockQuantity() == null)) return false;
+        if (item.stockQuantity() != null && item.stockQuantity() <= 0) return false;
+        boolean named = item.drugName() != null && !item.drugName().isBlank();
+        return item.inventoryItemId() != null
+            ? item.drugId() == null && named
+            : item.drugId() != null && item.drugName() == null;
     }
 }

@@ -17,6 +17,6 @@ public record IssuePrescriptionRequest(
     UUID tarbilDiseaseId,
     @NotEmpty @Valid List<Item> items
 ) {
-    public record Item(UUID drugId, String dosage, String frequency, int durationDays, DrugRoute route,
+    public record Item(UUID drugId, String drugName, String dosage, String frequency, int durationDays, DrugRoute route,
                        UUID inventoryItemId, @Positive Integer stockQuantity) {}
 }

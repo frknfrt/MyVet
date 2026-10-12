@@ -41,6 +41,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -501,9 +502,8 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
             i.linkTarbil("VETILAC_MEDICINE", "METACAM", "Şişe");
             return inventoryItemRepository.save(i).getId();
         });
-        UUID drug = jdbcTemplate.queryForObject("SELECT id FROM drug_catalog ORDER BY name LIMIT 1", UUID.class);
         String body = "{\"patientId\":\"" + patient + "\",\"controlledSubstance\":false,\"tarbilDiseaseId\":\"" + selectableDisease() + "\","
-            + "\"items\":[{\"drugId\":\"" + drug + "\",\"dosage\":\"1 ml\",\"frequency\":\"1x1\",\"durationDays\":3,\"route\":\"ORAL\","
+            + "\"items\":[{\"drugName\":\"Metacam\",\"dosage\":\"1 ml\",\"frequency\":\"1x1\",\"durationDays\":3,\"route\":\"ORAL\","
             + "\"inventoryItemId\":\"" + item + "\",\"stockQuantity\":" + given + "}]}";
         String location = mockMvc.perform(post("/api/v1/prescriptions").header("Authorization", "Bearer " + jwtA)
                 .contentType("application/json").content(body))
@@ -544,23 +544,21 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
 
     @Test
     void stockGivingPrescriptionWithoutDiagnosisIsRejected() throws Exception {
-        UUID drug = jdbcTemplate.queryForObject("SELECT id FROM drug_catalog ORDER BY name LIMIT 1", UUID.class);
         String body = "{\"patientId\":\"" + UUID.randomUUID() + "\",\"controlledSubstance\":false,"
-            + "\"items\":[{\"drugId\":\"" + drug + "\",\"dosage\":\"1\",\"frequency\":\"1\",\"durationDays\":1,\"route\":\"ORAL\","
+            + "\"items\":[{\"drugName\":\"Metacam\",\"dosage\":\"1\",\"frequency\":\"1\",\"durationDays\":1,\"route\":\"ORAL\","
             + "\"inventoryItemId\":\"" + UUID.randomUUID() + "\",\"stockQuantity\":1}]}";
         mockMvc.perform(post("/api/v1/prescriptions").header("Authorization", "Bearer " + jwtA).contentType("application/json").content(body))
             .andExpect(status().isUnprocessableEntity());
     }
 
     /** Hastali, gecerli teshisli recete govdesi; stok kalemi ve teshis parametre. */
-    private String stockPrescriptionBody(UUID inventoryItemId, UUID diseaseId) {
+    private String stockPrescriptionBody(UUID inventoryItemId, UUID diseaseId, String drugName) {
         UUID speciesId = inRootSession(() -> speciesRepository.findAll().get(0).getId());
         UUID owner = asTenant(tenantA, () -> ownerRepository.save(Owner.register(tenantA, "V Sahip", "05550000003", null, null)).getId());
         UUID patient = asTenant(tenantA, () -> patientRepository.save(
             Patient.register(tenantA, owner, speciesId, null, "Duman", Sex.MALE, null)).getId());
-        UUID drug = jdbcTemplate.queryForObject("SELECT id FROM drug_catalog ORDER BY name LIMIT 1", UUID.class);
         return "{\"patientId\":\"" + patient + "\",\"controlledSubstance\":false,\"tarbilDiseaseId\":\"" + diseaseId + "\","
-            + "\"items\":[{\"drugId\":\"" + drug + "\",\"dosage\":\"1\",\"frequency\":\"1\",\"durationDays\":1,\"route\":\"ORAL\","
+            + "\"items\":[{\"drugName\":\"" + drugName + "\",\"dosage\":\"1\",\"frequency\":\"1\",\"durationDays\":1,\"route\":\"ORAL\","
             + "\"inventoryItemId\":\"" + inventoryItemId + "\",\"stockQuantity\":1}]}";
     }
 
@@ -576,9 +574,9 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
         UUID unlinkedItem = asTenant(tenantA, () -> inventoryItemRepository.save(
             InventoryItem.create(tenantA, branchA, "Gazlı bez", "Sarf", null, 5, 0, null, null, null)).getId());
 
-        for (UUID item : List.of(UUID.randomUUID(), foreignItem, unlinkedItem)) {
+        for (Map.Entry<UUID, String> item : Map.of(UUID.randomUUID(), "Metacam", foreignItem, "Metacam", unlinkedItem, "Gazlı bez").entrySet()) {
             mockMvc.perform(post("/api/v1/prescriptions").header("Authorization", "Bearer " + jwtA)
-                    .contentType("application/json").content(stockPrescriptionBody(item, selectableDisease())))
+                    .contentType("application/json").content(stockPrescriptionBody(item.getKey(), selectableDisease(), item.getValue())))
                 .andExpect(status().isUnprocessableEntity());
         }
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM prescriptions WHERE tenant_id = ?", Integer.class, tenantA)).isZero();
@@ -594,8 +592,39 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
         });
 
         mockMvc.perform(post("/api/v1/prescriptions").header("Authorization", "Bearer " + jwtA)
-                .contentType("application/json").content(stockPrescriptionBody(item, UUID.randomUUID())))
+                .contentType("application/json").content(stockPrescriptionBody(item, UUID.randomUUID(), "Metacam")))
             .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void prescriptionStockItemNameMustMatchTheStockItem() throws Exception {
+        UUID branchA = jdbcTemplate.queryForObject("SELECT branch_id FROM staff_users WHERE id = ?", UUID.class, staffA);
+        UUID item = asTenant(tenantA, () -> {
+            InventoryItem i = InventoryItem.create(tenantA, branchA, "Metacam", "İlaç", null, 5, 0, null, "MC3", null);
+            i.linkTarbil("VETILAC_MEDICINE", "METACAM", "Şişe");
+            return inventoryItemRepository.save(i).getId();
+        });
+
+        mockMvc.perform(post("/api/v1/prescriptions").header("Authorization", "Bearer " + jwtA)
+                .contentType("application/json").content(stockPrescriptionBody(item, selectableDisease(), "Amoksisilin")))
+            .andExpect(status().isUnprocessableEntity());
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM prescriptions WHERE tenant_id = ?", Integer.class, tenantA)).isZero();
+    }
+
+    @Test
+    void acceptsAStockItemNameWithSurroundingSpaces() throws Exception {
+        UUID branchA = jdbcTemplate.queryForObject("SELECT branch_id FROM staff_users WHERE id = ?", UUID.class, staffA);
+        UUID item = asTenant(tenantA, () -> {
+            InventoryItem i = InventoryItem.create(tenantA, branchA, "Metacam", "İlaç", null, 5, 0, null, "MC4", null);
+            i.linkTarbil("VETILAC_MEDICINE", "METACAM", "Şişe");
+            return inventoryItemRepository.save(i).getId();
+        });
+
+        mockMvc.perform(post("/api/v1/prescriptions").header("Authorization", "Bearer " + jwtA)
+                .contentType("application/json").content(stockPrescriptionBody(item, selectableDisease(), " Metacam ")))
+            .andExpect(status().isCreated());
+        assertThat(jdbcTemplate.queryForObject("SELECT drug_name FROM prescription_items WHERE inventory_item_id = ?", String.class, item))
+            .isEqualTo("Metacam");
     }
 
     @Test

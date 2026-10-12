@@ -24,8 +24,13 @@ public class PrescriptionItem {
     @Column(name = "prescription_id", nullable = false)
     private UUID prescriptionId;
 
-    @Column(name = "drug_id", nullable = false)
+    /** Katalog ilaci; stoktan verilen kalemde bos (ilac stok urunudur, spec 2026-10-12). */
+    @Column(name = "drug_id")
     private UUID drugId;
+
+    /** Stoktan verilen kalemin stok urunu adi (anlik goruntu); katalog ilacli kalemde bos. */
+    @Column(name = "drug_name")
+    private String drugName;
 
     @Column(nullable = false)
     private String dosage;
@@ -48,15 +53,16 @@ public class PrescriptionItem {
     private Integer stockQuantity;
 
     public static PrescriptionItem add(UUID tenantId, UUID prescriptionId, UUID drugId, String dosage, String frequency, int durationDays, DrugRoute route) {
-        return add(tenantId, prescriptionId, drugId, dosage, frequency, durationDays, route, null, null);
+        return add(tenantId, prescriptionId, drugId, null, dosage, frequency, durationDays, route, null, null);
     }
 
-    public static PrescriptionItem add(UUID tenantId, UUID prescriptionId, UUID drugId, String dosage, String frequency, int durationDays,
-                                       DrugRoute route, UUID inventoryItemId, Integer stockQuantity) {
+    public static PrescriptionItem add(UUID tenantId, UUID prescriptionId, UUID drugId, String drugName, String dosage, String frequency,
+                                       int durationDays, DrugRoute route, UUID inventoryItemId, Integer stockQuantity) {
         PrescriptionItem item = new PrescriptionItem();
         item.tenantId = tenantId;
         item.prescriptionId = prescriptionId;
         item.drugId = drugId;
+        item.drugName = drugName;
         item.dosage = dosage;
         item.frequency = frequency;
         item.durationDays = durationDays;
