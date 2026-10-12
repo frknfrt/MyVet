@@ -1,6 +1,6 @@
 # Stoktan verilen reçete kalemi: ilaç stok ürününden — Tasarım
 
-Tarih: 2026-10-12 · Durum: taslak (kullanıcı onayı bekliyor) · İlgili: `2026-10-09-tarbil-stok-dusum-senkronu-design.md` §5.6
+Tarih: 2026-10-12 · Durum: uygulandı (docs/superpowers/plans/2026-10-12-stoktan-verilen-recete-kalemi.md) · İlgili: `2026-10-09-tarbil-stok-dusum-senkronu-design.md` §5.6
 
 ## 1. Sorun
 
