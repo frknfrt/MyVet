@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { ApiError } from '../../api/client';
 import {
-  BillingStatus, CatalogPlan, PlatformInvoice, PlatformInvoiceStatus, SubscriptionOverview, subscriptionApi,
+  BillingStatus, CatalogPlan, PlatformInvoice, PlatformInvoiceStatus, SubscriptionOverview, UsageSnapshot, subscriptionApi,
 } from '../../api/subscriptionApi';
 import { Badge, BadgeTone } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
+import { UsageSummary } from '../../components/usage/UsageSummary';
 import settingsStyles from './SettingsPage.module.css';
 import styles from './SubscriptionPanel.module.css';
 
@@ -61,6 +62,7 @@ export function SubscriptionPanel() {
   const [invoicesError, setInvoicesError] = useState<string | null>(null);
 
   const [plans, setPlans] = useState<CatalogPlan[]>([]);
+  const [usage, setUsage] = useState<UsageSnapshot | null>(null);
 
   const [checkoutLoadingId, setCheckoutLoadingId] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
@@ -88,6 +90,9 @@ export function SubscriptionPanel() {
     loadInvoices();
 
     subscriptionApi.getPlans().then(setPlans).catch(() => setPlans([]));
+
+    // kullanim kutusu opsiyonel (ADMIN disi 403 alir): hata olursa kutuyu gizle
+    subscriptionApi.getUsage().then(setUsage).catch(() => setUsage(null));
 
     const params = new URLSearchParams(window.location.search);
     const odeme = params.get('odeme');
@@ -167,6 +172,13 @@ export function SubscriptionPanel() {
           </Button>
         </div>
       </Card>
+
+      {usage && (
+        <Card className={styles.card}>
+          <div className={styles.planCode}>Bu ayki kullanım</div>
+          <UsageSummary usage={usage} />
+        </Card>
+      )}
 
       <Card className={styles.invoicesCard}>
         <div className={styles.invoicesTitle}>Faturalar</div>

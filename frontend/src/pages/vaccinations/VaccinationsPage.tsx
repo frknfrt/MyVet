@@ -59,7 +59,9 @@ export function VaccinationsPage() {
           ? 'Eklenti Vetly\'ye bağlı değil. Ayarlar > Entegrasyonlar > "Eklentiyi bağla".'
           : result.reason === 'NOT_FOUND'
             ? 'Bu aşı TARBİL kuyruğunda yok (iptal edilmiş ya da henüz uygulanmamış olabilir).'
-            : 'Eklentiyle iletişim kurulamadı.',
+            : result.reason === 'UPGRADE_REQUIRED'
+              ? "Vetly TARBİL eklentinizin sürümü artık desteklenmiyor. Vetly'de Ayarlar > Entegrasyonlar bölümünden yeni sürümü indirin."
+              : 'Eklentiyle iletişim kurulamadı.',
     );
   }
 

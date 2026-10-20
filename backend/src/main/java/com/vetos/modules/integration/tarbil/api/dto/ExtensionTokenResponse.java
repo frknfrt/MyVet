@@ -6,8 +6,10 @@ import java.time.Instant;
 import java.util.UUID;
 
 public record ExtensionTokenResponse(UUID id, UUID staffUserId, String staffName, String label,
-                                     Instant pairedAt, Instant lastUsedAt, Instant revokedAt) {
+                                     Instant pairedAt, Instant lastUsedAt, Instant revokedAt,
+                                     String lastClientVersion) {
     public static ExtensionTokenResponse from(ExtensionTokenSummary s) {
-        return new ExtensionTokenResponse(s.id(), s.staffUserId(), s.staffName(), s.label(), s.pairedAt(), s.lastUsedAt(), s.revokedAt());
+        return new ExtensionTokenResponse(s.id(), s.staffUserId(), s.staffName(), s.label(), s.pairedAt(), s.lastUsedAt(), s.revokedAt(),
+            s.lastClientVersion());
     }
 }

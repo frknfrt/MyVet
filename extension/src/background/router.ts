@@ -1,3 +1,4 @@
+import { EXTENSION_VERSION } from '../shared/version';
 import type { BackgroundRequest, BackgroundResponse, ExtensionState, ExternalRequest } from '../shared/messages';
 import type { KeyValueStore, TokenStore } from './chromeStorage';
 import type { ConfirmationOutbox } from './confirmationOutbox';
@@ -6,7 +7,6 @@ import type { DocumentType } from '../shared/types';
 import { ApiError, type VetlyApi } from './vetlyApi';
 
 const ACTIVE_KEY = 'activeSubmissionId';
-const VERSION = '0.1.0';
 
 interface Deps {
   api: VetlyApi;
@@ -27,14 +27,17 @@ export function createRouter({ api, tokens, outbox, session, openTarbilPage }: D
   async function state(): Promise<ExtensionState> {
     const paired = (await tokens.get()) !== null;
     let profile = null;
+    let upgradeRequired = false;
     if (paired) {
       try {
         profile = await api.me();
-      } catch {
+      } catch (e) {
+        // 426: surum desteklenmiyor; bagli kalinir, yan panel guncelleme uyarisi gosterir.
+        if (e instanceof ApiError && e.code === 'UPGRADE_REQUIRED') upgradeRequired = true;
         // 401'de api anahtari zaten sildi -> asagida paired:false; cevrimdisi/5xx'te bagli kalinir, profil bos.
       }
     }
-    return { paired: (await tokens.get()) !== null, profile, pendingConfirmations: await outbox.size() };
+    return { paired: (await tokens.get()) !== null, profile, upgradeRequired, pendingConfirmations: await outbox.size() };
   }
 
   return {
@@ -70,7 +73,7 @@ export function createRouter({ api, tokens, outbox, session, openTarbilPage }: D
             try {
               return { ok: true, data: await api.markSubmitted(req.id, req.method, req.tarbilReference, req.lines) };
             } catch (e) {
-              if (e instanceof ApiError && (e.code === 'OFFLINE' || e.code === 'UNKNOWN')) {
+              if (e instanceof ApiError && (e.code === 'OFFLINE' || e.code === 'UNKNOWN' || e.code === 'UPGRADE_REQUIRED')) {
                 await outbox.enqueue({ id: req.id, method: req.method, tarbilReference: req.tarbilReference, lines: req.lines });
                 return { ok: true, data: { queued: true } };
               }
@@ -93,7 +96,7 @@ export function createRouter({ api, tokens, outbox, session, openTarbilPage }: D
       try {
         switch (req.type) {
           case 'PING':
-            return { ok: true, data: { version: VERSION } };
+            return { ok: true, data: { version: EXTENSION_VERSION } };
           case 'SELECT_SUBMISSION': {
             const submission = await api.getByVaccination(req.vaccinationRecordId);
             await flow.arm(submission.id);

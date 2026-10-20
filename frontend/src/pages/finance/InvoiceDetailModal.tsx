@@ -3,6 +3,7 @@ import { billingApi, InvoiceDetail, PaymentMethod } from '../../api/billingApi';
 import { appointmentApi, ServiceTypeItem } from '../../api/appointmentApi';
 import { Button } from '../../components/ui/Button';
 import { FieldWrap, Input, Select } from '../../components/ui/Field';
+import { useFeatures } from '../../auth/FeatureContext';
 import { Modal } from '../../components/ui/Modal';
 import { InvoiceStatusBadge } from './invoiceStatus';
 import styles from './InvoiceDetailModal.module.css';
@@ -21,6 +22,7 @@ interface InvoiceDetailModalProps {
 }
 
 export function InvoiceDetailModal({ invoiceId, onClose, onChanged }: InvoiceDetailModalProps) {
+  const canUseEfatura = useFeatures().hasFeature('E_FATURA');
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [serviceTypes, setServiceTypes] = useState<ServiceTypeItem[]>([]);
   const [busy, setBusy] = useState(false);
@@ -147,7 +149,8 @@ export function InvoiceDetailModal({ invoiceId, onClose, onChanged }: InvoiceDet
             <div>
               <div className={styles.ownerName}>{invoice.ownerName}</div>
               <div className={styles.subline}>{invoice.issuedAt ? new Date(invoice.issuedAt).toLocaleDateString('tr-TR') : 'Henüz kesilmedi'}</div>
-              {invoice.status !== 'DRAFT' && (
+              {/* Paketinde e-fatura yoksa GIB'e gönderim hiç yapılmaz — "gönderiliyor" yazmak yanıltır; geçmiş e-fatura no her zaman gösterilir. */}
+              {invoice.status !== 'DRAFT' && (invoice.eInvoiceRef || canUseEfatura) && (
                 <div className={styles.subline}>
                   {invoice.eInvoiceRef ? `e-Fatura No: ${invoice.eInvoiceRef}` : 'e-Fatura: gönderiliyor...'}
                 </div>

@@ -1,6 +1,7 @@
 package com.vetos.modules.appointment.infrastructure.persistence;
 
 import com.vetos.modules.appointment.domain.Appointment;
+import com.vetos.modules.appointment.domain.AppointmentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -40,5 +41,22 @@ interface AppointmentJpaRepository extends JpaRepository<Appointment, UUID> {
     boolean existsOverlapping(
         @Param("staffId") UUID staffId, @Param("start") Instant start, @Param("end") Instant end,
         @Param("excludeId") UUID excludeAppointmentId
+    );
+
+    @Query(
+        "SELECT COUNT(a) FROM Appointment a WHERE a.tenantId = :tenantId " +
+            "AND a.scheduledStart >= :rangeStart AND a.scheduledStart < :rangeEnd"
+    )
+    long countByTenantIdAndDateRange(
+        @Param("tenantId") UUID tenantId, @Param("rangeStart") Instant rangeStart, @Param("rangeEnd") Instant rangeEnd
+    );
+
+    @Query(
+        "SELECT COUNT(a) FROM Appointment a WHERE a.tenantId = :tenantId " +
+            "AND a.scheduledStart >= :rangeStart AND a.scheduledStart < :rangeEnd AND a.status = :status"
+    )
+    long countByTenantIdAndDateRangeAndStatus(
+        @Param("tenantId") UUID tenantId, @Param("rangeStart") Instant rangeStart, @Param("rangeEnd") Instant rangeEnd,
+        @Param("status") AppointmentStatus status
     );
 }

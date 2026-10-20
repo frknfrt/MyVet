@@ -1,5 +1,6 @@
 package com.vetos.modules.billing.infrastructure.persistence;
 
+import com.vetos.modules.billing.domain.BranchRevenueAggregate;
 import com.vetos.modules.billing.domain.Invoice;
 import com.vetos.modules.billing.domain.InvoiceStatus;
 import com.vetos.modules.billing.domain.SalesAggregate;
@@ -25,6 +26,16 @@ interface InvoiceJpaRepository extends JpaRepository<Invoice, UUID> {
             "AND i.issuedAt >= :start AND i.issuedAt < :end"
     )
     SalesAggregate sumIssuedBetween(
+        @Param("tenantId") UUID tenantId, @Param("statuses") Collection<InvoiceStatus> statuses,
+        @Param("start") Instant start, @Param("end") Instant end
+    );
+
+    @Query(
+        "SELECT new com.vetos.modules.billing.domain.BranchRevenueAggregate(i.branchId, SUM(i.totalAmount)) " +
+            "FROM Invoice i WHERE i.tenantId = :tenantId AND i.status IN :statuses " +
+            "AND i.issuedAt >= :start AND i.issuedAt < :end GROUP BY i.branchId"
+    )
+    List<BranchRevenueAggregate> sumIssuedByBranchBetween(
         @Param("tenantId") UUID tenantId, @Param("statuses") Collection<InvoiceStatus> statuses,
         @Param("start") Instant start, @Param("end") Instant end
     );

@@ -17,4 +17,5 @@ interface TarbilSubmissionJpaRepository extends JpaRepository<TarbilSubmission, 
     Optional<TarbilSubmission> findByDocumentTypeAndSourceId(TarbilDocumentType documentType, UUID sourceId);
     List<TarbilSubmission> findByStatusAndQueuedAtBeforeOrderByQueuedAtAsc(TarbilSyncStatus status, Instant cutoff, Pageable page);
     long countByTenantIdAndStatusAndQueuedAtBefore(UUID tenantId, TarbilSyncStatus status, Instant cutoff);
+    long countByStatus(TarbilSyncStatus status);
 }

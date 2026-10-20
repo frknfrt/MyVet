@@ -7,6 +7,10 @@ import com.vetos.modules.tenant.domain.StaffUser;
 import com.vetos.modules.tenant.domain.StaffUserRepository;
 import com.vetos.modules.tenant.domain.exception.EmailAlreadyRegisteredConflictException;
 import com.vetos.modules.tenant.domain.exception.StaffInviteNotFoundException;
+import com.vetos.platform.audit.AuditAction;
+import com.vetos.platform.audit.AuditActor;
+import com.vetos.platform.audit.AuditPort;
+import com.vetos.platform.audit.AuditRecord;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -21,6 +25,7 @@ public class AcceptStaffInviteUseCase {
     private final StaffInviteRepository staffInviteRepository;
     private final StaffUserRepository staffUserRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuditPort auditPort;
 
     @Transactional
     public UUID execute(AcceptStaffInviteCommand command) {
@@ -41,6 +46,12 @@ public class AcceptStaffInviteUseCase {
         invite.accept();
         staffInviteRepository.save(invite);
 
+        // kimliksiz uc: kiraci davetten, aktor yeni personelin kendisi
+        auditPort.record(
+            AuditRecord.of(AuditAction.STAFF_INVITE_ACCEPTED, "STAFF", staffUser.getId(), staffUser.getFullName(), null)
+                .forTenant(invite.getTenantId()),
+            AuditActor.staff(staffUser.getId(), staffUser.getFullName(), staffUser.getRole().name())
+        );
         return staffUser.getId();
     }
 }

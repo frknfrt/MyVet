@@ -28,12 +28,25 @@ public class JwtTokenProvider {
     }
 
     public String generateToken(UUID staffUserId, UUID tenantId, List<UUID> branchIds, String role) {
+        return build(staffUserId, tenantId, branchIds, role, null);
+    }
+
+    /** Platform admin "kiraci olarak gir": normal personel token'i + "imp" claim'i (denetim kaydi icin). */
+    public String generateImpersonationToken(UUID staffUserId, UUID tenantId, List<UUID> branchIds, String role, String impersonatorEmail) {
+        return build(staffUserId, tenantId, branchIds, role, impersonatorEmail);
+    }
+
+    private String build(UUID staffUserId, UUID tenantId, List<UUID> branchIds, String role, String impersonatorEmail) {
         Instant now = Instant.now();
-        return Jwts.builder()
+        var builder = Jwts.builder()
             .subject(staffUserId.toString())
             .claim("tenantId", tenantId.toString())
             .claim("branchIds", branchIds.stream().map(UUID::toString).collect(Collectors.toList()))
-            .claim("role", role)
+            .claim("role", role);
+        if (impersonatorEmail != null) {
+            builder.claim("imp", impersonatorEmail);
+        }
+        return builder
             .issuedAt(java.util.Date.from(now))
             .expiration(java.util.Date.from(now.plus(expirationMinutes, ChronoUnit.MINUTES)))
             .signWith(signingKey)
@@ -54,7 +67,8 @@ public class JwtTokenProvider {
             UUID.fromString(claims.getSubject()),
             UUID.fromString(claims.get("tenantId", String.class)),
             branchIdStrings.stream().map(UUID::fromString).toList(),
-            claims.get("role", String.class)
+            claims.get("role", String.class),
+            claims.get("imp", String.class)
         );
     }
 }

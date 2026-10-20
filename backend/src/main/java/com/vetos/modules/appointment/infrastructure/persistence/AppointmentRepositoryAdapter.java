@@ -2,6 +2,7 @@ package com.vetos.modules.appointment.infrastructure.persistence;
 
 import com.vetos.modules.appointment.domain.Appointment;
 import com.vetos.modules.appointment.domain.AppointmentRepository;
+import com.vetos.modules.appointment.domain.AppointmentStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -38,5 +39,15 @@ class AppointmentRepositoryAdapter implements AppointmentRepository {
     @Override
     public boolean existsOverlapping(UUID assignedStaffId, Instant start, Instant end, UUID excludeAppointmentId) {
         return jpaRepository.existsOverlapping(assignedStaffId, start, end, excludeAppointmentId);
+    }
+
+    @Override
+    public long countByTenantIdAndDateRange(UUID tenantId, Instant rangeStart, Instant rangeEnd) {
+        return jpaRepository.countByTenantIdAndDateRange(tenantId, rangeStart, rangeEnd);
+    }
+
+    @Override
+    public long countByTenantIdAndDateRangeAndStatus(UUID tenantId, Instant rangeStart, Instant rangeEnd, AppointmentStatus status) {
+        return jpaRepository.countByTenantIdAndDateRangeAndStatus(tenantId, rangeStart, rangeEnd, status);
     }
 }

@@ -1,10 +1,14 @@
 package com.vetos.modules.ai.infrastructure.adapter;
 
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
 import com.vetos.modules.ai.domain.AudioTranscript;
 import com.vetos.modules.ai.domain.SoapDraft;
 import com.vetos.modules.ai.domain.SoapGenerationPort;
+import com.vetos.platform.observability.IntegrationOutcomes;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,10 +16,19 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ClaudeSoapGenerationAdapterTest {
+
+    private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
+    private final IntegrationOutcomes outcomes = new IntegrationOutcomes(registry, Clock.systemUTC());
+
+    private double calls(String integration, String outcome) {
+        Counter c = registry.find("vetly.integration.calls").tag("integration", integration).tag("outcome", outcome).counter();
+        return c == null ? 0 : c.count();
+    }
 
     private HttpServer stubServer;
     private String stubResponseBody;
@@ -44,7 +57,7 @@ class ClaudeSoapGenerationAdapterTest {
 
     @Test
     void should_returnSimulatedDraft_when_apiKeyIsBlank() {
-        SoapGenerationPort adapter = new ClaudeSoapGenerationAdapter("", "claude-sonnet-5", new ObjectMapper(), stubUrl());
+        SoapGenerationPort adapter = new ClaudeSoapGenerationAdapter("", "claude-sonnet-5", new ObjectMapper(), stubUrl(), outcomes, CircuitBreakerRegistry.ofDefaults());
 
         SoapDraft draft = adapter.generate(new AudioTranscript("Hasta kusuyor, iki gundur"));
 
@@ -60,7 +73,7 @@ class ClaudeSoapGenerationAdapterTest {
         stubResponseBody = "{\"content\":[{\"type\":\"tool_use\",\"id\":\"toolu_01\",\"name\":\"structure_soap_note\","
             + "\"input\":{\"subjective\":\"Iki gundur kusma\",\"objective\":\"Ates yok\","
             + "\"assessment\":\"Hafif gastrit\",\"plan\":\"Ac birakma, kontrol\"}}]}";
-        SoapGenerationPort adapter = new ClaudeSoapGenerationAdapter("test-api-key", "claude-sonnet-5", new ObjectMapper(), stubUrl());
+        SoapGenerationPort adapter = new ClaudeSoapGenerationAdapter("test-api-key", "claude-sonnet-5", new ObjectMapper(), stubUrl(), outcomes, CircuitBreakerRegistry.ofDefaults());
 
         SoapDraft draft = adapter.generate(new AudioTranscript("Hasta kusuyor, iki gundur"));
 
@@ -79,7 +92,7 @@ class ClaudeSoapGenerationAdapterTest {
         stubResponseBody = "{\"content\":[{\"type\":\"thinking\",\"thinking\":\"...\"},"
             + "{\"type\":\"tool_use\",\"id\":\"toolu_02\",\"name\":\"structure_soap_note\","
             + "\"input\":{\"subjective\":\"S\",\"objective\":\"O\",\"assessment\":\"A\",\"plan\":\"P\"}}]}";
-        SoapGenerationPort adapter = new ClaudeSoapGenerationAdapter("test-api-key", "claude-sonnet-5", new ObjectMapper(), stubUrl());
+        SoapGenerationPort adapter = new ClaudeSoapGenerationAdapter("test-api-key", "claude-sonnet-5", new ObjectMapper(), stubUrl(), outcomes, CircuitBreakerRegistry.ofDefaults());
 
         SoapDraft draft = adapter.generate(new AudioTranscript("Hasta kusuyor"));
 
@@ -91,7 +104,7 @@ class ClaudeSoapGenerationAdapterTest {
     @Test
     void should_returnSimulatedDraft_when_claudeCallFails() {
         stubServer.stop(0);
-        SoapGenerationPort adapter = new ClaudeSoapGenerationAdapter("test-api-key", "claude-sonnet-5", new ObjectMapper(), stubUrl());
+        SoapGenerationPort adapter = new ClaudeSoapGenerationAdapter("test-api-key", "claude-sonnet-5", new ObjectMapper(), stubUrl(), outcomes, CircuitBreakerRegistry.ofDefaults());
 
         SoapDraft draft = adapter.generate(new AudioTranscript("Hasta kusuyor"));
 
@@ -100,10 +113,40 @@ class ClaudeSoapGenerationAdapterTest {
 
     @Test
     void should_returnSimulatedDraft_when_transcriptIsEmpty() {
-        SoapGenerationPort adapter = new ClaudeSoapGenerationAdapter("test-api-key", "claude-sonnet-5", new ObjectMapper(), stubUrl());
+        SoapGenerationPort adapter = new ClaudeSoapGenerationAdapter("test-api-key", "claude-sonnet-5", new ObjectMapper(), stubUrl(), outcomes, CircuitBreakerRegistry.ofDefaults());
 
         SoapDraft draft = adapter.generate(new AudioTranscript(""));
 
         assertThat(draft.modelConnected()).isFalse();
+    }
+
+    @Test
+    void should_recordAiDurationAndSuccess_when_claudeResponds() {
+        stubResponseBody = "{\"content\":[{\"type\":\"tool_use\",\"id\":\"toolu_01\",\"name\":\"structure_soap_note\","
+            + "\"input\":{\"subjective\":\"S\",\"objective\":\"O\",\"assessment\":\"A\",\"plan\":\"P\"}}]}";
+
+        new ClaudeSoapGenerationAdapter("test-api-key", "claude-sonnet-5", new ObjectMapper(), stubUrl(), outcomes, CircuitBreakerRegistry.ofDefaults())
+            .generate(new AudioTranscript("Hasta kusuyor"));
+
+        assertThat(registry.find("vetly.ai.duration").tag("task", "soap").tag("provider", "claude").timer().count()).isEqualTo(1);
+        assertThat(calls("ai", "success")).isEqualTo(1);
+    }
+
+    @Test
+    void should_recordAiFailure_when_claudeUnreachable() {
+        stubServer.stop(0);
+
+        new ClaudeSoapGenerationAdapter("test-api-key", "claude-sonnet-5", new ObjectMapper(), stubUrl(), outcomes, CircuitBreakerRegistry.ofDefaults())
+            .generate(new AudioTranscript("Hasta kusuyor"));
+
+        assertThat(calls("ai", "failure")).isEqualTo(1);
+    }
+
+    @Test
+    void should_notRecord_when_apiKeyBlank() {
+        new ClaudeSoapGenerationAdapter("", "claude-sonnet-5", new ObjectMapper(), stubUrl(), outcomes, CircuitBreakerRegistry.ofDefaults())
+            .generate(new AudioTranscript("Hasta kusuyor"));
+
+        assertThat(registry.find("vetly.integration.calls").counters()).isEmpty();
     }
 }

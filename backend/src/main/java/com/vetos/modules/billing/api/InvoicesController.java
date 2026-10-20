@@ -14,6 +14,8 @@ import com.vetos.modules.billing.domain.InvoiceStatus;
 import com.vetos.platform.security.AuthenticatedStaffUser;
 import com.vetos.platform.tenancy.TenantContext;
 import com.vetos.platform.web.CsvWriter;
+import com.vetos.platform.feature.Feature;
+import com.vetos.platform.feature.RequiresFeature;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -254,6 +256,7 @@ public class InvoicesController {
         return ResponseEntity.created(java.net.URI.create("/api/v1/invoices/" + id)).build();
     }
 
+    @RequiresFeature(Feature.INVENTORY)
     @PostMapping("/quick-sale")
     public ResponseEntity<Void> quickSale(
         @AuthenticationPrincipal AuthenticatedStaffUser principal, @RequestBody @Valid CompleteQuickSaleRequest request

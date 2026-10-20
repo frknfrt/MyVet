@@ -7,6 +7,8 @@ import com.vetos.modules.lab.application.dto.LabResultItemInput;
 import com.vetos.modules.lab.application.dto.RequestLabResultCommand;
 import com.vetos.platform.security.AuthenticatedStaffUser;
 import com.vetos.platform.tenancy.TenantContext;
+import com.vetos.platform.feature.Feature;
+import com.vetos.platform.feature.RequiresFeature;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ByteArrayResource;
@@ -24,6 +26,7 @@ import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.UUID;
 
+@RequiresFeature(Feature.LAB_INTEGRATION)
 @RestController
 @RequestMapping("/api/v1/lab-results")
 @RequiredArgsConstructor

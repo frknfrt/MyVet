@@ -46,7 +46,8 @@ sudo systemctl restart vetly-backend
 **4. Sunucu — kontrol**
 ```bash
 sudo journalctl -u vetly-backend -f          # "Started ...Application" görününce Ctrl+C
-curl http://127.0.0.1:8080/actuator/health   # {"status":"UP"}
+curl -s http://127.0.0.1:8081/actuator/health/readiness   # {"status":"UP"}
+curl -s http://127.0.0.1:8081/actuator/health/external
 ```
 
 **Geri alma**
@@ -85,6 +86,7 @@ Düzenleme: `sudo nano /etc/vetly/backend.env`, ardından `sudo systemctl restar
 - Nginx arkasında gerekli: `SERVER_ADDRESS=127.0.0.1`, `SERVER_FORWARD_HEADERS_STRATEGY=native` (aksi halde `RateLimitFilter` ve KVKK onay kaydı tüm istekleri `127.0.0.1`'den gelmiş görür).
 - Dış servis geri dönüşleri: `IYZICO_CALLBACK_BASE_URL`, `EFATURA_FATURAENTEGRATOR_CALLBACK_BASE_URL` = `https://uygulama.vetly.com.tr`.
 - İsteğe bağlı entegrasyonlar (`AI_*`, `ANTHROPIC_*`, `ILETI_MERKEZI_*`, `META_WHATSAPP_*`, `IYZICO_*`, `EFATURA_*`): boşsa ilgili adaptör simüle moda düşer. Tam liste ve açıklamalar: `backend/src/main/resources/application.yml`.
+- `VETLY_EXTENSION_MIN_VERSION` (varsayılan `0.1.0`): bundan eski TARBİL eklentisi 426 alır. Yükseltmeden önce yeni sürüm Vetly'den indirilebilir olmalı (sıra: `docs/api-conventions.md` > Versiyonlama).
 - `PLATFORM_ADMIN_*` sadece ilk açılışta (tablo boşken) hesap oluşturur; sonradan değiştirmek mevcut hesabı güncellemez.
 - DB şifresini değiştirmek: `sudo -u postgres psql -c "\password vetly"` + `backend.env`'de `DB_PASSWORD`'ü güncelle.
 
@@ -100,17 +102,125 @@ Kaynak: `extension/` (tasarım: `docs/superpowers/specs/2026-10-02-tarbil-eklent
 ```powershell
 cd <repo>\extension
 npm ci
-npm run build          # dist/ — prod API: https://uygulama.vetly.com.tr
+npm run package        # build + ..\frontend\public\downloads\vetly-tarbil-eklenti.zip ve .json
 ```
-Kurulum (her klinik bilgisayarında, şimdilik paketlenmemiş): Chrome > `chrome://extensions` > Geliştirici modu > "Paketlenmemiş öğe yükle" > `extension\dist`. Güncellemede aynı klasörün içeriği değiştirilip eklenti kartında "Yeniden yükle".
+Ardından **Frontend güncellemesi** adımlarıyla web uygulamasını yayınlayın; zip `dist/downloads/` içinde sunucuya gider. Klinikler eklentiyi Vetly > Ayarlar > Entegrasyonlar > TARBİL kartından indirip "Paketlenmemiş öğe yükle" ile kurar; kart yüklü sürümü ve yeni sürüm olup olmadığını gösterir.
 
 - Eklenti kimliği manifest'teki `key` alanından türetilir ve sabittir (`npm run extension-id`); frontend'de `VITE_TARBIL_EXTENSION_ID` aynı değerdir. `extension/key.pem` repoda DEĞİLDİR, güvenli yedekte saklanır (Web Store'a geçişte gerekir).
 - Hekim eklentiyi Vetly > Ayarlar > Entegrasyonlar > "Eklentiyi bağla" ile bağlar; bağlantılar aynı ekrandan iptal edilir.
 
+## İzleme (Faz 3)
+
+Actuator uçları yönetim portunda (`127.0.0.1:8081`) çalışır, dışarıya kapalıdır; sadece iki health adresi Nginx ile açılır.
+
+**1. Nginx** — `/etc/nginx/sites-available/vetly` dosyasında certbot'un yönettiği `listen 443` server bloğunun içine ekleyin:
+```nginx
+location = /health/ready    { proxy_pass http://127.0.0.1:8081/actuator/health/readiness; }
+location = /health/external { proxy_pass http://127.0.0.1:8081/actuator/health/external; }
+```
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+```
+Yanıtta sadece `{"status":"UP"}` / `{"status":"DOWN"}` döner (HTTP 200 / 503), ayrıntı yoktur.
+
+**2. UptimeRobot** — iki HTTP(s) monitörü: `https://uygulama.vetly.com.tr/health/ready` ve `https://uygulama.vetly.com.tr/health/external`; aralık 5 dk, bildirim e-posta. Metod GET veya HEAD (ikisi de çalışır; ücretsiz planda varsayılan HEAD'dir).
+
+**3. Metrikleri okuma**
+```bash
+curl -s 127.0.0.1:8081/actuator/prometheus | grep vetly_
+```
+
+**4. Hangi entegrasyon DOWN?** (health ayrıntıyı gizler)
+```bash
+sudo journalctl -u vetly-backend | grep "Entegrasyon DOWN"
+curl -s 127.0.0.1:8081/actuator/prometheus | grep 'vetly_integration_calls_total.*failure'
+```
+DOWN / düzeldi log satırları sadece health sorgulandığında (UptimeRobot kontrolü) yazılır.
+
+**5. İsteğe bağlı: JSON log** — `/etc/vetly/backend.env` dosyasına `LOG_FORMAT=ecs` ekleyip `sudo systemctl restart vetly-backend`. Geçmeden önce JSON `message` alanında 11 haneli bir sayının maskelendiğini doğrulayın.
+
+## Rate limit ve paket kotaları (Faz 4)
+
+**Nginx kontrolü (bir kez):** `/api` location'ında şu satır olmalı — yoksa ekleyip `sudo nginx -t && sudo systemctl reload nginx`:
+
+    proxy_set_header X-Forwarded-For $remote_addr;
+
+Doğrulama:
+
+1. Ayar kontrolü: `grep -n "X-Forwarded-For" /etc/nginx/sites-enabled/vetly` — satır `proxy_set_header X-Forwarded-For $remote_addr;` olmalı ve `/api` location'ının içinde olmalı.
+2. Kayıtlı IP kontrolü: KVKK onay kayıtları istemci IP'sini saklar. Uygulama üzerinden bir onay kaydedildikten sonra `sudo -u postgres psql vetly -c "SELECT ip_address, granted_at FROM consent_records ORDER BY granted_at DESC LIMIT 3;"` gerçek istemci IP'lerini göstermeli. 127.0.0.1 görüyorsan ayar eksik — tüm kullanıcılar tek IP limitini paylaşır.
+
+**Koruma sınırları** (herkese aynı, `/etc/vetly/backend.env` ile değiştirilebilir):
+
+| Ayar | Varsayılan | Env |
+|---|---|---|
+| Kiracı başına genel tavan | 600 / dk | `VETLY_RATE_LIMIT_TENANT_GENERAL_PER_MINUTE` |
+| Kiracı başına AI üretimi | 10 / dk | `VETLY_RATE_LIMIT_TENANT_AI_PER_MINUTE` |
+| Kiracı başına kampanya alıcısı | 2000 / saat | `VETLY_RATE_LIMIT_CAMPAIGN_RECIPIENTS_PER_HOUR` |
+| Tek kampanyada alıcı | 1000 | kodda sabit |
+
+**Paket kotaları:** Admin paneli → Planlar → paketi düzenle → "Aylık AI hakkı", "Aylık mesaj hakkı (SMS + WhatsApp)". Boş = sınırsız. Deneme paketi: `VETLY_QUOTA_TRIAL_AI` (30), `VETLY_QUOTA_TRIAL_MESSAGE` (100).
+
+**Önerilen açılış sırası:** `FEATURES_ENFORCEMENT_ENABLED=false` iken kotalar yalnızca sayılır. Birkaç hafta Kiracılar → ilgili kiracı (detay sayfası) → "Bu ayki kullanım" kutusundan gerçek kullanımı izle, paketlere kota gir, sonra `FEATURES_ENFORCEMENT_ENABLED=true` yap (bu ayar Modül Erişimi işaretlerini de açar — onların da dolu olduğundan emin ol).
+
+## İşlem geçmişi / denetim kaydı (Faz 3b)
+
+Klinik içindeki hassas işlemler (giriş ve başarısız giriş denemesi, personel ve davet değişiklikleri, fatura iptali ve ödeme, kasa kapatma, reçete yazma/iptal, muayene kesinleştirme, KVKK onayı geri çekme, TARBİL işaretleme/yok sayma/geri alma, TARBİL eklentisi eşleştirme/anahtar iptali, Vetly destek ekibinin hesaba girmesi) `audit_events` tablosuna yazılır.
+
+- **Klinik yöneticisi:** Ayarlar → İşlem Geçmişi.
+- **Platform admin:** Kiracılar → ilgili kiracı → "Klinik işlem geçmişi".
+- Kayıtlar **değiştirilemez**: tablo üzerindeki tetikleyici UPDATE ve DELETE'i reddeder. Hasta/sahip adı, telefon, TCKN kayda yazılmaz.
+- Destek ekibi "Bu Klinik Olarak Gir" ile bir hesaba girdiğinde bu, kliniğin İşlem Geçmişi'nde görünür ve o oturumdaki her işlem "Vetly destek ekibi aracılığıyla" diye işaretlenir.
+- Kayıt bu sürümden itibaren başlar; eski işlemler için geçmiş yoktur. Saklama süresi şimdilik sınırsız.
+
+## Dış servis koruması (Faz 5)
+
+Claude (AI), iyzico ve FaturaEntegratör çağrıları devre kesiciyle korunur: son 10 çağrının yarısı kesinti (bağlantı hatası, zaman aşımı, 5xx, 401/402/403/429) ya da çok yavaşsa devre **açılır** ve 30 saniye boyunca o servis hiç çağrılmaz.
+
+- **AI:** devre açıkken hekim hemen "[AI modeli henuz baglanmadi -- bu, dikte edilen/yazilan metnin oldugu gibi Subjective alanina aktarilmasidir. ...]" notlu taslağı görür (kota hakkı iade edilir). Aynı anda en fazla 4 AI çağrısı yapılır; 5.'si en fazla 10 sn bekler, yer açılmazsa "AI şu an yoğun" mesajı (503) döner. Cevap bekleme sınırı 60 sn.
+- **iyzico:** devre açıkken ödeme başlatma hemen "Ödeme sistemine şu an ulaşılamıyor" (503) döner. Ödeme sonucu sorgusu (kullanıcı iyzico'dan dönerken) devre kesicisiz, kesintide 3 kez denenir.
+- **FaturaEntegratör:** devre açıkken gönderim yapılmaz, kuyruk normal takvimle (2 dk / 10 dk / 1 sa / 6 sa) tekrar dener. Durum sorgusu kesintide 3 kez denenir; sağlayıcı kesintisinde (devre açıkken de, 3 deneme tükenince de) fatura "işleniyor" durumunda kalır, "başarısız" işaretlenmez (aksi halde "Tekrar Dene" çift fatura kesebilirdi).
+- Fatura kesme ve ödeme başlatma gibi **yazma** çağrıları anında/eşzamanlı olarak asla tekrar denenmez (çift kayıt riski); e-fatura kuyruğu ise başarısız gönderimi normal takvimiyle (2 dk / 10 dk / 1 sa / 6 sa) sonradan yeniden gönderir, bu bir çelişki değildir.
+- **Dağıtım notu (nginx):** Bir AI isteği en fazla ~75 sn sürebilir (10 sn kuyruk + 60 sn cevap). nginx `/api` için `proxy_read_timeout` en az 90 sn olmalı (`sudo grep -n proxy_read_timeout /etc/nginx/sites-enabled/vetly`; nginx varsayılanı 60 sn). Aksi halde kullanıcı zaman aşımı hatası görür, ama arka uç işi bitirir ve kota hakkını harcar.
+
+**Log:** devre açılınca `Devre kesici ACIK: <ad>` (WARN), kapanınca `Devre kesici kapandi: <ad>` (INFO):
+
+    sudo journalctl -u vetly-backend --since "1 hour ago" | grep "Devre kesici"
+
+**Metrik (8081):** `curl -s 127.0.0.1:8081/actuator/prometheus | grep resilience4j_circuitbreaker_state` — `state="open"` satırı 1 ise o devre açık.
+
+**Ayarlar:** `application.yml` → `resilience4j.*` (env ile ezilebilir, ör. `RESILIENCE4J_BULKHEAD_INSTANCES_AI_MAXCONCURRENTCALLS=6`; emin değilsen `application.yml`'i düzenleyip uygulamayı yeniden başlat).
+
+## Önbellek (Faz 6)
+
+Uygulama bazı sık okunan, az değişen bilgileri kendi belleğinde tutar (Redis yok, tek sunucu).
+
+| Önbellek | Ne tutar | Ne zaman tazelenir |
+|---|---|---|
+| `tenantPlanCode` | Kliniğin paket kodu | Admin aboneliği değiştirince genellikle hemen (aynı anda süren bir istek nadiren eski değeri geri yazabilir); her durumda en geç 5 dk |
+| `planByCode` | Paketin açık modülleri ve aylık kotaları | Admin paket oluşturur/günceller/silerse genellikle hemen (aynı anda süren bir istek nadiren eski değeri geri yazabilir); her durumda en geç 5 dk |
+| `tarbilDiseases` | TARBİL hastalık listesi | Uygulama yeniden başlayınca (liste yalnızca yeni sürümle değişir) |
+
+- Paket bilgisi **admin paneli dışından** (doğrudan veritabanında) değiştirilirse, yeni değerin kliniklere yansıması en fazla 5 dakika sürer. Hemen gerekiyorsa `sudo systemctl restart vetly-backend`.
+- Önbellekte kişisel veri (hasta, sahip, personel, telefon, TCKN) tutulmaz.
+- Metrikler (8081, Prometheus): `cache_gets_total{cache="tenantPlanCode",result="hit"|"miss"}`, `cache_size`, `cache_evictions_total`.
+  Örnek: `curl -s localhost:8081/actuator/prometheus | grep '^cache_gets_total'`
+- Ana sayfa özetleri (gelir, bugünkü satış, yeni hasta, randevu) önbelleğe alınmaz; her açılışta veritabanında toplanır. Ay ve gün sınırları İstanbul saatine göredir.
+
+## Eklenti dağıtımı ve API dokümanı (Faz 7)
+
+- **Sıra:** frontend derlenmeden önce `extension/` içinde `npm ci && npm run package`. Unutulursa sürüm dosyası (json) bulunamaz; Ayarlar'daki kart indirme bağlantısını gizler ve "Eklenti dosyası şu an hazır değil" der (kart bozulmaz).
+- `frontend/public/downloads/` repoda değildir (derleme çıktısı). `key.pem` gerekmez: kimliği `manifest.json`'daki `key` alanı sabit tutar.
+- **Zorunlu güncelleme:** `VETLY_EXTENSION_MIN_VERSION` yükseltilince eski eklenti 426 alır. 0.1.0 eklentiler 426'yı tanımadığı için yan panelde her listelemede "Beklenmeyen yanıt: 426" gösterir; TARBİL onayları eklentide kuyrukta bekler ve güncelleme sonrası gönderilir. Bu yüzden önce kart üzerinden güncellemeyi duyurun.
+- **Kimler güncelledi?** Yükseltmeden önce sunucuda son 30 günde kullanılan eklentileri sürüme göre sayın (boş sürüm = 0.1.0):
+  `sudo -u postgres psql vetly -c "SELECT COALESCE(last_client_version, '0.1.0 (sürüm göndermiyor)') AS surum, COUNT(*) AS eklenti, COUNT(DISTINCT tenant_id) AS klinik FROM tarbil_extension_token WHERE revoked_at IS NULL AND last_used_at > now() - interval '30 days' GROUP BY 1 ORDER BY 1;"`
+  Yeni en düşük sürümden eski satır kalmadıysa (ya da kalanlar bilerek göze alındıysa) yükseltin. Sürüm her istekte yazılır; "son kullanım" ise en çok 5 dakikada bir güncellenir.
+- **API dokümanı:** `/swagger-ui.html` yalnız geliştirmede; `application-prod.yml` (`springdoc.*.enabled: false`) canlıda hem üretimi hem kimliksiz erişimi kapatır. Nginx `/v3` ve `/swagger-ui` yollarını hiç yönlendirmez (yalnız `/api` ve `/health/*` backend'e gider); prod bayrakları ikinci kilittir. Kontrol (sunucuda, backend'e doğrudan): `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/v3/api-docs` → `401`.
+
 ## Bilinen açık işler
 
 - [ ] Otomatik günlük veritabanı yedeği + sunucu dışına kopyalama
-- [ ] Uptime izleme (UptimeRobot vb.)
+- [x] Uptime izleme (UptimeRobot vb.) -- bkz. "İzleme (Faz 3)" bölümü
 - [ ] `META_WHATSAPP_TEMPLATE_NAME` (şablonsuz WhatsApp sadece 24 saatlik pencere içinde gider)
 - [ ] WhatsApp numarasi hala Meta "Test Number"inda -- gercek musteri numaralarina gonderim #131030 ("Recipient phone number not in allowed list") ile reddediliyor. Cozum: WhatsApp Yoneticisi > Telefon numaralari'na WhatsApp'ta aktif OLMAYAN gercek bir numara eklemek (kullanicinin kendi numarasi WhatsApp'ta aktif oldugu icin su an kullanilamiyor, ayri bir SIM gerekiyor), SMS/arama ile dogrulamak, kalici bir System User token'i olusturmak, ve META_WHATSAPP_PHONE_NUMBER_ID / META_WHATSAPP_ACCESS_TOKEN'i guncelleyip servisi yeniden baslatmak.
 - [ ] Tanıtım sitesi (`vetly.com.tr`) API adresini `https://myvet-21n4.onrender.com`'dan `https://uygulama.vetly.com.tr`'ye taşımak — ardından Render servisini kapatmak

@@ -2,7 +2,7 @@
     displayName = "Encounter (Klinik/SOAP)",
     allowedDependencies = {
         "modules.patient::domain", "modules.tenant::domain",
-        "platform::security", "platform::tenancy", "platform::event", "platform::exception"
+        "platform::security", "platform::audit", "platform::tenancy", "platform::event", "platform::exception"
     }
 )
 package com.vetos.modules.encounter;

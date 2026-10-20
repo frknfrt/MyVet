@@ -14,4 +14,6 @@ public interface TarbilSubmissionRepository {
     List<TarbilSubmission> findByTenantId(UUID tenantId);
     List<TarbilSubmission> findByTenantIdAndStatus(UUID tenantId, TarbilSyncStatus status);
     Optional<TarbilSubmission> findByDocumentTypeAndSourceId(TarbilDocumentType documentType, UUID sourceId);
+    /** Kuyruk metrigi (vetly.queue.*) icin; TenantContext'siz cagrilir -> tum kiracilar. */
+    long countByStatus(TarbilSyncStatus status);
 }

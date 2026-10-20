@@ -5,6 +5,8 @@ import com.vetos.modules.inventory.application.ListPendingDeductionsUseCase;
 import com.vetos.modules.inventory.application.SettleVetlyOnlyUseCase;
 import com.vetos.modules.inventory.domain.StockReferenceType;
 import com.vetos.platform.security.AuthenticatedStaffUser;
+import com.vetos.platform.feature.Feature;
+import com.vetos.platform.feature.RequiresFeature;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -19,6 +21,7 @@ import java.util.List;
 import java.util.UUID;
 
 /** TARBIL dusumu bekleyen kalemler ve "Yalniz Vetly'den dus" (spec 2026-10-09 S5.5). */
+@RequiresFeature(Feature.INVENTORY)
 @RestController
 @RequestMapping("/api/v1/inventory/pending-deductions")
 @RequiredArgsConstructor

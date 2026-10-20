@@ -1,9 +1,12 @@
 package com.vetos.platform.web;
 
 import com.vetos.platform.exception.DomainException;
+import com.vetos.platform.quota.MonthlyQuotaExceededException;
+import com.vetos.platform.ratelimit.RateLimitExceededException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -38,6 +41,19 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleDomainException(DomainException ex, HttpServletRequest request) {
         HttpStatus status = resolveStatus(ex);
         return ResponseEntity.status(status)
+            .body(ErrorResponse.of(ex.getErrorCode(), ex.getMessage(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleRateLimited(RateLimitExceededException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+            .header(HttpHeaders.RETRY_AFTER, String.valueOf(ex.getRetryAfterSeconds()))
+            .body(ErrorResponse.of(ex.getErrorCode(), ex.getMessage(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(MonthlyQuotaExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMonthlyQuota(MonthlyQuotaExceededException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
             .body(ErrorResponse.of(ex.getErrorCode(), ex.getMessage(), request.getRequestURI()));
     }
 
@@ -151,6 +167,9 @@ public class GlobalExceptionHandler {
         }
         if (name.endsWith("ConflictException")) {
             return HttpStatus.CONFLICT;
+        }
+        if (name.endsWith("ServiceUnavailableException")) {
+            return HttpStatus.SERVICE_UNAVAILABLE;
         }
         if (name.endsWith("ForbiddenException")) {
             return HttpStatus.FORBIDDEN;

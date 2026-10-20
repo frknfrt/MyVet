@@ -120,7 +120,7 @@ export function App() {
       <Route
         path="/laboratuvar"
         element={
-          <RequireAuth roles={['VET', 'TECHNICIAN', 'ADMIN']}>
+          <RequireAuth roles={['VET', 'TECHNICIAN', 'ADMIN']} feature="LAB_INTEGRATION">
             <LaboratoryPage />
           </RequireAuth>
         }
@@ -128,7 +128,7 @@ export function App() {
       <Route
         path="/goruntuleme"
         element={
-          <RequireAuth roles={['VET', 'TECHNICIAN', 'ADMIN']}>
+          <RequireAuth roles={['VET', 'TECHNICIAN', 'ADMIN']} feature="IMAGING">
             <ImagingPage />
           </RequireAuth>
         }
@@ -144,7 +144,7 @@ export function App() {
       <Route
         path="/konaklama"
         element={
-          <RequireAuth>
+          <RequireAuth feature="BOARDING">
             <KonaklamaPage />
           </RequireAuth>
         }
@@ -152,7 +152,7 @@ export function App() {
       <Route
         path="/konaklama/yeni"
         element={
-          <RequireAuth>
+          <RequireAuth feature="BOARDING">
             <NewBoardingStayPage />
           </RequireAuth>
         }
@@ -160,7 +160,7 @@ export function App() {
       <Route
         path="/stok"
         element={
-          <RequireAuth>
+          <RequireAuth feature="INVENTORY">
             <InventoryPage />
           </RequireAuth>
         }

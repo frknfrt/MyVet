@@ -7,6 +7,8 @@ import com.vetos.modules.boarding.application.ListBoardingRoomsUseCase;
 import com.vetos.modules.boarding.application.dto.CreateBoardingRoomCommand;
 import com.vetos.platform.security.AuthenticatedStaffUser;
 import com.vetos.platform.tenancy.TenantContext;
+import com.vetos.platform.feature.Feature;
+import com.vetos.platform.feature.RequiresFeature;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+@RequiresFeature(Feature.BOARDING)
 @RestController
 @RequestMapping("/api/v1/boarding-rooms")
 @RequiredArgsConstructor

@@ -1,5 +1,7 @@
 package com.vetos.modules.platformadmin.application;
 
+import com.vetos.platform.cache.CacheNames;
+import org.springframework.cache.annotation.CacheEvict;
 import com.vetos.modules.platformadmin.application.dto.CreatePlanCommand;
 import com.vetos.modules.platformadmin.domain.AuditAction;
 import com.vetos.modules.platformadmin.domain.Plan;
@@ -18,6 +20,7 @@ public class CreatePlanUseCase {
     private final PlanRepository planRepository;
     private final RecordAuditLogUseCase recordAuditLogUseCase;
 
+    @CacheEvict(cacheNames = CacheNames.PLAN_BY_CODE, allEntries = true)
     @Transactional
     public UUID execute(CreatePlanCommand command, UUID platformAdminId, String platformAdminEmail) {
         if (planRepository.existsByCode(command.code())) {

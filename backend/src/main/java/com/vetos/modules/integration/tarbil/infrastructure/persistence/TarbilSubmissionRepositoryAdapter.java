@@ -45,4 +45,9 @@ class TarbilSubmissionRepositoryAdapter implements TarbilSubmissionRepository {
     public Optional<TarbilSubmission> findByDocumentTypeAndSourceId(TarbilDocumentType documentType, UUID sourceId) {
         return jpaRepository.findByDocumentTypeAndSourceId(documentType, sourceId);
     }
+
+    @Override
+    public long countByStatus(TarbilSyncStatus status) {
+        return jpaRepository.countByStatus(status);
+    }
 }

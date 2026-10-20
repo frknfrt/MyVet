@@ -14,6 +14,7 @@ interface NotificationLogJpaRepository extends JpaRepository<NotificationLog, UU
     List<NotificationLog> findByTenantId(UUID tenantId);
     boolean existsByRelatedEntityIdAndNotificationType(UUID relatedEntityId, NotificationType notificationType);
     List<NotificationLog> findTop200ByStatusOrderByAttemptedAtDesc(com.vetos.modules.notification.domain.NotificationStatus status);
+    long countByStatus(com.vetos.modules.notification.domain.NotificationStatus status);
 
     @Query(value = """
         SELECT * FROM notification_log

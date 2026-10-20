@@ -22,7 +22,7 @@ class ExtensionTokenAuthenticationFilterTest {
 
     @Test
     void should_setPrincipalAndTenant_when_tokenValid() throws Exception {
-        ExtensionTokenAuthenticator authenticator = raw -> "vtx_ok".equals(raw)
+        ExtensionTokenAuthenticator authenticator = (raw, version) -> "vtx_ok".equals(raw)
             ? Optional.of(new AuthenticatedStaffUser(staffId, tenantId, List.of(), "TARBIL_EXTENSION"))
             : Optional.empty();
         MockHttpServletRequest request = new MockHttpServletRequest();
@@ -45,7 +45,7 @@ class ExtensionTokenAuthenticationFilterTest {
 
     @Test
     void should_returnUnauthenticated_when_tokenRevoked() throws Exception {
-        ExtensionTokenAuthenticator authenticator = raw -> Optional.empty();
+        ExtensionTokenAuthenticator authenticator = (raw, version) -> Optional.empty();
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Authorization", "Bearer vtx_revoked");
         AtomicReference<Authentication> seenAuth = new AtomicReference<>();
@@ -58,7 +58,7 @@ class ExtensionTokenAuthenticationFilterTest {
 
     @Test
     void should_ignoreJwtShapedBearer() throws Exception {
-        ExtensionTokenAuthenticator authenticator = raw -> {
+        ExtensionTokenAuthenticator authenticator = (raw, version) -> {
             throw new AssertionError("JWT bir eklenti anahtari olarak denenmemeli");
         };
         MockHttpServletRequest request = new MockHttpServletRequest();
@@ -69,5 +69,21 @@ class ExtensionTokenAuthenticationFilterTest {
             .doFilter(request, new MockHttpServletResponse(), (req, res) -> seenAuth.set(SecurityContextHolder.getContext().getAuthentication()));
 
         assertThat(seenAuth.get()).isNull();
+    }
+
+    @Test
+    void should_passClientVersionHeaderToAuthenticator() throws Exception {
+        AtomicReference<String> seenVersion = new AtomicReference<>();
+        ExtensionTokenAuthenticator authenticator = (raw, version) -> {
+            seenVersion.set(version);
+            return Optional.empty();
+        };
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer vtx_ok");
+        request.addHeader(ClientVersionFilter.HEADER, "0.2.0");
+
+        new ExtensionTokenAuthenticationFilter(authenticator).doFilter(request, new MockHttpServletResponse(), (req, res) -> {});
+
+        assertThat(seenVersion.get()).isEqualTo("0.2.0");
     }
 }

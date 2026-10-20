@@ -8,6 +8,8 @@ import com.vetos.modules.ai.domain.HistoryEntry;
 import com.vetos.modules.ai.domain.exception.ClinicalFindingsRequiredForDiagnosisException;
 import com.vetos.modules.encounter.domain.EncounterClinicalContext;
 import com.vetos.modules.encounter.domain.EncounterLookupPort;
+import com.vetos.platform.quota.UsageKind;
+import com.vetos.platform.quota.UsageQuotaPort;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -28,17 +30,23 @@ public class GenerateDiagnosisSuggestionUseCase {
     private final DiagnosisSuggestionPort diagnosisSuggestionPort;
     private final RecordAiJobUseCase recordAiJobUseCase;
     private final String providerName;
+    private final UsageQuotaPort usageQuotaPort;
+    private final AiCallGate aiCallGate;
 
     public GenerateDiagnosisSuggestionUseCase(
         EncounterLookupPort encounterLookupPort,
         DiagnosisSuggestionPort diagnosisSuggestionPort,
         RecordAiJobUseCase recordAiJobUseCase,
-        @Value("${ai.provider:ollama}") String providerName
+        @Value("${ai.provider:ollama}") String providerName,
+        UsageQuotaPort usageQuotaPort,
+        AiCallGate aiCallGate
     ) {
         this.encounterLookupPort = encounterLookupPort;
         this.diagnosisSuggestionPort = diagnosisSuggestionPort;
         this.recordAiJobUseCase = recordAiJobUseCase;
         this.providerName = providerName;
+        this.usageQuotaPort = usageQuotaPort;
+        this.aiCallGate = aiCallGate;
     }
 
     public DiagnosisSuggestionResult execute(GenerateDiagnosisSuggestionCommand command) {
@@ -59,7 +67,21 @@ public class GenerateDiagnosisSuggestionUseCase {
                 .toList()
         );
 
-        DiagnosisSuggestionDraft draft = diagnosisSuggestionPort.generate(input);
+        // Kota ayirma kapinin icinde: AI yogunsa hak dusmez.
+        DiagnosisSuggestionDraft draft = aiCallGate.run(command.tenantId(), () -> {
+            usageQuotaPort.reserve(command.tenantId(), UsageKind.AI, 1);
+            DiagnosisSuggestionDraft generated;
+            try {
+                generated = diagnosisSuggestionPort.generate(input);
+            } catch (RuntimeException e) {
+                usageQuotaPort.release(command.tenantId(), UsageKind.AI, 1);
+                throw e;
+            }
+            if (!generated.modelConnected()) {
+                usageQuotaPort.release(command.tenantId(), UsageKind.AI, 1);
+            }
+            return generated;
+        });
 
         UUID aiJobId = recordAiJobUseCase.execute(new RecordAiJobCommand(
             command.tenantId(), AiTaskType.DIAGNOSIS_SUGGESTION, command.encounterId(),

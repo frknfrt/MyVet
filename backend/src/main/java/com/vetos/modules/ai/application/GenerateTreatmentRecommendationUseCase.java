@@ -4,6 +4,8 @@ import com.vetos.modules.ai.domain.*;
 import com.vetos.modules.ai.domain.exception.AssessmentRequiredForRecommendationException;
 import com.vetos.modules.encounter.domain.EncounterClinicalContext;
 import com.vetos.modules.encounter.domain.EncounterLookupPort;
+import com.vetos.platform.quota.UsageKind;
+import com.vetos.platform.quota.UsageQuotaPort;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -18,17 +20,23 @@ public class GenerateTreatmentRecommendationUseCase {
     private final TreatmentRecommendationPort treatmentRecommendationPort;
     private final RecordAiJobUseCase recordAiJobUseCase;
     private final String providerName;
+    private final UsageQuotaPort usageQuotaPort;
+    private final AiCallGate aiCallGate;
 
     public GenerateTreatmentRecommendationUseCase(
         EncounterLookupPort encounterLookupPort,
         TreatmentRecommendationPort treatmentRecommendationPort,
         RecordAiJobUseCase recordAiJobUseCase,
-        @Value("${ai.provider:ollama}") String providerName
+        @Value("${ai.provider:ollama}") String providerName,
+        UsageQuotaPort usageQuotaPort,
+        AiCallGate aiCallGate
     ) {
         this.encounterLookupPort = encounterLookupPort;
         this.treatmentRecommendationPort = treatmentRecommendationPort;
         this.recordAiJobUseCase = recordAiJobUseCase;
         this.providerName = providerName;
+        this.usageQuotaPort = usageQuotaPort;
+        this.aiCallGate = aiCallGate;
     }
 
     public TreatmentRecommendationResult execute(GenerateTreatmentRecommendationCommand command) {
@@ -43,7 +51,21 @@ public class GenerateTreatmentRecommendationUseCase {
                 .map(h -> new HistoryEntry(h.date().toString(), h.assessment(), h.plan()))
                 .toList()
         );
-        TreatmentRecommendationDraft draft = treatmentRecommendationPort.generate(input);
+        // Kota ayirma kapinin icinde: AI yogunsa hak dusmez.
+        TreatmentRecommendationDraft draft = aiCallGate.run(command.tenantId(), () -> {
+            usageQuotaPort.reserve(command.tenantId(), UsageKind.AI, 1);
+            TreatmentRecommendationDraft generated;
+            try {
+                generated = treatmentRecommendationPort.generate(input);
+            } catch (RuntimeException e) {
+                usageQuotaPort.release(command.tenantId(), UsageKind.AI, 1);
+                throw e;
+            }
+            if (!generated.modelConnected()) {
+                usageQuotaPort.release(command.tenantId(), UsageKind.AI, 1);
+            }
+            return generated;
+        });
 
         UUID aiJobId = recordAiJobUseCase.execute(new RecordAiJobCommand(
             command.tenantId(), AiTaskType.TREATMENT_RECOMMENDATION, command.encounterId(),

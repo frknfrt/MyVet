@@ -2,6 +2,7 @@ package com.vetos.modules.platformadmin.infrastructure.adapter;
 
 import com.vetos.modules.platformadmin.domain.PlatformBillingEmailPort;
 import com.vetos.modules.platformadmin.domain.PlatformInvoice;
+import com.vetos.platform.observability.LogMasking;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -20,7 +21,7 @@ class MockPlatformBillingEmailAdapter implements PlatformBillingEmailPort {
     public void sendInvoiceIssued(PlatformInvoice invoice, String tenantName, String recipientEmail) {
         log.info(
             "Platform fatura e-postasi (mock, kesildi): to={}, klinik={}, tutar={}, sonOdemeTarihi={}, talimat={}",
-            recipientEmail, tenantName, invoice.getAmount(), invoice.getDueDate(), paymentInstructions
+            LogMasking.email(recipientEmail), tenantName, invoice.getAmount(), invoice.getDueDate(), paymentInstructions
         );
     }
 
@@ -28,12 +29,12 @@ class MockPlatformBillingEmailAdapter implements PlatformBillingEmailPort {
     public void sendInvoiceDueSoon(PlatformInvoice invoice, String tenantName, String recipientEmail) {
         log.info(
             "Platform fatura e-postasi (mock, son gun yaklasiyor): to={}, klinik={}, tutar={}, sonOdemeTarihi={}",
-            recipientEmail, tenantName, invoice.getAmount(), invoice.getDueDate()
+            LogMasking.email(recipientEmail), tenantName, invoice.getAmount(), invoice.getDueDate()
         );
     }
 
     @Override
     public void sendTenantSuspended(String tenantName, String recipientEmail) {
-        log.info("Platform fatura e-postasi (mock, askiya alindi): to={}, klinik={}", recipientEmail, tenantName);
+        log.info("Platform fatura e-postasi (mock, askiya alindi): to={}, klinik={}", LogMasking.email(recipientEmail), tenantName);
     }
 }

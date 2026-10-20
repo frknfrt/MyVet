@@ -1,8 +1,12 @@
 package com.vetos.platform.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vetos.platform.ratelimit.TenantRateLimiter;
 import com.vetos.platform.web.RateLimitFilter;
 import com.vetos.platform.web.RequestIdFilter;
+import com.vetos.platform.web.TenantRateLimitFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -24,10 +28,15 @@ public class TarbilExtensionSecurityConfig {
     private final ExtensionTokenAuthenticator extensionTokenAuthenticator;
     private final JsonAuthenticationEntryPoint authenticationEntryPoint;
     private final JsonAccessDeniedHandler accessDeniedHandler;
+    private final ObjectMapper objectMapper;
 
     @Bean
     @Order(2)
-    public SecurityFilterChain tarbilExtensionSecurityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain tarbilExtensionSecurityFilterChain(
+        HttpSecurity http,
+        TenantRateLimiter tenantRateLimiter,
+        @Value("${vetly.extension.min-version:0.1.0}") String minVersion
+    ) throws Exception {
         http
             .securityMatcher("/api/v1/tarbil-extension/**")
             // CSRF kapali: SecurityConfig ile ayni gerekce (STATELESS + Authorization header).
@@ -45,7 +54,10 @@ public class TarbilExtensionSecurityConfig {
             // Kayit sirasi PlatformAdminSecurityConfig ile ayni gerekceyle.
             .addFilterBefore(new ExtensionTokenAuthenticationFilter(extensionTokenAuthenticator), UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(new RateLimitFilter(), ExtensionTokenAuthenticationFilter.class)
-            .addFilterBefore(new RequestIdFilter(), RateLimitFilter.class);
+            // Faz 7: eski eklenti token dogrulamasina hic ulasmaz; RateLimit'ten sonra kaydedilmeli (ayni sira, kayit sirasi belirler).
+            .addFilterBefore(new ClientVersionFilter(ClientVersion.parse(minVersion), objectMapper), ExtensionTokenAuthenticationFilter.class)
+            .addFilterBefore(new RequestIdFilter(), RateLimitFilter.class)
+            .addFilterAfter(new TenantRateLimitFilter(tenantRateLimiter), ExtensionTokenAuthenticationFilter.class);
         return http.build();
     }
 }

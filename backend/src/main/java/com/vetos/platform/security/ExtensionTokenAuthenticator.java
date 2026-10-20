@@ -8,5 +8,6 @@ import java.util.Optional;
  * modulunde (TarbilExtensionTokenAuthenticatorAdapter).
  */
 public interface ExtensionTokenAuthenticator {
-    Optional<AuthenticatedStaffUser> authenticate(String rawToken);
+    /** clientVersion: ham X-Client-Version basligi (bos olabilir); son gorulen surum olarak kaydedilir. */
+    Optional<AuthenticatedStaffUser> authenticate(String rawToken, String clientVersion);
 }

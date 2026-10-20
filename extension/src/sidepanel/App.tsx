@@ -41,7 +41,7 @@ export function App() {
       <div className="header">
         <div>
           <strong>{state.profile?.clinicName ?? 'Vetly'}</strong>
-          <div className="muted">{state.profile?.staffName ?? 'Çevrimdışı'}</div>
+          <div className="muted">{state.profile?.staffName ?? (state.upgradeRequired ? 'Güncelleme gerekli' : 'Çevrimdışı')}</div>
         </div>
         <button onClick={async () => setState((await sendToBackground<ExtensionState>({ type: 'UNPAIR' })).ok ? { ...state, paired: false } : state)}>
           Bağlantıyı kes
@@ -49,7 +49,7 @@ export function App() {
       </div>
       <KeepAliveToggle />
       {state.pendingConfirmations > 0 && (
-        <div className="banner">{state.pendingConfirmations} onay Vetly'ye gönderilmeyi bekliyor (bağlantı gelince otomatik).</div>
+        <div className="banner">{state.pendingConfirmations} onay Vetly'ye gönderilmeyi bekliyor ({state.upgradeRequired ? 'eklenti güncellenince otomatik' : 'bağlantı gelince otomatik'}).</div>
       )}
       <PendingList
         onUnauthorized={() => {

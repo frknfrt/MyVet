@@ -30,6 +30,8 @@ import com.vetos.modules.integration.tarbil.domain.TarbilStockSystem;
 import com.vetos.modules.integration.tarbil.domain.exception.TarbilStockBranchMissingException;
 import com.vetos.platform.security.AuthenticatedStaffUser;
 import com.vetos.platform.tenancy.TenantContext;
+import com.vetos.platform.feature.Feature;
+import com.vetos.platform.feature.RequiresFeature;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -122,11 +124,13 @@ public class TarbilController {
         deleteTarbilMappingUseCase.execute(TenantContext.current(), id);
     }
 
+    @RequiresFeature(Feature.INVENTORY)
     @GetMapping("/stock-sync")
     public StockSyncResponse stockSync(@RequestParam TarbilStockSystem system, @AuthenticationPrincipal AuthenticatedStaffUser user) {
         return StockSyncResponse.from(getStockSyncViewUseCase.execute(TenantContext.current(), firstBranch(user), system));
     }
 
+    @RequiresFeature(Feature.INVENTORY)
     @PostMapping("/stock-sync/{snapshotId}/apply")
     public ApplyStockSyncResponse applyStockSync(@PathVariable UUID snapshotId, @Valid @RequestBody ApplyStockSyncRequest request,
                                                  @AuthenticationPrincipal AuthenticatedStaffUser user) {
@@ -134,6 +138,7 @@ public class TarbilController {
     }
 
     /** Muayene karti "TARBIL'den stok dus" (spec 2026-10-09 S5.1): stoktan dusen recete aktarimi kuyruga girer. */
+    @RequiresFeature(Feature.INVENTORY)
     @PostMapping("/encounters/{encounterId}/deduction")
     @ResponseStatus(HttpStatus.CREATED)
     public Map<String, UUID> queueEncounterDeduction(@PathVariable UUID encounterId,
@@ -141,6 +146,7 @@ public class TarbilController {
         return Map.of("submissionId", queueEncounterDeductionUseCase.execute(encounterId, request.tarbilDiseaseId()));
     }
 
+    @RequiresFeature(Feature.INVENTORY)
     @GetMapping("/encounters/{encounterId}/deduction")
     @PreAuthorize("hasAnyRole('ADMIN','VET','TECHNICIAN')")
     public EncounterTarbilDeductionResponse encounterDeduction(@PathVariable UUID encounterId) {

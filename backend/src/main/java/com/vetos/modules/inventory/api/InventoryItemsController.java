@@ -5,6 +5,8 @@ import com.vetos.modules.inventory.application.*;
 import com.vetos.modules.inventory.application.dto.CreateInventoryItemCommand;
 import com.vetos.modules.inventory.application.dto.UpdateInventoryItemCommand;
 import com.vetos.platform.security.AuthenticatedStaffUser;
+import com.vetos.platform.feature.Feature;
+import com.vetos.platform.feature.RequiresFeature;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +18,7 @@ import java.util.List;
 import java.util.UUID;
 
 /** api-conventions.md rol matrisi: /inventory/** (yazma) -> sadece TECHNICIAN ve ADMIN. */
+@RequiresFeature(Feature.INVENTORY)
 @RestController
 @RequestMapping("/api/v1/inventory-items")
 @RequiredArgsConstructor

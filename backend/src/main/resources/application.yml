@@ -38,6 +38,11 @@ spring:
     timeout-per-shutdown-phase: 30s
 
 management:
+  # Actuator ayri portta ve sadece localhost'ta (spec 2026-10-14 S4.2). Disariya nginx yalnizca
+  # /health/ready ve /health/external'i acar; metrikler sadece sunucunun icinden okunur.
+  server:
+    port: ${MANAGEMENT_PORT:8081}
+    address: 127.0.0.1
   endpoints:
     web:
       exposure:
@@ -45,6 +50,18 @@ management:
   endpoint:
     health:
       show-details: never
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,db
+        # Pasif dis servis kontrolu (IntegrationOutcomes). Readiness'a bilerek girmez:
+        # iyzico dustu diye uygulama "hazir degil" sayilmamali.
+        external:
+          include: efatura,sms,whatsapp,ai,payment
+  metrics:
+    tags:
+      application: vetly
 
 app:
   # Davet e-postasindaki kabul linki gibi frontend'e donen URL'ler icin.
@@ -148,8 +165,19 @@ server:
 logging:
   level:
     com.vetos: debug
+  # LOG_FORMAT=ecs -> Spring Boot yerlesik JSON (ECS); bos -> asagidaki duz metin deseni.
+  structured:
+    format:
+      console: ${LOG_FORMAT:}
+    json:
+      customizer: com.vetos.platform.observability.PiiMaskingJsonMembersCustomizer
   pattern:
-    correlation: "[%X{requestId:-etc.}/%X{tenantId:-sistem}] "
+    # Spring Boot varsayilan deseni + requestId/tenantId + mesajdaki 11 haneli sayilarin
+    # maskelenmesi (regex LogMasking.ELEVEN_DIGIT_REGEX ile ayni; ObservabilityWiringTest dogrular).
+    console: >-
+      %clr(%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX}){faint} %clr(%5p) %clr([%15.15t]){faint}
+      [%X{requestId:-etc.}/%X{tenantId:-sistem}] %clr(%-40.40logger{39}){cyan} %clr(:){faint}
+      %replace(%m){'(?<!\d)(\d{3})\d{6}(\d{2})(?!\d)', '$1******$2'}%n%wEx
 
 platform-billing:
   # Otomatik kart cekimi yok -- fatura e-posta/SMS bildirimlerinde gosterilen
@@ -180,3 +208,74 @@ payment-gateway:
     # iyzico'nun callback POST'u bu adrese gelir -- prod'da backend'in
     # disaridan erisilebilir gercek adresiyle override edilmeli.
     callback-base-url: ${IYZICO_CALLBACK_BASE_URL:http://localhost:8080}
+
+features:
+  enforcement:
+    # Plan "Modul Erisimi" isaretlerinin kliniklere uygulanmasi. Mevcut paketlerin
+    # isaretleri admin panelinden duzenlenmeden ACILMAMALI (bos isaretli paketteki
+    # odeme yapan klinikler kilitlenir). Kapaliyken her klinikte her modul acik.
+    enabled: ${FEATURES_ENFORCEMENT_ENABLED:false}
+
+vetly:
+  # Kiraci basina koruma sinirlari (bellek-ici, herkese ayni) -- spec 2026-10-15 §1.
+  # Env ile degistirilebilir: VETLY_RATE_LIMIT_TENANT_GENERAL_PER_MINUTE vb.
+  rate-limit:
+    tenant-general-per-minute: 600
+    tenant-ai-per-minute: 10
+    campaign-recipients-per-hour: 2000
+
+  # Paket kotalari: degerler admin panelinden (Paket Yonetimi). TRIAL'in plans satiri
+  # olmadigi icin deneme kotalari burada. Env: VETLY_QUOTA_TRIAL_AI / VETLY_QUOTA_TRIAL_MESSAGE.
+  quota:
+    trial:
+      ai: 30
+      message: 100
+  # Faz 7 (spec 2026-10-18): TARBIL eklentisi icin en dusuk surum. Bundan eski eklenti 426 alir.
+  # Yukseltmeden ONCE yeni surum Vetly'den indirilebilir olmali (docs/api-conventions.md Versiyonlama).
+  extension:
+    min-version: ${VETLY_EXTENSION_MIN_VERSION:0.1.0}
+
+# Faz 5 (spec 2026-10-16): dis servis korumasi. Kod programatik sarar (anotasyon yok).
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        slow-call-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 2
+        automatic-transition-from-open-to-half-open-enabled: false
+        # Kesinti-disi hatalar (400, ayristirma hatasi) breaker icin BASARI sayilir (servis cevap verdi) --
+        # bilincli tercih; bunlar devreyi asla acmaz.
+        record-failure-predicate: com.vetos.platform.resilience.OutageFailurePredicate
+    instances:
+      ai:
+        base-config: default
+        slow-call-duration-threshold: 30s
+      payment:
+        base-config: default
+        slow-call-duration-threshold: 10s
+      efatura:
+        base-config: default
+        slow-call-duration-threshold: 20s
+  bulkhead:
+    instances:
+      ai:
+        max-concurrent-calls: 4
+        max-wait-duration: 10s
+  retry:
+    configs:
+      read:
+        max-attempts: 3
+        wait-duration: 500ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exception-predicate: com.vetos.platform.resilience.OutageFailurePredicate
+    instances:
+      payment-read:
+        base-config: read
+      efatura-read:
+        base-config: read

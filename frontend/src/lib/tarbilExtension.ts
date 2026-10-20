@@ -30,13 +30,22 @@ export async function isExtensionAvailable(): Promise<boolean> {
   return !!reply?.ok;
 }
 
+/** Yuklu eklentinin surumu (PING); eklenti yoksa ya da yanit vermezse null. */
+export async function getInstalledExtensionVersion(): Promise<string | null> {
+  const reply = await send({ type: 'PING' });
+  if (!reply?.ok) return null;
+  const version = (reply.data as { version?: unknown } | null)?.version;
+  return typeof version === 'string' ? version : null;
+}
+
 export async function selectForTarbil(
   vaccinationRecordId: string,
-): Promise<{ ok: boolean; reason?: 'NOT_INSTALLED' | 'NOT_PAIRED' | 'NOT_FOUND' | 'ERROR' }> {
+): Promise<{ ok: boolean; reason?: 'NOT_INSTALLED' | 'NOT_PAIRED' | 'NOT_FOUND' | 'UPGRADE_REQUIRED' | 'ERROR' }> {
   const reply = await send({ type: 'SELECT_SUBMISSION', vaccinationRecordId });
   if (!reply) return { ok: false, reason: 'NOT_INSTALLED' };
   if (reply.ok) return { ok: true };
   if (reply.code === 'UNAUTHORIZED') return { ok: false, reason: 'NOT_PAIRED' };
   if (reply.code === 'NOT_FOUND') return { ok: false, reason: 'NOT_FOUND' };
+  if (reply.code === 'UPGRADE_REQUIRED') return { ok: false, reason: 'UPGRADE_REQUIRED' };
   return { ok: false, reason: 'ERROR' };
 }

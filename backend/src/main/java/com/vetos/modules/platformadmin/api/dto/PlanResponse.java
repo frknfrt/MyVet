@@ -1,7 +1,7 @@
 package com.vetos.modules.platformadmin.api.dto;
 
 import com.vetos.modules.platformadmin.domain.Plan;
-import com.vetos.modules.platformadmin.domain.PlanFeatureFlag;
+import com.vetos.platform.feature.Feature;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -18,8 +18,10 @@ public record PlanResponse(
     String badge,
     String imageUrl,
     List<String> features,
-    Set<PlanFeatureFlag> enabledFeatures,
-    boolean active
+    Set<Feature> enabledFeatures,
+    boolean active,
+    Integer monthlyAiQuota,
+    Integer monthlyMessageQuota
 ) {
     public static PlanResponse from(Plan plan) {
         return new PlanResponse(
@@ -33,7 +35,9 @@ public record PlanResponse(
             plan.getImageUrl(),
             plan.getFeatures(),
             plan.getEnabledFeatures(),
-            plan.isActive()
+            plan.isActive(),
+            plan.getMonthlyAiQuota(),
+            plan.getMonthlyMessageQuota()
         );
     }
 }

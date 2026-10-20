@@ -38,6 +38,8 @@ export interface ExtensionToken {
   pairedAt: string;
   lastUsedAt: string | null;
   revokedAt: string | null;
+  /** Sunucunun son gördüğü eklenti sürümü; null = 0.2.0 öncesi (sürüm göndermeyen) eklenti. */
+  lastClientVersion: string | null;
 }
 
 export interface TarbilMapping {

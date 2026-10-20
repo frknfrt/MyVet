@@ -33,3 +33,11 @@ app:
 logging:
   level:
     com.vetos: info
+
+# Faz 7 (spec 2026-10-18 §4.2): API dokumani canlida kapali. SecurityConfig bu bayrak
+# kapaliyken /v3/api-docs ve /swagger-ui icin serbest gecis de eklemez.
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

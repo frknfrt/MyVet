@@ -32,7 +32,10 @@ import com.vetos.modules.tenant.domain.TenantRepository;
 import com.vetos.platform.security.JwtTokenProvider;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import com.vetos.platform.security.AuthenticatedStaffUser;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -141,6 +144,21 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
     }
 
     @Test
+    void lastSeenClientVersionIsRecordedAndListed() throws Exception {
+        mockMvc.perform(get("/api/v1/tarbil-extension/pending").header("Authorization", "Bearer " + tokenA))
+            .andExpect(status().isOk());
+        assertThat(listExtensionTokensUseCase.execute(tenantA, staffA, false).get(0).lastClientVersion()).isNull();
+
+        mockMvc.perform(get("/api/v1/tarbil-extension/pending")
+                .header("Authorization", "Bearer " + tokenA).header("X-Client-Version", "0.2.0"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/tarbil/extension/tokens").header("Authorization", "Bearer " + jwtA))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].lastClientVersion").value("0.2.0"));
+    }
+
+    @Test
     void extensionTokenCannotReachOtherApis() throws Exception {
         mockMvc.perform(get("/api/v1/patients").header("Authorization", "Bearer " + tokenA))
             .andExpect(status().isUnauthorized());
@@ -155,7 +173,14 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
     @Test
     void revokedTokenIsRejected() throws Exception {
         UUID tokenId = listExtensionTokensUseCase.execute(tenantA, staffA, false).get(0).id();
-        revokeExtensionTokenUseCase.execute(tenantA, staffA, false, tokenId);
+        // denetim kaydi icin guvenlik baglami gerekir (urun kodu varsayilan aktor uretmez)
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+            new AuthenticatedStaffUser(staffA, tenantA, List.of(), "VET"), null, List.of()));
+        try {
+            revokeExtensionTokenUseCase.execute(tenantA, staffA, false, tokenId);
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
 
         mockMvc.perform(get("/api/v1/tarbil-extension/pending").header("Authorization", "Bearer " + tokenA))
             .andExpect(status().isUnauthorized());

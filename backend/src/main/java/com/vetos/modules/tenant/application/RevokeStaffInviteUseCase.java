@@ -3,6 +3,10 @@ package com.vetos.modules.tenant.application;
 import com.vetos.modules.tenant.domain.StaffInvite;
 import com.vetos.modules.tenant.domain.StaffInviteRepository;
 import com.vetos.modules.tenant.domain.exception.StaffInviteNotFoundException;
+import com.vetos.platform.audit.AuditAction;
+import com.vetos.platform.audit.AuditPort;
+import com.vetos.platform.audit.AuditRecord;
+import com.vetos.platform.observability.LogMasking;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +18,7 @@ import java.util.UUID;
 public class RevokeStaffInviteUseCase {
 
     private final StaffInviteRepository staffInviteRepository;
+    private final AuditPort auditPort;
 
     @Transactional
     public void execute(UUID id) {
@@ -21,5 +26,8 @@ public class RevokeStaffInviteUseCase {
             .orElseThrow(() -> new StaffInviteNotFoundException(id));
         invite.revoke();
         staffInviteRepository.save(invite);
+        auditPort.record(AuditRecord.of(
+            AuditAction.STAFF_INVITE_REVOKED, "STAFF_INVITE", invite.getId(), LogMasking.email(invite.getEmail()), null
+        ));
     }
 }

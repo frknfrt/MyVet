@@ -1,9 +1,10 @@
 package com.vetos.modules.platformadmin.api.dto;
 
-import com.vetos.modules.platformadmin.domain.PlanFeatureFlag;
+import com.vetos.platform.feature.Feature;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -17,6 +18,8 @@ public record UpdatePlanRequest(
     String badge,
     String imageUrl,
     List<String> features,
-    Set<PlanFeatureFlag> enabledFeatures,
-    boolean active
+    Set<Feature> enabledFeatures,
+    boolean active,
+    @PositiveOrZero Integer monthlyAiQuota,
+    @PositiveOrZero Integer monthlyMessageQuota
 ) {}

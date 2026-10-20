@@ -4,6 +4,9 @@ import com.vetos.modules.tenant.application.dto.CreateStaffUserCommand;
 import com.vetos.modules.tenant.domain.StaffUser;
 import com.vetos.modules.tenant.domain.StaffUserRepository;
 import com.vetos.modules.tenant.domain.exception.EmailAlreadyRegisteredConflictException;
+import com.vetos.platform.audit.AuditAction;
+import com.vetos.platform.audit.AuditPort;
+import com.vetos.platform.audit.AuditRecord;
 import com.vetos.platform.tenancy.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,6 +21,7 @@ public class CreateStaffUserUseCase {
 
     private final StaffUserRepository staffUserRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuditPort auditPort;
 
     @Transactional
     public UUID execute(CreateStaffUserCommand command) {
@@ -34,6 +38,10 @@ public class CreateStaffUserUseCase {
         );
         staffUser.updateProfile(command.fullName(), command.phone(), command.licenseNumber(), command.specialty(), command.bio());
 
-        return staffUserRepository.save(staffUser).getId();
+        StaffUser saved = staffUserRepository.save(staffUser);
+        auditPort.record(AuditRecord.of(
+            AuditAction.STAFF_CREATED, "STAFF", saved.getId(), saved.getFullName(), "Rol: " + saved.getRole()
+        ));
+        return saved.getId();
     }
 }

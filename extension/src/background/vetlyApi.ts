@@ -1,10 +1,24 @@
 import type { ErrorCode } from '../shared/messages';
 import type { ConfirmationMethod, ConfirmedLine, ExtensionProfile, StockComparison, StockSnapshotLine, StockSystem, Submission } from '../shared/types';
+import { EXTENSION_VERSION } from '../shared/version';
 import type { TokenStore } from './chromeStorage';
 
 export class ApiError extends Error {
   constructor(public readonly code: ErrorCode, message: string) {
     super(message);
+  }
+}
+
+/** Backend 426 (Faz 7) mesaji okunamazsa gosterilir; backend'deki ClientVersionFilter.MESSAGE ile ayni. */
+export const UPGRADE_MESSAGE =
+  "Vetly TARBİL eklentinizin sürümü artık desteklenmiyor. Vetly'de Ayarlar > Entegrasyonlar bölümünden yeni sürümü indirin.";
+
+async function upgradeMessage(response: Response): Promise<string> {
+  try {
+    const body = (await response.json()) as { message?: unknown };
+    return typeof body.message === 'string' && body.message ? body.message : UPGRADE_MESSAGE;
+  } catch {
+    return UPGRADE_MESSAGE;
   }
 }
 
@@ -16,7 +30,7 @@ interface Options {
 
 export function createVetlyApi({ baseUrl, tokens, fetchFn = fetch }: Options) {
   async function request<T>(path: string, init: RequestInit = {}, auth = true): Promise<T> {
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const headers: Record<string, string> = { 'Content-Type': 'application/json', 'X-Client-Version': EXTENSION_VERSION };
     if (auth) {
       const token = await tokens.get();
       if (!token) throw new ApiError('UNAUTHORIZED', 'Eklenti bağlı değil');
@@ -28,6 +42,8 @@ export function createVetlyApi({ baseUrl, tokens, fetchFn = fetch }: Options) {
     } catch {
       throw new ApiError('OFFLINE', "Vetly'ye ulaşılamıyor");
     }
+    // 426: eklenti cok eski (Faz 7). Token SILINMEZ -- guncelleme sonrasi yeniden eslestirme gerekmesin.
+    if (response.status === 426) throw new ApiError('UPGRADE_REQUIRED', await upgradeMessage(response));
     if (response.status === 401) {
       if (auth) await tokens.clear();
       throw new ApiError('UNAUTHORIZED', 'Bağlantı geçersiz ya da iptal edilmiş');

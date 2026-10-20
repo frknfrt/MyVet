@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { aiApi, DiagnosisSuggestion, TreatmentRecommendation } from '../../api/aiApi';
+import { useFeatures } from '../../auth/FeatureContext';
 import { ApiError } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { encounterApi, EncounterDetail } from '../../api/encounterApi';
@@ -32,6 +33,9 @@ export function EncounterPage() {
   const { encounterId } = useParams<{ encounterId: string }>();
   const navigate = useNavigate();
   const { session } = useAuth();
+  const { hasFeature } = useFeatures();
+  const canUseAi = hasFeature('AI_ASSISTANT');
+  const canUseStock = hasFeature('INVENTORY');
   const [encounter, setEncounter] = useState<EncounterDetail | null>(null);
   const [profile, setProfile] = useState<PatientProfile | null>(null);
   const [soap, setSoap] = useState<SoapForm>({ subjective: '', objective: '', assessment: '', plan: '' });
@@ -396,138 +400,142 @@ export function EncounterPage() {
             )}
           </div>
 
-          <div className={styles.aiCard}>
-            <div className={styles.aiTitle}>✦ AI Tanı Desteği</div>
-            <p className={styles.aiCopy}>
-              Subjective ve Objective alanlarına, vital bulgulara ve fiziksel muayeneye dayanarak olası
-              tanı/ayırıcı tanı önerisi üretir. Öneri hekim onayına sunulur, Assessment alanına siz
-              onaylamadan uygulanmaz — kesin tanı koymaz.
-            </p>
+          {canUseAi && (
+            <div className={styles.aiCard}>
+              <div className={styles.aiTitle}>✦ AI Tanı Desteği</div>
+              <p className={styles.aiCopy}>
+                Subjective ve Objective alanlarına, vital bulgulara ve fiziksel muayeneye dayanarak olası
+                tanı/ayırıcı tanı önerisi üretir. Öneri hekim onayına sunulur, Assessment alanına siz
+                onaylamadan uygulanmaz — kesin tanı koymaz.
+              </p>
 
-            {!(soap.subjective.trim() || soap.objective.trim()) && (
-              <p className={styles.aiCopy}>Önce Subjective veya Objective alanını doldurup kaydedin.</p>
-            )}
+              {!(soap.subjective.trim() || soap.objective.trim()) && (
+                <p className={styles.aiCopy}>Önce Subjective veya Objective alanını doldurup kaydedin.</p>
+              )}
 
-            {!isReadOnly && (
-              <div className={styles.aiActions}>
-                <Button
-                  variant="ai"
-                  onClick={handleGenerateDiagnosis}
-                  disabled={generatingDiagnosis || !(soap.subjective.trim() || soap.objective.trim())}
-                >
-                  {generatingDiagnosis ? 'Oluşturuluyor...' : 'Tanı Desteği Al'}
-                </Button>
-              </div>
-            )}
-
-            {generatingDiagnosis && (
-              <p className={styles.aiCopy}>AI önerisi hazırlanıyor, bu işlem ~30-60 saniye sürebilir…</p>
-            )}
-
-            {diagnosisError && <div className={styles.aiError}>{diagnosisError}</div>}
-
-            {diagnosis && (
-              <div className={styles.draftBox}>
-                <div className={styles.aiWarning}>
-                  Bu öneri gerçek bir tıbbi referans kaynağına dayanmaz, yalnızca genel AI bilgisine dayanır.
-                  Kesin tanı değildir, bağımsız olarak değerlendirin.
+              {!isReadOnly && (
+                <div className={styles.aiActions}>
+                  <Button
+                    variant="ai"
+                    onClick={handleGenerateDiagnosis}
+                    disabled={generatingDiagnosis || !(soap.subjective.trim() || soap.objective.trim())}
+                  >
+                    {generatingDiagnosis ? 'Oluşturuluyor...' : 'Tanı Desteği Al'}
+                  </Button>
                 </div>
-                {!diagnosis.modelConnected && (
+              )}
+
+              {generatingDiagnosis && (
+                <p className={styles.aiCopy}>AI önerisi hazırlanıyor, bu işlem ~30-60 saniye sürebilir…</p>
+              )}
+
+              {diagnosisError && <div className={styles.aiError}>{diagnosisError}</div>}
+
+              {diagnosis && (
+                <div className={styles.draftBox}>
                   <div className={styles.aiWarning}>
-                    Gerçek AI modeli henüz bağlı değil — bu, kullanılamaz bir yer tutucu metindir. Lütfen
-                    Assessment alanını elle girin.
+                    Bu öneri gerçek bir tıbbi referans kaynağına dayanmaz, yalnızca genel AI bilgisine dayanır.
+                    Kesin tanı değildir, bağımsız olarak değerlendirin.
                   </div>
-                )}
-                <div className={styles.draftLabel}>Öneri önizleme</div>
-                <div className={styles.draftPreview}>{diagnosis.suggestionText || '—'}</div>
-                {!isReadOnly && !diagnosisDecided && (
-                  <div className={styles.aiActions}>
-                    {diagnosis.modelConnected && (
-                      <Button variant="ai" onClick={acceptDiagnosis} disabled={decidingDiagnosis}>
-                        {decidingDiagnosis ? 'İşleniyor...' : 'Aynen Kabul Et'}
+                  {!diagnosis.modelConnected && (
+                    <div className={styles.aiWarning}>
+                      Gerçek AI modeli henüz bağlı değil — bu, kullanılamaz bir yer tutucu metindir. Lütfen
+                      Assessment alanını elle girin.
+                    </div>
+                  )}
+                  <div className={styles.draftLabel}>Öneri önizleme</div>
+                  <div className={styles.draftPreview}>{diagnosis.suggestionText || '—'}</div>
+                  {!isReadOnly && !diagnosisDecided && (
+                    <div className={styles.aiActions}>
+                      {diagnosis.modelConnected && (
+                        <Button variant="ai" onClick={acceptDiagnosis} disabled={decidingDiagnosis}>
+                          {decidingDiagnosis ? 'İşleniyor...' : 'Aynen Kabul Et'}
+                        </Button>
+                      )}
+                      <Button variant="secondary" onClick={rejectDiagnosis} disabled={decidingDiagnosis}>
+                        Reddet
                       </Button>
-                    )}
-                    <Button variant="secondary" onClick={rejectDiagnosis} disabled={decidingDiagnosis}>
-                      Reddet
-                    </Button>
-                  </div>
-                )}
-                {diagnosisDecided && (
-                  <p className={styles.aiCopy}>
-                    ✓ Assessment alanına uygulandı — kontrol edip "SOAP Kaydet"e basmayı unutmayın.
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className={styles.aiCard}>
-            <div className={styles.aiTitle}>✦ AI Tedavi Önerisi</div>
-            <p className={styles.aiCopy}>
-              Assessment alanına ve hastanın son muayenelerine dayanarak bir tedavi planı önerisi üretir.
-              Öneri hekim onayına sunulur, Plan alanına siz onaylamadan uygulanmaz.
-            </p>
-
-            {!soap.assessment.trim() && (
-              <p className={styles.aiCopy}>Önce Assessment alanını doldurup kaydedin.</p>
-            )}
-
-            {!isReadOnly && (
-              <div className={styles.aiActions}>
-                <Button
-                  variant="ai"
-                  onClick={handleGenerateRecommendation}
-                  disabled={generatingRecommendation || !soap.assessment.trim()}
-                >
-                  {generatingRecommendation ? 'Oluşturuluyor...' : 'Tedavi Önerisi Al'}
-                </Button>
-              </div>
-            )}
-
-            {generatingRecommendation && (
-              <p className={styles.aiCopy}>AI önerisi hazırlanıyor, bu işlem ~30-60 saniye sürebilir…</p>
-            )}
-
-            {recommendationError && <div className={styles.aiError}>{recommendationError}</div>}
-
-            {recommendation && (
-              <div className={styles.draftBox}>
-                <div className={styles.aiWarning}>
-                  Bu öneri gerçek bir tıbbi referans kaynağına dayanmaz, yalnızca genel AI bilgisine dayanır.
-                  Bağımsız olarak değerlendirin.
+                    </div>
+                  )}
+                  {diagnosisDecided && (
+                    <p className={styles.aiCopy}>
+                      ✓ Assessment alanına uygulandı — kontrol edip "SOAP Kaydet"e basmayı unutmayın.
+                    </p>
+                  )}
                 </div>
-                {!recommendation.modelConnected && (
+              )}
+            </div>
+          )}
+
+          {canUseAi && (
+            <div className={styles.aiCard}>
+              <div className={styles.aiTitle}>✦ AI Tedavi Önerisi</div>
+              <p className={styles.aiCopy}>
+                Assessment alanına ve hastanın son muayenelerine dayanarak bir tedavi planı önerisi üretir.
+                Öneri hekim onayına sunulur, Plan alanına siz onaylamadan uygulanmaz.
+              </p>
+
+              {!soap.assessment.trim() && (
+                <p className={styles.aiCopy}>Önce Assessment alanını doldurup kaydedin.</p>
+              )}
+
+              {!isReadOnly && (
+                <div className={styles.aiActions}>
+                  <Button
+                    variant="ai"
+                    onClick={handleGenerateRecommendation}
+                    disabled={generatingRecommendation || !soap.assessment.trim()}
+                  >
+                    {generatingRecommendation ? 'Oluşturuluyor...' : 'Tedavi Önerisi Al'}
+                  </Button>
+                </div>
+              )}
+
+              {generatingRecommendation && (
+                <p className={styles.aiCopy}>AI önerisi hazırlanıyor, bu işlem ~30-60 saniye sürebilir…</p>
+              )}
+
+              {recommendationError && <div className={styles.aiError}>{recommendationError}</div>}
+
+              {recommendation && (
+                <div className={styles.draftBox}>
                   <div className={styles.aiWarning}>
-                    Gerçek AI modeli henüz bağlı değil — bu, kullanılamaz bir yer tutucu metindir. Lütfen tedavi
-                    planını elle girin.
+                    Bu öneri gerçek bir tıbbi referans kaynağına dayanmaz, yalnızca genel AI bilgisine dayanır.
+                    Bağımsız olarak değerlendirin.
                   </div>
-                )}
-                <div className={styles.draftLabel}>Öneri önizleme</div>
-                <div className={styles.draftPreview}>{recommendation.suggestionText || '—'}</div>
-                {!isReadOnly && !recommendationDecided && (
-                  <div className={styles.aiActions}>
-                    {recommendation.modelConnected && (
-                      <Button variant="ai" onClick={acceptRecommendation} disabled={decidingRecommendation}>
-                        {decidingRecommendation ? 'İşleniyor...' : 'Aynen Kabul Et'}
+                  {!recommendation.modelConnected && (
+                    <div className={styles.aiWarning}>
+                      Gerçek AI modeli henüz bağlı değil — bu, kullanılamaz bir yer tutucu metindir. Lütfen tedavi
+                      planını elle girin.
+                    </div>
+                  )}
+                  <div className={styles.draftLabel}>Öneri önizleme</div>
+                  <div className={styles.draftPreview}>{recommendation.suggestionText || '—'}</div>
+                  {!isReadOnly && !recommendationDecided && (
+                    <div className={styles.aiActions}>
+                      {recommendation.modelConnected && (
+                        <Button variant="ai" onClick={acceptRecommendation} disabled={decidingRecommendation}>
+                          {decidingRecommendation ? 'İşleniyor...' : 'Aynen Kabul Et'}
+                        </Button>
+                      )}
+                      <Button variant="secondary" onClick={rejectRecommendation} disabled={decidingRecommendation}>
+                        Reddet
                       </Button>
-                    )}
-                    <Button variant="secondary" onClick={rejectRecommendation} disabled={decidingRecommendation}>
-                      Reddet
-                    </Button>
-                  </div>
-                )}
-                {recommendationDecided && (
-                  <p className={styles.aiCopy}>
-                    ✓ Plan alanına uygulandı — kontrol edip "SOAP Kaydet"e basmayı unutmayın.
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
+                    </div>
+                  )}
+                  {recommendationDecided && (
+                    <p className={styles.aiCopy}>
+                      ✓ Plan alanına uygulandı — kontrol edip "SOAP Kaydet"e basmayı unutmayın.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
-          <MaterialsUsedCard encounterId={encounter.id} readOnly={isReadOnly} />
+          {canUseStock && <MaterialsUsedCard encounterId={encounter.id} readOnly={isReadOnly} />}
 
-          {(encounter.status === 'FINALIZED' || encounter.status === 'AMENDED') && (
+          {canUseStock && (encounter.status === 'FINALIZED' || encounter.status === 'AMENDED') && (
             <TarbilDeductionCard encounterId={encounter.id} canAct={session?.role === 'VET' || session?.role === 'ADMIN'} />
           )}
 
@@ -535,71 +543,73 @@ export function EncounterPage() {
         </div>
 
         <div>
-          <div className={styles.aiCard}>
-            <div className={styles.aiTitle}>✦ AI Scribe</div>
-            <p className={styles.aiCopy}>
-              Muayeneyi sesli dikte edin veya not yazın; AI Scribe SOAP alanları için taslak oluşturur.
-              Üretilen her taslak hekim onayına sunulur, alanlara siz onaylamadan uygulanmaz.
-            </p>
+          {canUseAi && (
+            <div className={styles.aiCard}>
+              <div className={styles.aiTitle}>✦ AI Scribe</div>
+              <p className={styles.aiCopy}>
+                Muayeneyi sesli dikte edin veya not yazın; AI Scribe SOAP alanları için taslak oluşturur.
+                Üretilen her taslak hekim onayına sunulur, alanlara siz onaylamadan uygulanmaz.
+              </p>
 
-            {!speechSupported && (
-              <div className={styles.aiWarning}>
-                Tarayıcınız sesli dikteyi desteklemiyor (Chrome/Edge önerilir). Metni elle yazabilirsiniz.
-              </div>
-            )}
+              {!speechSupported && (
+                <div className={styles.aiWarning}>
+                  Tarayıcınız sesli dikteyi desteklemiyor (Chrome/Edge önerilir). Metni elle yazabilirsiniz.
+                </div>
+              )}
 
-            <FieldWrap label="Transkript / Not">
-              <Textarea
-                rows={5}
-                value={transcript}
-                onChange={(e) => setTranscript(e.target.value)}
-                placeholder="Muayene sırasında konuşulanlar veya kısa notlar..."
-                disabled={isReadOnly}
-              />
-            </FieldWrap>
+              <FieldWrap label="Transkript / Not">
+                <Textarea
+                  rows={5}
+                  value={transcript}
+                  onChange={(e) => setTranscript(e.target.value)}
+                  placeholder="Muayene sırasında konuşulanlar veya kısa notlar..."
+                  disabled={isReadOnly}
+                />
+              </FieldWrap>
 
-            {!isReadOnly && (
-              <div className={styles.aiActions}>
-                {speechSupported && (
-                  <Button variant="secondary" onClick={toggleRecording}>
-                    {recording ? '⏹ Dikteyi Durdur' : '🎙 Sesle Dikte Et'}
+              {!isReadOnly && (
+                <div className={styles.aiActions}>
+                  {speechSupported && (
+                    <Button variant="secondary" onClick={toggleRecording}>
+                      {recording ? '⏹ Dikteyi Durdur' : '🎙 Sesle Dikte Et'}
+                    </Button>
+                  )}
+                  <Button variant="ai" onClick={handleGenerateDraft} disabled={generatingDraft || !transcript.trim()}>
+                    {generatingDraft ? 'Oluşturuluyor...' : 'SOAP Taslağı Oluştur'}
                   </Button>
-                )}
-                <Button variant="ai" onClick={handleGenerateDraft} disabled={generatingDraft || !transcript.trim()}>
-                  {generatingDraft ? 'Oluşturuluyor...' : 'SOAP Taslağı Oluştur'}
-                </Button>
-              </div>
-            )}
+                </div>
+              )}
 
-            {generatingDraft && (
-              <p className={styles.aiCopy}>AI taslağı hazırlanıyor, bu işlem ~30-40 saniye sürebilir…</p>
-            )}
+              {generatingDraft && (
+                <p className={styles.aiCopy}>AI taslağı hazırlanıyor, bu işlem ~30-40 saniye sürebilir…</p>
+              )}
 
-            {draftError && <div className={styles.aiError}>{draftError}</div>}
+              {draftError && <div className={styles.aiError}>{draftError}</div>}
 
-            {draft && (
-              <div className={styles.draftBox}>
-                {!draft.modelConnected && (
-                  <div className={styles.aiWarning}>
-                    Gerçek AI modeli henüz bağlı değil — bu taslak, yazdığınız metnin Subjective alanına
-                    aktarılmasından ibaret. Diğer alanları elle doldurun.
-                  </div>
-                )}
-                <div className={styles.draftLabel}>Taslak önizleme</div>
-                <div className={styles.draftPreview}>{draft.subjective || '—'}</div>
-                {!isReadOnly && (
-                  <Button variant="ai" onClick={applyDraft}>
-                    Alanlara Uygula
-                  </Button>
-                )}
-                {draftApplied && (
-                  <p className={styles.aiCopy}>
-                    ✓ Soldaki "SOAP Notu" kartına uygulandı — kontrol edip "SOAP Kaydet"e basmayı unutmayın.
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
+              {draft && (
+                <div className={styles.draftBox}>
+                  {!draft.modelConnected && (
+                    <div className={styles.aiWarning}>
+                      Gerçek AI modeli henüz bağlı değil — bu taslak, yazdığınız metnin Subjective alanına
+                      aktarılmasından ibaret. Diğer alanları elle doldurun.
+                    </div>
+                  )}
+                  <div className={styles.draftLabel}>Taslak önizleme</div>
+                  <div className={styles.draftPreview}>{draft.subjective || '—'}</div>
+                  {!isReadOnly && (
+                    <Button variant="ai" onClick={applyDraft}>
+                      Alanlara Uygula
+                    </Button>
+                  )}
+                  {draftApplied && (
+                    <p className={styles.aiCopy}>
+                      ✓ Soldaki "SOAP Notu" kartına uygulandı — kontrol edip "SOAP Kaydet"e basmayı unutmayın.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </AppShell>

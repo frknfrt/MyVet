@@ -56,6 +56,10 @@ public class TarbilExtensionToken {
     @Column(name = "revoked_at")
     private Instant revokedAt;
 
+    /** Son gorulen eklenti surumu (x.y.z); bos = surum basligi gondermeyen (0.2.0 oncesi) eklenti. */
+    @Column(name = "last_client_version")
+    private String lastClientVersion;
+
     public static TarbilExtensionToken issuePairing(UUID tenantId, UUID staffId, String codeHash, Instant expiresAt, Instant now) {
         TarbilExtensionToken t = new TarbilExtensionToken();
         t.tenantId = tenantId;
@@ -85,6 +89,13 @@ public class TarbilExtensionToken {
 
     public boolean isUsable() {
         return pairedAt != null && revokedAt == null && tokenHash != null;
+    }
+
+    /** Yalniz dogrulanmis x.y.z gelir; bos deger mevcut kaydi silmez. */
+    public void recordClientVersion(String version) {
+        if (version != null) {
+            this.lastClientVersion = version;
+        }
     }
 
     public void touch(Instant now) {

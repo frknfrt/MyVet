@@ -6,7 +6,15 @@ import com.vetos.modules.platformadmin.domain.CheckoutResult;
 import com.vetos.modules.platformadmin.domain.CheckoutSession;
 import com.vetos.modules.platformadmin.domain.PaymentGatewayPort;
 import com.vetos.modules.platformadmin.domain.exception.PaymentGatewayException;
+import com.vetos.modules.platformadmin.domain.exception.PaymentProviderServiceUnavailableException;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryRegistry;
 import com.vetos.platform.http.OutboundHttp;
+import com.vetos.platform.observability.IntegrationOutcomes;
+import com.vetos.platform.observability.LogMasking;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -59,17 +67,26 @@ class IyzicoPaymentGatewayAdapter implements PaymentGatewayPort {
     private final String callbackBaseUrl;
     private final RestClient restClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final IntegrationOutcomes outcomes;
+    private final CircuitBreaker paymentBreaker;
+    private final Retry readRetry;
 
     IyzicoPaymentGatewayAdapter(
         @Value("${payment-gateway.iyzico.api-key:}") String apiKey,
         @Value("${payment-gateway.iyzico.secret-key:}") String secretKey,
         @Value("${payment-gateway.iyzico.base-url:https://sandbox-api.iyzipay.com}") String baseUrl,
-        @Value("${payment-gateway.iyzico.callback-base-url:http://localhost:8080}") String callbackBaseUrl
+        @Value("${payment-gateway.iyzico.callback-base-url:http://localhost:8080}") String callbackBaseUrl,
+        IntegrationOutcomes outcomes,
+        CircuitBreakerRegistry circuitBreakers,
+        RetryRegistry retries
     ) {
         this.apiKey = apiKey;
         this.secretKey = secretKey;
         this.baseUrl = baseUrl;
         this.callbackBaseUrl = callbackBaseUrl;
+        this.outcomes = outcomes;
+        this.paymentBreaker = circuitBreakers.circuitBreaker("payment");
+        this.readRetry = retries.retry("payment-read");
         this.restClient = OutboundHttp.restClient(CONNECT_TIMEOUT, READ_TIMEOUT);
     }
 
@@ -93,22 +110,30 @@ class IyzicoPaymentGatewayAdapter implements PaymentGatewayPort {
 
         Map<String, Object> response;
         try {
-            response = postSigned(INITIALIZE_PATH, requestBody);
+            response = paymentBreaker.executeSupplier(() -> postSigned(INITIALIZE_PATH, requestBody));
+        } catch (CallNotPermittedException e) {
+            log.warn("iyzico devre kesici acik, odeme baslatilmadi: conversationId={}", conversationId);
+            throw new PaymentProviderServiceUnavailableException();
         } catch (RestClientResponseException e) {
-            log.warn("iyzico checkout baslatilamadi: durum={}, govde={}", e.getStatusCode(), e.getResponseBodyAsString());
+            outcomes.record(IntegrationOutcomes.PAYMENT, !IntegrationOutcomes.isOutageStatus(e.getStatusCode().value()));
+            log.warn("iyzico checkout baslatilamadi: durum={}, govde={}", e.getStatusCode(), LogMasking.body(e.getResponseBodyAsString()));
             throw new PaymentGatewayException("iyzico checkout baslatilamadi", e);
         } catch (RestClientException e) {
             // Baglanti hatasi / zaman asimi -- yakalanmazsa GlobalExceptionHandler'da
             // 500 INTERNAL_ERROR'a dusuyordu; kullanici "tekrar deneyin" gormeli.
+            outcomes.record(IntegrationOutcomes.PAYMENT, false);
             log.warn("iyzico'ya ulasilamadi: {}", e.getMessage());
             throw new PaymentGatewayException("iyzico'ya ulasilamadi", e);
         }
+        // Bos/null yanit servis bozuk sayilir; iyzico yanit verdiyse is-seviyesi "failure"
+        // (gecersiz tutar vb.) servis ayakta demek.
+        outcomes.record(IntegrationOutcomes.PAYMENT, response != null);
 
         // iyzico is-seviyesi hatalari HTTP 200 + {"status":"failure",...} olarak
         // doner; status kontrolu olmadan CheckoutSession(null, null) uretilir ve
         // frontend "null" adresine gider.
         if (response == null || !"success".equals(response.get("status"))) {
-            log.warn("iyzico checkout basarisiz yanit dondu: govde={}", response);
+            log.warn("iyzico checkout basarisiz yanit dondu: govde={}", LogMasking.body(String.valueOf(response)));
             throw new PaymentGatewayException("iyzico checkout basarisiz: " + response, null);
         }
 
@@ -132,7 +157,7 @@ class IyzicoPaymentGatewayAdapter implements PaymentGatewayPort {
         String requestBody = toJson(retrieveBody);
 
         try {
-            Map<String, Object> response = postSigned(RETRIEVE_PATH, requestBody);
+            Map<String, Object> response = readRetry.executeSupplier(() -> retrieveOnce(requestBody));
             if (response == null) {
                 log.warn("iyzico odeme sonucu bos govde dondu");
                 return new CheckoutResult(false, null, null);
@@ -141,8 +166,25 @@ class IyzicoPaymentGatewayAdapter implements PaymentGatewayPort {
             boolean success = "success".equals(response.get("status")) && "SUCCESS".equals(response.get("paymentStatus"));
             return new CheckoutResult(success, (String) response.get("conversationId"), (String) response.get("paymentId"));
         } catch (RestClientResponseException e) {
-            log.warn("iyzico odeme sonucu sorgulanamadi: durum={}, govde={}", e.getStatusCode(), e.getResponseBodyAsString());
+            log.warn("iyzico odeme sonucu sorgulanamadi: durum={}, govde={}", e.getStatusCode(), LogMasking.body(e.getResponseBodyAsString()));
             return new CheckoutResult(false, null, null);
+        } catch (RestClientException e) {
+            throw e;
+        }
+    }
+
+    /** Tek gercek HTTP denemesi + IntegrationOutcomes kaydi (her deneme bir kayit). */
+    private Map<String, Object> retrieveOnce(String requestBody) {
+        try {
+            Map<String, Object> response = postSigned(RETRIEVE_PATH, requestBody);
+            outcomes.record(IntegrationOutcomes.PAYMENT, response != null);
+            return response;
+        } catch (RestClientResponseException e) {
+            outcomes.record(IntegrationOutcomes.PAYMENT, !IntegrationOutcomes.isOutageStatus(e.getStatusCode().value()));
+            throw e;
+        } catch (RestClientException e) {
+            outcomes.record(IntegrationOutcomes.PAYMENT, false);
+            throw e;
         }
     }
 

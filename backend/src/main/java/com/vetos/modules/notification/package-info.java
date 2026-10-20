@@ -4,7 +4,8 @@
         "modules.patient::domain", "modules.tenant::domain", "modules.appointment::domain", "modules.encounter::domain",
         "modules.appointment::domain.event",
         "platform::security", "platform::tenancy", "platform::event", "platform::exception", "platform::concurrency",
-        "platform::http"
+        "platform::http", "platform::observability", "platform::quota", "platform::ratelimit",
+        "platform::resilience"
     }
 )
 package com.vetos.modules.notification;

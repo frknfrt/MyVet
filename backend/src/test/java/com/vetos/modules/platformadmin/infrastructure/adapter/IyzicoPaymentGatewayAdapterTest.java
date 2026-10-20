@@ -1,5 +1,17 @@
 package com.vetos.modules.platformadmin.infrastructure.adapter;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import com.vetos.platform.observability.IntegrationOutcomes;
+import java.time.Clock;
+import java.time.Duration;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
+import com.vetos.modules.platformadmin.domain.exception.PaymentProviderServiceUnavailableException;
+import com.vetos.platform.resilience.OutageFailurePredicate;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.retry.RetryConfig;
+import io.github.resilience4j.retry.RetryRegistry;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpExchange;
@@ -26,6 +38,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class IyzicoPaymentGatewayAdapterTest {
 
+    private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
+    private final IntegrationOutcomes outcomes = new IntegrationOutcomes(registry, Clock.systemUTC());
+
+    private double calls(String integration, String outcome) {
+        Counter c = registry.find("vetly.integration.calls").tag("integration", integration).tag("outcome", outcome).counter();
+        return c == null ? 0 : c.count();
+    }
+
     private static final String INITIALIZE_PATH = "/payment/iyzipos/checkoutform/initialize/auth/ecom";
     private static final String RETRIEVE_PATH = "/payment/iyzipos/checkoutform/auth/ecom/detail";
 
@@ -33,11 +53,13 @@ class IyzicoPaymentGatewayAdapterTest {
 
     /** Simule mod: kimlik bilgileri bos. */
     private final IyzicoPaymentGatewayAdapter adapter =
-        new IyzicoPaymentGatewayAdapter("", "", "https://sandbox-api.iyzipay.com", "http://localhost:8080");
+        new IyzicoPaymentGatewayAdapter("", "", "https://sandbox-api.iyzipay.com", "http://localhost:8080", outcomes,
+            CircuitBreakerRegistry.ofDefaults(), RetryRegistry.ofDefaults());
 
     /** Kimlik bilgileri tanimli, base-url erisilemez: gercek mod yolu deterministik baglanti hatasi verir. */
     private final IyzicoPaymentGatewayAdapter unreachableConfiguredAdapter =
-        new IyzicoPaymentGatewayAdapter("test-api-key", "test-secret-key", "http://127.0.0.1:1", "http://localhost:8080");
+        new IyzicoPaymentGatewayAdapter("test-api-key", "test-secret-key", "http://127.0.0.1:1", "http://localhost:8080", outcomes,
+            CircuitBreakerRegistry.ofDefaults(), RetryRegistry.ofDefaults());
 
     /** Kimlik bilgileri tanimli ve asagidaki yerel sahte iyzico sunucusuna baglanan adapter. */
     private IyzicoPaymentGatewayAdapter stubbedConfiguredAdapter;
@@ -55,7 +77,8 @@ class IyzicoPaymentGatewayAdapterTest {
 
         stubbedConfiguredAdapter = new IyzicoPaymentGatewayAdapter(
             "test-api-key", "test-secret-key",
-            "http://127.0.0.1:" + stubServer.getAddress().getPort(), "http://localhost:8080");
+            "http://127.0.0.1:" + stubServer.getAddress().getPort(), "http://localhost:8080", outcomes,
+            CircuitBreakerRegistry.ofDefaults(), RetryRegistry.ofDefaults());
     }
 
     @AfterEach
@@ -63,12 +86,42 @@ class IyzicoPaymentGatewayAdapterTest {
         stubServer.stop(0);
     }
 
+    /** Yol basina istek sayaci ve (varsa) sirayla tuketilen durum kodlari; kuyruk bossa 200. */
+    private final Map<String, AtomicInteger> requestCounts = new ConcurrentHashMap<>();
+    private final Map<String, ConcurrentLinkedQueue<Integer>> scriptedStatuses = new ConcurrentHashMap<>();
+
+    private int requests(String path) {
+        AtomicInteger c = requestCounts.get(path);
+        return c == null ? 0 : c.get();
+    }
+
+    private void script(String path, Integer... statuses) {
+        scriptedStatuses.put(path, new ConcurrentLinkedQueue<>(java.util.List.of(statuses)));
+    }
+
+    private IyzicoPaymentGatewayAdapter adapterWith(CircuitBreakerRegistry breakers, RetryRegistry retries) {
+        return new IyzicoPaymentGatewayAdapter(
+            "test-api-key", "test-secret-key",
+            "http://127.0.0.1:" + stubServer.getAddress().getPort(), "http://localhost:8080", outcomes,
+            breakers, retries);
+    }
+
+    private static RetryRegistry fastRetries() {
+        return RetryRegistry.of(RetryConfig.custom().maxAttempts(3).waitDuration(Duration.ofMillis(10))
+            .retryOnException(new OutageFailurePredicate()).build());
+    }
+
     private void handle(HttpExchange exchange) throws IOException {
-        capturedBodies.put(exchange.getRequestURI().getPath(),
+        String path = exchange.getRequestURI().getPath();
+        requestCounts.computeIfAbsent(path, k -> new AtomicInteger()).incrementAndGet();
+        capturedBodies.put(path,
             new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+        ConcurrentLinkedQueue<Integer> queue = scriptedStatuses.get(path);
+        Integer scripted = queue == null ? null : queue.poll();
+        int status = scripted == null ? 200 : scripted;
         byte[] payload = stubResponseBody.getBytes(StandardCharsets.UTF_8);
         exchange.getResponseHeaders().add("Content-Type", "application/json");
-        exchange.sendResponseHeaders(200, payload.length);
+        exchange.sendResponseHeaders(status, payload.length);
         exchange.getResponseBody().write(payload);
         exchange.close();
     }
@@ -168,6 +221,18 @@ class IyzicoPaymentGatewayAdapterTest {
     }
 
     @Test
+    void should_recordPaymentFailure_when_initializeReturnsEmptyBody() {
+        stubResponseBody = "";
+
+        assertThatThrownBy(() -> stubbedConfiguredAdapter.initializeCheckout(
+            UUID.randomUUID().toString(), new BigDecimal("500.00"), "Test Klinik", "test@example.com"))
+            .isInstanceOf(PaymentGatewayException.class);
+
+        assertThat(calls("payment", "failure")).isEqualTo(1);
+        assertThat(calls("payment", "success")).isZero();
+    }
+
+    @Test
     void should_returnCheckoutSession_when_initializeReturnsSuccessStatus() {
         stubResponseBody = "{\"status\":\"success\",\"paymentPageUrl\":\"https://odeme.example/x\",\"token\":\"tok-1\"}";
 
@@ -240,5 +305,81 @@ class IyzicoPaymentGatewayAdapterTest {
         body.put("token", "tok");
 
         assertThat(adapter.toJson(body)).isEqualTo("{\"locale\":\"tr\",\"token\":\"tok\"}");
+    }
+
+    @Test
+    void should_recordPaymentFailure_when_gatewayUnreachable() {
+        assertThatThrownBy(() -> unreachableConfiguredAdapter.initializeCheckout(
+            UUID.randomUUID().toString(), new BigDecimal("500.00"), "Test Klinik", "test@example.com"))
+            .isInstanceOf(PaymentGatewayException.class);
+
+        assertThat(calls("payment", "failure")).isEqualTo(1);
+    }
+
+    @Test
+    void should_recordPaymentSuccess_when_gatewayAnswersEvenWithBusinessFailure() {
+        stubResponseBody = "{\"status\":\"failure\",\"errorCode\":\"5007\",\"errorMessage\":\"Tutar gecersiz\"}";
+
+        assertThatThrownBy(() -> stubbedConfiguredAdapter.initializeCheckout(
+            UUID.randomUUID().toString(), new BigDecimal("500.00"), "Test Klinik", "test@example.com"))
+            .isInstanceOf(PaymentGatewayException.class);
+
+        assertThat(calls("payment", "success")).isEqualTo(1);
+    }
+
+    @Test
+    void should_notRecord_when_simulated() {
+        adapter.initializeCheckout(UUID.randomUUID().toString(), new BigDecimal("500.00"), "Test Klinik", "test@example.com");
+
+        assertThat(registry.find("vetly.integration.calls").counters()).isEmpty();
+    }
+
+    // ------------------------------------------ Faz 5: devre kesici + tekrar deneme
+
+    @Test
+    void should_failFastWith503_when_breakerOpen() {
+        CircuitBreakerRegistry breakers = CircuitBreakerRegistry.ofDefaults();
+        breakers.circuitBreaker("payment").transitionToOpenState();
+        IyzicoPaymentGatewayAdapter openAdapter = adapterWith(breakers, fastRetries());
+        int before = requests(INITIALIZE_PATH);
+
+        assertThatThrownBy(() -> openAdapter.initializeCheckout("conv-1", new BigDecimal("100"), "Ad Soyad", "a@b.com"))
+            .isInstanceOf(PaymentProviderServiceUnavailableException.class)
+            .hasMessage("Ödeme sistemine şu an ulaşılamıyor, lütfen birkaç dakika sonra tekrar deneyin.");
+        assertThat(requests(INITIALIZE_PATH)).isEqualTo(before);
+        assertThat(registry.find("vetly.integration.calls").counters()).isEmpty();
+    }
+
+    @Test
+    void should_notRetryInitialize() {
+        script(INITIALIZE_PATH, 503, 503, 503);
+        IyzicoPaymentGatewayAdapter a = adapterWith(CircuitBreakerRegistry.ofDefaults(), fastRetries());
+
+        assertThatThrownBy(() -> a.initializeCheckout("conv-1", new BigDecimal("100"), "Ad Soyad", "a@b.com"))
+            .isInstanceOf(PaymentGatewayException.class);
+        assertThat(requests(INITIALIZE_PATH)).isEqualTo(1);
+    }
+
+    @Test
+    void should_retryRetrieve_onOutage_thenSucceed() {
+        script(RETRIEVE_PATH, 503, 503);
+        stubResponseBody = "{\"status\":\"success\",\"paymentStatus\":\"SUCCESS\",\"conversationId\":\"conv-1\",\"paymentId\":\"p1\"}";
+        IyzicoPaymentGatewayAdapter a = adapterWith(CircuitBreakerRegistry.ofDefaults(), fastRetries());
+
+        CheckoutResult result = a.retrieveCheckoutResult("tok");
+
+        assertThat(result.success()).isTrue();
+        assertThat(requests(RETRIEVE_PATH)).isEqualTo(3);
+        assertThat(calls("payment", "failure")).isEqualTo(2);
+        assertThat(calls("payment", "success")).isEqualTo(1);
+    }
+
+    @Test
+    void should_notRetryRetrieve_onClientError() {
+        script(RETRIEVE_PATH, 400);
+        IyzicoPaymentGatewayAdapter a = adapterWith(CircuitBreakerRegistry.ofDefaults(), fastRetries());
+
+        assertThat(a.retrieveCheckoutResult("tok").success()).isFalse();
+        assertThat(requests(RETRIEVE_PATH)).isEqualTo(1);
     }
 }

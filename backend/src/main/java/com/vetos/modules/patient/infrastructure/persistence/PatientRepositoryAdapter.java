@@ -31,7 +31,7 @@ class PatientRepositoryAdapter implements PatientRepository {
     }
 
     @Override
-    public List<Patient> findByTenantIdAndCreatedAtRange(UUID tenantId, Instant rangeStart, Instant rangeEnd) {
-        return jpaRepository.findByTenantIdAndCreatedAtRange(tenantId, rangeStart, rangeEnd);
+    public long countByTenantIdAndCreatedAtRange(UUID tenantId, Instant rangeStart, Instant rangeEnd) {
+        return jpaRepository.countByTenantIdAndCreatedAtRange(tenantId, rangeStart, rangeEnd);
     }
 }

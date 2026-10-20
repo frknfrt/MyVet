@@ -10,6 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Duration;
 import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -44,5 +45,18 @@ class EInvoiceSubmissionExecutorBackoffTest {
         Instant nextRetry = executor.computeNextRetryAt(5);
 
         assertThat(nextRetry).isNull();
+    }
+
+    @Test
+    void should_keepOutboxBackoff() {
+        EInvoiceSubmissionExecutor executor = new EInvoiceSubmissionExecutor(
+            eInvoiceSubmissionRepository, eInvoiceGatewayPort, ownerLookupPort, invoiceLineRepository, invoiceEInvoiceUpdatePort
+        );
+        Instant before = Instant.now();
+
+        Instant first = executor.computeNextRetryAt(1);
+        assertThat(first).isBetween(before.plus(Duration.ofMinutes(2)), Instant.now().plus(Duration.ofMinutes(2)));
+        assertThat(executor.computeNextRetryAt(4)).isAfter(Instant.now().plus(Duration.ofHours(5)));
+        assertThat(executor.computeNextRetryAt(5)).isNull();
     }
 }

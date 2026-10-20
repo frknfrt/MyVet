@@ -1,5 +1,6 @@
 package com.vetos.modules.platformadmin.domain;
 
+import com.vetos.platform.feature.Feature;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -49,12 +50,20 @@ public class Plan {
     @Column(name = "feature", nullable = false)
     private List<String> features = new ArrayList<>();
 
-    /** Plan.features'tan (serbest pazarlama metni) BAGIMSIZ -- bkz. PlanFeatureFlag javadoc'u. */
+    /** Plan.features'tan (serbest pazarlama metni) BAGIMSIZ: paketin gercekten actigi moduller (bkz. Feature, FeatureAccessPort). */
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "plan_feature_flags", joinColumns = @JoinColumn(name = "plan_id"))
     @Enumerated(EnumType.STRING)
     @Column(name = "feature", nullable = false)
-    private Set<PlanFeatureFlag> enabledFeatures = new HashSet<>();
+    private Set<Feature> enabledFeatures = new HashSet<>();
+
+    /** Aylik AI kotasi; null = sinirsiz (bkz. UsageQuotaPort). */
+    @Column(name = "monthly_ai_quota")
+    private Integer monthlyAiQuota;
+
+    /** Aylik mesaj (SMS + WhatsApp) kotasi; null = sinirsiz. */
+    @Column(name = "monthly_message_quota")
+    private Integer monthlyMessageQuota;
 
     @Column(nullable = false)
     private boolean active;
@@ -76,7 +85,7 @@ public class Plan {
         String badge,
         String imageUrl,
         List<String> features,
-        Set<PlanFeatureFlag> enabledFeatures
+        Set<Feature> enabledFeatures
     ) {
         this.name = name;
         this.monthlyPrice = monthlyPrice;
@@ -94,5 +103,13 @@ public class Plan {
 
     public void deactivate() {
         this.active = false;
+    }
+
+    public void updateQuotas(Integer monthlyAiQuota, Integer monthlyMessageQuota) {
+        if ((monthlyAiQuota != null && monthlyAiQuota < 0) || (monthlyMessageQuota != null && monthlyMessageQuota < 0)) {
+            throw new IllegalArgumentException("Kota negatif olamaz");
+        }
+        this.monthlyAiQuota = monthlyAiQuota;
+        this.monthlyMessageQuota = monthlyMessageQuota;
     }
 }

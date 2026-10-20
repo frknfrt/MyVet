@@ -24,6 +24,7 @@ import { VaccinationStatusBadge } from '../vaccinations/vaccinationStatus';
 import { PatientEditModal } from './PatientEditModal';
 import { buildPatientTimeline, buildWeightTrend, shortDateLabel, TimelineEntry } from './patientTimeline';
 import { PatientStatusBadge } from './statusBadge';
+import { useFeatures } from '../../auth/FeatureContext';
 import styles from './PatientDetailPage.module.css';
 
 type Tab = 'genel-bakis' | 'muayeneler' | 'asilar' | 'receteler' | 'lab' | 'goruntuleme';
@@ -52,6 +53,9 @@ function InfoItem({ label, value }: { label: string; value: ReactNode }) {
 }
 
 export function PatientDetailPage() {
+  const { hasFeature } = useFeatures();
+  const canLab = hasFeature('LAB_INTEGRATION');
+  const canImaging = hasFeature('IMAGING');
   const { patientId } = useParams<{ patientId: string }>();
   const navigate = useNavigate();
   const { session } = useAuth();
@@ -90,8 +94,8 @@ export function PatientDetailPage() {
       .catch((err) => {
         if (err instanceof ApiError && err.status === 403) setPrescriptionsForbidden(true);
       });
-    labApi.list(patientId).then(setLabResults);
-    imagingApi.list(patientId).then(setImagingRecords);
+    if (canLab) labApi.list(patientId).then(setLabResults);
+    if (canImaging) imagingApi.list(patientId).then(setImagingRecords);
   }
 
   useEffect(() => {
@@ -239,12 +243,16 @@ export function PatientDetailPage() {
         <div className={`${styles.tab} ${tab === 'receteler' ? styles.tabActive : ''}`} onClick={() => setTab('receteler')}>
           Reçeteler
         </div>
-        <div className={`${styles.tab} ${tab === 'lab' ? styles.tabActive : ''}`} onClick={() => setTab('lab')}>
-          Lab Sonuçları
-        </div>
-        <div className={`${styles.tab} ${tab === 'goruntuleme' ? styles.tabActive : ''}`} onClick={() => setTab('goruntuleme')}>
-          Görüntüleme
-        </div>
+        {canLab && (
+          <div className={`${styles.tab} ${tab === 'lab' ? styles.tabActive : ''}`} onClick={() => setTab('lab')}>
+            Lab Sonuçları
+          </div>
+        )}
+        {canImaging && (
+          <div className={`${styles.tab} ${tab === 'goruntuleme' ? styles.tabActive : ''}`} onClick={() => setTab('goruntuleme')}>
+            Görüntüleme
+          </div>
+        )}
       </div>
 
       {tab === 'genel-bakis' && (

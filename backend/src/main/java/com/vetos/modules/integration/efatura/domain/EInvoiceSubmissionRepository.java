@@ -13,4 +13,6 @@ public interface EInvoiceSubmissionRepository {
     List<EInvoiceSubmission> claimDueForRetry(Instant now, int limit);
     List<String> findProviderReferencesByStatusAndAttemptedAtBefore(EInvoiceSubmissionStatus status, Instant threshold);
     List<EInvoiceSubmission> findRecentByStatus(EInvoiceSubmissionStatus status, int limit);
+    /** Kuyruk metrigi (vetly.queue.*) icin; TenantContext'siz cagrilir -> tum kiracilar. */
+    long countByStatus(EInvoiceSubmissionStatus status);
 }

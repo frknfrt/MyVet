@@ -92,7 +92,7 @@ Her istekte JWT'den çözülen `tenantId`, `TenantContext` (ThreadLocal) üzerin
 | `/inventory/**` (yazma) | ❌ | ✅ | ❌ | ✅ |
 | `/settings/**`, `/users/**` | ❌ | ❌ | ❌ | ✅ |
 | `/tarbil/**` (durum, bildirilmeyecek/geri al, eklenti bağlama, eşleştirmeler, `GET /tarbil/diseases` hastalık ağacı) | ✅ | ❌ | ❌ | ✅ |
-| `/tarbil-extension/**` (yalnız eklenti anahtarı; `/pair` herkese açık + hız sınırlı) | eklenti | eklenti | eklenti | eklenti |
+| `/tarbil-extension/**` (yalnız eklenti anahtarı; `/pair` herkese açık + hız sınırlı; sürüm kontrolü: bkz. Versiyonlama) | eklenti | eklenti | eklenti | eklenti |
 | `/encounters/**` (okuma: SOAP, malzeme listesi) | ✅ | ✅ | ❌ | ✅ |
 | `/message-templates/**`, `/notifications/**` (SMS/WhatsApp) | ❌ | ❌ | ✅ | ✅ |
 | `**/campaign-candidates` (SMS/WhatsApp kampanya adayı listeleri) | ✅ | ❌ | ✅ | ✅ |
@@ -133,4 +133,35 @@ Ayrıca frontend'de daha önce **hiç** rol bazlı görünürlük yoktu (`navCon
 
 ## Versiyonlama
 
-`v1` şu an tek versiyon. Kırıcı bir değişiklik gerekirse `v2` eklenir, `v1` en az 6 ay paralel yaşar. Kırıcı olmayan değişiklik (yeni alan ekleme) versiyon gerektirmez.
+`v1` şu an tek versiyon (spec: `docs/superpowers/specs/2026-10-18-api-sozlesmesi-faz7-design.md`).
+
+**Kırıcı değişiklik** (mevcut bir istemciyi bozar, sürüm gerektirir):
+- bir alanı silmek ya da adını değiştirmek,
+- bir alanın tipini değiştirmek,
+- zorunlu yeni bir girdi (alan, parametre, başlık) eklemek,
+- bir adresi kaldırmak,
+- durum kodlarının ya da `errorCode` değerlerinin anlamını değiştirmek.
+
+**Kırıcı olmayan değişiklik** (sürüm gerekmez): yeni alan, isteğe bağlı yeni girdi, yeni adres. İstemciler (web uygulaması, eklenti) tanımadıkları alanları görmezden gelmek zorundadır.
+
+**v2 kuralı:** Kırıcı değişiklik gerekirse yalnız etkilenen adresler için `/api/v2/...` açılır; `v1` karşılığı en az 6 ay daha çalışır.
+
+**Kullanımdan kaldırma:** Kalkacak bir adres cevaplarında `Deprecation: true` ve `Sunset: <HTTP tarihi>` (kapanış tarihi) başlıklarını taşır. Bugün kalkacak adres yok; kural olarak duruyor, kodda karşılığı yok.
+
+**Web uygulaması ↔ backend:** Her zaman birlikte yayınlanır; aralarında sürüm kontrolü yoktur.
+
+### TARBİL eklentisi: zorunlu güncelleme
+
+Eklenti sunucuyla birlikte yayınlanmayan tek istemcidir. Her isteğe `X-Client-Version: x.y.z` ekler (kaynak: `extension/package.json`).
+`/api/v1/tarbil-extension/**` (`/pair` dahil) altında backend bunu `VETLY_EXTENSION_MIN_VERSION`'la (`vetly.extension.min-version`, varsayılan `0.1.0`) sayısal karşılaştırır:
+- Başlık yoksa `0.1.0`, bozuksa `0.0.0` sayılır.
+- Eskiyse **426** döner: `errorCode: CLIENT_UPGRADE_REQUIRED`, Türkçe güncelleme mesajı, `X-Min-Client-Version` başlığı. Eklenti yan panelde kalıcı uyarı gösterir, eşleştirmeyi silmez.
+
+En düşük sürümü yükseltme sırası:
+1. Yeni eklenti sürümünü `extension/` içinde `npm run package` ile paketleyip web uygulamasını yayınlayın.
+2. Klinikler güncellesin diye bekleyin (Ayarlar > Entegrasyonlar'daki kart eski sürümde "Yeni sürüm var" der). Backend her eşleşmiş eklentinin son gönderdiği sürümü `tarbil_extension_token.last_client_version`'a yazar (boş = başlık göndermeyen 0.1.0); kartın cihaz listesinde ve `GET /api/v1/tarbil/extension/tokens` yanıtında `lastClientVersion` olarak görünür. Tüm kliniklerin dağılımı için sorgu: `docs/deployment.md` > Faz 7.
+3. Ancak sonra sunucuda `VETLY_EXTENSION_MIN_VERSION`'ı yükseltip backend'i yeniden başlatın.
+
+### API dokümanı (OpenAPI)
+
+Geliştirmede `/swagger-ui.html` (JSON: `/v3/api-docs`) kimliksiz açıktır; içerik koddan otomatik çıkar, adreslere anotasyon eklenmez. `prod` profilinde kapalıdır.

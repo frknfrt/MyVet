@@ -12,4 +12,6 @@ public interface NotificationLogRepository {
     boolean existsByRelatedEntityIdAndNotificationType(UUID relatedEntityId, NotificationType notificationType);
     List<NotificationLog> claimDueForRetry(Instant now, int limit);
     List<NotificationLog> findRecentByStatus(NotificationStatus status, int limit);
+    /** Kuyruk metrigi (vetly.queue.*) icin; TenantContext'siz cagrilir -> tum kiracilar. */
+    long countByStatus(NotificationStatus status);
 }

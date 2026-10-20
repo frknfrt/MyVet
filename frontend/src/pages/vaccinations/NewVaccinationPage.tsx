@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { FieldWrap, Input, Select, Textarea } from '../../components/ui/Field';
 import { InventoryItem } from '../../api/inventoryApi';
 import { COMMON_VACCINE_NAMES } from './vaccinationStatus';
+import { useFeatures } from '../../auth/FeatureContext';
 import { VaccineStockPicker } from './VaccineStockPicker';
 import styles from './NewVaccinationPage.module.css';
 
@@ -33,6 +34,7 @@ interface OwnerPatientOption {
 }
 
 export function NewVaccinationPage() {
+  const canUseStock = useFeatures().hasFeature('INVENTORY');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const presetOwnerId = searchParams.get('ownerId');
@@ -258,13 +260,15 @@ export function NewVaccinationPage() {
 
           <div className={styles.row2}>
             <FieldWrap label="Aşı*">
-              <VaccineStockPicker
-                value={stockItem?.id ?? null}
-                onChange={(item) => {
-                  setStockItem(item);
-                  if (item) setVaccineName(item.name);
-                }}
-              />
+              {canUseStock && (
+                <VaccineStockPicker
+                  value={stockItem?.id ?? null}
+                  onChange={(item) => {
+                    setStockItem(item);
+                    if (item) setVaccineName(item.name);
+                  }}
+                />
+              )}
               {!stockItem && (
                 <>
                   <Input

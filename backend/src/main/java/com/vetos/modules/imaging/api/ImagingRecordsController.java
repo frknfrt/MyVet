@@ -6,6 +6,8 @@ import com.vetos.modules.imaging.application.dto.CompleteImagingRecordCommand;
 import com.vetos.modules.imaging.application.dto.RequestImagingRecordCommand;
 import com.vetos.platform.security.AuthenticatedStaffUser;
 import com.vetos.platform.tenancy.TenantContext;
+import com.vetos.platform.feature.Feature;
+import com.vetos.platform.feature.RequiresFeature;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ByteArrayResource;
@@ -23,6 +25,7 @@ import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.UUID;
 
+@RequiresFeature(Feature.IMAGING)
 @RestController
 @RequestMapping("/api/v1/imaging-records")
 @RequiredArgsConstructor

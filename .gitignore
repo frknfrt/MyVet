@@ -35,3 +35,5 @@ Thumbs.db
 extension/node_modules/
 extension/dist/
 extension/key.pem
+# Faz 7: npm run package ciktisi (derleme urunu, repoda tutulmaz)
+frontend/public/downloads/

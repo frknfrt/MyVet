@@ -7,6 +7,7 @@ import com.vetos.modules.integration.tarbil.domain.TarbilExtensionTokenRepositor
 import com.vetos.modules.tenant.domain.StaffRole;
 import com.vetos.modules.tenant.domain.StaffUserLookupPort;
 import com.vetos.modules.tenant.domain.TenantLookupPort;
+import com.vetos.platform.security.ClientVersion;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,7 +28,8 @@ public class AuthenticateExtensionTokenUseCase {
     private final TenantLookupPort tenantLookupPort;
 
     @Transactional
-    public Optional<ExtensionIdentity> execute(String rawToken) {
+    /** clientVersionHeader: X-Client-Version; bozuk ya da bos ise kayitli surum degismez. */
+    public Optional<ExtensionIdentity> execute(String rawToken, String clientVersionHeader) {
         if (rawToken == null || !rawToken.startsWith("vtx_")) {
             return Optional.empty();
         }
@@ -39,6 +41,7 @@ public class AuthenticateExtensionTokenUseCase {
             .filter(t -> tenantLookupPort.isOperational(t.getTenantId()));
         found.ifPresent(t -> {
             t.touch(Instant.now());
+            ClientVersion.tryParse(clientVersionHeader).map(ClientVersion::toString).ifPresent(t::recordClientVersion);
             repository.save(t);
         });
         return found.map(t -> new ExtensionIdentity(t.getId(), t.getTenantId(), t.getStaffUserId()));

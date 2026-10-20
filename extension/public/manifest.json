@@ -1,8 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Vetly TARBİL Yardımcısı",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Vetly'deki aşı kayıtlarını TARBİL'e aktarmanıza yardım eder. Kaydet'e her zaman siz basarsınız.",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnVkvZr4VqOu6O+uOWCU/5Dza4DjeD6/NCW5uextmEI8zzZHsHriKEnjmMq9giDMc2wR8a3tzRaSgzuoVxN0DMor3pG25IG3LibnSK3e/r3njiql4ULn29JswRmaeAgHe1VfibDv3P+iBg9LqxOPrLtAE2bczRIQFHL3OzN84Qq8CjD9gVbAcxhM86TkMiRMrk+0t/0JL4YOu/yH4EO1Rkb8OPQAeqDZabolqf60HuQpf3d5NOxzP3ktkr8ixoEQxzz6lu4h2HYqhkGtSujWRXEGiWU93gjllz02tB/LSoAgNcnLR6mXiMSv1BnYDwbxkOsNUvSXAT2s4fjHGGZKaYQIDAQAB",
   "permissions": [
     "storage",
@@ -25,7 +31,12 @@
     "default_path": "sidepanel.html"
   },
   "action": {
-    "default_title": "Vetly TARBİL"
+    "default_title": "Vetly TARBİL",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png"
+    }
   },
   "externally_connectable": {
     "matches": [

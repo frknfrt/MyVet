@@ -41,4 +41,9 @@ class NotificationLogRepositoryAdapter implements NotificationLogRepository {
     public List<NotificationLog> findRecentByStatus(NotificationStatus status, int limit) {
         return jpaRepository.findTop200ByStatusOrderByAttemptedAtDesc(status).stream().limit(limit).toList();
     }
+
+    @Override
+    public long countByStatus(NotificationStatus status) {
+        return jpaRepository.countByStatus(status);
+    }
 }

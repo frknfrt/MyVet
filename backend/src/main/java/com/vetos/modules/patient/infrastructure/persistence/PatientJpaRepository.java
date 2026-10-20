@@ -25,11 +25,10 @@ interface PatientJpaRepository extends JpaRepository<Patient, UUID> {
     List<Patient> searchByNameOrOwner(@Param("tenantId") UUID tenantId, @Param("query") String query);
 
     @Query(
-        value = "SELECT p.* FROM patients p JOIN owners o ON p.owner_id = o.id " +
-            "WHERE o.tenant_id = :tenantId AND p.created_at >= :rangeStart AND p.created_at < :rangeEnd",
-        nativeQuery = true
+        "SELECT COUNT(p) FROM Patient p WHERE p.tenantId = :tenantId " +
+            "AND p.createdAt >= :rangeStart AND p.createdAt < :rangeEnd"
     )
-    List<Patient> findByTenantIdAndCreatedAtRange(
+    long countByTenantIdAndCreatedAtRange(
         @Param("tenantId") UUID tenantId, @Param("rangeStart") Instant rangeStart, @Param("rangeEnd") Instant rangeEnd
     );
 }

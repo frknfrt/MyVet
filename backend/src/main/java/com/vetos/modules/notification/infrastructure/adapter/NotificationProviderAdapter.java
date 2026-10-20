@@ -7,6 +7,8 @@ import com.vetos.modules.notification.domain.NotificationSendOutcome;
 import com.vetos.modules.notification.domain.NotificationSendPort;
 import com.vetos.modules.notification.domain.NotificationSendRequest;
 import com.vetos.platform.http.OutboundHttp;
+import com.vetos.platform.observability.IntegrationOutcomes;
+import com.vetos.platform.observability.LogMasking;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -54,6 +56,7 @@ class NotificationProviderAdapter implements NotificationSendPort {
     private final String iletiMerkeziSendUrl;
     private final RestClient restClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final IntegrationOutcomes outcomes;
 
     @Autowired
     NotificationProviderAdapter(
@@ -64,13 +67,15 @@ class NotificationProviderAdapter implements NotificationSendPort {
         @Value("${notification.meta.api-version:v25.0}") String metaApiVersion,
         @Value("${notification.ileti-merkezi.api-key:}") String iletiMerkeziApiKey,
         @Value("${notification.ileti-merkezi.hash:}") String iletiMerkeziHash,
-        @Value("${notification.ileti-merkezi.sender:vetly}") String iletiMerkeziSender
+        @Value("${notification.ileti-merkezi.sender:vetly}") String iletiMerkeziSender,
+        IntegrationOutcomes outcomes
     ) {
         this(
             metaAccessToken, metaPhoneNumberId, metaTemplateName, metaTemplateLanguage, metaApiVersion,
             iletiMerkeziApiKey, iletiMerkeziHash, iletiMerkeziSender,
             "https://graph.facebook.com",
-            "https://api.iletimerkezi.com/v1/send-sms/json"
+            "https://api.iletimerkezi.com/v1/send-sms/json",
+            outcomes
         );
     }
 
@@ -78,7 +83,8 @@ class NotificationProviderAdapter implements NotificationSendPort {
     NotificationProviderAdapter(
         String metaAccessToken, String metaPhoneNumberId, String metaTemplateName, String metaTemplateLanguage, String metaApiVersion,
         String iletiMerkeziApiKey, String iletiMerkeziHash, String iletiMerkeziSender,
-        String metaGraphApiBaseUrl, String iletiMerkeziSendUrl
+        String metaGraphApiBaseUrl, String iletiMerkeziSendUrl,
+        IntegrationOutcomes outcomes
     ) {
         this.metaAccessToken = metaAccessToken;
         this.metaPhoneNumberId = metaPhoneNumberId;
@@ -90,6 +96,7 @@ class NotificationProviderAdapter implements NotificationSendPort {
         this.iletiMerkeziSender = iletiMerkeziSender;
         this.metaGraphApiBaseUrl = metaGraphApiBaseUrl;
         this.iletiMerkeziSendUrl = iletiMerkeziSendUrl;
+        this.outcomes = outcomes;
         this.restClient = OutboundHttp.restClient(CONNECT_TIMEOUT, READ_TIMEOUT);
     }
 
@@ -154,16 +161,19 @@ class NotificationProviderAdapter implements NotificationSendPort {
                 .retrieve()
                 .body(String.class);
 
-            log.info("WhatsApp gonderimi (Meta): alici={}, yanit={}", request.recipientContact(), responseBody);
+            outcomes.record(IntegrationOutcomes.WHATSAPP, true);
+            log.info("WhatsApp gonderimi (Meta): alici={}, yanit={}", LogMasking.phone(request.recipientContact()), LogMasking.body(responseBody));
             return NotificationSendOutcome.success("Meta WhatsApp Cloud API'ye iletildi");
         } catch (RestClientResponseException e) {
+            outcomes.record(IntegrationOutcomes.WHATSAPP, !IntegrationOutcomes.isOutageStatus(e.getStatusCode().value()));
             log.warn(
                 "Meta WhatsApp gonderimi basarisiz: alici={}, durum={}, govde={}",
-                request.recipientContact(), e.getStatusCode(), e.getResponseBodyAsString()
+                LogMasking.phone(request.recipientContact()), e.getStatusCode(), LogMasking.body(e.getResponseBodyAsString())
             );
             return NotificationSendOutcome.failure("Meta hatasi (" + e.getStatusCode() + "): " + e.getResponseBodyAsString());
         } catch (Exception e) {
-            log.warn("Meta WhatsApp gonderimi basarisiz: alici={}, hata={}", request.recipientContact(), e.getMessage());
+            outcomes.record(IntegrationOutcomes.WHATSAPP, false);
+            log.warn("Meta WhatsApp gonderimi basarisiz: alici={}, hata={}", LogMasking.phone(request.recipientContact()), e.getMessage());
             return NotificationSendOutcome.failure("Saglayiciya ulasilamadi: " + e.getMessage());
         }
     }
@@ -188,19 +198,24 @@ class NotificationProviderAdapter implements NotificationSendPort {
             String statusMessage = status == null ? "bos yanit" : String.valueOf(status.get("message"));
 
             if (code == 200) {
-                log.info("SMS gonderimi (Ileti Merkezi): alici={}", request.recipientContact());
+                outcomes.record(IntegrationOutcomes.SMS, true);
+                log.info("SMS gonderimi (Ileti Merkezi): alici={}", LogMasking.phone(request.recipientContact()));
                 return NotificationSendOutcome.success("Ileti Merkezi'ne iletildi");
             }
-            log.warn("Ileti Merkezi SMS gonderimi basarisiz: alici={}, kod={}, mesaj={}", request.recipientContact(), code, statusMessage);
+            // -1: bos/beklenmeyen yanit -> servis bozuk sayilir
+            outcomes.record(IntegrationOutcomes.SMS, code > 0 && !IntegrationOutcomes.isOutageStatus(code));
+            log.warn("Ileti Merkezi SMS gonderimi basarisiz: alici={}, kod={}, mesaj={}", LogMasking.phone(request.recipientContact()), code, statusMessage);
             return NotificationSendOutcome.failure("Ileti Merkezi hatasi (" + code + "): " + statusMessage);
         } catch (RestClientResponseException e) {
+            outcomes.record(IntegrationOutcomes.SMS, !IntegrationOutcomes.isOutageStatus(e.getStatusCode().value()));
             log.warn(
                 "Ileti Merkezi SMS gonderimi basarisiz: alici={}, durum={}, govde={}",
-                request.recipientContact(), e.getStatusCode(), e.getResponseBodyAsString()
+                LogMasking.phone(request.recipientContact()), e.getStatusCode(), LogMasking.body(e.getResponseBodyAsString())
             );
             return NotificationSendOutcome.failure("Ileti Merkezi hatasi (" + e.getStatusCode() + "): " + e.getResponseBodyAsString());
         } catch (Exception e) {
-            log.warn("Ileti Merkezi SMS gonderimi basarisiz: alici={}, hata={}", request.recipientContact(), e.getMessage());
+            outcomes.record(IntegrationOutcomes.SMS, false);
+            log.warn("Ileti Merkezi SMS gonderimi basarisiz: alici={}, hata={}", LogMasking.phone(request.recipientContact()), e.getMessage());
             return NotificationSendOutcome.failure("Saglayiciya ulasilamadi: " + e.getMessage());
         }
     }
@@ -208,7 +223,7 @@ class NotificationProviderAdapter implements NotificationSendPort {
     private NotificationSendOutcome sendSimulated(NotificationSendRequest request) {
         log.info(
             "Bildirim gonderimi (mock): kanal={}, alici={}, mesaj=\"{}\"",
-            request.channel(), request.recipientContact(), request.message()
+            request.channel(), LogMasking.phone(request.recipientContact()), request.message()
         );
         if (Math.random() < SIMULATED_FAILURE_RATE) {
             return NotificationSendOutcome.failure("Saglayici gecici olarak yanit vermedi (simule edilmis hata)");

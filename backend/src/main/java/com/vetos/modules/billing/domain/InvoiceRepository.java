@@ -20,4 +20,10 @@ public interface InvoiceRepository {
      * yapilir -- KPI hesaplamak icin tum fatura gecmisi belleğe cekilmez.
      */
     SalesAggregate sumIssuedBetween(UUID tenantId, Collection<InvoiceStatus> statuses, Instant start, Instant end);
+
+    /**
+     * [start, end) araliginda kesilmis, durumu {@code statuses} icindeki faturalarin sube bazli
+     * toplami. Yalnizca faturasi olan subeler doner. Toplama veritabaninda yapilir.
+     */
+    List<BranchRevenueAggregate> sumIssuedByBranchBetween(UUID tenantId, Collection<InvoiceStatus> statuses, Instant start, Instant end);
 }

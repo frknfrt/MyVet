@@ -6,6 +6,8 @@ import com.vetos.modules.integration.efatura.application.GetEInvoiceStatusSummar
 import com.vetos.modules.integration.efatura.application.ListEInvoiceSubmissionsUseCase;
 import com.vetos.modules.integration.efatura.application.RetryEInvoiceSubmissionUseCase;
 import com.vetos.platform.tenancy.TenantContext;
+import com.vetos.platform.feature.Feature;
+import com.vetos.platform.feature.RequiresFeature;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +16,7 @@ import java.util.List;
 import java.util.UUID;
 
 /** api-conventions.md rol matrisi: /efatura/** -> sadece ADMIN. */
+@RequiresFeature(Feature.E_FATURA)
 @RestController
 @RequestMapping("/api/v1/efatura")
 @RequiredArgsConstructor

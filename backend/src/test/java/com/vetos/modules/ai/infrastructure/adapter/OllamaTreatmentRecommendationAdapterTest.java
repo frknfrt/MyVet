@@ -1,11 +1,15 @@
 package com.vetos.modules.ai.infrastructure.adapter;
 
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
 import com.vetos.modules.ai.domain.HistoryEntry;
 import com.vetos.modules.ai.domain.TreatmentRecommendationDraft;
 import com.vetos.modules.ai.domain.TreatmentRecommendationInput;
 import com.vetos.modules.ai.domain.TreatmentRecommendationPort;
+import com.vetos.platform.observability.IntegrationOutcomes;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,12 +17,21 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class OllamaTreatmentRecommendationAdapterTest {
+
+    private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
+    private final IntegrationOutcomes outcomes = new IntegrationOutcomes(registry, Clock.systemUTC());
+
+    private double calls(String integration, String outcome) {
+        Counter c = registry.find("vetly.integration.calls").tag("integration", integration).tag("outcome", outcome).counter();
+        return c == null ? 0 : c.count();
+    }
 
     private HttpServer stubServer;
     private String stubResponseBody;
@@ -54,7 +67,7 @@ class OllamaTreatmentRecommendationAdapterTest {
 
     @Test
     void should_returnSimulatedDraft_when_baseUrlIsBlank() {
-        TreatmentRecommendationPort adapter = new OllamaTreatmentRecommendationAdapter("", "llama3.1", new ObjectMapper());
+        TreatmentRecommendationPort adapter = new OllamaTreatmentRecommendationAdapter("", "llama3.1", new ObjectMapper(), outcomes, CircuitBreakerRegistry.ofDefaults());
 
         TreatmentRecommendationDraft draft = adapter.generate(anInput());
 
@@ -66,7 +79,7 @@ class OllamaTreatmentRecommendationAdapterTest {
     @Test
     void should_returnParsedSuggestion_when_ollamaRespondsSuccessfully() {
         stubResponseBody = "{\"response\":\"Diyet degisikligi ve 1 hafta kontrol onerilir.\"}";
-        TreatmentRecommendationPort adapter = new OllamaTreatmentRecommendationAdapter(stubUrl(), "llama3.1", new ObjectMapper());
+        TreatmentRecommendationPort adapter = new OllamaTreatmentRecommendationAdapter(stubUrl(), "llama3.1", new ObjectMapper(), outcomes, CircuitBreakerRegistry.ofDefaults());
 
         TreatmentRecommendationDraft draft = adapter.generate(anInput());
 
@@ -78,7 +91,7 @@ class OllamaTreatmentRecommendationAdapterTest {
     @Test
     void should_returnSimulatedDraft_when_ollamaCallFails() {
         stubServer.stop(0);
-        TreatmentRecommendationPort adapter = new OllamaTreatmentRecommendationAdapter(stubUrl(), "llama3.1", new ObjectMapper());
+        TreatmentRecommendationPort adapter = new OllamaTreatmentRecommendationAdapter(stubUrl(), "llama3.1", new ObjectMapper(), outcomes, CircuitBreakerRegistry.ofDefaults());
 
         TreatmentRecommendationDraft draft = adapter.generate(anInput());
 

@@ -12,7 +12,7 @@ export function SubmissionCard({ submission: s, onDone }: { submission: Submissi
     setBusy(true);
     const res = await sendToBackground<{ queued?: boolean }>({ type: 'MARK_SUBMITTED', id: s.id, method: 'MANUAL', tarbilReference: null });
     setBusy(false);
-    if (res.ok && res.data && 'queued' in res.data) setNote("Vetly'ye ulaşılamadı; bağlantı gelince otomatik bildirilecek.");
+    if (res.ok && res.data && 'queued' in res.data) setNote("Vetly'ye iletilemedi; onay sırada bekliyor, Vetly'ye ulaşılınca (gerekirse eklenti güncellenince) otomatik bildirilecek.");
     else if (res.ok) onDone();
     else setNote(res.error);
   }

@@ -5,7 +5,9 @@ import com.vetos.modules.billing.domain.InvoiceLine;
 import com.vetos.modules.billing.domain.InvoiceLineRepository;
 import com.vetos.modules.integration.efatura.domain.*;
 import com.vetos.modules.patient.domain.OwnerLookupPort;
+import com.vetos.platform.observability.LogMasking;
 import com.vetos.modules.patient.domain.OwnerSummary;
+import com.vetos.platform.resilience.BackoffSchedule;
 import com.vetos.platform.tenancy.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +16,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -43,9 +44,6 @@ class EInvoiceSubmissionExecutor {
 
     private static final String ANONYMOUS_CONSUMER_TCKN = "11111111111";
     private static final String DEFAULT_UNIT = "C62";
-    private static final Duration[] RETRY_BACKOFF = {
-        Duration.ofMinutes(2), Duration.ofMinutes(10), Duration.ofHours(1), Duration.ofHours(6)
-    };
 
     private final EInvoiceSubmissionRepository eInvoiceSubmissionRepository;
     private final EInvoiceGatewayPort eInvoiceGatewayPort;
@@ -57,9 +55,7 @@ class EInvoiceSubmissionExecutor {
     private String callbackBaseUrl;
 
     Instant computeNextRetryAt(int attemptCountAfterThisFailure) {
-        int index = attemptCountAfterThisFailure - 1;
-        if (index >= RETRY_BACKOFF.length) return null;
-        return Instant.now().plus(RETRY_BACKOFF[index]);
+        return BackoffSchedule.OUTBOX.nextRetryAt(attemptCountAfterThisFailure, Instant.now());
     }
 
     @Async
@@ -117,7 +113,7 @@ class EInvoiceSubmissionExecutor {
 
         if (!outcome.success()) {
             submission.markFailed(outcome.message(), computeNextRetryAt(submission.getAttemptCount() + 1));
-            log.warn("e-Fatura gonderimi basarisiz: submissionId={}, sebep={}", submissionId, outcome.message());
+            log.warn("e-Fatura gonderimi basarisiz: submissionId={}, sebep={}", submissionId, LogMasking.body(outcome.message()));
         } else if (outcome.finalResult()) {
             submission.markSubmitted(outcome.gibReference());
             invoiceEInvoiceUpdatePort.applyEInvoiceReference(submission.getInvoiceId(), outcome.gibReference());

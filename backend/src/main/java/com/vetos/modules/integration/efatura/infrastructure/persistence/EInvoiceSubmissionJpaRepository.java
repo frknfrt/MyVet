@@ -14,6 +14,7 @@ interface EInvoiceSubmissionJpaRepository extends JpaRepository<EInvoiceSubmissi
     List<EInvoiceSubmission> findByTenantId(UUID tenantId);
     List<EInvoiceSubmission> findTop200ByStatusOrderByAttemptedAtDesc(com.vetos.modules.integration.efatura.domain.EInvoiceSubmissionStatus status);
     Optional<EInvoiceSubmission> findByProviderReference(String providerReference);
+    long countByStatus(com.vetos.modules.integration.efatura.domain.EInvoiceSubmissionStatus status);
 
     // status = 'FAILED' filtresi KESIN -- PROCESSING asla claim edilmez (mukerrer GIB gonderimi riski).
     @Query(value = """

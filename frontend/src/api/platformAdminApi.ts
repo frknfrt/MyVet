@@ -1,5 +1,7 @@
 import { platformAdminClient } from '../platformAdmin/platformAdminClient';
 import { PlatformAdminSession } from '../platformAdmin/session';
+import type { UsageSnapshot } from './subscriptionApi';
+import { toQueryString, type AuditEventPage, type AuditQuery } from './auditApi';
 
 export interface PlatformAdminLoginPayload {
   email: string;
@@ -44,7 +46,12 @@ export interface CreateTenantPayload {
   adminPassword: string;
 }
 
-export type PlanFeatureFlag = 'AI_ASSISTANT' | 'IMAGING' | 'LAB_INTEGRATION' | 'BOARDING' | 'INVENTORY' | 'E_FATURA';
+/** Admin "Modül Erişimi" kutuları — liste ve etiketler backend'den (tek kaynak: Feature enum). */
+export interface FeatureOptions {
+  enforcementActive: boolean;
+  options: { code: string; label: string }[];
+  trialQuotas: { ai: number; message: number };
+}
 
 export interface Plan {
   id: string;
@@ -56,7 +63,9 @@ export interface Plan {
   badge: string | null;
   imageUrl: string | null;
   features: string[];
-  enabledFeatures: PlanFeatureFlag[];
+  enabledFeatures: string[];
+  monthlyAiQuota: number | null;
+  monthlyMessageQuota: number | null;
   active: boolean;
 }
 
@@ -68,7 +77,9 @@ export interface UpdatePlanPayload {
   badge: string | null;
   imageUrl: string | null;
   features: string[];
-  enabledFeatures: PlanFeatureFlag[];
+  enabledFeatures: string[];
+  monthlyAiQuota: number | null;
+  monthlyMessageQuota: number | null;
   active: boolean;
 }
 
@@ -264,6 +275,8 @@ export interface AiUsageByTenant {
 
 
 export const platformAdminApi = {
+  listTenantAuditEvents: (tenantId: string, q: AuditQuery) =>
+    platformAdminClient.get<AuditEventPage>(`/api/v1/platform-admin/tenants/${tenantId}/audit-events?${toQueryString(q)}`),
   login: (payload: PlatformAdminLoginPayload) =>
     platformAdminClient.post<PlatformAdminSession>('/api/v1/platform-admin/auth/login', payload),
   listTenants: () => platformAdminClient.get<TenantAdminOverview[]>('/api/v1/platform-admin/tenants'),
@@ -278,6 +291,9 @@ export const platformAdminApi = {
   getTenantIntegrationHealth: (id: string) =>
     platformAdminClient.get<TenantIntegrationHealth>(`/api/v1/platform-admin/tenants/${id}/integration-health`),
   listPlans: () => platformAdminClient.get<Plan[]>('/api/v1/platform-admin/plans'),
+  getTenantUsage: (id: string) =>
+    platformAdminClient.get<UsageSnapshot>(`/api/v1/platform-admin/tenants/${id}/usage`),
+  getFeatureOptions: () => platformAdminClient.get<FeatureOptions>('/api/v1/platform-admin/plans/feature-options'),
   createPlan: (payload: { code: string; name: string; monthlyPrice: number }) =>
     platformAdminClient.post<void>('/api/v1/platform-admin/plans', payload),
   updatePlan: (id: string, payload: UpdatePlanPayload) =>

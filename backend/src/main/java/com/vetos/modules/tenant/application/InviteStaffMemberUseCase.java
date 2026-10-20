@@ -11,6 +11,10 @@ import com.vetos.modules.tenant.domain.TenantRepository;
 import com.vetos.modules.tenant.domain.exception.EmailAlreadyRegisteredConflictException;
 import com.vetos.modules.tenant.domain.exception.StaffInviteAlreadyPendingConflictException;
 import com.vetos.modules.tenant.domain.exception.TenantNotFoundException;
+import com.vetos.platform.audit.AuditAction;
+import com.vetos.platform.audit.AuditPort;
+import com.vetos.platform.audit.AuditRecord;
+import com.vetos.platform.observability.LogMasking;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -26,6 +30,7 @@ public class InviteStaffMemberUseCase {
     private final StaffUserRepository staffUserRepository;
     private final TenantRepository tenantRepository;
     private final InviteEmailPort inviteEmailPort;
+    private final AuditPort auditPort;
 
     @Value("${app.frontend-base-url}")
     private String frontendBaseUrl;
@@ -52,6 +57,9 @@ public class InviteStaffMemberUseCase {
         String acceptUrl = frontendBaseUrl + "/davet/" + invite.getToken();
         inviteEmailPort.sendInvite(invite, tenant.getName(), acceptUrl);
 
+        auditPort.record(AuditRecord.of(
+            AuditAction.STAFF_INVITED, "STAFF_INVITE", invite.getId(), LogMasking.email(invite.getEmail()), "Rol: " + invite.getRole()
+        ));
         return invite.getId();
     }
 }

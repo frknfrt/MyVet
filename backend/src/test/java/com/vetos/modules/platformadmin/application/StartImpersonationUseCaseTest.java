@@ -6,9 +6,13 @@ import com.vetos.modules.platformadmin.domain.exception.ImpersonationTargetNotFo
 import com.vetos.modules.tenant.domain.ImpersonationTarget;
 import com.vetos.modules.tenant.domain.StaffRole;
 import com.vetos.modules.tenant.domain.TenantAdminPort;
+import com.vetos.platform.audit.AuditActor;
+import com.vetos.platform.audit.AuditPort;
+import com.vetos.platform.audit.AuditRecord;
 import com.vetos.platform.security.JwtTokenProvider;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -30,6 +34,7 @@ class StartImpersonationUseCaseTest {
     @Mock private TenantAdminPort tenantAdminPort;
     @Mock private JwtTokenProvider jwtTokenProvider;
     @Mock private RecordAuditLogUseCase recordAuditLogUseCase;
+    @Mock private AuditPort auditPort;
 
     @Test
     void should_generateTokenForTenantsAdminStaff_when_targetExists() {
@@ -39,9 +44,9 @@ class StartImpersonationUseCaseTest {
         UUID branchId = UUID.randomUUID();
         ImpersonationTarget target = new ImpersonationTarget(staffUserId, branchId, "Ayse Yilmaz", StaffRole.ADMIN);
         when(tenantAdminPort.findImpersonationTarget(tenantId)).thenReturn(Optional.of(target));
-        when(jwtTokenProvider.generateToken(staffUserId, tenantId, List.of(branchId), "ADMIN")).thenReturn("jwt-token-123");
+        when(jwtTokenProvider.generateImpersonationToken(staffUserId, tenantId, List.of(branchId), "ADMIN", "admin@vetly.com.tr")).thenReturn("jwt-token-123");
 
-        StartImpersonationUseCase useCase = new StartImpersonationUseCase(tenantAdminPort, jwtTokenProvider, recordAuditLogUseCase);
+        StartImpersonationUseCase useCase = new StartImpersonationUseCase(tenantAdminPort, jwtTokenProvider, recordAuditLogUseCase, auditPort);
         ImpersonationSession session = useCase.execute(tenantId, platformAdminId, "admin@vetly.com.tr");
 
         assertThat(session.token()).isEqualTo("jwt-token-123");
@@ -56,14 +61,38 @@ class StartImpersonationUseCaseTest {
     }
 
     @Test
+    void should_issueImpersonationToken_and_recordClinicVisibleEvent() {
+        UUID tenantId = UUID.randomUUID();
+        UUID platformAdminId = UUID.randomUUID();
+        UUID staffUserId = UUID.randomUUID();
+        UUID branchId = UUID.randomUUID();
+        ImpersonationTarget target = new ImpersonationTarget(staffUserId, branchId, "Ayse Yilmaz", StaffRole.ADMIN);
+        when(tenantAdminPort.findImpersonationTarget(tenantId)).thenReturn(Optional.of(target));
+        when(jwtTokenProvider.generateImpersonationToken(any(), any(), any(), any(), any())).thenReturn("jwt-token-123");
+
+        StartImpersonationUseCase useCase = new StartImpersonationUseCase(tenantAdminPort, jwtTokenProvider, recordAuditLogUseCase, auditPort);
+        useCase.execute(tenantId, platformAdminId, "destek@vetly.com.tr");
+
+        verify(jwtTokenProvider).generateImpersonationToken(
+            eq(target.staffUserId()), eq(tenantId), eq(List.of(target.branchId())), eq(target.role().name()), eq("destek@vetly.com.tr"));
+        ArgumentCaptor<AuditRecord> captor = ArgumentCaptor.forClass(AuditRecord.class);
+        verify(auditPort).record(captor.capture(), eq(AuditActor.platformAdmin(platformAdminId, "destek@vetly.com.tr")));
+        assertThat(captor.getValue().action()).isEqualTo(com.vetos.platform.audit.AuditAction.SUPPORT_IMPERSONATION_STARTED);
+        assertThat(captor.getValue().tenantId()).isEqualTo(tenantId);
+        assertThat(captor.getValue().targetType()).isEqualTo("TENANT");
+        assertThat(captor.getValue().summary()).isEqualTo("Yönetici hesabıyla");
+    }
+
+    @Test
     void should_throwNotFound_when_tenantHasNoAdminStaff() {
         UUID tenantId = UUID.randomUUID();
         when(tenantAdminPort.findImpersonationTarget(tenantId)).thenReturn(Optional.empty());
 
-        StartImpersonationUseCase useCase = new StartImpersonationUseCase(tenantAdminPort, jwtTokenProvider, recordAuditLogUseCase);
+        StartImpersonationUseCase useCase = new StartImpersonationUseCase(tenantAdminPort, jwtTokenProvider, recordAuditLogUseCase, auditPort);
 
         assertThatThrownBy(() -> useCase.execute(tenantId, UUID.randomUUID(), "admin@vetly.com.tr"))
             .isInstanceOf(ImpersonationTargetNotFoundException.class);
         verifyNoInteractions(recordAuditLogUseCase);
+        verifyNoInteractions(auditPort);
     }
 }

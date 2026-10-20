@@ -107,7 +107,7 @@ export const views = {
     view(
       s,
       queued
-        ? "✓ TARBİL'e kaydedildi. Vetly'ye şu an ulaşılamıyor; bağlantı gelince otomatik işlenecek."
+        ? "✓ TARBİL'e kaydedildi. Vetly'ye şu an iletilemedi; onay sırada bekliyor, Vetly'ye ulaşılınca (gerekirse eklenti güncellenince) otomatik işlenecek. Formu tekrar doldurmayın."
         : "✓ TARBİL'e kaydedildi ve Vetly'de işaretlendi.",
       'ok',
       [],

@@ -1,5 +1,6 @@
 package com.vetos.modules.billing.infrastructure.persistence;
 
+import com.vetos.modules.billing.domain.BranchRevenueAggregate;
 import com.vetos.modules.billing.domain.Invoice;
 import com.vetos.modules.billing.domain.InvoiceRepository;
 import com.vetos.modules.billing.domain.InvoiceStatus;
@@ -46,5 +47,12 @@ class InvoiceRepositoryAdapter implements InvoiceRepository {
         UUID tenantId, Collection<InvoiceStatus> statuses, Instant start, Instant end
     ) {
         return jpaRepository.sumIssuedBetween(tenantId, statuses, start, end);
+    }
+
+    @Override
+    public List<BranchRevenueAggregate> sumIssuedByBranchBetween(
+        UUID tenantId, Collection<InvoiceStatus> statuses, Instant start, Instant end
+    ) {
+        return jpaRepository.sumIssuedByBranchBetween(tenantId, statuses, start, end);
     }
 }

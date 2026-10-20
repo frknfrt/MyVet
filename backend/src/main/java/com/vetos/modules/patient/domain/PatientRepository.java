@@ -10,5 +10,6 @@ public interface PatientRepository {
     Optional<Patient> findById(UUID id);
     List<Patient> findByOwnerId(UUID ownerId);
     List<Patient> searchByNameOrOwner(UUID tenantId, String query);
-    List<Patient> findByTenantIdAndCreatedAtRange(UUID tenantId, Instant rangeStart, Instant rangeEnd);
+    /** [rangeStart, rangeEnd) araliginda eklenen hasta sayisi; sayma veritabaninda. */
+    long countByTenantIdAndCreatedAtRange(UUID tenantId, Instant rangeStart, Instant rangeEnd);
 }

@@ -24,7 +24,8 @@ public class ListExtensionTokensUseCase {
             .filter(t -> callerIsAdmin || t.getStaffUserId().equals(callerStaffId))
             .map(t -> new ExtensionTokenSummary(
                 t.getId(), t.getStaffUserId(), staffUserLookupPort.findSummaryById(t.getStaffUserId()).fullName(),
-                t.getLabel(), t.getPairedAt(), t.getLastUsedAt(), t.getRevokedAt()))
+                t.getLabel(), t.getPairedAt(), t.getLastUsedAt(), t.getRevokedAt(),
+                t.getLastClientVersion()))
             .toList();
     }
 }

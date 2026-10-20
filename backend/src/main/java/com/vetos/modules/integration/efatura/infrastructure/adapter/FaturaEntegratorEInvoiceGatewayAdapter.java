@@ -1,23 +1,34 @@
 package com.vetos.modules.integration.efatura.infrastructure.adapter;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vetos.modules.integration.efatura.domain.EInvoiceGatewayPort;
 import com.vetos.modules.integration.efatura.domain.EInvoiceLineItem;
 import com.vetos.modules.integration.efatura.domain.EInvoiceSubmissionOutcome;
 import com.vetos.modules.integration.efatura.domain.EInvoiceSubmissionRequest;
+import com.vetos.platform.observability.IntegrationOutcomes;
+import com.vetos.platform.http.OutboundHttp;
+import com.vetos.platform.observability.LogMasking;
+import com.vetos.platform.resilience.OutageFailurePredicate;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -70,29 +81,37 @@ class FaturaEntegratorEInvoiceGatewayAdapter implements EInvoiceGatewayPort {
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
     private final String apiBaseUrl;
+    private final IntegrationOutcomes outcomes;
+    private final CircuitBreaker efaturaBreaker;
+    private final Retry readRetry;
 
     @Autowired
     FaturaEntegratorEInvoiceGatewayAdapter(
         @Value("${efatura.faturaentegrator.api-key:}") String apiKey,
         @Value("${efatura.faturaentegrator.invoice-integration-id:0}") long invoiceIntegrationId,
         @Value("${efatura.faturaentegrator.sale-channel-id:0}") long saleChannelId,
-        ObjectMapper objectMapper
+        ObjectMapper objectMapper,
+        IntegrationOutcomes outcomes,
+        CircuitBreakerRegistry circuitBreakers,
+        RetryRegistry retries
     ) {
-        this(apiKey, invoiceIntegrationId, saleChannelId, objectMapper, "https://app.faturaentegrator.com/api");
+        this(apiKey, invoiceIntegrationId, saleChannelId, objectMapper, "https://app.faturaentegrator.com/api", outcomes,
+            circuitBreakers, retries);
     }
 
     FaturaEntegratorEInvoiceGatewayAdapter(
-        String apiKey, long invoiceIntegrationId, long saleChannelId, ObjectMapper objectMapper, String apiBaseUrl
+        String apiKey, long invoiceIntegrationId, long saleChannelId, ObjectMapper objectMapper, String apiBaseUrl,
+        IntegrationOutcomes outcomes, CircuitBreakerRegistry circuitBreakers, RetryRegistry retries
     ) {
         this.apiKey = apiKey;
         this.invoiceIntegrationId = invoiceIntegrationId;
         this.saleChannelId = saleChannelId;
         this.objectMapper = objectMapper;
         this.apiBaseUrl = apiBaseUrl;
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(5_000);
-        requestFactory.setReadTimeout(30_000);
-        this.restClient = RestClient.builder().requestFactory(requestFactory).build();
+        this.outcomes = outcomes;
+        this.efaturaBreaker = circuitBreakers.circuitBreaker("efatura");
+        this.readRetry = retries.retry("efatura-read");
+        this.restClient = OutboundHttp.restClient(Duration.ofSeconds(5), Duration.ofSeconds(30));
     }
 
     @Override
@@ -108,30 +127,49 @@ class FaturaEntegratorEInvoiceGatewayAdapter implements EInvoiceGatewayPort {
                     + "invoice-integration-id / sale-channel-id eksik)"
             );
         }
+        // Istek govdesi kendi kodumuzda olusur; burada hata cikarsa saglayici kesintisi
+        // sayilmamali (outcomes.record cagrilmaz), ayni basarisiz sonuc doner.
+        Map<String, Object> requestBody;
         try {
-            String raw = restClient.post()
+            requestBody = buildRequestBody(request);
+        } catch (Exception e) {
+            log.warn("faturaentegrator istek govdesi olusturulamadi: {}", e.getMessage());
+            return EInvoiceSubmissionOutcome.failure("faturaentegrator cagrisi basarisiz: " + e.getMessage());
+        }
+        try {
+            // Yazma cagrisi: tekrar deneme YOK; yalniz devre kesici sarar.
+            String raw = efaturaBreaker.executeSupplier(() -> restClient.post()
                 .uri(apiBaseUrl + "/invoices")
                 .header("Authorization", "Bearer " + apiKey)
                 .header("Accept", MediaType.APPLICATION_JSON_VALUE)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(buildRequestBody(request))
+                .body(requestBody)
                 .retrieve()
-                .body(String.class);
+                .body(String.class));
 
             JsonNode data = objectMapper.readTree(raw).path("data");
             String providerReference = data.path("id").asText(null);
             String workflowStatus = data.path("workflow_status").asText("processing");
             if (providerReference == null || providerReference.isBlank()) {
-                log.warn("faturaentegrator beklenmeyen yanit dondu (data.id yok): {}", raw);
+                outcomes.record(IntegrationOutcomes.EFATURA, false);
+                log.warn("faturaentegrator beklenmeyen yanit dondu (data.id yok): {}", LogMasking.body(raw));
                 return EInvoiceSubmissionOutcome.failure("faturaentegrator yaniti beklenmeyen bicimde (data.id eksik)");
             }
+            outcomes.record(IntegrationOutcomes.EFATURA, true);
             return EInvoiceSubmissionOutcome.pending(
                 providerReference, "Fatura saglayiciya iletildi, GIB resmilesmesi bekleniyor (workflow_status=" + workflowStatus + ")"
             );
+        } catch (CallNotPermittedException e) {
+            // Acik devre: gercek deneme yok -> IntegrationOutcomes'a kayit YOK; gecici hata sonucu,
+            // kuyruk mevcut BackoffSchedule.OUTBOX takvimiyle yeniden planlar.
+            log.warn("faturaentegrator devre kesici acik, gonderim ertelendi");
+            return EInvoiceSubmissionOutcome.failure("faturaentegrator gecici olarak devre disi (devre kesici acik)");
         } catch (RestClientResponseException e) {
-            log.warn("faturaentegrator gonderimi basarisiz: durum={}, govde={}", e.getStatusCode(), e.getResponseBodyAsString());
+            outcomes.record(IntegrationOutcomes.EFATURA, !IntegrationOutcomes.isOutageStatus(e.getStatusCode().value()));
+            log.warn("faturaentegrator gonderimi basarisiz: durum={}, govde={}", e.getStatusCode(), LogMasking.body(e.getResponseBodyAsString()));
             return EInvoiceSubmissionOutcome.failure("faturaentegrator reddetti (HTTP " + e.getStatusCode() + "): " + e.getResponseBodyAsString());
         } catch (Exception e) {
+            outcomes.record(IntegrationOutcomes.EFATURA, false);
             log.warn("faturaentegrator gonderimi basarisiz: {}", e.getMessage());
             return EInvoiceSubmissionOutcome.failure("faturaentegrator cagrisi basarisiz: " + e.getMessage());
         }
@@ -146,14 +184,14 @@ class FaturaEntegratorEInvoiceGatewayAdapter implements EInvoiceGatewayPort {
     @Override
     public EInvoiceSubmissionOutcome fetchStatus(String providerReference) {
         try {
-            String raw = restClient.get()
-                .uri(apiBaseUrl + "/invoices/" + providerReference)
-                .header("Authorization", "Bearer " + apiKey)
-                .header("Accept", MediaType.APPLICATION_JSON_VALUE)
-                .retrieve()
-                .body(String.class);
+            // Okuma: retry(breaker(tek deneme)) -- her deneme devre kesiciye ayri sayilir,
+            // acik devre (CallNotPermittedException) tekrar denenmez.
+            String raw = readRetry.executeSupplier(() -> efaturaBreaker.executeSupplier(() -> fetchOnce(providerReference)));
 
-            JsonNode data = objectMapper.readTree(raw).path("data");
+            JsonNode parsed = objectMapper.readTree(raw);
+            // data dugumu yoksa (bos/beklenmeyen govde) servis bozuk sayilir
+            outcomes.record(IntegrationOutcomes.EFATURA, !parsed.path("data").isMissingNode());
+            JsonNode data = parsed.path("data");
             String ettn = data.path("ettn").asText(null);
             JsonNode errors = data.path("errors");
             if (ettn != null && !ettn.isBlank()) {
@@ -164,12 +202,59 @@ class FaturaEntegratorEInvoiceGatewayAdapter implements EInvoiceGatewayPort {
             }
             String workflowStatus = data.path("workflow_status").asText("processing");
             return EInvoiceSubmissionOutcome.pending(providerReference, "Hala isleniyor (workflow_status=" + workflowStatus + ")");
+        } catch (CallNotPermittedException e) {
+            // Acik devre: faturayi "basarisiz" isaretlemek (ApplyEInvoiceCallbackUseCase markFailed) yanlis
+            // olur -- elle tekrar gonderim cift faturaya yol acabilir. "Hala isleniyor" doner, kayit degismez.
+            log.warn("faturaentegrator devre kesici acik, durum sorgusu yapilmadi: providerReference={}", providerReference);
+            return EInvoiceSubmissionOutcome.pending(providerReference, "Saglayiciya su an ulasilamiyor (devre kesici acik), durum daha sonra sorgulanacak");
         } catch (RestClientResponseException e) {
-            log.warn("faturaentegrator durum sorgusu basarisiz: durum={}, govde={}", e.getStatusCode(), e.getResponseBodyAsString());
+            // outcomes.record deneme basina fetchOnce icinde yapildi
+            // Kesinti sinifi (5xx/401/402/403/429): 3 deneme tukendi ama devre henuz kapali. Faturayi "basarisiz"
+            // isaretlemek (ApplyEInvoiceCallbackUseCase markFailed) yanlis olur -- elle tekrar gonderim cift
+            // faturaya yol acabilir. "Hala isleniyor" doner; kayit deneme basina fetchOnce'ta yapildi.
+            if (OutageFailurePredicate.isOutage(e)) {
+                log.warn("faturaentegrator durum sorgusu kesinti nedeniyle tamamlanamadi: {}", e.getMessage());
+                return EInvoiceSubmissionOutcome.pending(providerReference, "Saglayiciya su an ulasilamiyor, durum daha sonra sorgulanacak");
+            }
+            log.warn("faturaentegrator durum sorgusu basarisiz: durum={}, govde={}", e.getStatusCode(), LogMasking.body(e.getResponseBodyAsString()));
             return EInvoiceSubmissionOutcome.failure("faturaentegrator durum sorgusu basarisiz (HTTP " + e.getStatusCode() + ")");
-        } catch (Exception e) {
+        } catch (RestClientException e) {
+            // Kesinti sinifi (5xx/401/402/403/429): 3 deneme tukendi ama devre henuz kapali. Faturayi "basarisiz"
+            // isaretlemek (ApplyEInvoiceCallbackUseCase markFailed) yanlis olur -- elle tekrar gonderim cift
+            // faturaya yol acabilir. "Hala isleniyor" doner; kayit deneme basina fetchOnce'ta yapildi.
+            if (OutageFailurePredicate.isOutage(e)) {
+                log.warn("faturaentegrator durum sorgusu kesinti nedeniyle tamamlanamadi: {}", e.getMessage());
+                return EInvoiceSubmissionOutcome.pending(providerReference, "Saglayiciya su an ulasilamiyor, durum daha sonra sorgulanacak");
+            }
             log.warn("faturaentegrator durum sorgusu basarisiz: {}", e.getMessage());
             return EInvoiceSubmissionOutcome.failure("faturaentegrator durum sorgusu basarisiz: " + e.getMessage());
+        } catch (JsonProcessingException e) {
+            // HTTP basarili ama govde ayristirilamadi: servis bozuk sayilir (onceki davranis)
+            outcomes.record(IntegrationOutcomes.EFATURA, false);
+            log.warn("faturaentegrator durum yaniti ayristirilamadi: {}", e.getMessage());
+            return EInvoiceSubmissionOutcome.failure("faturaentegrator durum sorgusu basarisiz: " + e.getMessage());
+        } catch (Exception e) {
+            outcomes.record(IntegrationOutcomes.EFATURA, false);
+            log.warn("faturaentegrator durum sorgusu basarisiz: {}", e.getMessage());
+            return EInvoiceSubmissionOutcome.failure("faturaentegrator durum sorgusu basarisiz: " + e.getMessage());
+        }
+    }
+
+    /** Tek gercek GET denemesi; kesinti siniflari IntegrationOutcomes'a burada yazilir. */
+    private String fetchOnce(String providerReference) {
+        try {
+            return restClient.get()
+                .uri(apiBaseUrl + "/invoices/" + providerReference)
+                .header("Authorization", "Bearer " + apiKey)
+                .header("Accept", MediaType.APPLICATION_JSON_VALUE)
+                .retrieve()
+                .body(String.class);
+        } catch (RestClientResponseException e) {
+            outcomes.record(IntegrationOutcomes.EFATURA, !IntegrationOutcomes.isOutageStatus(e.getStatusCode().value()));
+            throw e;
+        } catch (RestClientException e) {
+            outcomes.record(IntegrationOutcomes.EFATURA, false);
+            throw e;
         }
     }
 

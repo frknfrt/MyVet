@@ -45,4 +45,9 @@ class EInvoiceSubmissionRepositoryAdapter implements EInvoiceSubmissionRepositor
     public List<EInvoiceSubmission> findRecentByStatus(EInvoiceSubmissionStatus status, int limit) {
         return jpaRepository.findTop200ByStatusOrderByAttemptedAtDesc(status).stream().limit(limit).toList();
     }
+
+    @Override
+    public long countByStatus(EInvoiceSubmissionStatus status) {
+        return jpaRepository.countByStatus(status);
+    }
 }

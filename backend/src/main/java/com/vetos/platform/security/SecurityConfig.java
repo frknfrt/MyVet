@@ -1,7 +1,9 @@
 package com.vetos.platform.security;
 
+import com.vetos.platform.ratelimit.TenantRateLimiter;
 import com.vetos.platform.web.RateLimitFilter;
 import com.vetos.platform.web.RequestIdFilter;
+import com.vetos.platform.web.TenantRateLimitFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -36,8 +38,12 @@ public class SecurityConfig {
     @org.springframework.beans.factory.annotation.Value("${app.frontend-base-url:http://localhost:5173}")
     private String frontendBaseUrl;
 
+    /** Faz 7: API dokumani yalniz bu bayrak acikken (gelistirme) kimliksiz; prod'da false. */
+    @org.springframework.beans.factory.annotation.Value("${springdoc.api-docs.enabled:true}")
+    private boolean apiDocsEnabled;
+
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, Environment env) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, Environment env, TenantRateLimiter tenantRateLimiter) throws Exception {
         http
             // CSRF korumasi kasitli olarak kapali: CSRF saldirilari, tarayicinin
             // cross-site istege otomatik ekledigi cookie/oturum kimlik bilgisine
@@ -53,18 +59,18 @@ public class SecurityConfig {
                 .authenticationEntryPoint(authenticationEntryPoint)
                 .accessDeniedHandler(accessDeniedHandler)
             )
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/v1/auth/**").permitAll()
-                .requestMatchers("/api/v1/public/**").permitAll()
-                .requestMatchers("/actuator/health").permitAll()
-                // metrics/prometheus, tenant'lar arasi operasyonel bilgi sizdiriyor (tum
-                // endpoint envanteri, tum kiracilarin gecikme/hata sayilari, JVM ici bilgi)
-                // -- herhangi bir personel hesabiyla degil, ayri bir scrape kimlik
-                // bilgisiyle korunmali (henuz tasarlanmadi, bkz. takip notu). Su an icin
-                // tamamen kapali.
-                .requestMatchers("/actuator/prometheus", "/actuator/metrics/**").denyAll()
-                .anyRequest().authenticated()
-            )
+            .authorizeHttpRequests(auth -> {
+                auth.requestMatchers("/api/v1/auth/**").permitAll()
+                    .requestMatchers("/api/v1/public/**").permitAll()
+                    // Actuator yalnizca 127.0.0.1:8081 yonetim portunda (application.yml
+                    // management.server); guvenlik ag seviyesinde. Bu zincir yonetim baglamina da
+                    // uygulanabildigi icin acikca izin verilir; ana portta bu yollar zaten yok (404).
+                    .requestMatchers("/actuator/**").permitAll();
+                if (apiDocsEnabled) {
+                    auth.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll();
+                }
+                auth.anyRequest().authenticated();
+            })
             // RateLimitFilter, JwtAuthenticationFilter'dan SONRA eklenmeli -- Spring Security'nin
             // FilterOrderRegistration'i, ozel bir filtre sinifini ancak once addFilterBefore/After/At
             // ile eklendikten sonra "bilinen" sayar. Sira degisirse (RateLimitFilter, henuz
@@ -74,7 +80,8 @@ public class SecurityConfig {
             // etkilenmez, sadece KAYIT cagri sirasi degisti.
             .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(new RateLimitFilter(), JwtAuthenticationFilter.class)
-            .addFilterBefore(new RequestIdFilter(), RateLimitFilter.class);
+            .addFilterBefore(new RequestIdFilter(), RateLimitFilter.class)
+            .addFilterAfter(new TenantRateLimitFilter(tenantRateLimiter), JwtAuthenticationFilter.class);
 
         return http.build();
     }

@@ -5,14 +5,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vetos.modules.ai.domain.DiagnosisSuggestionDraft;
 import com.vetos.modules.ai.domain.DiagnosisSuggestionInput;
 import com.vetos.modules.ai.domain.DiagnosisSuggestionPort;
+import com.vetos.platform.http.OutboundHttp;
+import com.vetos.platform.observability.IntegrationOutcomes;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -40,19 +44,22 @@ class OllamaDiagnosisSuggestionAdapter implements DiagnosisSuggestionPort {
     private final String model;
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
+    private final IntegrationOutcomes outcomes;
+    private final CircuitBreaker circuitBreaker;
 
     OllamaDiagnosisSuggestionAdapter(
         @Value("${ai.ollama.base-url:}") String baseUrl,
         @Value("${ai.ollama.model:llama3.1}") String model,
-        ObjectMapper objectMapper
+        ObjectMapper objectMapper,
+        IntegrationOutcomes outcomes,
+        CircuitBreakerRegistry circuitBreakers
     ) {
         this.baseUrl = baseUrl;
         this.model = model;
         this.objectMapper = objectMapper;
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(5_000);
-        requestFactory.setReadTimeout(120_000);
-        this.restClient = RestClient.builder().requestFactory(requestFactory).build();
+        this.outcomes = outcomes;
+        this.circuitBreaker = circuitBreakers.circuitBreaker("ai");
+        this.restClient = OutboundHttp.restClient(Duration.ofSeconds(5), Duration.ofSeconds(60));
     }
 
     @Override
@@ -61,7 +68,7 @@ class OllamaDiagnosisSuggestionAdapter implements DiagnosisSuggestionPort {
             return fallback();
         }
         try {
-            return generateViaOllama(input);
+            return circuitBreaker.executeCallable(() -> outcomes.recordAiCall("diagnosis", "ollama", () -> generateViaOllama(input)));
         } catch (Exception e) {
             log.warn("Ollama tani destegi uretimi basarisiz, mock'a duseluyor: {}", e.getMessage());
             return fallback();

@@ -1,5 +1,9 @@
 package com.vetos.modules.notification.infrastructure.adapter;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import com.vetos.platform.observability.IntegrationOutcomes;
+import java.time.Clock;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpExchange;
@@ -21,6 +25,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class NotificationProviderAdapterTest {
+
+    private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
+    private final IntegrationOutcomes outcomes = new IntegrationOutcomes(registry, Clock.systemUTC());
+
+    private double calls(String integration, String outcome) {
+        Counter c = registry.find("vetly.integration.calls").tag("integration", integration).tag("outcome", outcome).counter();
+        return c == null ? 0 : c.count();
+    }
 
     private static final String META_API_VERSION = "v99.0";
     private static final String META_PHONE_NUMBER_ID = "1234567890";
@@ -76,7 +88,8 @@ class NotificationProviderAdapterTest {
         return new NotificationProviderAdapter(
             metaAccessToken, META_PHONE_NUMBER_ID, metaTemplateName, "en_US", META_API_VERSION,
             iletiMerkeziApiKey, iletiMerkeziHash, "vetly",
-            stubBaseUrl(), stubBaseUrl() + ILETI_MERKEZI_PATH
+            stubBaseUrl(), stubBaseUrl() + ILETI_MERKEZI_PATH,
+            outcomes
         );
     }
 
@@ -255,5 +268,45 @@ class NotificationProviderAdapterTest {
         assertThat(parameters).hasSize(1);
         assertThat(parameters.get(0).get("type")).isEqualTo("text");
         assertThat(parameters.get(0).get("text")).isEqualTo("Vetly Klinik: Randevunuz yarin");
+    }
+
+    @Test
+    void should_recordSmsSuccess_when_iletiMerkeziAccepts() {
+        adapter("", "test-key", "test-hash").send(new NotificationSendRequest(NotificationChannel.SMS, "05551234567", "Merhaba"));
+
+        assertThat(calls("sms", "success")).isEqualTo(1);
+    }
+
+    @Test
+    void should_recordSmsFailure_when_iletiMerkeziRejectsCredentials() {
+        iletiMerkeziStubResponse = "{\"response\":{\"status\":{\"code\":401,\"message\":\"Kimlik dogrulama basarisiz\"}}}";
+
+        adapter("", "bad-key", "bad-hash").send(new NotificationSendRequest(NotificationChannel.SMS, "05551234567", "Merhaba"));
+
+        assertThat(calls("sms", "failure")).isEqualTo(1);
+    }
+
+    @Test
+    void should_recordWhatsappSuccess_when_metaAccepts() {
+        adapter("meta-token", "", "").send(new NotificationSendRequest(NotificationChannel.WHATSAPP, "05551234567", "Merhaba"));
+
+        assertThat(calls("whatsapp", "success")).isEqualTo(1);
+    }
+
+    @Test
+    void should_recordWhatsappFailure_when_metaUnreachable() {
+        NotificationProviderAdapter adapter = adapter("meta-token", "", "");
+        stubServer.stop(0);
+
+        adapter.send(new NotificationSendRequest(NotificationChannel.WHATSAPP, "05551234567", "Merhaba"));
+
+        assertThat(calls("whatsapp", "failure")).isEqualTo(1);
+    }
+
+    @Test
+    void should_notRecord_when_simulated() {
+        adapter("", "", "").send(new NotificationSendRequest(NotificationChannel.SMS, "05551234567", "Merhaba"));
+
+        assertThat(registry.find("vetly.integration.calls").counters()).isEmpty();
     }
 }

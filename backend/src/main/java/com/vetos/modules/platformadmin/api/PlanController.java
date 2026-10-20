@@ -1,6 +1,7 @@
 package com.vetos.modules.platformadmin.api;
 
 import com.vetos.modules.platformadmin.api.dto.CreatePlanRequest;
+import com.vetos.modules.platformadmin.api.dto.FeatureOptionsResponse;
 import com.vetos.modules.platformadmin.api.dto.PlanResponse;
 import com.vetos.modules.platformadmin.api.dto.UpdatePlanRequest;
 import com.vetos.modules.platformadmin.application.CreatePlanUseCase;
@@ -9,6 +10,8 @@ import com.vetos.modules.platformadmin.application.ListPlansUseCase;
 import com.vetos.modules.platformadmin.application.UpdatePlanUseCase;
 import com.vetos.modules.platformadmin.application.dto.CreatePlanCommand;
 import com.vetos.modules.platformadmin.application.dto.UpdatePlanCommand;
+import com.vetos.platform.feature.FeatureAccessPort;
+import com.vetos.platform.quota.QuotaProperties;
 import com.vetos.platform.security.AuthenticatedPlatformAdmin;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -30,10 +33,17 @@ public class PlanController {
     private final CreatePlanUseCase createPlanUseCase;
     private final UpdatePlanUseCase updatePlanUseCase;
     private final DeletePlanUseCase deletePlanUseCase;
+    private final FeatureAccessPort featureAccessPort;
+    private final QuotaProperties quotaProperties;
 
     @GetMapping
     public List<PlanResponse> list() {
         return listPlansUseCase.execute().stream().map(PlanResponse::from).toList();
+    }
+
+    @GetMapping("/feature-options")
+    public FeatureOptionsResponse featureOptions() {
+        return FeatureOptionsResponse.of(featureAccessPort.enforcementActive(), quotaProperties.trial());
     }
 
     @PostMapping
@@ -56,7 +66,9 @@ public class PlanController {
             request.imageUrl(),
             request.features() == null ? List.of() : request.features(),
             request.enabledFeatures() == null ? java.util.Set.of() : request.enabledFeatures(),
-            request.active()
+            request.active(),
+            request.monthlyAiQuota(),
+            request.monthlyMessageQuota()
         ), principal.platformAdminId(), principal.email());
     }
 

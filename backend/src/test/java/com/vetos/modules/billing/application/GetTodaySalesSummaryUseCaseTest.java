@@ -11,8 +11,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.Collection;
 import java.util.UUID;
@@ -26,11 +26,15 @@ import static org.mockito.Mockito.when;
 /**
  * Bugunun tarih araligina/durumlarina gore filtreleme artik JPQL tarafinda
  * (InvoiceJpaRepository#sumIssuedBetween). Bu katmanda dogrulanan sey:
- * repository'nin dogru tenant, durum kumesi ve [bugun 00:00, yarin 00:00)
+ * repository'nin dogru tenant, durum kumesi ve [bugun 00:00, yarin 00:00) Istanbul saatiyle
  * araligi ile cagrildigi ve donen toplamin aynen yansitildigi.
  */
 @ExtendWith(MockitoExtension.class)
 class GetTodaySalesSummaryUseCaseTest {
+
+    // 2026-10-17T21:30Z = Istanbul 2026-10-18 00:30 -> "bugun" 18 Ekim (UTC'ye gore 17 olurdu).
+    private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-10-17T21:30:00Z"), ZoneOffset.UTC);
+    private static final Instant ISTANBUL_TODAY_START = Instant.parse("2026-10-17T21:00:00Z");
 
     @Mock private InvoiceRepository invoiceRepository;
 
@@ -38,18 +42,17 @@ class GetTodaySalesSummaryUseCaseTest {
 
     @Test
     void should_queryTodayRangeWithRevenueStatuses() {
-        useCase = new GetTodaySalesSummaryUseCase(invoiceRepository);
+        useCase = new GetTodaySalesSummaryUseCase(invoiceRepository, CLOCK);
         UUID tenantId = UUID.randomUUID();
         when(invoiceRepository.sumIssuedBetween(any(), any(), any(), any()))
             .thenReturn(new SalesAggregate(BigDecimal.valueOf(150), 2));
 
         TodaySalesSummary result = useCase.execute(tenantId);
 
-        Instant startOfToday = LocalDate.now(ZoneOffset.UTC).atStartOfDay(ZoneOffset.UTC).toInstant();
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Collection<InvoiceStatus>> statuses = ArgumentCaptor.forClass(Collection.class);
         verify(invoiceRepository).sumIssuedBetween(
-            eq(tenantId), statuses.capture(), eq(startOfToday), eq(startOfToday.plusSeconds(86400))
+            eq(tenantId), statuses.capture(), eq(ISTANBUL_TODAY_START), eq(ISTANBUL_TODAY_START.plusSeconds(86400))
         );
         assertThat(statuses.getValue())
             .containsExactlyInAnyOrder(InvoiceStatus.ISSUED, InvoiceStatus.PARTIALLY_PAID, InvoiceStatus.PAID);
@@ -59,7 +62,7 @@ class GetTodaySalesSummaryUseCaseTest {
 
     @Test
     void should_returnZero_when_noInvoicesToday() {
-        useCase = new GetTodaySalesSummaryUseCase(invoiceRepository);
+        useCase = new GetTodaySalesSummaryUseCase(invoiceRepository, CLOCK);
         UUID tenantId = UUID.randomUUID();
         // SUM() eslesen satir yoksa null doner; SalesAggregate bunu sifira normalize eder.
         when(invoiceRepository.sumIssuedBetween(any(), any(), any(), any()))

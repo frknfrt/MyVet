@@ -3,7 +3,9 @@ package com.vetos.modules.integration.tarbil.application;
 import com.vetos.modules.integration.tarbil.application.dto.TarbilDiseaseSummary;
 import com.vetos.modules.integration.tarbil.domain.TarbilDisease;
 import com.vetos.modules.integration.tarbil.domain.TarbilDiseaseRepository;
+import com.vetos.platform.cache.CacheNames;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,13 +15,17 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/** TARBIL hastalik agaci; recete formu ve eklenti eslestirmesi icin "KATEGORI > AD" yolu ile. */
+/**
+ * TARBIL hastalik agaci; recete formu ve eklenti eslestirmesi icin "KATEGORI > AD" yolu ile.
+ * Onbellekli (tum kliniklerde ayni referans tablosu; yalnizca migration degistirir, deploy tazeler).
+ */
 @Service
 @RequiredArgsConstructor
 public class ListTarbilDiseasesUseCase {
 
     private final TarbilDiseaseRepository repository;
 
+    @Cacheable(CacheNames.TARBIL_DISEASES)
     @Transactional(readOnly = true)
     public List<TarbilDiseaseSummary> execute() {
         List<TarbilDisease> all = repository.findAllOrdered();

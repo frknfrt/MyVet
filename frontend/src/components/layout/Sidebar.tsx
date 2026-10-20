@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import vetlyIcon from '../../assets/vetly-icon.png';
 import { useAuth } from '../../auth/AuthContext';
+import { useFeatures } from '../../auth/FeatureContext';
 import { NAV_ITEMS } from './navConfig';
 import { ChangePasswordModal } from './ChangePasswordModal';
 import styles from './Sidebar.module.css';
@@ -25,7 +26,11 @@ export function Sidebar({ userName, userRole, userInitials, onLogout, isOpen, on
   const [menuOpen, setMenuOpen] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const footRef = useRef<HTMLDivElement>(null);
-  const visibleNavItems = NAV_ITEMS.filter((item) => !item.roles || (session && item.roles.includes(session.role)));
+  const { hasFeature } = useFeatures();
+  const visibleNavItems = NAV_ITEMS.filter(
+    (item) =>
+      (!item.roles || (session && item.roles.includes(session.role))) && (!item.feature || hasFeature(item.feature)),
+  );
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -46,10 +51,10 @@ export function Sidebar({ userName, userRole, userInitials, onLogout, isOpen, on
         aria-hidden="true"
       />
       <aside className={[styles.sidebar, isOpen && styles.open].filter(Boolean).join(' ')}>
-      <div className={styles.brandMark}>
+      <Link to="/panel" className={styles.brandMark} onClick={onClose} aria-label="Ana sayfa">
         <img className={styles.glyph} src={vetlyIcon} alt="" />
         <span className={styles.word}>Vetly</span>
-      </div>
+      </Link>
 
       <nav>
         {visibleNavItems.map((item) => (

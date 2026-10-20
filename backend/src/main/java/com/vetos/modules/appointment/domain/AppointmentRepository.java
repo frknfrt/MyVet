@@ -10,6 +10,8 @@ public interface AppointmentRepository {
     Optional<Appointment> findById(UUID id);
     List<Appointment> findByBranchAndDateRange(UUID branchId, Instant rangeStart, Instant rangeEnd);
     List<Appointment> findByTenantIdAndDateRange(UUID tenantId, Instant rangeStart, Instant rangeEnd);
+    long countByTenantIdAndDateRange(UUID tenantId, Instant rangeStart, Instant rangeEnd);
+    long countByTenantIdAndDateRangeAndStatus(UUID tenantId, Instant rangeStart, Instant rangeEnd, AppointmentStatus status);
     List<Appointment> findByOwnerId(UUID ownerId);
     boolean existsOverlapping(UUID assignedStaffId, Instant start, Instant end, UUID excludeAppointmentId);
 }

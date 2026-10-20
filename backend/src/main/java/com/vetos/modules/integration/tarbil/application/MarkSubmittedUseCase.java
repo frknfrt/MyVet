@@ -9,6 +9,10 @@ import com.vetos.modules.inventory.domain.DeductionSettlementResult;
 import com.vetos.modules.inventory.domain.ReportedDeductionLine;
 import com.vetos.modules.inventory.domain.StockReferenceType;
 import com.vetos.modules.inventory.domain.TarbilStockDeductionPort;
+import com.vetos.platform.audit.AuditAction;
+import com.vetos.platform.audit.AuditLabels;
+import com.vetos.platform.audit.AuditPort;
+import com.vetos.platform.audit.AuditRecord;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +34,7 @@ public class MarkSubmittedUseCase {
     private final TarbilSubmissionRepository syncLogRepository;
     private final TarbilSubmissionAssembler assembler;
     private final TarbilStockDeductionPort stockDeductionPort;
+    private final AuditPort auditPort;
 
     @Transactional
     public Optional<TarbilSubmissionView> execute(UUID tenantId, UUID staffId, UUID submissionId,
@@ -42,6 +47,9 @@ public class MarkSubmittedUseCase {
         if (log.markSubmitted(staffId, method, reference, Instant.now())) {
             settleStock(log, method, lines, staffId);
             syncLogRepository.save(log);
+            // yalnizca gercekten isaretlendiginde (idempotent tekrar gonderimler kayit uretmez)
+            auditPort.record(AuditRecord.of(AuditAction.TARBIL_MARKED_SUBMITTED, "TARBIL_SUBMISSION", submissionId,
+                AuditLabels.shortId(submissionId), null).forTenant(tenantId));
         }
         return assembler.assemble(log);
     }

@@ -12,6 +12,9 @@ import com.vetos.modules.encounter.domain.event.PrescriptionIssuedEvent;
 import com.vetos.modules.encounter.domain.exception.InvalidPrescriptionItemException;
 import com.vetos.modules.encounter.domain.exception.PrescriptionEncounterMismatchException;
 import com.vetos.modules.encounter.domain.exception.PrescriptionTarbilDiseaseRequiredException;
+import com.vetos.platform.audit.AuditAction;
+import com.vetos.platform.audit.AuditPort;
+import com.vetos.platform.audit.AuditRecord;
 import com.vetos.platform.event.DomainEventPublisher;
 import com.vetos.platform.tenancy.TenantContext;
 import org.junit.jupiter.api.AfterEach;
@@ -43,6 +46,7 @@ class IssuePrescriptionUseCaseTest {
     @Mock private PrescriptionItemRepository items;
     @Mock private EncounterRepository encounters;
     @Mock private DomainEventPublisher publisher;
+    @Mock private AuditPort auditPort;
 
     private final UUID patient = UUID.randomUUID();
     private final UUID staff = UUID.randomUUID();
@@ -60,7 +64,7 @@ class IssuePrescriptionUseCaseTest {
     }
 
     private IssuePrescriptionUseCase useCase() {
-        return new IssuePrescriptionUseCase(prescriptions, items, encounters, publisher);
+        return new IssuePrescriptionUseCase(prescriptions, items, encounters, publisher, auditPort);
     }
 
     private PrescriptionItemInput stockItem(UUID inventoryItemId, Integer qty) {
@@ -86,6 +90,7 @@ class IssuePrescriptionUseCaseTest {
         assertThatThrownBy(() -> useCase().execute(new IssuePrescriptionCommand(patient, null, staff, false, null,
             List.of(stockItem(UUID.randomUUID(), 1))))).isInstanceOf(PrescriptionTarbilDiseaseRequiredException.class);
         verifyNoInteractions(publisher);
+        verifyNoInteractions(auditPort);
     }
 
     @Test
@@ -146,5 +151,24 @@ class IssuePrescriptionUseCaseTest {
         verify(publisher).publish(event.capture());
         assertThat(event.getValue().prescriptionId()).isEqualTo(id);
         assertThat(event.getValue().stockItems()).containsExactly(new PrescriptionIssuedEvent.StockItem(inv, 1, "Metacam"));
+    }
+
+    @Test
+    void should_recordAuditEvent_onSuccess() {
+        UUID inv = UUID.randomUUID();
+        PrescriptionItemInput second = new PrescriptionItemInput(drug, null, "1 tb", "1x1", 3, DrugRoute.ORAL, null, null);
+
+        UUID id = useCase().execute(new IssuePrescriptionCommand(patient, null, staff, false, UUID.randomUUID(),
+            List.of(stockItem(inv, 2), plainItem(), second)));
+
+        ArgumentCaptor<AuditRecord> captor = ArgumentCaptor.forClass(AuditRecord.class);
+        verify(auditPort).record(captor.capture());
+        AuditRecord rec = captor.getValue();
+        assertThat(rec.action()).isEqualTo(AuditAction.PRESCRIPTION_ISSUED);
+        assertThat(rec.targetType()).isEqualTo("PRESCRIPTION");
+        assertThat(rec.targetId()).isEqualTo(id);
+        assertThat(rec.targetLabel()).isEqualTo(id.toString().substring(0, 8));
+        assertThat(rec.summary()).isEqualTo("3 kalem");
+        assertThat(rec.summary()).doesNotContain("Metacam");
     }
 }

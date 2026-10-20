@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { ApiError } from '../../api/client';
+import { useFeatures } from '../../auth/FeatureContext';
 import {
   clinicalApi,
   DrugInteractionWarning,
@@ -59,6 +60,7 @@ function errorMessageOf(err: unknown): string {
 }
 
 export function PrescriptionCard({ encounterId, patientId, readOnly, onChanged }: PrescriptionCardProps) {
+  const canUseStock = useFeatures().hasFeature('INVENTORY');
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [drugs, setDrugs] = useState<DrugSummary[]>([]);
   const [formOpen, setFormOpen] = useState(false);
@@ -78,10 +80,10 @@ export function PrescriptionCard({ encounterId, patientId, readOnly, onChanged }
 
   useEffect(() => {
     clinicalApi.listDrugs().then(setDrugs);
-    inventoryApi.list().then(setStockItems).catch(() => setStockItems([]));
+    if (canUseStock) inventoryApi.list().then(setStockItems).catch(() => setStockItems([]));
     reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [encounterId, patientId]);
+  }, [encounterId, patientId, canUseStock]);
 
   useEffect(() => {
     // Etkileşim katalog bilgisine dayanır: stoktan verilen kalemler katılmaz (spec 2026-10-12).
@@ -237,22 +239,24 @@ export function PrescriptionCard({ encounterId, patientId, readOnly, onChanged }
               {/* Kalem başlığı: sıra, stoktan verme seçimi, kaldır. Alan sayısı seçime göre değişse de satırlar kaymaz. */}
               <div className={styles.itemHead}>
                 <span className={styles.itemNo}>İlaç {index + 1}</span>
-                <label className={styles.stockToggle}>
-                  <input
-                    type="checkbox"
-                    aria-label="Kliniğin stoğundan ver"
-                    checked={item.giveFromStock}
-                    onChange={(e) =>
-                      updateItem(
-                        index,
-                        e.target.checked
-                          ? { giveFromStock: true, stockQuantity: 1, drugId: null }
-                          : { giveFromStock: false, inventoryItemId: null, stockQuantity: null, drugName: null, drugId: drugs[0]?.id ?? '' },
-                      )
-                    }
-                  />
-                  Kliniğin stoğundan ver
-                </label>
+                {canUseStock && (
+                  <label className={styles.stockToggle}>
+                    <input
+                      type="checkbox"
+                      aria-label="Kliniğin stoğundan ver"
+                      checked={item.giveFromStock}
+                      onChange={(e) =>
+                        updateItem(
+                          index,
+                          e.target.checked
+                            ? { giveFromStock: true, stockQuantity: 1, drugId: null }
+                            : { giveFromStock: false, inventoryItemId: null, stockQuantity: null, drugName: null, drugId: drugs[0]?.id ?? '' },
+                        )
+                      }
+                    />
+                    Kliniğin stoğundan ver
+                  </label>
+                )}
                 {items.length > 1 && (
                   <button type="button" className={styles.removeBtn} onClick={() => removeItem(index)}>
                     Kaldır

@@ -17,8 +17,8 @@ class TarbilExtensionTokenAuthenticatorAdapter implements ExtensionTokenAuthenti
     private final AuthenticateExtensionTokenUseCase authenticateExtensionTokenUseCase;
 
     @Override
-    public Optional<AuthenticatedStaffUser> authenticate(String rawToken) {
-        return authenticateExtensionTokenUseCase.execute(rawToken).map(identity -> new AuthenticatedStaffUser(
+    public Optional<AuthenticatedStaffUser> authenticate(String rawToken, String clientVersion) {
+        return authenticateExtensionTokenUseCase.execute(rawToken, clientVersion).map(identity -> new AuthenticatedStaffUser(
             identity.staffUserId(), identity.tenantId(), List.of(), ExtensionTokenAuthenticationFilter.ROLE
         ));
     }

@@ -3,7 +3,8 @@
     allowedDependencies = {
         "modules.patient::domain", "modules.tenant::domain",
         "modules.billing::domain", "modules.billing::domain.event",
-        "platform::security", "platform::tenancy", "platform::event", "platform::exception"
+        "platform::security", "platform::tenancy", "platform::event", "platform::exception", "platform::feature", "platform::observability",
+        "platform::resilience", "platform::http"
     }
 )
 package com.vetos.modules.integration.efatura;

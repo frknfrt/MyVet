@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createTokenStore, memoryStore } from './chromeStorage';
 import { createConfirmationOutbox } from './confirmationOutbox';
+import { EXTENSION_VERSION } from '../shared/version';
 import { createRouter } from './router';
 import { ApiError } from './vetlyApi';
 
@@ -50,7 +51,7 @@ describe('router', () => {
 
     const res = await router.handle({ type: 'GET_STATE' });
 
-    expect(res).toEqual({ ok: true, data: { paired: false, profile: null, pendingConfirmations: 0 } });
+    expect(res).toEqual({ ok: true, data: { paired: false, profile: null, upgradeRequired: false, pendingConfirmations: 0 } });
   });
 
   it('keeps paired state without profile when me fails unexpectedly', async () => {
@@ -65,7 +66,7 @@ describe('router', () => {
 
     const res = await router.handle({ type: 'GET_STATE' });
 
-    expect(res).toEqual({ ok: true, data: { paired: true, profile: null, pendingConfirmations: 0 } });
+    expect(res).toEqual({ ok: true, data: { paired: true, profile: null, upgradeRequired: false, pendingConfirmations: 0 } });
   });
 
   it('arms the TARBIL flow when Vetly selects a submission', async () => {
@@ -100,9 +101,9 @@ describe('router', () => {
     expect(opened).toBe(1);
   });
 
-  it('answers ping', async () => {
+  it('answers ping with the real extension version', async () => {
     const { router } = setup(async () => ({}));
-    expect(await router.handleExternal({ type: 'PING' })).toEqual({ ok: true, data: { version: '0.1.0' } });
+    expect(await router.handleExternal({ type: 'PING' })).toEqual({ ok: true, data: { version: EXTENSION_VERSION } });
   });
 
   it('uploads a TARBIL stock snapshot through the API', async () => {
@@ -165,5 +166,28 @@ describe('router', () => {
     await router.handle({ type: 'MARK_SUBMITTED', id: 's1', method: 'AUTO', tarbilReference: null, lines });
 
     expect(enqueued).toEqual([{ id: 's1', method: 'AUTO', tarbilReference: null, lines }]);
+  });
+
+  it('queues confirmation when upgrade is required and reports queued', async () => {
+    const { router, outbox } = setup(async () => {
+      throw new ApiError('UPGRADE_REQUIRED', 'x');
+    });
+
+    const res = await router.handle({ type: 'MARK_SUBMITTED', id: 's1', method: 'MANUAL', tarbilReference: null });
+
+    expect(res).toEqual({ ok: true, data: { queued: true } });
+    expect(await outbox.size()).toBe(1);
+  });
+
+  it('reports upgradeRequired in state when me() is rejected with UPGRADE_REQUIRED', async () => {
+    const tokens = createTokenStore(memoryStore());
+    await tokens.set('tok');
+    const api = { me: async () => { throw new ApiError('UPGRADE_REQUIRED', 'x'); } } as never;
+    const outbox = createConfirmationOutbox(memoryStore(), api);
+    const router = createRouter({ api, tokens, outbox, session: memoryStore() });
+
+    const res = await router.handle({ type: 'GET_STATE' });
+
+    expect(res).toEqual({ ok: true, data: { paired: true, profile: null, upgradeRequired: true, pendingConfirmations: 0 } });
   });
 });

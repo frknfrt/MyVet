@@ -1,6 +1,6 @@
 package com.vetos.modules.platformadmin.application.dto;
 
-import com.vetos.modules.platformadmin.domain.PlanFeatureFlag;
+import com.vetos.platform.feature.Feature;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -16,6 +16,8 @@ public record UpdatePlanCommand(
     String badge,
     String imageUrl,
     List<String> features,
-    Set<PlanFeatureFlag> enabledFeatures,
-    boolean active
+    Set<Feature> enabledFeatures,
+    boolean active,
+    Integer monthlyAiQuota,
+    Integer monthlyMessageQuota
 ) {}

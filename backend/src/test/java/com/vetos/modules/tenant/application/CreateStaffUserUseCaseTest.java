@@ -5,13 +5,18 @@ import com.vetos.modules.tenant.domain.StaffRole;
 import com.vetos.modules.tenant.domain.StaffUser;
 import com.vetos.modules.tenant.domain.StaffUserRepository;
 import com.vetos.modules.tenant.domain.exception.EmailAlreadyRegisteredConflictException;
+import com.vetos.platform.audit.AuditAction;
+import com.vetos.platform.audit.AuditPort;
+import com.vetos.platform.audit.AuditRecord;
 import com.vetos.platform.tenancy.TenantContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +24,8 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -37,6 +44,7 @@ class CreateStaffUserUseCaseTest {
 
     @Mock private StaffUserRepository staffUserRepository;
     @Mock private PasswordEncoder passwordEncoder;
+    @Mock private AuditPort auditPort;
 
     @AfterEach
     void clearAmbientContext() {
@@ -44,7 +52,7 @@ class CreateStaffUserUseCaseTest {
     }
 
     private CreateStaffUserUseCase useCase() {
-        return new CreateStaffUserUseCase(staffUserRepository, passwordEncoder);
+        return new CreateStaffUserUseCase(staffUserRepository, passwordEncoder, auditPort);
     }
 
     @Test
@@ -114,5 +122,43 @@ class CreateStaffUserUseCaseTest {
         assertThatThrownBy(() -> useCase().execute(command)).isInstanceOf(RuntimeException.class);
 
         assertThat(TenantContext.currentOrNull()).isEqualTo(callerTenantId);
+    }
+
+    @Test
+    void should_recordAuditEvent_onSuccess() {
+        TenantContext.set(UUID.randomUUID());
+        UUID newId = UUID.randomUUID();
+        when(staffUserRepository.existsByEmail("yeni@klinik.test")).thenReturn(false);
+        when(passwordEncoder.encode("sifre123")).thenReturn("hash");
+        when(staffUserRepository.save(org.mockito.ArgumentMatchers.any(StaffUser.class))).thenAnswer(invocation -> {
+            StaffUser saved = invocation.getArgument(0);
+            ReflectionTestUtils.setField(saved, "id", newId);
+            return saved;
+        });
+
+        useCase().execute(new CreateStaffUserCommand(
+            UUID.randomUUID(), "Ayşe Yılmaz", "yeni@klinik.test", "sifre123", StaffRole.VET, null, null, null, null
+        ));
+
+        ArgumentCaptor<AuditRecord> captor = ArgumentCaptor.forClass(AuditRecord.class);
+        verify(auditPort).record(captor.capture());
+        AuditRecord rec = captor.getValue();
+        assertThat(rec.action()).isEqualTo(AuditAction.STAFF_CREATED);
+        assertThat(rec.targetType()).isEqualTo("STAFF");
+        assertThat(rec.targetId()).isEqualTo(newId);
+        assertThat(rec.targetLabel()).isEqualTo("Ayşe Yılmaz");
+        assertThat(rec.summary()).isEqualTo("Rol: VET");
+    }
+
+    @Test
+    void should_notRecord_whenUseCaseFails() {
+        TenantContext.set(UUID.randomUUID());
+        when(staffUserRepository.existsByEmail("cakisan@klinik.test")).thenReturn(true);
+
+        assertThatThrownBy(() -> useCase().execute(new CreateStaffUserCommand(
+            UUID.randomUUID(), "Dr. Test", "cakisan@klinik.test", "sifre123", StaffRole.VET, null, null, null, null
+        ))).isInstanceOf(EmailAlreadyRegisteredConflictException.class);
+
+        verifyNoInteractions(auditPort);
     }
 }

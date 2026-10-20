@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { StaffRole, storeSession } from '../../auth/session';
 import { ApiError } from '../../api/client';
@@ -10,6 +10,10 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { FieldWrap, Input, Select } from '../../components/ui/Field';
 import { Modal } from '../../components/ui/Modal';
+import { AuditEventTable } from '../../components/audit/AuditEventTable';
+import type { AuditQuery } from '../../api/auditApi';
+import { UsageSummary } from '../../components/usage/UsageSummary';
+import type { UsageSnapshot } from '../../api/subscriptionApi';
 import styles from './PlatformAdminPages.module.css';
 import {
   BILLING_STATUS_LABELS, BILLING_STATUS_TONES, formatDate, PLATFORM_INVOICE_STATUS_LABELS,
@@ -34,6 +38,7 @@ export function TenantDetailPage() {
   const [tenant, setTenant] = useState<TenantAdminOverview | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [integrationHealth, setIntegrationHealth] = useState<TenantIntegrationHealth | null>(null);
+  const [usage, setUsage] = useState<UsageSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -55,12 +60,18 @@ export function TenantDetailPage() {
     platformAdminApi.getTenant(tenantId).then(setTenant).catch((err) => setError(errorMessageOf(err)));
     platformAdminApi.listInvoices(tenantId).then(setInvoices).catch(() => undefined);
     platformAdminApi.getTenantIntegrationHealth(tenantId).then(setIntegrationHealth).catch(() => undefined);
+    platformAdminApi.getTenantUsage(tenantId).then(setUsage).catch(() => setUsage(null));
   }
 
   useEffect(load, [tenantId]);
   useEffect(() => {
     platformAdminApi.listPlans().then(setPlans).catch(() => undefined);
   }, []);
+
+  const fetchAuditPage = useCallback(
+    (q: AuditQuery) => platformAdminApi.listTenantAuditEvents(tenantId ?? '', q),
+    [tenantId]
+  );
 
   if (!tenantId) return null;
 
@@ -269,6 +280,18 @@ export function TenantDetailPage() {
                   Plan / Durum Değiştir
                 </Button>
               </div>
+            </div>
+
+            {usage && (
+              <div className={styles.card}>
+                <div className={styles.cardTitle}>Bu ayki kullanım ({usage.period})</div>
+                <UsageSummary usage={usage} />
+              </div>
+            )}
+
+            <div className={styles.card}>
+              <div className={styles.cardTitle}>Klinik işlem geçmişi</div>
+              <AuditEventTable fetchPage={fetchAuditPage} />
             </div>
 
             <div className={styles.card}>

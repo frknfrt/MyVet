@@ -1,5 +1,9 @@
 package com.vetos.modules.platformadmin.infrastructure.adapter;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import com.vetos.platform.observability.IntegrationOutcomes;
+import java.time.Clock;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpExchange;
@@ -22,6 +26,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class IletiMerkeziPlatformBillingSmsAdapterTest {
+
+    private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
+    private final IntegrationOutcomes outcomes = new IntegrationOutcomes(registry, Clock.systemUTC());
+
+    private double calls(String integration, String outcome) {
+        Counter c = registry.find("vetly.integration.calls").tag("integration", integration).tag("outcome", outcome).counter();
+        return c == null ? 0 : c.count();
+    }
 
     private static final String SEND_PATH = "/v1/send-sms/json";
 
@@ -62,11 +74,11 @@ class IletiMerkeziPlatformBillingSmsAdapterTest {
     }
 
     private IletiMerkeziPlatformBillingSmsAdapter configuredAdapter() {
-        return new IletiMerkeziPlatformBillingSmsAdapter("test-key", "test-hash", "vetly", stubBaseUrl() + SEND_PATH);
+        return new IletiMerkeziPlatformBillingSmsAdapter("test-key", "test-hash", "vetly", stubBaseUrl() + SEND_PATH, outcomes);
     }
 
     private IletiMerkeziPlatformBillingSmsAdapter unconfiguredAdapter() {
-        return new IletiMerkeziPlatformBillingSmsAdapter("", "", "vetly", stubBaseUrl() + SEND_PATH);
+        return new IletiMerkeziPlatformBillingSmsAdapter("", "", "vetly", stubBaseUrl() + SEND_PATH, outcomes);
     }
 
     // ------------------------------------------------------ simule mod: kimlik bilgisi bos
@@ -150,5 +162,21 @@ class IletiMerkeziPlatformBillingSmsAdapterTest {
         Map<String, Object> order = (Map<String, Object>) request.get("order");
         Map<String, Object> message = (Map<String, Object>) order.get("message");
         return (String) message.get("text");
+    }
+
+    @Test
+    void should_recordSmsSuccess_when_gatewayAccepts() {
+        configuredAdapter().sendTenantSuspended("Test Klinik", "05551234567");
+
+        assertThat(calls("sms", "success")).isEqualTo(1);
+    }
+
+    @Test
+    void should_recordSmsFailure_when_gatewayRejectsCredentialsInBody() {
+        stubResponse = "{\"response\":{\"status\":{\"code\":401,\"message\":\"Kimlik dogrulama basarisiz\"}}}";
+
+        configuredAdapter().sendTenantSuspended("Test Klinik", "05551234567");
+
+        assertThat(calls("sms", "failure")).isEqualTo(1);
     }
 }

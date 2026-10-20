@@ -13,6 +13,10 @@ import com.vetos.modules.encounter.domain.exception.EncounterNotFoundException;
 import com.vetos.modules.encounter.domain.exception.InvalidPrescriptionItemException;
 import com.vetos.modules.encounter.domain.exception.PrescriptionEncounterMismatchException;
 import com.vetos.modules.encounter.domain.exception.PrescriptionTarbilDiseaseRequiredException;
+import com.vetos.platform.audit.AuditAction;
+import com.vetos.platform.audit.AuditLabels;
+import com.vetos.platform.audit.AuditPort;
+import com.vetos.platform.audit.AuditRecord;
 import com.vetos.platform.event.DomainEventPublisher;
 import com.vetos.platform.tenancy.TenantContext;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +35,7 @@ public class IssuePrescriptionUseCase {
     private final PrescriptionItemRepository prescriptionItemRepository;
     private final EncounterRepository encounterRepository;
     private final DomainEventPublisher eventPublisher;
+    private final AuditPort auditPort;
 
     @Transactional
     public UUID execute(IssuePrescriptionCommand command) {
@@ -62,6 +67,8 @@ public class IssuePrescriptionUseCase {
             item.dosage(), item.frequency(), item.durationDays(), item.route(), item.inventoryItemId(), item.stockQuantity()
         )));
         eventPublisher.publish(new PrescriptionIssuedEvent(prescription.getId(), command.patientId(), command.tarbilDiseaseId(), stockItems));
+        auditPort.record(AuditRecord.of(AuditAction.PRESCRIPTION_ISSUED, "PRESCRIPTION", prescription.getId(),
+            AuditLabels.shortId(prescription.getId()), command.items().size() + " kalem"));
         return prescription.getId();
     }
 

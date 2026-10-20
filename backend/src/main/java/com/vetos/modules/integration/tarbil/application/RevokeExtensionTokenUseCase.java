@@ -3,6 +3,9 @@ package com.vetos.modules.integration.tarbil.application;
 import com.vetos.modules.integration.tarbil.domain.TarbilExtensionToken;
 import com.vetos.modules.integration.tarbil.domain.TarbilExtensionTokenRepository;
 import com.vetos.modules.integration.tarbil.domain.exception.TarbilExtensionTokenNotFoundException;
+import com.vetos.platform.audit.AuditAction;
+import com.vetos.platform.audit.AuditPort;
+import com.vetos.platform.audit.AuditRecord;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +18,7 @@ import java.util.UUID;
 public class RevokeExtensionTokenUseCase {
 
     private final TarbilExtensionTokenRepository repository;
+    private final AuditPort auditPort;
 
     @Transactional
     public void execute(UUID tenantId, UUID callerStaffId, boolean callerIsAdmin, UUID tokenId) {
@@ -24,5 +28,7 @@ public class RevokeExtensionTokenUseCase {
             .orElseThrow(() -> new TarbilExtensionTokenNotFoundException(tokenId));
         token.revoke(Instant.now());
         repository.save(token);
+        auditPort.record(AuditRecord.of(AuditAction.TARBIL_EXTENSION_REVOKED, "EXTENSION_TOKEN", token.getId(),
+            token.getLabel(), null).forTenant(tenantId));
     }
 }

@@ -38,10 +38,12 @@ class UpdatePlanUseCaseTest {
         UpdatePlanUseCase useCase = new UpdatePlanUseCase(planRepository, recordAuditLogUseCase);
 
         useCase.execute(new UpdatePlanCommand(
-            planId, "Pro Plan Yeni", new BigDecimal("2500.00"), null, null, null, null, List.of(), Set.of(), true
+            planId, "Pro Plan Yeni", new BigDecimal("2500.00"), null, null, null, null, List.of(), Set.of(), true, 100, null
         ), adminId, "admin@vetly.com.tr");
 
         verify(planRepository).save(plan);
+        org.assertj.core.api.Assertions.assertThat(plan.getMonthlyAiQuota()).isEqualTo(100);
+        org.assertj.core.api.Assertions.assertThat(plan.getMonthlyMessageQuota()).isNull();
         verify(recordAuditLogUseCase).execute(eq(adminId), eq("admin@vetly.com.tr"), eq(AuditAction.PLAN_UPDATED), eq("PLAN"), eq(planId), any());
     }
 
@@ -52,7 +54,7 @@ class UpdatePlanUseCaseTest {
         UpdatePlanUseCase useCase = new UpdatePlanUseCase(planRepository, recordAuditLogUseCase);
 
         assertThatThrownBy(() -> useCase.execute(new UpdatePlanCommand(
-            planId, "X", BigDecimal.ONE, null, null, null, null, List.of(), Set.of(), true
+            planId, "X", BigDecimal.ONE, null, null, null, null, List.of(), Set.of(), true, null, null
         ), UUID.randomUUID(), "admin@vetly.com.tr")).isInstanceOf(PlanNotFoundException.class);
         verifyNoInteractions(recordAuditLogUseCase);
     }

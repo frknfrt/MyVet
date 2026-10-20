@@ -8,9 +8,20 @@ Tasarım: `docs/superpowers/specs/2026-10-02-tarbil-eklenti-design.md`.
     npm run build          # prod: https://uygulama.vetly.com.tr
     npm run build:dev      # .env.development'taki VITE_VETLY_API_BASE (ör. http://localhost:8080)
 
-## Kurulum (paketlenmemiş)
+## Yayınlama ve kurulum (Faz 7)
 
-Chrome > `chrome://extensions` > Geliştirici modu > "Paketlenmemiş öğe yükle" > `extension/dist`.
+Yeni sürüm: `package.json` ve `public/manifest.json`'daki `version`'ı birlikte artırın (test ikisinin eşitliğini denetler), sonra:
+
+    npm run package        # build + ../frontend/public/downloads/vetly-tarbil-eklenti.zip ve .json
+
+Ardından web uygulamasını yayınlayın (`docs/deployment.md`). Klinikler eklentiyi **Vetly > Ayarlar > Entegrasyonlar > TARBİL Chrome Eklentisi** kartından indirir:
+zip'i bir klasöre açın, Chrome > `chrome://extensions` > Geliştirici modu > "Paketlenmemiş öğe yükle" > o klasör.
+Güncellemede klasörün içeriği yenisiyle değiştirilir ve eklenti kartında "Yenile"ye basılır; kimlik ve eşleştirme korunur.
+
+Eklenti her isteğe `X-Client-Version` ekler; sunucu en düşük sürümün (`VETLY_EXTENSION_MIN_VERSION`) altındaki eklentiye 426 döner,
+yan panel "yeni sürümü indirin" uyarısı gösterir. Kurallar: `docs/api-conventions.md` > Versiyonlama.
+
+Geliştirmede doğrudan `extension/dist` klasörü de yüklenebilir.
 
 ## Eklenti kimliği
 

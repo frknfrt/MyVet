@@ -4,6 +4,10 @@ import com.vetos.modules.integration.tarbil.domain.ExtensionSecrets;
 import com.vetos.modules.integration.tarbil.domain.TarbilExtensionToken;
 import com.vetos.modules.integration.tarbil.domain.TarbilExtensionTokenRepository;
 import com.vetos.modules.integration.tarbil.domain.exception.InvalidPairingCodeUnauthorizedException;
+import com.vetos.platform.audit.AuditAction;
+import com.vetos.platform.audit.AuditActor;
+import com.vetos.platform.audit.AuditPort;
+import com.vetos.platform.audit.AuditRecord;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +21,7 @@ public class PairExtensionUseCase {
     private static final int MAX_LABEL_LENGTH = 60;
 
     private final TarbilExtensionTokenRepository repository;
+    private final AuditPort auditPort;
 
     /** @return ham anahtar -- yalnizca bu yanitta bir kez dondurulur, veritabaninda sadece ozeti durur. */
     @Transactional
@@ -31,6 +36,11 @@ public class PairExtensionUseCase {
         }
         token.pair(ExtensionSecrets.sha256Hex(rawToken), safeLabel, Instant.now());
         repository.save(token);
+        // kimliksiz uc: kiraci ve personel eslestirme kodunun kaydindan okunur; ad/rol yazim aninda doldurulur
+        auditPort.record(
+            AuditRecord.of(AuditAction.TARBIL_EXTENSION_PAIRED, "EXTENSION_TOKEN", token.getId(), safeLabel, null)
+                .forTenant(token.getTenantId()),
+            AuditActor.staff(token.getStaffUserId(), null, null));
         return rawToken;
     }
 }

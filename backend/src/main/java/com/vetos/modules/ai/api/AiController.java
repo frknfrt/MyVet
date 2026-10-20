@@ -3,6 +3,8 @@ package com.vetos.modules.ai.api;
 import com.vetos.modules.ai.api.dto.*;
 import com.vetos.modules.ai.application.*;
 import com.vetos.platform.security.AuthenticatedStaffUser;
+import com.vetos.platform.feature.Feature;
+import com.vetos.platform.feature.RequiresFeature;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
+@RequiresFeature(Feature.AI_ASSISTANT)
 @RestController
 @RequestMapping("/api/v1/ai")
 @RequiredArgsConstructor
@@ -27,8 +30,11 @@ public class AiController {
     private final RecordAiJobDecisionUseCase recordAiJobDecisionUseCase;
 
     @PostMapping("/soap-drafts")
-    public SoapDraftResponse generateSoapDraft(@RequestBody @Valid GenerateSoapDraftRequest request) {
-        return SoapDraftResponse.from(generateSoapDraftUseCase.execute(request.transcript()));
+    public SoapDraftResponse generateSoapDraft(
+        @RequestBody @Valid GenerateSoapDraftRequest request,
+        @AuthenticationPrincipal AuthenticatedStaffUser principal
+    ) {
+        return SoapDraftResponse.from(generateSoapDraftUseCase.execute(principal.tenantId(), request.transcript()));
     }
 
     @PostMapping("/treatment-recommendations")

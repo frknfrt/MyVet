@@ -10,10 +10,15 @@ import com.vetos.modules.tenant.domain.StaffUserRepository;
 import com.vetos.modules.tenant.domain.Tenant;
 import com.vetos.modules.tenant.domain.TenantRepository;
 import com.vetos.modules.tenant.domain.exception.EmailAlreadyRegisteredConflictException;
+import com.vetos.platform.audit.AuditAction;
+import com.vetos.platform.audit.AuditPort;
+import com.vetos.platform.audit.AuditRecord;
+import com.vetos.platform.observability.LogMasking;
 import com.vetos.platform.tenancy.TenantContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -26,6 +31,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -45,6 +51,7 @@ class InviteStaffMemberUseCaseTest {
     @Mock private StaffUserRepository staffUserRepository;
     @Mock private TenantRepository tenantRepository;
     @Mock private InviteEmailPort inviteEmailPort;
+    @Mock private AuditPort auditPort;
 
     @AfterEach
     void clearAmbientContext() {
@@ -53,7 +60,7 @@ class InviteStaffMemberUseCaseTest {
 
     private InviteStaffMemberUseCase useCase() {
         InviteStaffMemberUseCase useCase =
-            new InviteStaffMemberUseCase(staffInviteRepository, staffUserRepository, tenantRepository, inviteEmailPort);
+            new InviteStaffMemberUseCase(staffInviteRepository, staffUserRepository, tenantRepository, inviteEmailPort, auditPort);
         ReflectionTestUtils.setField(useCase, "frontendBaseUrl", "https://app.vetly.test");
         return useCase;
     }
@@ -125,5 +132,45 @@ class InviteStaffMemberUseCaseTest {
         assertThatThrownBy(() -> useCase().execute(command)).isInstanceOf(RuntimeException.class);
 
         assertThat(TenantContext.currentOrNull()).isEqualTo(callerTenantId);
+    }
+
+    @Test
+    void should_recordAuditEvent_onSuccess() {
+        UUID tenantId = UUID.randomUUID();
+        UUID inviteId = UUID.randomUUID();
+        String email = "ayse@klinik.com";
+        when(staffUserRepository.existsByEmail(email)).thenReturn(false);
+        when(staffInviteRepository.existsByEmailAndStatus(email, StaffInviteStatus.PENDING)).thenReturn(false);
+        when(staffInviteRepository.save(any(StaffInvite.class))).thenAnswer(invocation -> {
+            StaffInvite saved = invocation.getArgument(0);
+            ReflectionTestUtils.setField(saved, "id", inviteId);
+            return saved;
+        });
+        Tenant tenant = Tenant.register("Test Klinik", null);
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
+
+        useCase().execute(new InviteStaffMemberCommand(
+            tenantId, UUID.randomUUID(), email, "Ayşe Yılmaz", StaffRole.VET, UUID.randomUUID()
+        ));
+
+        ArgumentCaptor<AuditRecord> captor = ArgumentCaptor.forClass(AuditRecord.class);
+        verify(auditPort).record(captor.capture());
+        AuditRecord rec = captor.getValue();
+        assertThat(rec.action()).isEqualTo(AuditAction.STAFF_INVITED);
+        assertThat(rec.targetType()).isEqualTo("STAFF_INVITE");
+        assertThat(rec.targetId()).isEqualTo(inviteId);
+        assertThat(rec.targetLabel()).isEqualTo(LogMasking.email(email)).doesNotContain("ayse");
+        assertThat(rec.summary()).isEqualTo("Rol: VET");
+    }
+
+    @Test
+    void should_notRecord_whenUseCaseFails() {
+        when(staffUserRepository.existsByEmail("cakisan@klinik.test")).thenReturn(true);
+
+        assertThatThrownBy(() -> useCase().execute(new InviteStaffMemberCommand(
+            UUID.randomUUID(), UUID.randomUUID(), "cakisan@klinik.test", "Dr. Test", StaffRole.VET, UUID.randomUUID()
+        ))).isInstanceOf(EmailAlreadyRegisteredConflictException.class);
+
+        org.mockito.Mockito.verifyNoInteractions(auditPort);
     }
 }

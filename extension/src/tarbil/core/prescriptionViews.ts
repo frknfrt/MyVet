@@ -80,7 +80,7 @@ export const prescriptionViews = {
     view(s, "✓ Tüm ilaçlar eklendi. Teşhis, hayvan ve satırları kontrol edip Reçeteyi Onayla'ya basın. Kaydı yakalayıp Vetly'ye işleyeceğiz.", 'ok'),
   done: (s: Submission, queued: boolean): CardView =>
     view(s, queued
-      ? "✓ TARBİL'e kaydedildi. Vetly'ye şu an ulaşılamıyor; bağlantı gelince otomatik işlenecek."
+      ? "✓ TARBİL'e kaydedildi. Vetly'ye şu an iletilemedi; onay sırada bekliyor, Vetly'ye ulaşılınca (gerekirse eklenti güncellenince) otomatik işlenecek. Formu tekrar doldurmayın."
       : "✓ TARBİL'e kaydedildi; Vetly stoğu düşüldü.", 'ok', []),
   failed: (s: Submission, code: string): CardView =>
     view(s, `Otomatik doldurma durdu (${code}). Kalan adımları TARBİL'de kendiniz tamamlayabilirsiniz.`, 'warn', [

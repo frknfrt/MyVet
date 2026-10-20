@@ -28,6 +28,9 @@ public interface TenantAdminPort {
     Optional<String> findBillingContactEmail(UUID tenantId);
     Optional<String> findBillingContactPhone(UUID tenantId);
 
+    /** Kiracinin abonelikteki plan kodu -- plan ozellik kisitlamasi (FeatureAccessPort) icin. */
+    Optional<String> findPlanCode(UUID tenantId);
+
     /**
      * Yeni bir kiraci + ilk sube (adres/sehir dahil, TAM doldurulmus) + TRIAL
      * abonelik + ADMIN rolunde ilk personeli tek islemde olusturur -- platform

@@ -203,6 +203,10 @@ export function CampaignTab() {
 
   async function handleSend() {
     if (!recipients || recipients.length === 0 || !messageBody.trim()) return;
+    if (recipients.length > 1000) {
+      setError('Tek seferde en fazla 1000 alıcıya gönderilebilir. Listeyi bölerek gönderin.');
+      return;
+    }
     setSending(true);
     setError(null);
     try {

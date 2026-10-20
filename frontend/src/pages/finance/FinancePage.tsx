@@ -7,11 +7,13 @@ import { InvoiceDetailModal } from './InvoiceDetailModal';
 import { InvoiceStatusBadge } from './invoiceStatus';
 import { NewInvoiceModal } from './NewInvoiceModal';
 import { QuickSaleModal } from './QuickSaleModal';
+import { useFeatures } from '../../auth/FeatureContext';
 import styles from './FinancePage.module.css';
 
 type Tab = 'invoices' | 'cash-register' | 'debtors';
 
 export function FinancePage() {
+  const canUseStock = useFeatures().hasFeature('INVENTORY');
   const [tab, setTab] = useState<Tab>('invoices');
   const [invoices, setInvoices] = useState<InvoiceSummary[]>([]);
   const [debtors, setDebtors] = useState<OwnerBalance[]>([]);
@@ -45,9 +47,11 @@ export function FinancePage() {
         </div>
         {tab === 'invoices' && (
           <div className={styles.actions}>
-            <Button variant="secondary" onClick={() => setQuickSaleOpen(true)}>
-              Hızlı Satış
-            </Button>
+            {canUseStock && (
+              <Button variant="secondary" onClick={() => setQuickSaleOpen(true)}>
+                Hızlı Satış
+              </Button>
+            )}
             <Button variant="primary" onClick={() => setNewInvoiceOpen(true)}>
               Yeni Fatura
             </Button>

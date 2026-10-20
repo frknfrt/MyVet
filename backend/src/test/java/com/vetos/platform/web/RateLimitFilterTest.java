@@ -14,6 +14,8 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -206,5 +208,48 @@ class RateLimitFilterTest {
 
         verify(chain, times(60)).doFilter(request, response);
         verify(response, never()).setStatus(429);
+    }
+
+    @Test
+    void should_setRetryAfter_and_writeErrorResponseBody_when_limited() throws ServletException, IOException {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        FilterChain chain = mock(FilterChain.class);
+        when(request.getRequestURI()).thenReturn("/api/v1/auth/login");
+        when(request.getContextPath()).thenReturn("");
+        when(request.getRemoteAddr()).thenReturn("10.0.0.50");
+        StringWriter body = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(body));
+        org.slf4j.MDC.put("requestId", "req-123");
+        try {
+            for (int i = 0; i < 11; i++) {
+                filter.doFilter(request, response, chain);
+            }
+        } finally {
+            org.slf4j.MDC.remove("requestId");
+        }
+
+        verify(response).setStatus(429);
+        verify(response).setHeader(eq("Retry-After"), argThat(v -> Long.parseLong(v) >= 1));
+        assertThat(body.toString())
+            .contains("\"errorCode\":\"RATE_LIMITED\"")
+            .contains("\"requestId\":\"req-123\"")
+            .contains("\"path\":\"/api/v1/auth/login\"")
+            .contains("saniye sonra tekrar deneyin");
+    }
+
+    @Test
+    void should_boundTrackedClients_byMaximumSize() throws ServletException, IOException {
+        RateLimitFilter small = new RateLimitFilter(5);
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        FilterChain chain = mock(FilterChain.class);
+        for (int i = 0; i < 50; i++) {
+            HttpServletRequest request = mock(HttpServletRequest.class);
+            when(request.getRequestURI()).thenReturn("/api/v1/public/signup/plans");
+            when(request.getContextPath()).thenReturn("");
+            when(request.getRemoteAddr()).thenReturn("10.1.0." + i);
+            small.doFilter(request, response, chain);
+        }
+        assertThat(small.trackedClientCount()).isLessThanOrEqualTo(5);
     }
 }

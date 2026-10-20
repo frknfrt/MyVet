@@ -55,6 +55,11 @@ class TenantAdminPortAdapter implements TenantAdminPort {
     }
 
     @Override
+    public Optional<String> findPlanCode(UUID tenantId) {
+        return subscriptionJpaRepository.findByTenantId(tenantId).map(Subscription::getPlanCode);
+    }
+
+    @Override
     public void updateSubscription(UUID tenantId, String planCode, BillingStatus billingStatus, LocalDate renewsAt) {
         Subscription subscription = subscriptionJpaRepository.findByTenantId(tenantId)
             .orElseThrow(() -> new SubscriptionNotFoundException(tenantId));

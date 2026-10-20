@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { FeatureCode } from '../../auth/FeatureContext';
 import { StaffRole } from '../../auth/session';
 
 export interface NavItemConfig {
@@ -8,6 +9,8 @@ export interface NavItemConfig {
   icon: ReactNode;
   /** Belirtilmezse tüm roller görür. Backend'deki gerçek erişim seviyesiyle eşleşmeli. */
   roles?: StaffRole[];
+  /** Belirtilirse yalnız kliniğin paketinde bu modül açıksa görünür. */
+  feature?: FeatureCode;
 }
 
 /**
@@ -74,6 +77,7 @@ export const NAV_ITEMS: NavItemConfig[] = [
     key: 'laboratuvar',
     label: 'Laboratuvar',
     path: '/laboratuvar',
+    feature: 'LAB_INTEGRATION',
     roles: ['VET', 'TECHNICIAN', 'ADMIN'],
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -85,6 +89,7 @@ export const NAV_ITEMS: NavItemConfig[] = [
     key: 'goruntuleme',
     label: 'Görüntüleme',
     path: '/goruntuleme',
+    feature: 'IMAGING',
     roles: ['VET', 'TECHNICIAN', 'ADMIN'],
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -98,6 +103,7 @@ export const NAV_ITEMS: NavItemConfig[] = [
     key: 'konaklama',
     label: 'Konaklama',
     path: '/konaklama',
+    feature: 'BOARDING',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 10.5L12 3l9 7.5" />
@@ -109,6 +115,7 @@ export const NAV_ITEMS: NavItemConfig[] = [
     key: 'stok',
     label: 'Stok',
     path: '/stok',
+    feature: 'INVENTORY',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 8V21H3V8M1 3h22v5H1zM10 12h4" />

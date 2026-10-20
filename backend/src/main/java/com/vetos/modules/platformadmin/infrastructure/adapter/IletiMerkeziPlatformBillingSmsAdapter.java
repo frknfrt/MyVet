@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vetos.modules.platformadmin.domain.PlatformBillingSmsPort;
 import com.vetos.modules.platformadmin.domain.PlatformInvoice;
 import com.vetos.platform.http.OutboundHttp;
+import com.vetos.platform.observability.IntegrationOutcomes;
+import com.vetos.platform.observability.LogMasking;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -46,22 +48,25 @@ class IletiMerkeziPlatformBillingSmsAdapter implements PlatformBillingSmsPort {
     private final String sendUrl;
     private final RestClient restClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final IntegrationOutcomes outcomes;
 
     @Autowired
     IletiMerkeziPlatformBillingSmsAdapter(
         @Value("${platform-billing.ileti-merkezi.api-key:}") String apiKey,
         @Value("${platform-billing.ileti-merkezi.hash:}") String hash,
-        @Value("${platform-billing.ileti-merkezi.sender:vetly}") String sender
+        @Value("${platform-billing.ileti-merkezi.sender:vetly}") String sender,
+        IntegrationOutcomes outcomes
     ) {
-        this(apiKey, hash, sender, "https://api.iletimerkezi.com/v1/send-sms/json");
+        this(apiKey, hash, sender, "https://api.iletimerkezi.com/v1/send-sms/json", outcomes);
     }
 
     // paket-ozel: testler yerel sahte sunuculara yonlendirmek icin kullanir
-    IletiMerkeziPlatformBillingSmsAdapter(String apiKey, String hash, String sender, String sendUrl) {
+    IletiMerkeziPlatformBillingSmsAdapter(String apiKey, String hash, String sender, String sendUrl, IntegrationOutcomes outcomes) {
         this.apiKey = apiKey;
         this.hash = hash;
         this.sender = sender;
         this.sendUrl = sendUrl;
+        this.outcomes = outcomes;
         this.restClient = OutboundHttp.restClient(CONNECT_TIMEOUT, READ_TIMEOUT);
     }
 
@@ -90,25 +95,43 @@ class IletiMerkeziPlatformBillingSmsAdapter implements PlatformBillingSmsPort {
 
     private void send(String recipientPhone, String messageText) {
         if (!isConfigured()) {
-            log.info("Platform fatura SMS'i (simule): to={}, mesaj=\"{}\"", recipientPhone, messageText);
+            log.info("Platform fatura SMS'i (simule): to={}, mesaj=\"{}\"", LogMasking.phone(recipientPhone), messageText);
             return;
         }
 
         String requestBody = toJson(requestBody(apiKey, hash, sender, messageText, toE164(recipientPhone)));
 
         try {
-            restClient.post()
+            Map<?, ?> response = restClient.post()
                 .uri(sendUrl)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(requestBody)
                 .retrieve()
                 .body(Map.class);
-            log.info("Platform fatura SMS'i gonderildi: to={}", recipientPhone);
+            // Ileti Merkezi is-seviyesi hatalari (kimlik, bakiye) HTTP 200 + response.status.code olarak doner.
+            int code = statusCode(response);
+            if (code == 200) {
+                outcomes.record(IntegrationOutcomes.SMS, true);
+                log.info("Platform fatura SMS'i gonderildi: to={}", LogMasking.phone(recipientPhone));
+            } else {
+                outcomes.record(IntegrationOutcomes.SMS, code > 0 && !IntegrationOutcomes.isOutageStatus(code));
+                log.warn("Platform fatura SMS'i gonderilemedi: to={}, kod={}", LogMasking.phone(recipientPhone), code);
+            }
         } catch (RestClientResponseException e) {
-            log.warn("Platform fatura SMS'i gonderilemedi: to={}, durum={}, govde={}", recipientPhone, e.getStatusCode(), e.getResponseBodyAsString());
+            outcomes.record(IntegrationOutcomes.SMS, !IntegrationOutcomes.isOutageStatus(e.getStatusCode().value()));
+            log.warn("Platform fatura SMS'i gonderilemedi: to={}, durum={}, govde={}",
+                LogMasking.phone(recipientPhone), e.getStatusCode(), LogMasking.body(e.getResponseBodyAsString()));
         } catch (Exception e) {
-            log.warn("Platform fatura SMS'i gonderilemedi: to={}, hata={}", recipientPhone, e.getMessage());
+            outcomes.record(IntegrationOutcomes.SMS, false);
+            log.warn("Platform fatura SMS'i gonderilemedi: to={}, hata={}", LogMasking.phone(recipientPhone), e.getMessage());
         }
+    }
+
+    private static int statusCode(Map<?, ?> response) {
+        Object responseNode = response == null ? null : response.get("response");
+        Object status = responseNode instanceof Map<?, ?> node ? node.get("status") : null;
+        Object code = status instanceof Map<?, ?> s ? s.get("code") : null;
+        return code instanceof Number n ? n.intValue() : -1;
     }
 
     /** Turkiye pazarina ozel basit normallestirme -- 0'la baslayan yerel numarayi +90'a cevirir. */

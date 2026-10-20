@@ -15,6 +15,10 @@ import com.vetos.modules.inventory.domain.ReportedDeductionLine;
 import com.vetos.modules.inventory.domain.StockReferenceType;
 import com.vetos.modules.inventory.domain.TarbilStockDeductionPort;
 import com.vetos.modules.patient.domain.PatientLookupPort;
+import com.vetos.platform.audit.AuditAction;
+import com.vetos.platform.audit.AuditPort;
+import com.vetos.platform.audit.AuditRecord;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -33,6 +37,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -49,6 +54,7 @@ class MarkSubmittedUseCaseTest {
     @Mock private VaccinationLookupPort vaccinationLookupPort;
     @Mock private PatientLookupPort patientLookupPort;
     @Mock private TarbilStockDeductionPort deductions;
+    @Mock private AuditPort auditPort;
 
     private final UUID tenantId = UUID.randomUUID();
     private final UUID staffId = UUID.randomUUID();
@@ -58,7 +64,7 @@ class MarkSubmittedUseCaseTest {
         return new MarkSubmittedUseCase(syncLogRepository,
             new TarbilSubmissionAssembler(vaccinationLookupPort, patientLookupPort, mappingRepository, inventoryItemLookupPort,
                 assemblerDeductions, diseaseRepository),
-            deductions);
+            deductions, auditPort);
     }
 
     private TarbilSubmission pendingWithVaccination(UUID id) {
@@ -88,6 +94,35 @@ class MarkSubmittedUseCaseTest {
         assertThat(log.getStatus()).isEqualTo(TarbilSyncStatus.SUBMITTED);
         verify(syncLogRepository).save(log);
         verify(deductions).settleFromTarbil(StockReferenceType.VACCINATION, log.getSourceId(), null, staffId);
+    }
+
+    @Test
+    void should_recordAuditEvent_when_marked() {
+        UUID id = UUID.randomUUID();
+        TarbilSubmission log = pendingWithVaccination(id);
+
+        useCase().execute(tenantId, staffId, id, TarbilConfirmationMethod.AUTO, "TRB-9", null);
+
+        ArgumentCaptor<AuditRecord> captor = ArgumentCaptor.forClass(AuditRecord.class);
+        verify(auditPort).record(captor.capture());
+        AuditRecord rec = captor.getValue();
+        assertThat(rec.tenantId()).isEqualTo(tenantId);
+        assertThat(rec.action()).isEqualTo(AuditAction.TARBIL_MARKED_SUBMITTED);
+        assertThat(rec.targetType()).isEqualTo("TARBIL_SUBMISSION");
+        assertThat(rec.targetId()).isEqualTo(id);
+        assertThat(rec.targetLabel()).isEqualTo(id.toString().substring(0, 8));
+        assertThat(rec.summary()).isNull();
+    }
+
+    @Test
+    void should_notRecord_whenNothingMarked() {
+        UUID id = UUID.randomUUID();
+        TarbilSubmission log = pendingWithVaccination(id);
+        log.markSubmitted(staffId, TarbilConfirmationMethod.AUTO, "TRB-1", Instant.now());
+
+        useCase().execute(tenantId, staffId, id, TarbilConfirmationMethod.MANUAL, null, null);
+
+        verifyNoInteractions(auditPort);
     }
 
     @Test

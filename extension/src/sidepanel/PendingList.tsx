@@ -5,7 +5,7 @@ import { sendToBackground } from './useBackground';
 
 export function PendingList({ onUnauthorized }: { onUnauthorized: () => void }) {
   const [items, setItems] = useState<Submission[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; upgrade: boolean } | null>(null);
 
   async function load() {
     const res = await sendToBackground<Submission[]>({ type: 'LIST_PENDING' });
@@ -15,7 +15,10 @@ export function PendingList({ onUnauthorized }: { onUnauthorized: () => void }) 
     } else if (res.code === 'UNAUTHORIZED') {
       onUnauthorized();
     } else {
-      setError(res.code === 'OFFLINE' ? 'Çevrimdışı — Vetly\'ye ulaşılamıyor.' : res.error);
+      setError({
+        message: res.code === 'OFFLINE' ? 'Çevrimdışı — Vetly\'ye ulaşılamıyor.' : res.error,
+        upgrade: res.code === 'UPGRADE_REQUIRED',
+      });
     }
   }
 
@@ -23,7 +26,9 @@ export function PendingList({ onUnauthorized }: { onUnauthorized: () => void }) 
     load();
   }, []);
 
-  if (error) return <div className="banner">{error} <button onClick={load}>Yenile</button></div>;
+  // Guncelleme gerekiyorsa kalici uyari: yenilemek ise yaramaz, yeni surum kurulmali.
+  if (error?.upgrade) return <div className="warning">{error.message}</div>;
+  if (error) return <div className="banner">{error.message} <button onClick={load}>Yenile</button></div>;
   if (!items) return <div className="muted">Yükleniyor…</div>;
   if (items.length === 0) return <div className="muted">TARBİL'e aktarılmayı bekleyen aşı yok.</div>;
   return (

@@ -2,6 +2,7 @@ package com.vetos.modules.tenant.infrastructure.adapter;
 
 import com.vetos.modules.tenant.domain.InviteEmailPort;
 import com.vetos.modules.tenant.domain.StaffInvite;
+import com.vetos.platform.observability.LogMasking;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -21,7 +22,7 @@ class MockInviteEmailAdapter implements InviteEmailPort {
     public void sendInvite(StaffInvite invite, String tenantName, String acceptUrl) {
         log.info(
             "Davet e-postasi (mock): to={}, klinik={}, rol={}, link={}",
-            invite.getEmail(), tenantName, invite.getRole(), acceptUrl
+            LogMasking.email(invite.getEmail()), tenantName, invite.getRole(), acceptUrl
         );
     }
 }

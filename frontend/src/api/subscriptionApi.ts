@@ -9,6 +9,11 @@ export interface SubscriptionOverview {
   billingStatus: BillingStatus;
 }
 
+export interface EnabledFeatures {
+  enabledFeatures: string[];
+  enforcementActive: boolean;
+}
+
 export type PlatformInvoiceStatus = 'ISSUED' | 'PAID' | 'OVERDUE' | 'VOID';
 
 export interface PlatformInvoice {
@@ -45,9 +50,23 @@ export interface CheckoutSession {
   checkoutFormUrl: string;
 }
 
+export interface UsageItem {
+  used: number;
+  quota: number | null;
+}
+
+export interface UsageSnapshot {
+  period: string;
+  enforced: boolean;
+  ai: UsageItem;
+  message: UsageItem;
+}
+
 export const subscriptionApi = {
   getCurrent: () => apiClient.get<SubscriptionOverview>('/api/v1/subscriptions/current'),
+  getFeatures: () => apiClient.get<EnabledFeatures>('/api/v1/subscriptions/features'),
   getInvoices: () => apiClient.get<TenantBillingOverview>('/api/v1/subscriptions/invoices'),
+  getUsage: () => apiClient.get<UsageSnapshot>('/api/v1/subscriptions/usage'),
   getPlans: () => apiClient.get<CatalogPlan[]>('/api/v1/subscriptions/plans'),
   initiateCheckout: (invoiceId: string) =>
     apiClient.post<CheckoutSession>(`/api/v1/subscriptions/invoices/${invoiceId}/checkout`),

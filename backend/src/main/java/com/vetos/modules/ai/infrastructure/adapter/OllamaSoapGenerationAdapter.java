@@ -5,14 +5,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vetos.modules.ai.domain.AudioTranscript;
 import com.vetos.modules.ai.domain.SoapDraft;
 import com.vetos.modules.ai.domain.SoapGenerationPort;
+import com.vetos.platform.http.OutboundHttp;
+import com.vetos.platform.observability.IntegrationOutcomes;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.time.Duration;
 import java.util.Map;
 
 /**
@@ -46,19 +50,22 @@ class OllamaSoapGenerationAdapter implements SoapGenerationPort {
     private final String model;
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
+    private final IntegrationOutcomes outcomes;
+    private final CircuitBreaker circuitBreaker;
 
     OllamaSoapGenerationAdapter(
         @Value("${ai.ollama.base-url:}") String baseUrl,
         @Value("${ai.ollama.model:llama3.1}") String model,
-        ObjectMapper objectMapper
+        ObjectMapper objectMapper,
+        IntegrationOutcomes outcomes,
+        CircuitBreakerRegistry circuitBreakers
     ) {
         this.baseUrl = baseUrl;
         this.model = model;
         this.objectMapper = objectMapper;
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(5_000);
-        requestFactory.setReadTimeout(120_000);
-        this.restClient = RestClient.builder().requestFactory(requestFactory).build();
+        this.outcomes = outcomes;
+        this.circuitBreaker = circuitBreakers.circuitBreaker("ai");
+        this.restClient = OutboundHttp.restClient(Duration.ofSeconds(5), Duration.ofSeconds(60));
     }
 
     @Override
@@ -68,7 +75,7 @@ class OllamaSoapGenerationAdapter implements SoapGenerationPort {
             return fallback(text);
         }
         try {
-            return generateViaOllama(text);
+            return circuitBreaker.executeCallable(() -> outcomes.recordAiCall("soap", "ollama", () -> generateViaOllama(text)));
         } catch (Exception e) {
             log.warn("Ollama SOAP uretimi basarisiz, mock'a duseluyor: {}", e.getMessage());
             return fallback(text);

@@ -1,5 +1,6 @@
 package com.vetos.modules.platformadmin.domain;
 
+import com.vetos.platform.feature.Feature;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -7,6 +8,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class PlanTest {
 
@@ -35,7 +37,7 @@ class PlanTest {
             "En Popüler",
             "https://vetly.com/assets/pro.png",
             List.of("Laboratuvar", "AI Merkezi"),
-            Set.of(PlanFeatureFlag.AI_ASSISTANT, PlanFeatureFlag.LAB_INTEGRATION)
+            Set.of(Feature.AI_ASSISTANT, Feature.LAB_INTEGRATION)
         );
 
         assertThat(plan.getAnnualPrice()).isEqualByComparingTo("20000.00");
@@ -43,7 +45,7 @@ class PlanTest {
         assertThat(plan.getBadge()).isEqualTo("En Popüler");
         assertThat(plan.getImageUrl()).isEqualTo("https://vetly.com/assets/pro.png");
         assertThat(plan.getFeatures()).containsExactly("Laboratuvar", "AI Merkezi");
-        assertThat(plan.getEnabledFeatures()).containsExactlyInAnyOrder(PlanFeatureFlag.AI_ASSISTANT, PlanFeatureFlag.LAB_INTEGRATION);
+        assertThat(plan.getEnabledFeatures()).containsExactlyInAnyOrder(Feature.AI_ASSISTANT, Feature.LAB_INTEGRATION);
     }
 
     @Test
@@ -51,7 +53,7 @@ class PlanTest {
         Plan plan = Plan.create("PRO", "Profesyonel", new BigDecimal("2000.00"));
         plan.updateDetails(
             "Profesyonel", new BigDecimal("2000.00"), null, null, null, null,
-            List.of("A", "B", "C"), Set.of(PlanFeatureFlag.AI_ASSISTANT)
+            List.of("A", "B", "C"), Set.of(Feature.AI_ASSISTANT)
         );
 
         plan.updateDetails(
@@ -61,5 +63,20 @@ class PlanTest {
 
         assertThat(plan.getFeatures()).containsExactly("A");
         assertThat(plan.getEnabledFeatures()).isEmpty();
+    }
+
+    @Test
+    void should_updateQuotas_allowingNullAsUnlimited() {
+        Plan plan = Plan.create("PRO", "Pro", BigDecimal.TEN);
+        plan.updateQuotas(100, null);
+        assertThat(plan.getMonthlyAiQuota()).isEqualTo(100);
+        assertThat(plan.getMonthlyMessageQuota()).isNull();
+    }
+
+    @Test
+    void should_rejectNegativeQuota() {
+        Plan plan = Plan.create("PRO", "Pro", BigDecimal.TEN);
+        assertThatThrownBy(() -> plan.updateQuotas(-1, null)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> plan.updateQuotas(null, -5)).isInstanceOf(IllegalArgumentException.class);
     }
 }

@@ -37,7 +37,9 @@ public class ExtensionTokenAuthenticationFilter extends OncePerRequestFilter {
         try {
             String header = request.getHeader("Authorization");
             if (header != null && header.startsWith(BEARER_PREFIX + TOKEN_PREFIX)) {
-                authenticator.authenticate(header.substring(BEARER_PREFIX.length())).ifPresent(principal -> {
+                authenticator.authenticate(
+                    header.substring(BEARER_PREFIX.length()), request.getHeader(ClientVersionFilter.HEADER)
+                ).ifPresent(principal -> {
                     SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
                         principal, null, List.of(new SimpleGrantedAuthority("ROLE_" + ROLE))
                     ));

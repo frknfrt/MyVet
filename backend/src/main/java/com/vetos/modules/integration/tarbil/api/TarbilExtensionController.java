@@ -23,6 +23,8 @@ import com.vetos.modules.integration.tarbil.application.RecordStockSnapshotUseCa
 import com.vetos.modules.integration.tarbil.domain.TarbilMappingKind;
 import com.vetos.platform.security.AuthenticatedStaffUser;
 import com.vetos.platform.tenancy.TenantContext;
+import com.vetos.platform.feature.Feature;
+import com.vetos.platform.feature.RequiresFeature;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -97,6 +99,7 @@ public class TarbilExtensionController {
         learnTarbilMappingUseCase.execute(TenantContext.current(), user.staffUserId(), kind, request.key(), request.fields().toString());
     }
 
+    @RequiresFeature(Feature.INVENTORY)
     @PostMapping("/stock-snapshots")
     @ResponseStatus(HttpStatus.CREATED)
     public StockSnapshotResponse uploadStockSnapshot(@Valid @RequestBody StockSnapshotRequest request,
@@ -106,6 +109,7 @@ public class TarbilExtensionController {
     }
 
     /** Stok sayfasi acilinca: Vetly stoguyla karsilastirma, hicbir sey kaydedilmez (2026-10-07). */
+    @RequiresFeature(Feature.INVENTORY)
     @PostMapping("/stock-snapshots/compare")
     public StockComparisonResponse compareStockSnapshot(@Valid @RequestBody StockSnapshotRequest request,
                                                         @AuthenticationPrincipal AuthenticatedStaffUser user) {

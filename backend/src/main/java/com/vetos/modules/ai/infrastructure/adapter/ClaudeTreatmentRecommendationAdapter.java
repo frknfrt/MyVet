@@ -5,16 +5,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vetos.modules.ai.domain.TreatmentRecommendationDraft;
 import com.vetos.modules.ai.domain.TreatmentRecommendationInput;
 import com.vetos.modules.ai.domain.TreatmentRecommendationPort;
+import com.vetos.platform.http.OutboundHttp;
+import com.vetos.platform.observability.IntegrationOutcomes;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 import java.util.List;
+import java.time.Duration;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -45,25 +49,29 @@ class ClaudeTreatmentRecommendationAdapter implements TreatmentRecommendationPor
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
     private final String apiUrl;
+    private final IntegrationOutcomes outcomes;
+    private final CircuitBreaker circuitBreaker;
 
     @Autowired
     ClaudeTreatmentRecommendationAdapter(
         @Value("${ai.anthropic.api-key:}") String apiKey,
         @Value("${ai.anthropic.model:claude-sonnet-5}") String model,
-        ObjectMapper objectMapper
+        ObjectMapper objectMapper,
+        IntegrationOutcomes outcomes,
+        CircuitBreakerRegistry circuitBreakers
     ) {
-        this(apiKey, model, objectMapper, "https://api.anthropic.com/v1/messages");
+        this(apiKey, model, objectMapper, "https://api.anthropic.com/v1/messages", outcomes, circuitBreakers);
     }
 
-    ClaudeTreatmentRecommendationAdapter(String apiKey, String model, ObjectMapper objectMapper, String apiUrl) {
+    ClaudeTreatmentRecommendationAdapter(String apiKey, String model, ObjectMapper objectMapper, String apiUrl, IntegrationOutcomes outcomes,
+                                  CircuitBreakerRegistry circuitBreakers) {
         this.apiKey = apiKey;
         this.model = model;
         this.objectMapper = objectMapper;
         this.apiUrl = apiUrl;
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(5_000);
-        requestFactory.setReadTimeout(120_000);
-        this.restClient = RestClient.builder().requestFactory(requestFactory).build();
+        this.outcomes = outcomes;
+        this.circuitBreaker = circuitBreakers.circuitBreaker("ai");
+        this.restClient = OutboundHttp.restClient(Duration.ofSeconds(5), Duration.ofSeconds(60));
     }
 
     @Override
@@ -72,7 +80,7 @@ class ClaudeTreatmentRecommendationAdapter implements TreatmentRecommendationPor
             return fallback();
         }
         try {
-            return generateViaClaude(input);
+            return circuitBreaker.executeCallable(() -> outcomes.recordAiCall("treatment", "claude", () -> generateViaClaude(input)));
         } catch (Exception e) {
             log.warn("Claude tedavi onerisi uretimi basarisiz, mock'a duseluyor: {}", e.getMessage());
             return fallback();

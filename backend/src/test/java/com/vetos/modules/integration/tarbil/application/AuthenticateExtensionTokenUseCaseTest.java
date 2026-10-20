@@ -56,11 +56,49 @@ class AuthenticateExtensionTokenUseCaseTest {
         when(repository.findByTokenHash(ExtensionSecrets.sha256Hex("vtx_abc"))).thenReturn(Optional.of(token));
         staffIs(StaffRole.VET, true);
 
-        Optional<ExtensionIdentity> identity = useCase().execute("vtx_abc");
+        Optional<ExtensionIdentity> identity = useCase().execute("vtx_abc", null);
 
         assertThat(identity).isPresent();
         assertThat(identity.get().tenantId()).isEqualTo(tenantId);
         assertThat(identity.get().staffUserId()).isEqualTo(staffId);
+    }
+
+    @Test
+    void should_recordClientVersion_when_headerWellFormed() {
+        TarbilExtensionToken token = paired("vtx_abc");
+        when(repository.findByTokenHash(anyString())).thenReturn(Optional.of(token));
+        staffIs(StaffRole.VET, true);
+
+        useCase().execute("vtx_abc", " 0.2.0 ");
+        assertThat(token.getLastClientVersion()).isEqualTo("0.2.0");
+
+        useCase().execute("vtx_abc", "0.10.1");
+        assertThat(token.getLastClientVersion()).isEqualTo("0.10.1");
+    }
+
+    @Test
+    void should_keepLastClientVersion_when_headerMissingOrMalformed() {
+        TarbilExtensionToken token = paired("vtx_abc");
+        when(repository.findByTokenHash(anyString())).thenReturn(Optional.of(token));
+        staffIs(StaffRole.VET, true);
+        useCase().execute("vtx_abc", "0.2.0");
+
+        useCase().execute("vtx_abc", null);
+        useCase().execute("vtx_abc", "");
+        useCase().execute("vtx_abc", "abc<script>");
+
+        assertThat(token.getLastClientVersion()).isEqualTo("0.2.0");
+    }
+
+    @Test
+    void should_notRecordClientVersion_when_tokenRejected() {
+        TarbilExtensionToken token = paired("vtx_abc");
+        token.revoke(Instant.now());
+        when(repository.findByTokenHash(anyString())).thenReturn(Optional.of(token));
+
+        useCase().execute("vtx_abc", "0.2.0");
+
+        assertThat(token.getLastClientVersion()).isNull();
     }
 
     @Test
@@ -69,7 +107,7 @@ class AuthenticateExtensionTokenUseCaseTest {
         token.revoke(Instant.now());
         when(repository.findByTokenHash(anyString())).thenReturn(Optional.of(token));
 
-        assertThat(useCase().execute("vtx_abc")).isEmpty();
+        assertThat(useCase().execute("vtx_abc", null)).isEmpty();
     }
 
     @Test
@@ -78,7 +116,7 @@ class AuthenticateExtensionTokenUseCaseTest {
         when(repository.findByTokenHash(anyString())).thenReturn(Optional.of(token));
         when(staffUserLookupPort.isActive(staffId)).thenReturn(false);
 
-        assertThat(useCase().execute("vtx_abc")).isEmpty();
+        assertThat(useCase().execute("vtx_abc", null)).isEmpty();
     }
 
     @Test
@@ -87,7 +125,7 @@ class AuthenticateExtensionTokenUseCaseTest {
         when(repository.findByTokenHash(anyString())).thenReturn(Optional.of(token));
         staffIs(StaffRole.VET, false);
 
-        assertThat(useCase().execute("vtx_abc")).isEmpty();
+        assertThat(useCase().execute("vtx_abc", null)).isEmpty();
     }
 
     @Test
@@ -96,13 +134,13 @@ class AuthenticateExtensionTokenUseCaseTest {
         when(repository.findByTokenHash(anyString())).thenReturn(Optional.of(token));
         staffIs(StaffRole.RECEPTIONIST, true);
 
-        assertThat(useCase().execute("vtx_abc")).isEmpty();
+        assertThat(useCase().execute("vtx_abc", null)).isEmpty();
     }
 
     @Test
     void should_reject_when_tokenUnknownOrMalformed() {
-        assertThat(useCase().execute("not-a-token")).isEmpty();
+        assertThat(useCase().execute("not-a-token", null)).isEmpty();
         when(repository.findByTokenHash(anyString())).thenReturn(Optional.empty());
-        assertThat(useCase().execute("vtx_unknown")).isEmpty();
+        assertThat(useCase().execute("vtx_unknown", null)).isEmpty();
     }
 }
