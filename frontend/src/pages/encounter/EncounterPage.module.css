@@ -124,6 +124,15 @@
   color: var(--color-text-ink);
   white-space: pre-wrap;
   margin-bottom: 10px;
-  max-height: 220px;
+  max-height: 320px;
   overflow-y: auto;
+}
+.draftSection + .draftSection {
+  margin-top: 10px;
+}
+.draftSectionTitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-ai-600);
+  margin-bottom: 2px;
 }

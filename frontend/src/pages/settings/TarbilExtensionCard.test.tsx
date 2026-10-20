@@ -43,7 +43,8 @@ afterEach(() => {
 describe('TarbilExtensionCard version row', () => {
   it('not installed', async () => {
     const { text, link } = await render(null, '{"version":"0.2.0"}');
-    expect(text).toContain('Eklenti yüklü değil. İndirip kurun.');
+    expect(text).toContain('Bu bilgisayarda eklenti yüklü değil. Aşağıdaki 3 adımı izleyin.');
+    expect(text).toContain('Kurulu değil');
     expect(link?.getAttribute('href')).toBe('/downloads/vetly-tarbil-eklenti.zip?v=0.2.0');
   });
 
@@ -54,7 +55,9 @@ describe('TarbilExtensionCard version row', () => {
 
   it('outdated', async () => {
     const { text, link } = await render('0.1.0', '{"version":"0.2.0"}');
-    expect(text).toContain('Yüklü sürüm: 0.1.0. Yeni sürüm var (0.2.0), indirip güncelleyin.');
+    expect(text).toContain('Yüklü sürüm: 0.1.0. Yeni sürüm var (0.2.0), aşağıdan güncelleyin.');
+    expect(text).toContain('Güncellemeyi indir (0.2.0)');
+    expect(text).toContain('Yeniden yükle');
     expect(link).not.toBeNull();
   });
 
@@ -62,20 +65,32 @@ describe('TarbilExtensionCard version row', () => {
     const { text, link } = await render('0.1.0', null);
     expect(text).toContain('Eklenti dosyası şu an hazır değil');
     expect(text).toContain('Yüklü sürüm: 0.1.0');
+    expect(text).not.toContain('Güncellemeyi indir');
     expect(text).not.toContain('Yeni sürüm var');
     expect(link).toBeNull();
   });
 
   it('not installed and release file missing', async () => {
     const { text } = await render(null, null);
-    expect(text).toContain('Eklenti yüklü değil.');
-    expect(text).not.toContain('İndirip kurun.');
+    expect(text).toContain('Bu bilgisayarda eklenti yüklü değil.');
+    expect(text).not.toContain('3 adımı izleyin');
   });
 
   it('shows install and update steps', async () => {
     const { text } = await render(null, '{"version":"0.2.0"}');
     expect(text).toContain('chrome://extensions');
     expect(text).toContain('Paketlenmemiş öğe yükle');
+    expect(text).toContain('Tümünü ayıkla');
+    expect(text).toContain('Eklentiyi bağla');
+  });
+
+  it('opens step-by-step install only when not installed', async () => {
+    let r = await render(null, '{"version":"0.2.0"}');
+    expect(container.querySelector('details')?.open).toBe(true);
+    container.remove();
+    r = await render('0.2.0', '{"version":"0.2.0"}');
+    expect(container.querySelector('details')?.open).toBe(false);
+    expect(r.text).toContain('Kurulu');
   });
 });
 
@@ -122,5 +137,6 @@ describe('TarbilExtensionCard paired device version', () => {
     const { text } = await render(null, '{"version":"0.2.0"}');
     expect(text).not.toContain('Sürüm 0.1.0');
     expect(text).not.toContain('Sürüm bilinmiyor');
+    expect(text).toContain('Kaldırılan bağlantılar (1)');
   });
 });

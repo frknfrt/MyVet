@@ -20,6 +20,17 @@ import styles from './EncounterPage.module.css';
 type VitalsForm = { weightKg: string; temperatureC: string; heartRate: string; respiratoryRate: string };
 type SoapForm = { subjective: string; objective: string; assessment: string; plan: string };
 
+// AI SOAP taslağı önizlemesinde gösterilen alanlar (SOAP Notu kartıyla aynı başlıklar).
+const DRAFT_SECTIONS: { key: 'subjective' | 'objective' | 'assessment' | 'plan'; label: string }[] = [
+  { key: 'subjective', label: 'Subjective (S)' },
+  { key: 'objective', label: 'Objective (O)' },
+  { key: 'assessment', label: 'Assessment (A)' },
+  { key: 'plan', label: 'Plan (P)' },
+];
+
+const UNSAVED_SOAP_MESSAGE =
+  "SOAP Notu'nda kaydedilmemiş değişiklik var. AI önerisi kayıtlı nota göre hazırlanır — önce \"SOAP Kaydet\"e basın, sonra tekrar deneyin.";
+
 function errorMessageOf(err: unknown): string {
   return err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Beklenmeyen bir hata oluştu';
 }
@@ -63,18 +74,22 @@ export function EncounterPage() {
   const [diagnosis, setDiagnosis] = useState<DiagnosisSuggestion | null>(null);
   const [diagnosisDecided, setDiagnosisDecided] = useState(false);
   const [decidingDiagnosis, setDecidingDiagnosis] = useState(false);
+  // Sunucudaki son kayıtlı SOAP; AI önerileri bunu kullanır, formdaki kaydedilmemiş metni değil.
+  const [savedSoap, setSavedSoap] = useState({ subjective: '', objective: '', assessment: '', plan: '' });
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     if (!encounterId) return;
     encounterApi.get(encounterId).then((e) => {
       setEncounter(e);
-      setSoap({
+      const loaded = {
         subjective: e.subjective ?? '',
         objective: e.objective ?? '',
         assessment: e.assessment ?? '',
         plan: e.plan ?? '',
-      });
+      };
+      setSoap(loaded);
+      setSavedSoap(loaded);
       setVitals({
         weightKg: e.weightKg?.toString() ?? '',
         temperatureC: e.temperatureC?.toString() ?? '',
@@ -126,6 +141,8 @@ export function EncounterPage() {
     recognition.onerror = () => setRecording(false);
     recognition.onend = () => setRecording(false);
     recognitionRef.current = recognition;
+    // Her yeni dikte boş not alanıyla başlar (eski metnin devamına eklenmez).
+    setTranscript('');
     recognition.start();
     setRecording(true);
   }
@@ -154,6 +171,10 @@ export function EncounterPage() {
 
   async function handleGenerateRecommendation() {
     if (generatingRecommendation || !soap.assessment.trim() || !encounterId) return;
+    if (soapHasUnsavedChanges()) {
+      setRecommendationError(UNSAVED_SOAP_MESSAGE);
+      return;
+    }
     setGeneratingRecommendation(true);
     setRecommendationError(null);
     try {
@@ -199,6 +220,10 @@ export function EncounterPage() {
   async function handleGenerateDiagnosis() {
     const hasFindings = soap.subjective.trim() || soap.objective.trim();
     if (generatingDiagnosis || !hasFindings || !encounterId) return;
+    if (soapHasUnsavedChanges()) {
+      setDiagnosisError(UNSAVED_SOAP_MESSAGE);
+      return;
+    }
     setGeneratingDiagnosis(true);
     setDiagnosisError(null);
     try {
@@ -246,10 +271,22 @@ export function EncounterPage() {
     setSavingSoap(true);
     try {
       await encounterApi.updateSoap(encounterId, { ...soap, aiGenerated: soapAiGenerated });
+      setSavedSoap(soap);
+      setDiagnosisError((e) => (e === UNSAVED_SOAP_MESSAGE ? null : e));
+      setRecommendationError((e) => (e === UNSAVED_SOAP_MESSAGE ? null : e));
       flashSaved('SOAP kaydedildi');
     } finally {
       setSavingSoap(false);
     }
+  }
+
+  function soapHasUnsavedChanges() {
+    return (
+      soap.subjective !== savedSoap.subjective ||
+      soap.objective !== savedSoap.objective ||
+      soap.assessment !== savedSoap.assessment ||
+      soap.plan !== savedSoap.plan
+    );
   }
 
   async function handleSaveVitals() {
@@ -595,7 +632,14 @@ export function EncounterPage() {
                     </div>
                   )}
                   <div className={styles.draftLabel}>Taslak önizleme</div>
-                  <div className={styles.draftPreview}>{draft.subjective || '—'}</div>
+                  <div className={styles.draftPreview}>
+                    {DRAFT_SECTIONS.map(({ key, label }) => (
+                      <div key={key} className={styles.draftSection}>
+                        <div className={styles.draftSectionTitle}>{label}</div>
+                        <div>{draft[key] || '—'}</div>
+                      </div>
+                    ))}
+                  </div>
                   {!isReadOnly && (
                     <Button variant="ai" onClick={applyDraft}>
                       Alanlara Uygula

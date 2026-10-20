@@ -8,7 +8,7 @@ Henüz kullanıcı şikâyeti yok (test aşaması). Amaç uygulamanın kullanım
 ## Parça 1 — AI SOAP taslağı akışı (onaylandı, playback'e itiraz yok)
 - Bugün: "SOAP Taslağı Oluştur" → "Oluşturuluyor..." + "~30-40 saniye sürebilir" → tek seferde cevap. Hekim bu sürede ekran başında bekliyor.
 - İstenen: yapay zekâ yazdıkça metin ekrana akar (Subjective → Objective → Assessment → Plan). Toplam süre aynı; boş bekleme biter.
-- Önizleme kutusu dört alanı başlıklarıyla ayrı ayrı gösterir (bugün yalnız Subjective görünüyor: EncounterPage.tsx `draft.subjective`); sığmazsa kutu içinde kaydırılır. (Kullanıcı kararı)
+- Önizleme kutusu dört alanı başlıklarıyla ayrı ayrı gösterir (bugün yalnız Subjective görünüyor: EncounterPage.tsx `draft.subjective`); sığmazsa kutu içinde kaydırılır. (Kullanıcı kararı) — **2026-10-20 yapıldı** (Faz 1–7 sürümüne alındı; akış kısmı Faz 8'de).
 - "Alanlara Uygula" demeden SOAP kartına bir şey yazılmaz; kota ve AI meşgul kapısı bugünkü gibi.
 - Tahmin (kullanıcı söylemedi): bağlantı yarıda koparsa o ana kadar yazılan kalır + "tekrar dene".
 - Kapsam dışı: hızlandırma / model değişikliği.

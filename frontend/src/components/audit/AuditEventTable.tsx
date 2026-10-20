@@ -31,9 +31,11 @@ interface Props {
   fetchPage: (q: AuditQuery) => Promise<AuditEventPage>;
   actionOptions?: AuditActionOption[];
   staffOptions?: { id: string; name: string }[];
+  /** Açıklama ve IP kolonları (yalnız Vetly admin panelinde; klinik ekranında gizli). */
+  showDetails?: boolean;
 }
 
-export function AuditEventTable({ fetchPage, actionOptions, staffOptions }: Props) {
+export function AuditEventTable({ fetchPage, actionOptions, staffOptions, showDetails = false }: Props) {
   const [fromDay, setFromDay] = useState('');
   const [toDay, setToDay] = useState('');
   const [action, setAction] = useState('');
@@ -121,8 +123,8 @@ export function AuditEventTable({ fetchPage, actionOptions, staffOptions }: Prop
               <th>Kişi</th>
               <th>İşlem</th>
               <th>Kayıt</th>
-              <th>Açıklama</th>
-              <th>IP</th>
+              {showDetails && <th>Açıklama</th>}
+              {showDetails && <th>IP</th>}
             </tr>
           </thead>
           <tbody>
@@ -132,13 +134,13 @@ export function AuditEventTable({ fetchPage, actionOptions, staffOptions }: Prop
                 <td>{actorText(e)}</td>
                 <td>{e.actionLabel}</td>
                 <td>{e.targetLabel ?? '—'}</td>
-                <td>{e.summary ?? '—'}</td>
-                <td>{e.ipAddress ?? '—'}</td>
+                {showDetails && <td>{e.summary ?? '—'}</td>}
+                {showDetails && <td>{e.ipAddress ?? '—'}</td>}
               </tr>
             ))}
             {!loading && items.length === 0 && (
               <tr>
-                <td colSpan={6} className={styles.empty}>
+                <td colSpan={showDetails ? 6 : 4} className={styles.empty}>
                   Kayıt yok.
                 </td>
               </tr>

@@ -291,7 +291,7 @@ export function TenantDetailPage() {
 
             <div className={styles.card}>
               <div className={styles.cardTitle}>Klinik işlem geçmişi</div>
-              <AuditEventTable fetchPage={fetchAuditPage} />
+              <AuditEventTable fetchPage={fetchAuditPage} showDetails />
             </div>
 
             <div className={styles.card}>

@@ -80,6 +80,12 @@ Komutları **tek tek** çalıştırın (PowerShell'de çok satır yapıştırmak
   ```
   Beklenen: `SERVER_ADDRESS=127.0.0.1`, `SERVER_FORWARD_HEADERS_STRATEGY=native`, `SPRING_PROFILES_ACTIVE=prod`.
   `FEATURES_ENFORCEMENT_ENABLED` ve `VETLY_EXTENSION_MIN_VERSION` **eklemeyin** (varsayılanlar doğru).
+- [ ] AI ayarı (eksikse AI SOAP taslağı "Gerçek AI modeli henüz bağlı değil" der; anahtarın kendisi ekrana basılmaz, yalnız uzunluğu):
+  ```bash
+  sudo grep -E "^(AI_PROVIDER|ANTHROPIC_MODEL)=" /etc/vetly/backend.env
+  sudo awk -F= '/^ANTHROPIC_API_KEY=/{print "anahtar uzunlugu:", length($2)}' /etc/vetly/backend.env
+  ```
+  Beklenen: `AI_PROVIDER=claude` ve anahtar uzunluğu 0'dan büyük.
 
 ## 4. Sunucu — Nginx
 
