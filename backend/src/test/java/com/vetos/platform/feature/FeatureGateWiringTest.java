@@ -58,12 +58,25 @@ class FeatureGateWiringTest {
     void should_gateWholeModuleControllers() {
         assertAllRequire("/api/v1/ai", Feature.AI_ASSISTANT);
         assertAllRequire("/api/v1/imaging-records", Feature.IMAGING);
-        assertAllRequire("/api/v1/lab-results", Feature.LAB_INTEGRATION);
         assertAllRequire("/api/v1/boarding-rooms", Feature.BOARDING);
         assertAllRequire("/api/v1/boarding-stays", Feature.BOARDING);
         assertAllRequire("/api/v1/inventory-items", Feature.INVENTORY);
         assertAllRequire("/api/v1/inventory/pending-deductions", Feature.INVENTORY);
         assertAllRequire("/api/v1/efatura", Feature.E_FATURA);
+    }
+
+    @Test
+    void should_gateLabArchiveButNotQuickEvaluate() {
+        var evaluateHandlers = handlersWhere(p -> p.equals("/api/v1/lab-results/evaluate"));
+        assertThat(evaluateHandlers).isNotEmpty();
+        evaluateHandlers.forEach(e -> assertThat(FeatureGateInterceptor.requiredFeature(e.getValue()))
+            .as(e.getKey().toString()).isEmpty());
+
+        var archiveHandlers = handlersWhere(p -> p.startsWith("/api/v1/lab-results")
+            && !p.equals("/api/v1/lab-results/evaluate"));
+        assertThat(archiveHandlers).isNotEmpty();
+        archiveHandlers.forEach(e -> assertThat(FeatureGateInterceptor.requiredFeature(e.getValue()))
+            .as(e.getKey().toString()).contains(Feature.LAB_INTEGRATION));
     }
 
     @Test

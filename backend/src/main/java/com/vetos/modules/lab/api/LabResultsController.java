@@ -26,7 +26,12 @@ import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.UUID;
 
-@RequiresFeature(Feature.LAB_INTEGRATION)
+/**
+ * Faz 2 notu (2026-10-21): tum controller degil, sadece arsiv uclari (kaydet/listele/getir/
+ * tamamla/iptal/dosya) LAB_INTEGRATION'a bagli. /evaluate (kural tabanli referans araligi
+ * on-degerlendirmesi, hicbir sey persist etmez) kasitli olarak acik -- Baslangic paketi de
+ * bu kontrolu kullanabilir, tam lab arsivine ihtiyac duymadan (bkz. EvaluateLabResultItemsUseCase).
+ */
 @RestController
 @RequestMapping("/api/v1/lab-results")
 @RequiredArgsConstructor
@@ -42,6 +47,7 @@ public class LabResultsController {
     private final DownloadLabResultFileUseCase downloadLabResultFileUseCase;
     private final EvaluateLabResultItemsUseCase evaluateLabResultItemsUseCase;
 
+    @RequiresFeature(Feature.LAB_INTEGRATION)
     @PostMapping
     @PreAuthorize("hasAnyRole('VET', 'TECHNICIAN', 'ADMIN')")
     public ResponseEntity<LabResultResponse> request(
@@ -54,6 +60,7 @@ public class LabResultsController {
         return ResponseEntity.status(201).body(new LabResultResponse(id, request.testName()));
     }
 
+    @RequiresFeature(Feature.LAB_INTEGRATION)
     @GetMapping
     public List<LabResultSummaryResponse> list(@RequestParam(required = false) UUID patientId) {
         var results = patientId != null
@@ -62,11 +69,13 @@ public class LabResultsController {
         return results.stream().map(LabResultSummaryResponse::from).toList();
     }
 
+    @RequiresFeature(Feature.LAB_INTEGRATION)
     @GetMapping("/{id}")
     public LabResultDetailResponse get(@PathVariable UUID id) {
         return LabResultDetailResponse.from(getLabResultUseCase.execute(id));
     }
 
+    @RequiresFeature(Feature.LAB_INTEGRATION)
     @PutMapping("/{id}/complete")
     @PreAuthorize("hasAnyRole('VET', 'TECHNICIAN', 'ADMIN')")
     public void complete(@PathVariable UUID id, @RequestBody @Valid CompleteLabResultRequest request) {
@@ -85,12 +94,14 @@ public class LabResultsController {
         return EvaluateLabResultItemsResponse.from(evaluateLabResultItemsUseCase.execute(items));
     }
 
+    @RequiresFeature(Feature.LAB_INTEGRATION)
     @PostMapping("/{id}/cancel")
     @PreAuthorize("hasAnyRole('VET', 'TECHNICIAN', 'ADMIN')")
     public void cancel(@PathVariable UUID id) {
         cancelLabResultUseCase.execute(id);
     }
 
+    @RequiresFeature(Feature.LAB_INTEGRATION)
     @PostMapping("/{id}/files")
     @PreAuthorize("hasAnyRole('VET', 'TECHNICIAN', 'ADMIN')")
     public ResponseEntity<Void> uploadFile(@PathVariable UUID id, @RequestParam("file") MultipartFile file) {
@@ -104,6 +115,7 @@ public class LabResultsController {
         }
     }
 
+    @RequiresFeature(Feature.LAB_INTEGRATION)
     @GetMapping("/files/{fileId}")
     public ResponseEntity<ByteArrayResource> downloadFile(@PathVariable UUID fileId) {
         var file = downloadLabResultFileUseCase.execute(fileId);
