@@ -34,8 +34,9 @@ public class HandlePaymentCallbackUseCase {
     @Transactional
     public boolean execute(String token, LocalDate today) {
         CheckoutResult result = paymentGatewayPort.retrieveCheckoutResult(token);
-        if (!result.success()) {
-            log.info("iyzico odeme basarisiz: conversationId={}", result.conversationId());
+        if (!result.success() || result.conversationId() == null) {
+            log.info("iyzico odeme basarisiz ya da conversationId eksik: success={}, conversationId={}",
+                result.success(), result.conversationId());
             return false;
         }
 

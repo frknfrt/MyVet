@@ -162,9 +162,12 @@ class IyzicoPaymentGatewayAdapter implements PaymentGatewayPort {
                 log.warn("iyzico odeme sonucu bos govde dondu");
                 return new CheckoutResult(false, null, null);
             }
-
             boolean success = "success".equals(response.get("status")) && "SUCCESS".equals(response.get("paymentStatus"));
-            return new CheckoutResult(success, (String) response.get("conversationId"), (String) response.get("paymentId"));
+            // 2026-10-21 gercek sandbox dogrulamasi: checkoutform/auth/ecom/detail yaniti
+            // "conversationId" alanini DONMUYOR (yalniz initialize istegine eklenmisti) --
+            // faturanin kimligini initializeRequestBody'de ayni degerle doldurdugumuz
+            // "basketId" uzerinden geri okuyoruz.
+            return new CheckoutResult(success, (String) response.get("basketId"), (String) response.get("paymentId"));
         } catch (RestClientResponseException e) {
             log.warn("iyzico odeme sonucu sorgulanamadi: durum={}, govde={}", e.getStatusCode(), LogMasking.body(e.getResponseBodyAsString()));
             return new CheckoutResult(false, null, null);

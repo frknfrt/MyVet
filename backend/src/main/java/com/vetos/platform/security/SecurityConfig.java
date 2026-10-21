@@ -109,7 +109,21 @@ public class SecurityConfig {
         configuration.setExposedHeaders(List.of("Location", "X-Request-Id"));
         configuration.setAllowCredentials(true);
 
+        CorsConfiguration iyzicoCallback = new CorsConfiguration();
+        // iyzico'nun odeme sayfasi (checkout tamamlaninca) kullanicinin tarayicisini bu
+        // uca POST/GET ile geri yonlendirir -- istek Origin header'inda iyzico'nun kendi
+        // alan adini tasir, bizim frontend/vetly-site origin listemizde degildir. Bu uc
+        // zaten @RequestMapping("/api/v1/public/...") ile herkese acik ve cookie/JWT
+        // kullanmiyor, o yuzden origin kisitlamasinin burada bir guvenlik faydasi yok --
+        // kisitlarsak sadece iyzico'nun gercek geri donusu "Invalid CORS request" ile
+        // reddedilir (bkz. DefaultCorsProcessor.rejectRequest).
+        iyzicoCallback.setAllowedOriginPatterns(List.of("*"));
+        iyzicoCallback.setAllowedMethods(List.of("GET", "POST"));
+        iyzicoCallback.setAllowedHeaders(List.of("*"));
+        iyzicoCallback.setAllowCredentials(false);
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/v1/public/payments/iyzico/callback", iyzicoCallback);
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
