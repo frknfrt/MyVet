@@ -139,3 +139,12 @@
     min-width: 640px;
   }
 }
+.partTag {
+  margin-top: 4px;
+}
+.pendingWarning {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--color-warning-700);
+}

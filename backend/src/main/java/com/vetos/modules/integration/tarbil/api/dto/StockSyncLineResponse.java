@@ -9,9 +9,11 @@ import java.util.UUID;
 
 public record StockSyncLineResponse(UUID lineId, String productName, String presentation, String lotNumber, LocalDate expiryDate,
                                     int tarbilQuantity, BigDecimal openedQuantity, TarbilStockSyncStatus status,
-                                    UUID inventoryItemId, Integer vetlyQuantity) {
+                                    UUID inventoryItemId, Integer vetlyQuantity, boolean partStock,
+                                    int pendingTarbilCount) {
     public static StockSyncLineResponse from(StockSyncLineView v) {
         return new StockSyncLineResponse(v.lineId(), v.productName(), v.presentation(), v.lotNumber(), v.expiryDate(),
-            v.tarbilQuantity(), v.openedQuantity(), v.status(), v.inventoryItemId(), v.vetlyQuantity());
+            v.tarbilQuantity(), v.openedQuantity(), v.status(), v.inventoryItemId(), v.vetlyQuantity(), v.partStock(),
+            v.pendingTarbilCount());
     }
 }

@@ -45,7 +45,7 @@ public class RecordStockSnapshotUseCase {
         for (int i = 0; i < lines.size(); i++) {
             StockSnapshotLineInput l = lines.get(i);
             rows.add(TarbilStockSnapshotLine.of(snapshot.getId(), tenantId, i + 1, l.productName().trim(), trimToNull(l.presentation()),
-                trimToNull(l.lotNumber()), l.expiryDate(), l.quantity(), l.openedQuantity()));
+                trimToNull(l.lotNumber()), l.expiryDate(), l.quantity(), l.openedQuantity(), l.partStock()));
         }
         repository.saveLines(rows);
         return snapshot.getId();

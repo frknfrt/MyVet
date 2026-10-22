@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
-import { tarbilApi, TarbilStockSync, TarbilStockSyncStatus, TarbilStockSystem } from '../../api/tarbilApi';
+import { tarbilApi, TarbilStockSync, TarbilStockSyncLine, TarbilStockSyncStatus, TarbilStockSystem } from '../../api/tarbilApi';
 import styles from './TarbilStockSyncPanel.module.css';
 
 const STATUS: Record<TarbilStockSyncStatus, { label: string; tone: 'success' | 'warning' | 'neutral' | 'gold' }> = {
@@ -16,7 +16,13 @@ const TABS: { system: TarbilStockSystem; label: string; where: string }[] = [
   { system: 'HBSAPP_VACCINE', label: 'Aşı', where: 'Aşı > Stok > Ara' },
 ];
 
-const canSelect = (s: TarbilStockSyncStatus) => s === 'NEW' || s === 'QUANTITY_DIFFERS';
+/**
+ * TARBİL'e işlenmemiş kaydı olan ürün eşitlenmez (2026-10-21): kayıt TARBİL'e gidince fark kendiliğinden kapanır;
+ * önce eşitlenirse Vetly aynı aşı/reçete için tekrar düşmediğinden fark ters yöne döner.
+ */
+const differs = (l: TarbilStockSyncLine) => l.status === 'NEW' || l.status === 'QUANTITY_DIFFERS';
+const waitsForTarbil = (l: TarbilStockSyncLine) => differs(l) && l.pendingTarbilCount > 0;
+const canSelect = (l: TarbilStockSyncLine) => differs(l) && l.pendingTarbilCount === 0;
 
 /** "2027-01-31" -> "31.01.2027"; Date ile ayristirilmaz (UTC kaymasi olmasin). */
 function trDate(iso: string | null): string {
@@ -48,7 +54,8 @@ export function TarbilStockSyncPanel({ onApplied }: { onApplied: () => void }) {
     load(system);
   }, [system]);
 
-  const selectable = (data?.lines ?? []).filter((l) => canSelect(l.status));
+  const selectable = (data?.lines ?? []).filter(canSelect);
+  const blockedCount = (data?.lines ?? []).filter(waitsForTarbil).length;
   const allSelected = selectable.length > 0 && selected.size === selectable.length;
 
   function toggle(lineId: string) {
@@ -135,7 +142,7 @@ export function TarbilStockSyncPanel({ onApplied }: { onApplied: () => void }) {
           <div className={styles.empty}>TARBİL stoğunda satır yok.</div>
         ) : (
           data.lines.map((l) => {
-            const selectableRow = canSelect(l.status);
+            const selectableRow = canSelect(l);
             return (
               <div
                 key={l.lineId}
@@ -155,6 +162,11 @@ export function TarbilStockSyncPanel({ onApplied }: { onApplied: () => void }) {
                 <div className={styles.product}>
                   <div className={styles.productName} title={l.productName}>{l.productName}</div>
                   {l.presentation && <div className={`${styles.muted} ${styles.small}`}>{l.presentation}</div>}
+                  {l.partStock && (
+                    <div className={styles.partTag} title="TARBİL'de &quot;Parça Stok Ara&quot; listesinden geldi">
+                      <Badge tone="gold">Parça stok</Badge>
+                    </div>
+                  )}
                 </div>
                 <div className={l.lotNumber ? undefined : styles.muted}>{l.lotNumber ?? '—'}</div>
                 <div className={styles.muted}>{trDate(l.expiryDate)}</div>
@@ -162,6 +174,12 @@ export function TarbilStockSyncPanel({ onApplied }: { onApplied: () => void }) {
                 <div className={`${styles.num} ${l.vetlyQuantity === null ? styles.muted : ''}`}>{l.vetlyQuantity ?? '—'}</div>
                 <div>
                   <Badge tone={STATUS[l.status].tone}>{STATUS[l.status].label}</Badge>
+                  {waitsForTarbil(l) && (
+                    <div className={styles.pendingWarning}>
+                      TARBİL'e gönderilmeyi bekleyen {l.pendingTarbilCount} kayıt var. Önce eklentiyle TARBİL'e gönderin;
+                      fark kendiliğinden kapanır.
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -171,7 +189,12 @@ export function TarbilStockSyncPanel({ onApplied }: { onApplied: () => void }) {
         {data?.snapshotId && data.lines.length > 0 && (
           <div className={styles.footer}>
             <span className={message?.error ? styles.error : styles.muted}>
-              {message?.text ?? (selectable.length === 0 ? 'Vetly stoğu TARBİL ile aynı.' : `${selected.size} / ${selectable.length} satır seçili`)}
+              {message?.text ??
+                (selectable.length > 0
+                  ? `${selected.size} / ${selectable.length} satır seçili`
+                  : blockedCount > 0
+                    ? "Farklı görünen ürünlerin TARBİL'e gönderilmeyi bekleyen kaydı var."
+                    : 'Vetly stoğu TARBİL ile aynı.')}
             </span>
             <Button variant="primary" disabled={busy || selected.size === 0} onClick={apply}>
               Seçilenleri Vetly stoğuna işle

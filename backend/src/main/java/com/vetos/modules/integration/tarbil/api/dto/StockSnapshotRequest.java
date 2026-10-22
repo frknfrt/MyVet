@@ -11,6 +11,6 @@ import java.util.List;
 public record StockSnapshotRequest(@NotNull TarbilStockSystem system, @NotNull @Size(min = 1, max = 500) List<@Valid StockSnapshotLineRequest> lines) {
     public List<StockSnapshotLineInput> toInputs() {
         return lines.stream().map(l -> new StockSnapshotLineInput(l.productName(), l.presentation(), l.lotNumber(),
-            l.expiryDate(), l.quantity(), l.openedQuantity())).toList();
+            l.expiryDate(), l.quantity(), l.openedQuantity(), Boolean.TRUE.equals(l.partStock()))).toList();
     }
 }

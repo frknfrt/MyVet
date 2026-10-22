@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { parseTrDate, parseTrNumber, readStockRows } from './stockRows';
+import { parseTrDate, parseTrNumber, readStockRows, readStockTable } from './stockRows';
 
 const VP = 'ctl00_ctl00_ctl00_bodyCPH_ContentPlaceHolder1_cntVACCINEBodyContent_radGridStock_ctl00';
 const MP = 'ctl00_ContentHolder_radGridStockSearch_ctl00';
@@ -52,5 +52,30 @@ describe('stock rows', () => {
 
     vaccineTable(`<tr id="${VP}__0"><td></td><td></td><td></td><td>R</td><td>Aşı X</td><td>Flakon</td><td>1</td><td>31.01.2027</td><td>2,5</td><td>A</td></tr>`);
     expect(readStockRows(document, 'vaccineStock')).toEqual([]);
+  });
+});
+
+describe('Parça Stok table (2026-10-21)', () => {
+  const PP = 'ctl00_ctl00_ctl00_bodyCPH_ContentPlaceHolder1_cntVACCINEBodyContent_radGridStockInbox_ctl00';
+  const headers = ['', '', '', 'Aşı Adı', 'Takdim Şekli', 'Seri Numarası', 'Son Kullanma Tarihi', 'Ürün Miktarı', 'Ruhsat Sahibi Tip'];
+  const table = (rows: string) =>
+    `<table id="${PP}"><thead><tr>${headers.map((h) => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
+
+  it('reads the Parça Stok grid without mixing it up with the whole-stock grid', () => {
+    document.body.innerHTML = table(`<tr id="${PP}__0"><td></td><td></td><td></td><td>Biocan R</td><td>Flakon</td><td>665932</td><td>31.08.2027</td><td>18</td><td>Firma</td></tr>`);
+
+    expect(readStockTable(document, 'vaccinePartStock')).toEqual([
+      { productName: 'Biocan R', presentation: 'Flakon', lotNumber: '665932', expiryDate: '2027-08-31', quantity: 18, openedQuantity: null },
+    ]);
+    expect(readStockTable(document, 'vaccineStock')).toBeNull();
+  });
+
+  it('tells an empty table apart from a missing or unrecognized one', () => {
+    document.body.innerHTML = table('<tr class="rgNoRecords"><td>Kayıt yok</td></tr>');
+    expect(readStockTable(document, 'vaccinePartStock')).toEqual([]);
+
+    document.body.innerHTML = '<div></div>';
+    expect(readStockTable(document, 'vaccinePartStock')).toBeNull();
+    expect(readStockRows(document, 'vaccinePartStock')).toEqual([]);
   });
 });

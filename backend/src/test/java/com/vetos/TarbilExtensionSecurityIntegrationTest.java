@@ -346,6 +346,27 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
     }
 
     @Test
+    void partStockFlagTravelsFromExtensionToTheSyncScreen() throws Exception {
+        UUID branchA = inRootSession(() -> branchRepository.save(Branch.create(tenantA, "Parça Şubesi")).getId());
+        String jwt = jwtTokenProvider.generateToken(staffA, tenantA, List.of(branchA), "VET");
+        // Ilk satir eski eklenti gibi alan gondermez (butun stok); ikincisi "Parca Stok Ara" tablosundan.
+        String body = "{\"system\":\"HBSAPP_VACCINE\",\"lines\":["
+            + "{\"productName\":\"Biocan DHPPI\",\"lotNumber\":\"145932\",\"quantity\":1},"
+            + "{\"productName\":\"Biocan R\",\"lotNumber\":\"665932\",\"quantity\":18,\"partStock\":true}]}";
+
+        mockMvc.perform(post("/api/v1/tarbil-extension/stock-snapshots")
+                .header("Authorization", "Bearer " + tokenA).contentType("application/json").content(body))
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/v1/tarbil/stock-sync?system=HBSAPP_VACCINE").header("Authorization", "Bearer " + jwt))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.lines[0].productName").value("Biocan DHPPI"))
+            .andExpect(jsonPath("$.lines[0].partStock").value(false))
+            .andExpect(jsonPath("$.lines[1].productName").value("Biocan R"))
+            .andExpect(jsonPath("$.lines[1].partStock").value(true));
+    }
+
+    @Test
     void vaccinationFromStockWaitsForTarbilAndCancellationClosesIt() throws Exception {
         UUID branchA = inRootSession(() -> branchRepository.save(Branch.create(tenantA, "Aşı Şubesi")).getId());
         String jwt = jwtTokenProvider.generateToken(staffA, tenantA, List.of(branchA), "VET");
@@ -374,6 +395,40 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
         assertThat(afterCancel).isEqualTo(18);
         assertThat(jdbcTemplate.queryForObject("SELECT status FROM pending_stock_deduction WHERE reference_id = ?", String.class, vid))
             .isEqualTo("CANCELLED");
+    }
+
+    @Test
+    void stockSyncBlocksAProductWhoseVaccinationStillWaitsForTarbil() throws Exception {
+        UUID branchA = inRootSession(() -> branchRepository.save(Branch.create(tenantA, "Bekleyen Şube")).getId());
+        String jwt = jwtTokenProvider.generateToken(staffA, tenantA, List.of(branchA), "VET");
+        UUID speciesId = inRootSession(() -> speciesRepository.findAll().get(0).getId());
+        UUID owner = asTenant(tenantA, () -> ownerRepository.save(Owner.register(tenantA, "B Sahip", "05550000001", null, null)).getId());
+        UUID patient = asTenant(tenantA, () -> patientRepository.save(
+            Patient.register(tenantA, owner, speciesId, null, "Boncuk", Sex.FEMALE, null)).getId());
+        UUID item = asTenant(tenantA, () -> inventoryItemRepository.save(
+            InventoryItem.create(tenantA, branchA, "Biocan DHPPI", "Aşı", null, 5, 0, LocalDate.of(2027, 8, 31), "145932", null)).getId());
+        mockMvc.perform(post("/api/v1/vaccination-records").header("Authorization", "Bearer " + jwt).contentType("application/json")
+                .content("{\"patientId\":\"" + patient + "\",\"vaccineName\":\"Biocan DHPPI\",\"lotNumber\":\"145932\","
+                    + "\"administeredDate\":\"" + LocalDate.now() + "\",\"status\":\"ADMINISTERED\",\"inventoryItemId\":\"" + item + "\"}"))
+            .andExpect(status().isCreated());
+        // TARBIL'de miktar farkli (ornegin bir kabul Vetly'ye islenmemis); asi ise henuz TARBIL'e gonderilmedi.
+        mockMvc.perform(post("/api/v1/tarbil-extension/stock-snapshots").header("Authorization", "Bearer " + tokenA)
+                .contentType("application/json")
+                .content("{\"system\":\"HBSAPP_VACCINE\",\"lines\":[{\"productName\":\"Biocan DHPPI\",\"lotNumber\":\"145932\",\"quantity\":7}]}"))
+            .andExpect(status().isCreated());
+
+        String view = mockMvc.perform(get("/api/v1/tarbil/stock-sync?system=HBSAPP_VACCINE").header("Authorization", "Bearer " + jwt))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.lines[0].status").value("QUANTITY_DIFFERS"))
+            .andExpect(jsonPath("$.lines[0].pendingTarbilCount").value(1))
+            .andReturn().getResponse().getContentAsString();
+
+        mockMvc.perform(post("/api/v1/tarbil/stock-sync/" + JsonPath.read(view, "$.snapshotId") + "/apply")
+                .header("Authorization", "Bearer " + jwt).contentType("application/json")
+                .content("{\"lineIds\":[\"" + JsonPath.read(view, "$.lines[0].lineId") + "\"]}"))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.errorCode").value("TARBIL_STOCK_LINE_PENDING"));
+        assertThat(stockOf(item)).isEqualTo(5);
     }
 
     /** Stoktan asi kaydeder; asi kaydi id'si ve kalem id'si (spec 2026-10-09 S5.2 testleri). */

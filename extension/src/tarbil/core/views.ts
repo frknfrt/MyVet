@@ -126,7 +126,10 @@ export const views = {
     ],
     actions: [],
   }),
-  stock: (text: string, tone?: Tone, actions: CardAction[] = []): CardView => ({ lines: [{ text: 'TARBİL stoğu', tone: 'strong' }, { text, tone }], actions }),
+  stock: (text: string, tone?: Tone, actions: CardAction[] = [], details: CardLine[] = []): CardView => ({
+    lines: [{ text: 'TARBİL stoğu', tone: 'strong' }, { text, tone }, ...details],
+    actions,
+  }),
   stockPopup: (text: string, tone?: Tone): CardView => ({ lines: [{ text: 'Vetly', tone: 'strong' }, { text, tone }], actions: [] }),
   popup: (text: string, tone?: Tone): CardView => ({ lines: [{ text, tone }], actions: [] }),
 };

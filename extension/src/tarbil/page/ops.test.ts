@@ -134,6 +134,24 @@ describe('page ops', () => {
     expect(log).toEqual(['ara', 'size:500']);
   });
 
+  it('loads the vaccine Parça Stok table: presses Parça Stok Ara, then shows all rows', async () => {
+    const P = 'ctl00_ctl00_ctl00_bodyCPH_ContentPlaceHolder1_cntVACCINEBodyContent_';
+    const BTN = `${P}btnStocklInboxSearch`;
+    const GRID = `${P}radGridStockInbox`;
+    document.body.innerHTML = `<a id="${BTN}"></a><div id="${GRID}"></div>`;
+    const prm = instantPrm();
+    const log: string[] = [];
+    const comps: Record<string, Record<string, unknown>> = {
+      [BTN]: { click: () => { log.push('parca-ara'); prm.fire(); } },
+      [GRID]: { get_masterTableView: () => ({ get_pageSize: () => 15, set_pageSize: (n: number) => { log.push(`size:${n}`); prm.fire(); } }) },
+    };
+    const env: TelerikEnv = { doc: document, find: (id) => comps[id] ?? null, prm: () => prm, isReady: () => true };
+
+    await createPageOps(env).loadVaccinePartStock({});
+
+    expect(log).toEqual(['parca-ara', 'size:500']);
+  });
+
   it('rejects an unknown stock page', async () => {
     const env: TelerikEnv = { doc: document, find: () => null, prm: () => instantPrm(), isReady: () => true };
     await expect(createPageOps(env).loadStockTable({ page: 'vaccineReceipt' })).rejects.toMatchObject({ code: 'BAD_INPUT' });

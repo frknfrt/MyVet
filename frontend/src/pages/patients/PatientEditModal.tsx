@@ -20,6 +20,7 @@ interface PatientEditModalProps {
 export function PatientEditModal({ open, profile, onClose, onSaved }: PatientEditModalProps) {
   const [species, setSpecies] = useState<SpeciesItem[]>([]);
   const [breeds, setBreeds] = useState<BreedItem[]>([]);
+  const [name, setName] = useState('');
   const [breedId, setBreedId] = useState('');
   const [sex, setSex] = useState<Sex>('UNKNOWN');
   const [birthDate, setBirthDate] = useState('');
@@ -43,6 +44,7 @@ export function PatientEditModal({ open, profile, onClose, onSaved }: PatientEdi
   useEffect(() => {
     if (!open || !profile) return;
     patientApi.listSpecies().then(setSpecies);
+    setName(profile.name);
     setBreedId('');
     setSex(profile.sex ?? 'UNKNOWN');
     setBirthDate(profile.birthDate ?? '');
@@ -61,6 +63,7 @@ export function PatientEditModal({ open, profile, onClose, onSaved }: PatientEdi
     setNotes(profile.notes ?? '');
     setError(null);
     initialRef.current = {
+      name: profile.name,
       breedId: '',
       sex: profile.sex ?? 'UNKNOWN',
       birthDate: profile.birthDate ?? '',
@@ -99,11 +102,16 @@ export function PatientEditModal({ open, profile, onClose, onSaved }: PatientEdi
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (busy || !profile) return;
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setError('Hasta adı boş olamaz.');
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       await patientApi.update(profile.id, {
-        name: profile.name,
+        name: trimmedName,
         breedId: breedId || undefined,
         sex,
         birthDate: birthDate || undefined,
@@ -137,7 +145,7 @@ export function PatientEditModal({ open, profile, onClose, onSaved }: PatientEdi
     !!initialRef.current &&
     JSON.stringify(initialRef.current) !==
       JSON.stringify({
-        breedId, sex, birthDate, neutered, color, temperament, distinguishingMarks, aggressive,
+        name, breedId, sex, birthDate, neutered, color, temperament, distinguishingMarks, aggressive,
         bloodType, foodBrand, microchipNumber, passportNumber, rabiesTag, protocolNumber, criticalAlert, notes,
       });
 
@@ -149,6 +157,9 @@ export function PatientEditModal({ open, profile, onClose, onSaved }: PatientEdi
         {error && <div className={styles.errorBanner}>{error}</div>}
 
         <div className={styles.sectionLabel}>Kimlik</div>
+        <FieldWrap label="Hasta Adı">
+          <Input value={name} onChange={(e) => setName(e.target.value)} required />
+        </FieldWrap>
         <div className={styles.row3}>
           <FieldWrap label="Irk">
             <Select value={breedId} onChange={(e) => setBreedId(e.target.value)} disabled={breeds.length === 0}>

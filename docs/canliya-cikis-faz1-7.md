@@ -59,10 +59,11 @@ Komutları **tek tek** çalıştırın (PowerShell'de çok satır yapıştırmak
 
 `ssh furkan@70.40.139.40`
 
-- [ ] Veritabanının şu anki sürümünü not edin (sonda V82 olmalı):
+- [ ] Veritabanının şu anki sürümünü not edin (sonda V82 olmalı) ve **numaralandırma uyumunu** kontrol edin:
   ```bash
-  sudo -u postgres psql vetly -c "SELECT version, description FROM flyway_schema_history ORDER BY installed_rank DESC LIMIT 3;"
+  sudo -u postgres psql vetly -c "SELECT installed_rank, version, description FROM flyway_schema_history ORDER BY installed_rank DESC LIMIT 25;"
   ```
+  2026-10-05 birleştirmesinde TARBİL migration'ları V59–V68'den V68–V77'ye kaydırıldı. Sunucuda 59 = *notification message templates*, 61 = *notification log failure reason*, 63 = *audit log* ise (ya da liste 58'de bitiyorsa) uyumlu, devam. 59 = *tarbil submission rework*, 61 = *tarbil extension token* gibi satırlar varsa **DURUN**: yeni backend Flyway doğrulamasında açılmaz; önce `flyway_schema_history` yeni numaralara eşlenmeli (ayrı iş).
 - [ ] Disk yeri: `df -h ~` (yedek için birkaç yüz MB yeter).
 - [ ] **Veritabanı yedeği (zorunlu — yeni migration'lar var):**
   ```bash

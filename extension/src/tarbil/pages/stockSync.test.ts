@@ -189,3 +189,115 @@ describe('stock sync page', () => {
   });
 });
 
+
+const VB = 'ctl00_ctl00_ctl00_bodyCPH_ContentPlaceHolder1_cntVACCINEBodyContent_';
+const VACCINE_HEADERS = ['', '', '', 'Aşı Adı', 'Takdim Şekli', 'Seri Numarası', 'Son Kullanma Tarihi', 'Ürün Miktarı', 'Stok Tipi'];
+
+function vaccineGrid(grid: string, rows: [string, string, number][]) {
+  const id = `${VB}${grid}_ctl00`;
+  const body = rows
+    .map(([name, lot, qty], i) => `<tr id="${id}__${i}"><td></td><td></td><td></td><td>${name}</td><td>Flakon</td><td>${lot}</td><td>31.08.2027</td><td>${qty}</td><td>Kendi Ürünü</td></tr>`)
+    .join('');
+  return `<table id="${id}"><thead><tr>${VACCINE_HEADERS.map((h) => `<th>${h}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table>`;
+}
+
+const line = (productName: string, lotNumber: string, quantity: number) =>
+  ({ productName, presentation: 'Flakon', lotNumber, expiryDate: '2027-08-31', quantity, openedQuantity: null });
+
+describe('vaccine stock page with Parça Stok (2026-10-21)', () => {
+  it('reads Ara and Parça Stok Ara and sends both in one upload', async () => {
+    document.body.innerHTML = vaccineGrid('radGridStock', [['Biocan DHPPI', '145932', 1]]) + vaccineGrid('radGridStockInbox', [['Biocan R', '665932', 18]]);
+    const s = setup(undefined, BROKEN);
+    await createStockSync({ ...s.deps, kind: 'vaccineStock' }).start();
+
+    s.click('sendStock');
+
+    await vi.waitFor(() => expect(s.uploads()).toHaveLength(1));
+    expect(s.calls.map((c) => c.op)).toEqual(['ready', 'loadStockTable', 'loadVaccinePartStock', 'ready', 'loadStockTable', 'loadVaccinePartStock']);
+    expect(s.uploads()[0]).toEqual({
+      type: 'UPLOAD_STOCK_SNAPSHOT', system: 'HBSAPP_VACCINE',
+      lines: [line('Biocan DHPPI', '145932', 1), { ...line('Biocan R', '665932', 18), partStock: true }],
+    });
+    await vi.waitFor(() => expect(s.text()).toContain('2 satır'));
+    expect(s.text()).toContain('Bütün stok 1 satır, parça stok 1 satır');
+  });
+
+  it('shows both counts in the comparison card on load', async () => {
+    document.body.innerHTML = vaccineGrid('radGridStock', [['Biocan DHPPI', '145932', 1]]) + vaccineGrid('radGridStockInbox', []);
+    const s = setup();
+    await createStockSync({ ...s.deps, kind: 'vaccineStock' }).start();
+
+    expect(s.text()).toContain('güncel');
+    expect(s.text()).toContain('Bütün stok 1 satır, parça stok 0 satır');
+  });
+
+  it('sends Parça Stok alone when the whole-stock table is empty', async () => {
+    document.body.innerHTML = vaccineGrid('radGridStock', []) + vaccineGrid('radGridStockInbox', [['Felocell CVR', '823287', 23]]);
+    const s = setup(undefined, BROKEN);
+    await createStockSync({ ...s.deps, kind: 'vaccineStock' }).start();
+
+    s.click('sendStock');
+
+    await vi.waitFor(() => expect(s.uploads()).toHaveLength(1));
+    expect(s.uploads()[0]).toMatchObject({ lines: [{ ...line('Felocell CVR', '823287', 23), partStock: true }] });
+  });
+
+  it('still sends the whole stock but warns when Parça Stok cannot be read', async () => {
+    document.body.innerHTML = vaccineGrid('radGridStock', [['Biocan DHPPI', '145932', 1]]);
+    const s = setup(undefined, BROKEN);
+    await createStockSync({ ...s.deps, kind: 'vaccineStock' }).start();
+
+    s.click('sendStock');
+
+    await vi.waitFor(() => expect(s.uploads()).toHaveLength(1));
+    expect(s.uploads()[0]).toMatchObject({ lines: [line('Biocan DHPPI', '145932', 1)] });
+    await vi.waitFor(() => expect(s.text()).toContain('Parça stok okunamadı'));
+    expect(s.shown.at(-1)?.lines.at(-1)?.tone).toBe('warn');
+  });
+
+  it('still sends the whole stock when pressing Parça Stok Ara fails', async () => {
+    document.body.innerHTML = vaccineGrid('radGridStock', [['Biocan DHPPI', '145932', 1]]) + vaccineGrid('radGridStockInbox', [['Biocan R', '665932', 18]]);
+    const s = setup(undefined, BROKEN);
+    const bridge = { call: async (op: string) => { if (op === 'loadVaccinePartStock') throw { code: 'NOT_FOUND' }; return undefined as never; } };
+    await createStockSync({ ...s.deps, bridge, kind: 'vaccineStock' }).start();
+
+    s.click('sendStock');
+
+    await vi.waitFor(() => expect(s.uploads()).toHaveLength(1));
+    expect(s.uploads()[0]).toMatchObject({ lines: [line('Biocan DHPPI', '145932', 1)] });
+    await vi.waitFor(() => expect(s.text()).toContain('Parça stok okunamadı'));
+  });
+
+  it('mentions Parça Stok in the explanatory card', async () => {
+    document.body.innerHTML = '<div></div>';
+    const s = setup();
+    await createStockSync({ ...s.deps, kind: 'vaccineStock' }).start();
+
+    expect(s.text()).toContain('bütün stok ve parça stok');
+  });
+});
+
+describe('stock sync after the extension was reloaded (2026-10-21)', () => {
+  it('asks to refresh the page instead of showing UNKNOWN when sending throws without a code', async () => {
+    medicineTable();
+    const s = setup(undefined, BROKEN);
+    const dead = (async () => { throw new Error('Extension context invalidated.'); }) as Send;
+    createStockSync({ ...s.deps, send: dead, kind: 'medicineStock' });
+
+    s.click('sendStock');
+
+    await vi.waitFor(() => expect(s.text()).toContain('Sayfayı yenileyip (F5)'));
+    expect(s.text()).not.toContain('UNKNOWN');
+  });
+
+  it('keeps showing the error code when there is one', async () => {
+    medicineTable();
+    const s = setup(undefined, BROKEN);
+    const bridge = { call: async (op: string) => { if (op === 'loadStockTable') throw { code: 'TIMEOUT' }; return undefined as never; } };
+    createStockSync({ ...s.deps, bridge, kind: 'medicineStock' });
+
+    s.click('sendStock');
+
+    await vi.waitFor(() => expect(s.text()).toContain('Stok okunamadı (TIMEOUT)'));
+  });
+});

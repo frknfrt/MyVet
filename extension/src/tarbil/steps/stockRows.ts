@@ -1,6 +1,8 @@
 import { MEDICINE_STOCK, VACCINE_STOCK, bySuffix } from '../selectors';
 
 export type StockKind = 'vaccineStock' | 'medicineStock';
+/** Okunabilen stok tablolari: sayfa turleri + asi sayfasindaki "Parca Stok Ara" tablosu (2026-10-21). */
+export type StockTable = StockKind | 'vaccinePartStock';
 
 export interface StockRow {
   productName: string;
@@ -14,9 +16,14 @@ export interface StockRow {
 interface Columns { product: string; presentation: string; lot: string; expiry: string; quantity: string; opened?: string }
 
 // Basliklar 2026-10-04 canli okumasindan; tam esitlikle aranir ("Acilmis Kalan Miktar Son Kullanma Tarihi" karismasin).
-const COLUMNS: Record<StockKind, Columns> = {
-  vaccineStock: { product: 'Aşı Adı', presentation: 'Takdim Şekli', lot: 'Seri Numarası', expiry: 'Son Kullanma Tarihi', quantity: 'Ürün Miktarı' },
-  medicineStock: { product: 'Ürün', presentation: 'Takdim Şekli', lot: 'Seri Numarası', expiry: 'Son Kullanma Tarihi', quantity: 'Miktar', opened: 'Açılmış Kalan Miktar' },
+const VACCINE_COLUMNS: Columns = { product: 'Aşı Adı', presentation: 'Takdim Şekli', lot: 'Seri Numarası', expiry: 'Son Kullanma Tarihi', quantity: 'Ürün Miktarı' };
+const TABLES: Record<StockTable, { grid: string; cols: Columns }> = {
+  vaccineStock: { grid: VACCINE_STOCK.grid, cols: VACCINE_COLUMNS },
+  vaccinePartStock: { grid: VACCINE_STOCK.partGrid, cols: VACCINE_COLUMNS },
+  medicineStock: {
+    grid: MEDICINE_STOCK.grid,
+    cols: { product: 'Ürün', presentation: 'Takdim Şekli', lot: 'Seri Numarası', expiry: 'Son Kullanma Tarihi', quantity: 'Miktar', opened: 'Açılmış Kalan Miktar' },
+  },
 };
 
 const clean = (s: string | null | undefined) => (s ?? '').replace(/\s+/g, ' ').trim();
@@ -40,12 +47,19 @@ function headerCells(doc: Document, table: HTMLTableElement): string[] {
 }
 
 /** Bilinen sutunlardan biri yoksa (TARBIL ekrani degismis) bos liste doner; yanlis veri gonderilmez. */
-export function readStockRows(doc: Document, kind: StockKind): StockRow[] {
-  const gridSuffix = kind === 'vaccineStock' ? VACCINE_STOCK.grid : MEDICINE_STOCK.grid;
-  const table = doc.querySelector<HTMLTableElement>(`table${bySuffix(gridSuffix)}`);
-  if (!table) return [];
+export function readStockRows(doc: Document, table: StockTable): StockRow[] {
+  return readStockTable(doc, table) ?? [];
+}
+
+/**
+ * Tablo yoksa, sutunlari tanınmadıysa ya da bir satiri supheliyse null; tablo tanindi ama bossa []. Parca stok gibi
+ * cogu klinikte bos olan tablolarda "bos" ile "okunamadi" ayrilsin diye (2026-10-21).
+ */
+export function readStockTable(doc: Document, which: StockTable): StockRow[] | null {
+  const { grid, cols } = TABLES[which];
+  const table = doc.querySelector<HTMLTableElement>(`table${bySuffix(grid)}`);
+  if (!table) return null;
   const headers = headerCells(doc, table);
-  const cols = COLUMNS[kind];
   const idx = (name: string | undefined) => (name ? headers.indexOf(name) : -1);
   const product = idx(cols.product);
   const presentation = idx(cols.presentation);
@@ -53,7 +67,7 @@ export function readStockRows(doc: Document, kind: StockKind): StockRow[] {
   const expiry = idx(cols.expiry);
   const quantity = idx(cols.quantity);
   const opened = idx(cols.opened);
-  if ([product, presentation, lot, expiry, quantity].some((i) => i < 0) || (cols.opened && opened < 0)) return [];
+  if ([product, presentation, lot, expiry, quantity].some((i) => i < 0) || (cols.opened && opened < 0)) return null;
   const rows: StockRow[] = [];
   for (const r of Array.from(table.tBodies[0]?.rows ?? [])) {
     if (!r.id.startsWith(`${table.id}__`)) continue;
@@ -66,9 +80,9 @@ export function readStockRows(doc: Document, kind: StockKind): StockRow[] {
     const expiryDate = parseTrDate(expiryText);
     const openedText = opened >= 0 ? clean(r.cells[opened]?.textContent) : '';
     const openedQuantity = openedText ? parseTrNumber(openedText) : null;
-    if (qty === null || !Number.isInteger(qty) || qty < 0) return [];
-    if (expiryText && !expiryDate) return [];
-    if (openedText && openedQuantity === null) return [];
+    if (qty === null || !Number.isInteger(qty) || qty < 0) return null;
+    if (expiryText && !expiryDate) return null;
+    if (openedText && openedQuantity === null) return null;
     rows.push({
       productName,
       presentation: clean(r.cells[presentation]?.textContent) || null,

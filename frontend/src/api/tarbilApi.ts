@@ -64,6 +64,10 @@ export interface TarbilStockSyncLine {
   status: TarbilStockSyncStatus;
   inventoryItemId: string | null;
   vetlyQuantity: number | null;
+  /** TARBİL aşı sayfasındaki "Parça Stok Ara" listesinden geldi (2026-10-21). */
+  partStock: boolean;
+  /** Bu ürünün TARBİL'e henüz işlenmemiş aşı/reçete kaydı sayısı; > 0 ise satır eşitlenemez (2026-10-21). */
+  pendingTarbilCount: number;
 }
 
 export interface TarbilStockSync {

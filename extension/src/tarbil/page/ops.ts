@@ -47,6 +47,11 @@ export function createPageOps(env: TelerikEnv): Record<string, PageHandler> {
       await clickButton(env, allowed(page, 'search'));
       await showAllRows(env, grid, 500);
     },
+    // Asi stok sayfasi: "Parca Stok Ara" + tum satirlar (2026-10-21). Yalniz okuma icin.
+    loadVaccinePartStock: async () => {
+      await clickButton(env, allowed('vaccineStock', 'partSearch'));
+      await showAllRows(env, VACCINE_STOCK.partGridComponent, 500);
+    },
     // Asi stok penceresi (spec 2026-10-04 P2): seri ile ara, tek satirin "Sec" baglantisi, urun satirina adet.
     searchSerial: async ({ serial }: { serial: string }) => {
       setText(env, VACCINE_STOCK_POPUP.serial, serial);

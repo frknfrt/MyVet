@@ -50,6 +50,10 @@ export function NewVaccinationPage() {
 
   const [vaccineName, setVaccineName] = useState('');
   const [stockItem, setStockItem] = useState<InventoryItem | null>(null);
+  // İkinci ürün (2026-10-22): ör. iç + dış parazit aynı anda; her ürün ayrı kayıt olur, kendi stoğundan düşer.
+  const [secondOpen, setSecondOpen] = useState(false);
+  const [secondName, setSecondName] = useState('');
+  const [secondItem, setSecondItem] = useState<InventoryItem | null>(null);
   const [vaccinationDate, setVaccinationDate] = useState(isoDate(new Date()));
   const [nextDueDate, setNextDueDate] = useState('');
   const [status, setStatus] = useState<VaccinationStatus>('SCHEDULED');
@@ -110,9 +114,16 @@ export function NewVaccinationPage() {
     setVaccinationDate(isoDate(d));
   }
 
+  function clearSecond() {
+    setSecondOpen(false);
+    setSecondName('');
+    setSecondItem(null);
+  }
+
   function resetVaccineFields() {
     setVaccineName('');
     setStockItem(null);
+    clearSecond();
     setNextDueDate('');
     setNotes('');
     setNotesOpen(false);
@@ -123,46 +134,65 @@ export function NewVaccinationPage() {
     setDoseCount('10');
   }
 
+  async function saveOne(name: string, item: InventoryItem | null) {
+    // Birlestirme duzeltmesi (2026-10-05): tek kayit -- periyodikse seri, degilse tekil (stoktan secildiyse stok bilgisiyle).
+    if (periodic) {
+      await vaccinationApi.recordSeries({
+        patientId,
+        vaccineName: name,
+        startDate: vaccinationDate,
+        intervalDays: Number(intervalDays),
+        doseCount: Number(doseCount),
+        firstDoseStatus: status,
+        notes: notes || undefined,
+      });
+    } else {
+      await vaccinationApi.record({
+        patientId,
+        vaccineName: name,
+        lotNumber: item?.lotNumber ?? undefined,
+        inventoryItemId: item?.id,
+        administeredDate: vaccinationDate,
+        nextDueDate: nextDueDate || undefined,
+        status,
+        notes: notes || undefined,
+      });
+    }
+  }
+
   async function submit(andPlanAnother: boolean) {
-    if (busy || !patientId || !vaccineName.trim() || !periodicValid) return;
+    if (busy || !canSubmit) return;
     setBusy(true);
     setError(null);
     setSuccessMsg(null);
+    const entries = [{ name: stockItem ? stockItem.name : vaccineName.trim(), item: stockItem }];
+    if (secondOpen) entries.push({ name: secondItem ? secondItem.name : secondName.trim(), item: secondItem });
+    let saved = 0;
     try {
-      // Birlestirme duzeltmesi (2026-10-05): tek kayit -- periyodikse seri, degilse tekil (stoktan secildiyse stok bilgisiyle).
-      if (periodic) {
-        await vaccinationApi.recordSeries({
-          patientId,
-          vaccineName: stockItem ? stockItem.name : vaccineName.trim(),
-          startDate: vaccinationDate,
-          intervalDays: Number(intervalDays),
-          doseCount: Number(doseCount),
-          firstDoseStatus: status,
-          notes: notes || undefined,
-        });
-      } else {
-        await vaccinationApi.record({
-          patientId,
-          vaccineName: stockItem ? stockItem.name : vaccineName.trim(),
-          lotNumber: stockItem?.lotNumber ?? undefined,
-          inventoryItemId: stockItem?.id,
-          administeredDate: vaccinationDate,
-          nextDueDate: nextDueDate || undefined,
-          status,
-          notes: notes || undefined,
-        });
+      for (const e of entries) {
+        await saveOne(e.name, e.item);
+        saved++;
       }
       if (andPlanAnother) {
-        const msg = periodic
-          ? `${doseCount} dozluk aşı serisi oluşturuldu. Yeni bir aşı planlayabilirsiniz.`
-          : 'Aşı kaydı oluşturuldu. Yeni bir aşı planlayabilirsiniz.';
+        const what = periodic ? `${doseCount} dozluk aşı serisi` : 'aşı kaydı';
+        const msg = `${entries.length > 1 ? `${entries.length} ${what}` : what.charAt(0).toUpperCase() + what.slice(1)} oluşturuldu. Yeni bir aşı planlayabilirsiniz.`;
         resetVaccineFields();
         setSuccessMsg(msg);
       } else {
         navigate('/asi-takvimi');
       }
     } catch (err) {
-      setError(errorMessageOf(err));
+      if (saved > 0) {
+        // İlk ürün kaydedildi, ikincisi olmadı: formda yalnız ikinci kalsın ki tekrar denemede ilki çift kaydedilmesin.
+        setStockItem(secondItem);
+        setVaccineName(secondItem ? secondItem.name : secondName.trim());
+        clearSecond();
+        setError(
+          `"${entries[0].name}" kaydedildi, "${entries[1].name}" kaydedilemedi: ${errorMessageOf(err)} Formda yalnız bu ürün kaldı; tekrar deneyebilirsiniz.`
+        );
+      } else {
+        setError(errorMessageOf(err));
+      }
     } finally {
       setBusy(false);
     }
@@ -183,6 +213,9 @@ export function NewVaccinationPage() {
           'tr-TR'
         )
       : '';
+  const secondValid = !secondOpen || !!secondItem || !!secondName.trim();
+  const canSubmit = !!patientId && !!vaccineName.trim() && secondValid && periodicValid;
+  const count = secondOpen ? 2 : 1;
 
   return (
     <AppShell>
@@ -262,7 +295,9 @@ export function NewVaccinationPage() {
             <FieldWrap label="Aşı*">
               {canUseStock && (
                 <VaccineStockPicker
+                  ariaLabel="Aşı stoktan"
                   value={stockItem?.id ?? null}
+                  excludeId={secondItem?.id}
                   onChange={(item) => {
                     setStockItem(item);
                     if (item) setVaccineName(item.name);
@@ -285,6 +320,42 @@ export function NewVaccinationPage() {
                     ))}
                   </datalist>
                 </>
+              )}
+              {secondOpen ? (
+                <div className={styles.secondProduct}>
+                  <div className={styles.secondHead}>
+                    <span>2. ürün</span>
+                    <button type="button" className={styles.removeSecond} onClick={clearSecond}>
+                      Kaldır
+                    </button>
+                  </div>
+                  {canUseStock && (
+                    <VaccineStockPicker
+                      ariaLabel="2. ürün stoktan"
+                      value={secondItem?.id ?? null}
+                      excludeId={stockItem?.id}
+                      onChange={(item) => {
+                        setSecondItem(item);
+                        if (item) setSecondName(item.name);
+                      }}
+                    />
+                  )}
+                  {!secondItem && (
+                    <Input
+                      list="vaccine-names"
+                      aria-label="2. ürün adı"
+                      value={secondName}
+                      onChange={(e) => setSecondName(e.target.value)}
+                      placeholder="Aşı adı (stokta yoksa)"
+                      required
+                      style={{ marginTop: 8 }}
+                    />
+                  )}
+                </div>
+              ) : (
+                <button type="button" className={styles.notesToggle} onClick={() => setSecondOpen(true)}>
+                  + İkinci ürün ekle (ör. iç + dış parazit birlikte)
+                </button>
               )}
             </FieldWrap>
 
@@ -375,13 +446,15 @@ export function NewVaccinationPage() {
           )}
 
           <div className={styles.actions}>
-            <Button type="submit" variant="primary" disabled={busy || !patientId || !vaccineName.trim() || !periodicValid}>
-              {busy ? 'Kaydediliyor...' : periodic ? 'Aşı Serisi Oluştur' : 'Aşı Kaydı Oluştur'}
+            <Button type="submit" variant="primary" disabled={busy || !canSubmit}>
+              {busy
+                ? 'Kaydediliyor...'
+                : `${count > 1 ? `${count} ` : ''}${periodic ? 'Aşı Serisi Oluştur' : 'Aşı Kaydı Oluştur'}`}
             </Button>
             <Button
               type="button"
               variant="secondary"
-              disabled={busy || !patientId || !vaccineName.trim() || !periodicValid}
+              disabled={busy || !canSubmit}
               onClick={() => submit(true)}
             >
               + Kaydet ve Yeni Aşı Planla

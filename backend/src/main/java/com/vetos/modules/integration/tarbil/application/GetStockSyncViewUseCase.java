@@ -23,6 +23,7 @@ public class GetStockSyncViewUseCase {
 
     private final TarbilStockSnapshotRepository repository;
     private final TarbilStockSyncPort stockSyncPort;
+    private final PendingTarbilStockWork pendingWork;
 
     @Transactional(readOnly = true)
     public StockSyncView execute(UUID tenantId, UUID branchId, TarbilStockSystem system) {
@@ -33,12 +34,22 @@ public class GetStockSyncViewUseCase {
         List<InventoryStockView> stock = stockSyncPort.listForBranch(branchId);
         List<TarbilStockSnapshotLine> rows = repository.findLines(snapshot.get().getId());
         Map<String, Integer> totals = StockSyncMatcher.totals(rows);
+        Map<UUID, Integer> pending = pendingWork.countByItem(tenantId);
         List<StockSyncLineView> lines = rows.stream().map(l -> {
             StockSyncMatcher.Match m = StockSyncMatcher.match(l, stock, totals.get(StockSyncMatcher.key(l)));
             return new StockSyncLineView(l.getId(), l.getProductName(), l.getPresentation(), l.getLotNumber(), l.getExpiryDate(),
                 l.getQuantity(), l.getOpenedQuantity(), m.status(),
-                m.item() == null ? null : m.item().id(), m.item() == null ? null : m.item().quantityOnHand());
+                m.item() == null ? null : m.item().id(), m.item() == null ? null : m.item().quantityOnHand(), l.isPartStock(),
+                pendingCount(l, m, pending));
         }).toList();
         return new StockSyncView(snapshot.get().getId(), system, snapshot.get().getTakenAt(), lines);
+    }
+
+    /** Islenmis satirda gosterilmez; uyari yalniz hekimin karar verecegi satirlar icin. */
+    private static int pendingCount(TarbilStockSnapshotLine line, StockSyncMatcher.Match m, Map<UUID, Integer> pending) {
+        if (line.isApplied() || m.item() == null) {
+            return 0;
+        }
+        return pending.getOrDefault(m.item().id(), 0);
     }
 }

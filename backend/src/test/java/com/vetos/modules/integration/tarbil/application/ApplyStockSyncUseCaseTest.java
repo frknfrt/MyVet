@@ -4,6 +4,7 @@ import com.vetos.modules.integration.tarbil.domain.TarbilStockSnapshot;
 import com.vetos.modules.integration.tarbil.domain.TarbilStockSnapshotLine;
 import com.vetos.modules.integration.tarbil.domain.TarbilStockSnapshotRepository;
 import com.vetos.modules.integration.tarbil.domain.TarbilStockSystem;
+import com.vetos.modules.integration.tarbil.domain.exception.TarbilStockLinePendingConflictException;
 import com.vetos.modules.integration.tarbil.domain.exception.TarbilStockSnapshotNotFoundException;
 import com.vetos.modules.inventory.domain.InventoryStockView;
 import com.vetos.modules.inventory.domain.NewTarbilStockItem;
@@ -17,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -35,6 +37,7 @@ class ApplyStockSyncUseCaseTest {
 
     @Mock private TarbilStockSnapshotRepository repository;
     @Mock private TarbilStockSyncPort port;
+    @Mock private PendingTarbilStockWork pendingWork;
 
     private final UUID tenantId = UUID.randomUUID();
     private final UUID branchId = UUID.randomUUID();
@@ -48,7 +51,7 @@ class ApplyStockSyncUseCaseTest {
     }
 
     private ApplyStockSyncUseCase useCase() {
-        return new ApplyStockSyncUseCase(repository, port);
+        return new ApplyStockSyncUseCase(repository, port, pendingWork);
     }
 
     @Test
@@ -135,5 +138,42 @@ class ApplyStockSyncUseCaseTest {
         assertThatThrownBy(() -> useCase().execute(tenantId, branchId, snapshotId, List.of(UUID.randomUUID())))
             .isInstanceOf(TarbilStockSnapshotNotFoundException.class);
         verify(port, never()).listForBranch(any());
+    }
+
+    @Test
+    void should_rejectWholeRequest_when_aSelectedLinesItemHasWorkPendingInTarbil() {
+        UUID snapshotId = UUID.randomUUID();
+        TarbilStockSnapshotLine fresh = line(1, "Drontal", "L1", 3);
+        TarbilStockSnapshotLine differs = line(2, "Biocan DHPPI", "145932", 1);
+        UUID existing = UUID.randomUUID();
+        when(repository.findByIdForUpdate(snapshotId)).thenReturn(Optional.of(snapshot(TarbilStockSystem.HBSAPP_VACCINE)));
+        when(repository.findLines(snapshotId)).thenReturn(List.of(fresh, differs));
+        when(port.listForBranch(branchId)).thenReturn(List.of(new InventoryStockView(existing, "Biocan DHPPI", "145932", null, 0, null)));
+        when(pendingWork.countByItem(tenantId)).thenReturn(Map.of(existing, 1));
+
+        assertThatThrownBy(() -> useCase().execute(tenantId, branchId, snapshotId, List.of(fresh.getId(), differs.getId())))
+            .isInstanceOf(TarbilStockLinePendingConflictException.class);
+        verify(port, never()).createFromTarbil(any(), any(), any());
+        verify(port, never()).syncFromTarbil(any(), anyInt(), any(), any());
+    }
+
+    @Test
+    void should_applyLine_when_pendingWorkTouchesOnlyAnUnselectedItem() {
+        UUID snapshotId = UUID.randomUUID();
+        TarbilStockSnapshotLine differs = line(1, "Rabisin", "R9", 10);
+        TarbilStockSnapshotLine blocked = line(2, "Biocan DHPPI", "145932", 1);
+        UUID rabisin = UUID.randomUUID();
+        UUID biocan = UUID.randomUUID();
+        when(repository.findByIdForUpdate(snapshotId)).thenReturn(Optional.of(snapshot(TarbilStockSystem.HBSAPP_VACCINE)));
+        when(repository.findLines(snapshotId)).thenReturn(List.of(differs, blocked));
+        when(port.listForBranch(branchId)).thenReturn(List.of(
+            new InventoryStockView(rabisin, "Rabisin", "R9", null, 4, null),
+            new InventoryStockView(biocan, "Biocan DHPPI", "145932", null, 0, null)));
+        when(pendingWork.countByItem(tenantId)).thenReturn(Map.of(biocan, 1));
+
+        int applied = useCase().execute(tenantId, branchId, snapshotId, List.of(differs.getId()));
+
+        assertThat(applied).isEqualTo(1);
+        verify(port).syncFromTarbil(eq(rabisin), eq(10), any(TarbilStockLink.class), eq(snapshotId));
     }
 }

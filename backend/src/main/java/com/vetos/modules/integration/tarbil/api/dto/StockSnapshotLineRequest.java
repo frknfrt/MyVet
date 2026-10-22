@@ -13,5 +13,7 @@ public record StockSnapshotLineRequest(
     @Size(max = 100) String lotNumber,
     LocalDate expiryDate,
     @Min(0) int quantity,
-    BigDecimal openedQuantity
+    BigDecimal openedQuantity,
+    /** Asi sayfasindaki "Parca Stok Ara" tablosundan (2026-10-21). Eski eklenti gondermez = false. */
+    Boolean partStock
 ) {}

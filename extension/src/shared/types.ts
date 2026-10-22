@@ -66,6 +66,8 @@ export interface StockSnapshotLine {
   expiryDate: string | null;
   quantity: number;
   openedQuantity: number | null;
+  /** Asi sayfasindaki "Parca Stok Ara" tablosundan (2026-10-21); yalniz parca stok satirlarinda true gonderilir. */
+  partStock?: boolean;
 }
 
 /** Stok sayfasi karsilastirmasi: urun+lot gruplari sayilir, hicbir sey kaydedilmez. */

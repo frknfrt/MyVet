@@ -11,7 +11,7 @@ export const ALLOWED_BUTTONS = {
   vaccineReceipt: { petVet: RECEIPT.petVet, addProduct: RECEIPT.addProduct },
   vaccineStockPopup: { search: VACCINE_STOCK_POPUP.search },
   animalSearch: { search: SEARCH.search, transfer: SEARCH.transfer },
-  vaccineStock: { search: VACCINE_STOCK.search },
+  vaccineStock: { search: VACCINE_STOCK.search, partSearch: VACCINE_STOCK.partSearch },
   medicineStock: { search: MEDICINE_STOCK.search },
   prescriptionReceipt: {
     petVet: PRESCRIPTION_RECEIPT.petVet,

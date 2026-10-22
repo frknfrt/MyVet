@@ -45,6 +45,10 @@ public class TarbilStockSnapshotLine {
     @Column(name = "opened_quantity")
     private BigDecimal openedQuantity;
 
+    /** TARBIL asi sayfasindaki "Parca Stok Ara" tablosundan geldi (2026-10-21); Vetly ekraninda etiket. */
+    @Column(name = "part_stock", nullable = false)
+    private boolean partStock;
+
     @Column(name = "applied_inventory_item_id")
     private UUID appliedInventoryItemId;
 
@@ -54,6 +58,12 @@ public class TarbilStockSnapshotLine {
     /** id hemen atanir: satirlar kaydedilmeden once de kimlikleriyle secilebilsin (testler ve eslesme). */
     public static TarbilStockSnapshotLine of(UUID snapshotId, UUID tenantId, int lineNo, String productName, String presentation,
                                              String lotNumber, LocalDate expiryDate, int quantity, BigDecimal openedQuantity) {
+        return of(snapshotId, tenantId, lineNo, productName, presentation, lotNumber, expiryDate, quantity, openedQuantity, false);
+    }
+
+    public static TarbilStockSnapshotLine of(UUID snapshotId, UUID tenantId, int lineNo, String productName, String presentation,
+                                             String lotNumber, LocalDate expiryDate, int quantity, BigDecimal openedQuantity,
+                                             boolean partStock) {
         TarbilStockSnapshotLine line = new TarbilStockSnapshotLine();
         line.id = UUID.randomUUID();
         line.snapshotId = snapshotId;
@@ -65,6 +75,7 @@ public class TarbilStockSnapshotLine {
         line.expiryDate = expiryDate;
         line.quantity = quantity;
         line.openedQuantity = openedQuantity;
+        line.partStock = partStock;
         return line;
     }
 

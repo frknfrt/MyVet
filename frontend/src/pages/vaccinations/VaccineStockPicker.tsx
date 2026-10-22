@@ -23,7 +23,18 @@ const todayIso = () => {
  * Yeni Asi formu (spec 2026-10-04 P2 S3.2): subenin asi stogundan seri secimi. "Stokta yok" secilirse asi adi elle
  * yazilir (stok baglantisi olmaz, eklenti urun adimini hekime birakir). SKT'si gecmis seri secilemez.
  */
-export function VaccineStockPicker({ value, onChange }: { value: string | null; onChange: (item: InventoryItem | null) => void }) {
+export function VaccineStockPicker({
+  value,
+  onChange,
+  excludeId,
+  ariaLabel,
+}: {
+  value: string | null;
+  onChange: (item: InventoryItem | null) => void;
+  /** Formda başka bir satırda seçili olan kalem (aynı ürün iki kez seçilmesin). */
+  excludeId?: string | null;
+  ariaLabel?: string;
+}) {
   const [items, setItems] = useState<InventoryItem[]>([]);
 
   useEffect(() => {
@@ -36,9 +47,9 @@ export function VaccineStockPicker({ value, onChange }: { value: string | null; 
   const today = todayIso();
 
   return (
-    <Select value={value ?? ''} onChange={(e) => onChange(items.find((i) => i.id === e.target.value) ?? null)}>
+    <Select aria-label={ariaLabel} value={value ?? ''} onChange={(e) => onChange(items.find((i) => i.id === e.target.value) ?? null)}>
       <option value="">Stokta yok — aşı adını elle yaz</option>
-      {items.map((i) => {
+      {items.filter((i) => i.id !== excludeId).map((i) => {
         const expired = !!i.expiryDate && i.expiryDate < today;
         return (
           <option key={i.id} value={i.id} disabled={expired} style={expired ? { color: 'var(--color-danger-700)' } : undefined}>

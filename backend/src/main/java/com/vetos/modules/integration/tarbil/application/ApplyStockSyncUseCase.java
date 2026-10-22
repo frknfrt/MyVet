@@ -5,6 +5,7 @@ import com.vetos.modules.integration.tarbil.domain.TarbilStockSnapshotLine;
 import com.vetos.modules.integration.tarbil.domain.TarbilStockSnapshotRepository;
 import com.vetos.modules.integration.tarbil.domain.TarbilStockSyncStatus;
 import com.vetos.modules.integration.tarbil.domain.TarbilStockSystem;
+import com.vetos.modules.integration.tarbil.domain.exception.TarbilStockLinePendingConflictException;
 import com.vetos.modules.integration.tarbil.domain.exception.TarbilStockSnapshotNotFoundException;
 import com.vetos.modules.inventory.domain.InventoryStockView;
 import com.vetos.modules.inventory.domain.NewTarbilStockItem;
@@ -32,6 +33,7 @@ public class ApplyStockSyncUseCase {
 
     private final TarbilStockSnapshotRepository repository;
     private final TarbilStockSyncPort stockSyncPort;
+    private final PendingTarbilStockWork pendingWork;
 
     @Transactional
     public int execute(UUID tenantId, UUID branchId, UUID snapshotId, List<UUID> lineIds) {
@@ -45,6 +47,17 @@ public class ApplyStockSyncUseCase {
         Map<String, Integer> totals = StockSyncMatcher.totals(lines);
         List<InventoryStockView> stock = stockSyncPort.listForBranch(branchId);
         Instant now = Instant.now();
+        // TARBIL'e islenmemis aktarimi olan kalem esitlenmez (2026-10-21): ekran bu satirlari sectirmez, burada da reddedilir.
+        Map<UUID, Integer> pending = pendingWork.countByItem(tenantId);
+        for (TarbilStockSnapshotLine line : lines) {
+            if (!wanted.contains(line.getId()) || line.isApplied()) {
+                continue;
+            }
+            StockSyncMatcher.Match match = StockSyncMatcher.match(line, stock, totals.get(StockSyncMatcher.key(line)));
+            if (match.item() != null && pending.getOrDefault(match.item().id(), 0) > 0) {
+                throw new TarbilStockLinePendingConflictException();
+            }
+        }
         int applied = 0;
         for (TarbilStockSnapshotLine line : lines) {
             if (!wanted.contains(line.getId()) || line.isApplied()) {
