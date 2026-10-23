@@ -209,6 +209,26 @@ payment-gateway:
     # disaridan erisilebilir gercek adresiyle override edilmeli.
     callback-base-url: ${IYZICO_CALLBACK_BASE_URL:http://localhost:8080}
 
+admin-email:
+  # UYARI: host + port + UCU DE kutunun kullanici adi/sifresi birlikte set
+  # edilmedikce gercek SMTP gonderimi devreye girmez, admin panelinden "Gonder"
+  # istegi sadece loglanir (bkz. SmtpAdminEmailAdapter.isConfigured()) --
+  # IyzicoPaymentGatewayAdapter'daki ayni "bos ise simule et" deseni.
+  # cPanel'deki E-posta Hesaplari > (kutu) > Baglan/Yapilandir ekraninda
+  # gorunen sunucu adi/port buraya; kullanici adi genelde kutunun tam
+  # adresi (ornek: info@vetly.com.tr), sifre o kutunun mail sifresidir.
+  smtp-host: ${ADMIN_EMAIL_SMTP_HOST:}
+  smtp-port: ${ADMIN_EMAIL_SMTP_PORT:465}
+  info:
+    username: ${ADMIN_EMAIL_INFO_USERNAME:}
+    password: ${ADMIN_EMAIL_INFO_PASSWORD:}
+  destek:
+    username: ${ADMIN_EMAIL_DESTEK_USERNAME:}
+    password: ${ADMIN_EMAIL_DESTEK_PASSWORD:}
+  bildirim:
+    username: ${ADMIN_EMAIL_BILDIRIM_USERNAME:}
+    password: ${ADMIN_EMAIL_BILDIRIM_PASSWORD:}
+
 features:
   enforcement:
     # Plan "Modul Erisimi" isaretlerinin kliniklere uygulanmasi. Mevcut paketlerin

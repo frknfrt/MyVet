@@ -17,6 +17,7 @@ public final class AuditAction {
     public static final String INVOICE_VOIDED = "INVOICE_VOIDED";
     public static final String PAYMENT_RECORDED = "PAYMENT_RECORDED";
     public static final String ANNOUNCEMENT_SENT = "ANNOUNCEMENT_SENT";
+    public static final String ADMIN_EMAIL_SENT = "ADMIN_EMAIL_SENT";
 
     private AuditAction() {
     }

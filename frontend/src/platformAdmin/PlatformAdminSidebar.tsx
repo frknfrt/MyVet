@@ -103,6 +103,16 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
+    path: 'emails',
+    label: 'E-posta Gönder',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 4h16v16H4z" />
+        <path d="M4 6l8 7 8-7" />
+      </svg>
+    ),
+  },
+  {
     path: 'system-health',
     label: 'Sistem Sağlığı',
     icon: (

@@ -274,6 +274,47 @@ export interface AiUsageByTenant {
 }
 
 
+
+export type EmailTemplateCode = 'SALES' | 'TRIAL_FOLLOWUP' | 'WELCOME' | 'INVOICE_REMINDER';
+
+export interface EmailTemplateFieldOption {
+  key: string;
+  label: string;
+}
+
+export interface EmailTemplateOption {
+  code: EmailTemplateCode;
+  label: string;
+  mailboxAddress: string;
+  fields: EmailTemplateFieldOption[];
+}
+
+export interface PreviewAdminEmailPayload {
+  templateType: EmailTemplateCode;
+  fields: Record<string, string>;
+}
+
+export interface PreviewAdminEmailResult {
+  subject: string;
+  html: string;
+}
+
+export interface SendAdminEmailPayload {
+  templateType: EmailTemplateCode;
+  recipientEmail: string;
+  fields: Record<string, string>;
+}
+
+export interface AdminSentEmail {
+  id: string;
+  templateType: EmailTemplateCode;
+  templateLabel: string;
+  recipientEmail: string;
+  subject: string;
+  sentByAdminEmail: string;
+  sentAt: string;
+}
+
 export const platformAdminApi = {
   listTenantAuditEvents: (tenantId: string, q: AuditQuery) =>
     platformAdminClient.get<AuditEventPage>(`/api/v1/platform-admin/tenants/${tenantId}/audit-events?${toQueryString(q)}`),
@@ -331,4 +372,10 @@ export const platformAdminApi = {
   listAnnouncements: () => platformAdminClient.get<Announcement[]>('/api/v1/platform-admin/announcements'),
   sendAnnouncement: (payload: { title: string; body: string }) =>
     platformAdminClient.post<void>('/api/v1/platform-admin/announcements', payload),
+  listEmailTemplates: () => platformAdminClient.get<EmailTemplateOption[]>('/api/v1/platform-admin/emails/templates'),
+  previewAdminEmail: (payload: PreviewAdminEmailPayload) =>
+    platformAdminClient.post<PreviewAdminEmailResult>('/api/v1/platform-admin/emails/preview', payload),
+  sendAdminEmail: (payload: SendAdminEmailPayload) =>
+    platformAdminClient.post<AdminSentEmail>('/api/v1/platform-admin/emails/send', payload),
+  listSentAdminEmails: () => platformAdminClient.get<AdminSentEmail[]>('/api/v1/platform-admin/emails/sent'),
 };
