@@ -4,7 +4,6 @@ import com.vetos.modules.ai.domain.AiTaskType;
 import com.vetos.modules.ai.domain.DiagnosisSuggestionDraft;
 import com.vetos.modules.ai.domain.DiagnosisSuggestionInput;
 import com.vetos.modules.ai.domain.DiagnosisSuggestionPort;
-import com.vetos.modules.ai.domain.HistoryEntry;
 import com.vetos.modules.ai.domain.exception.ClinicalFindingsRequiredForDiagnosisException;
 import com.vetos.modules.encounter.domain.EncounterClinicalContext;
 import com.vetos.modules.encounter.domain.EncounterLookupPort;
@@ -24,7 +23,8 @@ import java.util.UUID;
 @Service
 public class GenerateDiagnosisSuggestionUseCase {
 
-    private static final int HISTORY_LIMIT = 5;
+    /** Tavanın bir fazlası: PatientHistoryAssembler kısaltıldığını anlayabilsin. */
+    private static final int HISTORY_LIMIT = PatientHistoryAssembler.MAX_ENCOUNTERS + 1;
 
     private final EncounterLookupPort encounterLookupPort;
     private final DiagnosisSuggestionPort diagnosisSuggestionPort;
@@ -32,6 +32,7 @@ public class GenerateDiagnosisSuggestionUseCase {
     private final String providerName;
     private final UsageQuotaPort usageQuotaPort;
     private final AiCallGate aiCallGate;
+    private final PatientHistoryAssembler patientHistoryAssembler;
 
     public GenerateDiagnosisSuggestionUseCase(
         EncounterLookupPort encounterLookupPort,
@@ -39,6 +40,7 @@ public class GenerateDiagnosisSuggestionUseCase {
         RecordAiJobUseCase recordAiJobUseCase,
         @Value("${ai.provider:ollama}") String providerName,
         UsageQuotaPort usageQuotaPort,
+        PatientHistoryAssembler patientHistoryAssembler,
         AiCallGate aiCallGate
     ) {
         this.encounterLookupPort = encounterLookupPort;
@@ -47,6 +49,7 @@ public class GenerateDiagnosisSuggestionUseCase {
         this.providerName = providerName;
         this.usageQuotaPort = usageQuotaPort;
         this.aiCallGate = aiCallGate;
+        this.patientHistoryAssembler = patientHistoryAssembler;
     }
 
     public DiagnosisSuggestionResult execute(GenerateDiagnosisSuggestionCommand command) {
@@ -62,9 +65,7 @@ public class GenerateDiagnosisSuggestionUseCase {
             context.objective(),
             context.physicalExamSummary(),
             context.vitalsSummary(),
-            context.recentHistory().stream()
-                .map(h -> new HistoryEntry(h.date().toString(), h.assessment(), h.plan()))
-                .toList()
+            PatientHistoryFormatter.format(patientHistoryAssembler.assemble(context))
         );
 
         // Kota ayirma kapinin icinde: AI yogunsa hak dusmez.

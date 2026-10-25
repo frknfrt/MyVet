@@ -3,6 +3,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { tarbilApi, TarbilStockSync, TarbilStockSyncLine, TarbilStockSyncStatus, TarbilStockSystem } from '../../api/tarbilApi';
 import styles from './TarbilStockSyncPanel.module.css';
+import { formatStock } from './stockFormat';
 
 const STATUS: Record<TarbilStockSyncStatus, { label: string; tone: 'success' | 'warning' | 'neutral' | 'gold' }> = {
   NEW: { label: "Vetly'de yok", tone: 'gold' },
@@ -170,8 +171,10 @@ export function TarbilStockSyncPanel({ onApplied }: { onApplied: () => void }) {
                 </div>
                 <div className={l.lotNumber ? undefined : styles.muted}>{l.lotNumber ?? '—'}</div>
                 <div className={styles.muted}>{trDate(l.expiryDate)}</div>
-                <div className={styles.num}>{l.tarbilQuantity}</div>
-                <div className={`${styles.num} ${l.vetlyQuantity === null ? styles.muted : ''}`}>{l.vetlyQuantity ?? '—'}</div>
+                <div className={styles.num}>{formatStock(l.tarbilQuantity, l.tarbilOpenedQuantity, l.unit)}</div>
+                <div className={`${styles.num} ${l.vetlyQuantity === null ? styles.muted : ''}`}>
+                  {l.vetlyQuantity === null ? '—' : formatStock(l.vetlyQuantity, l.tarbilOpenedQuantity === null ? null : l.vetlyOpenedQuantity, l.unit)}
+                </div>
                 <div>
                   <Badge tone={STATUS[l.status].tone}>{STATUS[l.status].label}</Badge>
                   {waitsForTarbil(l) && (

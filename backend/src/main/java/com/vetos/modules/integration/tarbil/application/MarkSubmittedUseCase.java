@@ -67,7 +67,7 @@ public class MarkSubmittedUseCase {
         DeductionSettlementResult result = stockDeductionPort.settleFromTarbil(stockRef, log.getSourceId(), reported, staffId);
         if (!result.unmatched().isEmpty()) {
             log.noteSettlement("Vetly'de eslesmeyen TARBIL satirlari: " + result.unmatched().stream()
-                .map(l -> l.productName() + " / " + l.serialNumber() + " x" + l.quantity())
+                .map(l -> l.productName() + " / " + l.serialNumber() + " x" + l.amount())
                 .collect(Collectors.joining(", ")));
         }
     }

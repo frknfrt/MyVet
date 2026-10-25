@@ -24,8 +24,7 @@ import { NewVaccinationPage } from './NewVaccinationPage';
 
 const item = (id: string, name: string, lot: string): InventoryItem => ({
   id, name, category: 'Aşı', skuBarcode: null, quantityOnHand: 5, reorderThreshold: 0, belowReorderThreshold: false,
-  expiryDate: null, lotNumber: lot, unitCost: null, tarbilProductName: null,
-});
+  expiryDate: null, lotNumber: lot, unitCost: null, tarbilProductName: null, unit: 'ADET', packageSize: null, openedQuantity: 0, unitSource: 'AUTO',});
 
 let container: HTMLDivElement;
 

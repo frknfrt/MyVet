@@ -21,15 +21,17 @@ public class ListPendingDeductionsUseCase {
     private final PendingStockDeductionRepository repository;
     private final InventoryItemRepository items;
 
-    public record PendingDeductionView(UUID id, UUID inventoryItemId, String itemName, String lotNumber, int quantity,
-                                       StockReferenceType referenceType, UUID referenceId, Instant createdAt) {}
+    public record PendingDeductionView(UUID id, UUID inventoryItemId, String itemName, String lotNumber, java.math.BigDecimal quantity,
+                                       StockReferenceType referenceType, UUID referenceId, Instant createdAt,
+                                       /** Kalemin kullanim birimi (spec 2026-10-24). */ String unit) {}
 
     @Transactional(readOnly = true)
     public List<PendingDeductionView> execute() {
         return repository.findAllPending().stream().map(p -> {
             Optional<InventoryItem> item = items.findById(p.getInventoryItemId());
             return new PendingDeductionView(p.getId(), p.getInventoryItemId(), item.map(InventoryItem::getName).orElse("—"),
-                item.map(InventoryItem::getLotNumber).orElse(null), p.getQuantity(), p.getReferenceType(), p.getReferenceId(), p.getCreatedAt());
+                item.map(InventoryItem::getLotNumber).orElse(null), p.getQuantity(), p.getReferenceType(), p.getReferenceId(), p.getCreatedAt(),
+                item.map(i -> i.getUnit().name()).orElse("ADET"));
         }).toList();
     }
 }

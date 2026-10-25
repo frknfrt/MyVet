@@ -17,12 +17,17 @@ public record InventoryItemResponse(
     LocalDate expiryDate,
     String lotNumber,
     BigDecimal unitCost,
-    String tarbilProductName
+    String tarbilProductName,
+    String unit,
+    BigDecimal packageSize,
+    BigDecimal openedQuantity,
+    String unitSource
 ) {
     public static InventoryItemResponse from(InventoryItemDetail d) {
         return new InventoryItemResponse(
             d.id(), d.name(), d.category(), d.skuBarcode(), d.quantityOnHand(), d.reorderThreshold(),
-            d.belowReorderThreshold(), d.expiryDate(), d.lotNumber(), d.unitCost(), d.tarbilProductName()
+            d.belowReorderThreshold(), d.expiryDate(), d.lotNumber(), d.unitCost(), d.tarbilProductName(),
+            d.unit(), d.packageSize(), d.openedQuantity(), d.unitSource()
         );
     }
 }

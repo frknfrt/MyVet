@@ -80,9 +80,9 @@ export function createRouter({ api, tokens, outbox, session, openTarbilPage }: D
               throw e;
             }
           case 'UPLOAD_STOCK_SNAPSHOT':
-            return { ok: true, data: await api.uploadStockSnapshot(req.system, req.lines) };
+            return { ok: true, data: await api.uploadStockSnapshot(req.system, req.lines, req.partStockRead) };
           case 'COMPARE_STOCK_SNAPSHOT':
-            return { ok: true, data: await api.compareStockSnapshot(req.system, req.lines) };
+            return { ok: true, data: await api.compareStockSnapshot(req.system, req.lines, req.partStockRead) };
           case 'DISMISS':
             await api.dismiss(req.id, req.reason);
             return { ok: true, data: null };

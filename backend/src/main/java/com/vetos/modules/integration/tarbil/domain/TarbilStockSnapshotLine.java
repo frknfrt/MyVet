@@ -49,6 +49,10 @@ public class TarbilStockSnapshotLine {
     @Column(name = "part_stock", nullable = false)
     private boolean partStock;
 
+    /** Asi butun stok: kutudaki flakon (TARBIL "Uretilen Doz-Kucuk Hayvan", spec 2026-10-24); yoksa null. */
+    @Column(name = "doses_per_package")
+    private Integer dosesPerPackage;
+
     @Column(name = "applied_inventory_item_id")
     private UUID appliedInventoryItemId;
 
@@ -64,6 +68,12 @@ public class TarbilStockSnapshotLine {
     public static TarbilStockSnapshotLine of(UUID snapshotId, UUID tenantId, int lineNo, String productName, String presentation,
                                              String lotNumber, LocalDate expiryDate, int quantity, BigDecimal openedQuantity,
                                              boolean partStock) {
+        return of(snapshotId, tenantId, lineNo, productName, presentation, lotNumber, expiryDate, quantity, openedQuantity, partStock, null);
+    }
+
+    public static TarbilStockSnapshotLine of(UUID snapshotId, UUID tenantId, int lineNo, String productName, String presentation,
+                                             String lotNumber, LocalDate expiryDate, int quantity, BigDecimal openedQuantity,
+                                             boolean partStock, Integer dosesPerPackage) {
         TarbilStockSnapshotLine line = new TarbilStockSnapshotLine();
         line.id = UUID.randomUUID();
         line.snapshotId = snapshotId;
@@ -76,6 +86,7 @@ public class TarbilStockSnapshotLine {
         line.quantity = quantity;
         line.openedQuantity = openedQuantity;
         line.partStock = partStock;
+        line.dosesPerPackage = dosesPerPackage;
         return line;
     }
 

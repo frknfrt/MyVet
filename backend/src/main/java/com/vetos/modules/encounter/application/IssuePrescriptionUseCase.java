@@ -78,7 +78,7 @@ public class IssuePrescriptionUseCase {
      */
     private static boolean validItem(PrescriptionItemInput item) {
         if ((item.inventoryItemId() == null) != (item.stockQuantity() == null)) return false;
-        if (item.stockQuantity() != null && item.stockQuantity() <= 0) return false;
+        if (item.stockQuantity() != null && item.stockQuantity().signum() <= 0) return false;
         boolean named = item.drugName() != null && !item.drugName().isBlank();
         return item.inventoryItemId() != null
             ? item.drugId() == null && named

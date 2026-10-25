@@ -17,4 +17,6 @@ public interface VaccinationLookupPort {
 
     /** integration/tarbil icin -- kiraci kontrolu cagiranin sorumlulugundadir (tenantId gorunumde). */
     Optional<VaccinationTarbilView> findForTarbil(UUID vaccinationRecordId);
+    /** AI önerisi için: yalnız yapılmış aşılar, from <= administeredDate <= to, en yeniden eskiye, en fazla limit. */
+    List<VaccinationHistoryEntry> findAdministeredBetween(UUID patientId, LocalDate from, LocalDate to, int limit);
 }

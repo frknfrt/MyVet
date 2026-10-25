@@ -253,7 +253,7 @@ vetly:
   # Faz 7 (spec 2026-10-18): TARBIL eklentisi icin en dusuk surum. Bundan eski eklenti 426 alir.
   # Yukseltmeden ONCE yeni surum Vetly'den indirilebilir olmali (docs/api-conventions.md Versiyonlama).
   extension:
-    min-version: ${VETLY_EXTENSION_MIN_VERSION:0.1.0}
+    min-version: ${VETLY_EXTENSION_MIN_VERSION:0.3.0}
 
 # Faz 5 (spec 2026-10-16): dis servis korumasi. Kod programatik sarar (anotasyon yok).
 resilience4j:

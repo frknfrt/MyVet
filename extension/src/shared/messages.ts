@@ -9,8 +9,9 @@ export type BackgroundRequest =
   | { type: 'SET_ACTIVE'; id: string; documentType?: DocumentType }
   | { type: 'GET_ACTIVE' }
   | { type: 'MARK_SUBMITTED'; id: string; method: ConfirmationMethod; tarbilReference: string | null; lines?: ConfirmedLine[] }
-  | { type: 'UPLOAD_STOCK_SNAPSHOT'; system: StockSystem; lines: StockSnapshotLine[] }
-  | { type: 'COMPARE_STOCK_SNAPSHOT'; system: StockSystem; lines: StockSnapshotLine[] }
+  /** partStockRead: aşı sayfasında Parça Stok tablosu okundu (spec 2026-10-24); ilaçta gönderilmez. */
+  | { type: 'UPLOAD_STOCK_SNAPSHOT'; system: StockSystem; lines: StockSnapshotLine[]; partStockRead?: boolean }
+  | { type: 'COMPARE_STOCK_SNAPSHOT'; system: StockSystem; lines: StockSnapshotLine[]; partStockRead?: boolean }
   | { type: 'DISMISS'; id: string; reason: string };
 
 export type ErrorCode = 'UNAUTHORIZED' | 'OFFLINE' | 'NOT_FOUND' | 'CONFLICT' | 'UPGRADE_REQUIRED' | 'UNKNOWN';

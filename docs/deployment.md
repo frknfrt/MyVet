@@ -22,6 +22,22 @@ Canlı ortam: **https://uygulama.vetly.com.tr** — Güzel Hosting VPS üzerinde
 
 > Komutları **tek tek** çalıştırın; birden fazla satırı aynı anda yapıştırmak PowerShell'de komutları birleştirebiliyor.
 
+## Her çıkıştan önce: canlı ile depo uyumlu mu?
+
+Canlıya birden fazla geliştirici çıkıyor. 2026-10-23'te canlıda depoda olmayan bir migration (`V83__admin_sent_emails`) vardı; depodan derlenen jar Flyway doğrulamasında açılmadı ve backend ~20 dk kapalı kaldı. Jar'ı değiştirmeden **önce**:
+
+```bash
+# Canlı veritabanının son migration'ları
+sudo -u postgres psql vetly -c "SELECT version, description FROM flyway_schema_history ORDER BY installed_rank DESC LIMIT 5;"
+```
+```powershell
+# Depodaki son migration'lar
+dir <repo>\backend\src\main\resources\db\migration | sort Name | select -Last 5
+```
+- Canlıdaki her sürüm numarası depoda **aynı adla** olmalı. Canlıda olup depoda olmayan bir migration varsa ya da aynı numara farklı bir açıklamayla duruyorsa **DURUN**. O kodu çıkaran geliştiriciden değişikliğini `main`'e göndermesini isteyin.
+- Depoda canlıdan **büyük** numaralı migration'lar varsa, bunlar bu çıkışta uygulanacak olanlardır. Yedek zorunludur.
+- Jar'ı değiştirmeden önce `git pull` yapın; başkasının sabah çıktığı kod sizde yoksa onu canlıdan silersiniz.
+
 ## Backend güncellemesi
 
 **1. Lokal (PowerShell) — derle ve yükle**
@@ -62,10 +78,19 @@ Yeni sürüm bir Flyway migration'ı çalıştırdıysa eski jar `ddl-auto: vali
 **1. Lokal (PowerShell) — derle ve yükle**
 
 `npm run dev` çalışıyorsa önce durdurun; aksi halde `npm ci` `esbuild.exe` kilidi yüzünden `EPERM` verir.
+
+**Eklenti zip'i git'te yok** (`frontend/public/downloads/` gitignore'da). Derlemeden önce üretilmezse canlıdaki "Eklentiyi indir" bağlantısı kırılır (2026-10-23'te oldu):
+```powershell
+cd <repo>\extension
+npm ci
+npm run package          # frontend\public\downloads\ altına zip + json yazar
+npm run build:dev        # yerel test için dist'i yeniden localhost'a çevirir
+```
 ```powershell
 cd <repo>\frontend
 npm ci
 npm run build
+dir dist\downloads       # vetly-tarbil-eklenti.zip ve .json OLMALI; yoksa durun
 scp -r dist furkan@70.40.139.40:~/dist
 ```
 
@@ -75,7 +100,7 @@ sudo rm -rf /var/www/vetly/* && sudo cp -r ~/dist/. /var/www/vetly/ && sudo chmo
 ```
 `chmod` atlanmamalı: Windows'tan `scp` ile gelen klasörler `700` izniyle oluşuyor, Nginx (`www-data`) `assets/` klasörünü okuyamıyor ve JS/CSS **404** dönüyor.
 
-**3. Kontrol** — tarayıcıda `Ctrl+F5`. Nginx/backend yeniden başlatma gerekmez, kesinti olmaz.
+**3. Kontrol** — tarayıcıda `Ctrl+F5`. Nginx/backend yeniden başlatma gerekmez, kesinti olmaz. `https://uygulama.vetly.com.tr/downloads/vetly-tarbil-eklenti.json` sürüm numarasını (`{"version":"…"}`) dönmeli, HTML sayfası değil.
 
 ## Ortam değişkenleri (`/etc/vetly/backend.env`)
 
@@ -108,6 +133,13 @@ Ardından **Frontend güncellemesi** adımlarıyla web uygulamasını yayınlay�
 
 - Eklenti kimliği manifest'teki `key` alanından türetilir ve sabittir (`npm run extension-id`); frontend'de `VITE_TARBIL_EXTENSION_ID` aynı değerdir. `extension/key.pem` repoda DEĞİLDİR, güvenli yedekte saklanır (Web Store'a geçişte gerekir).
 - Hekim eklentiyi Vetly > Ayarlar > Entegrasyonlar > "Eklentiyi bağla" ile bağlar; bağlantılar aynı ekrandan iptal edilir.
+- **0.3.0 (açık/parça stok, spec `2026-10-24-acik-parca-stok-design.md`):**
+  - Eklenti ilaç reçetesinde açık şişe varsa "Açık Stok"tan seçip ml yazar; aşıda açık kutu varsa "Parça Stok"tan seçer.
+  - Stok gönderiminde kutu başına doz sayısını ve parça stoğun okunduğunu bildirir.
+  - Backend V85 + V86 ile birlikte çıkmalı.
+  - **En düşük eklenti sürümü 0.3.0** (koddaki varsayılan, `application.yml`). Eski eklenti (0.2.x) ml'li satırları dolduramaz ve onaydan düşürür; bu yüzden backend açılır açılmaz eski eklenti 426 alır ve yan panelde "güncelleyin" uyarısı gösterir.
+  - Sıra: önce web (0.3.0 zip'i `downloads` içinde, indirilebilir olmalı), sonra backend. Klinikleri önceden haberdar edin: güncellemeyene kadar TARBİL aktarımı durur.
+  - `/etc/vetly/backend.env` içinde `VETLY_EXTENSION_MIN_VERSION` daha düşük bir değerle tanımlıysa satırı silin ya da 0.3.0 yapın.
 
 ## İzleme (Faz 3)
 
@@ -182,6 +214,7 @@ Claude (AI), iyzico ve FaturaEntegratör çağrıları devre kesiciyle korunur: 
 - **FaturaEntegratör:** devre açıkken gönderim yapılmaz, kuyruk normal takvimle (2 dk / 10 dk / 1 sa / 6 sa) tekrar dener. Durum sorgusu kesintide 3 kez denenir; sağlayıcı kesintisinde (devre açıkken de, 3 deneme tükenince de) fatura "işleniyor" durumunda kalır, "başarısız" işaretlenmez (aksi halde "Tekrar Dene" çift fatura kesebilirdi).
 - Fatura kesme ve ödeme başlatma gibi **yazma** çağrıları anında/eşzamanlı olarak asla tekrar denenmez (çift kayıt riski); e-fatura kuyruğu ise başarısız gönderimi normal takvimiyle (2 dk / 10 dk / 1 sa / 6 sa) sonradan yeniden gönderir, bu bir çelişki değildir.
 - **Dağıtım notu (nginx):** Bir AI isteği en fazla ~75 sn sürebilir (10 sn kuyruk + 60 sn cevap). nginx `/api` için `proxy_read_timeout` en az 90 sn olmalı (`sudo grep -n proxy_read_timeout /etc/nginx/sites-enabled/vetly`; nginx varsayılanı 60 sn). Aksi halde kullanıcı zaman aşımı hatası görür, ama arka uç işi bitirir ve kota hakkını harcar.
+  - 2026-10-25: Tanı/tedavi önerisinde cevap 2048 parça sınırına takılırsa Claude'dan bir kez devam istenir (toplam 4096). Devam yalnızca ilk parça 40 sn'den kısa sürdüyse istenir; böylece toplam süre 90 sn içinde kalır (`ClaudeTextCompletion`). 90 sn değeri düşürülmemeli.
 
 **Log:** devre açılınca `Devre kesici ACIK: <ad>` (WARN), kapanınca `Devre kesici kapandi: <ad>` (INFO):
 

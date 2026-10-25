@@ -9,7 +9,8 @@ import { RECEIPT } from './vaccineReceipt';
  */
 export const ALLOWED_BUTTONS = {
   vaccineReceipt: { petVet: RECEIPT.petVet, addProduct: RECEIPT.addProduct },
-  vaccineStockPopup: { search: VACCINE_STOCK_POPUP.search },
+  // partStock: liste seçimi (radyo), kayıt yapmaz (spec 2026-10-24).
+  vaccineStockPopup: { search: VACCINE_STOCK_POPUP.search, partStock: VACCINE_STOCK_POPUP.partStockRadio },
   animalSearch: { search: SEARCH.search, transfer: SEARCH.transfer },
   vaccineStock: { search: VACCINE_STOCK.search, partSearch: VACCINE_STOCK.partSearch },
   medicineStock: { search: MEDICINE_STOCK.search },
@@ -19,7 +20,8 @@ export const ALLOWED_BUTTONS = {
     addStock: PRESCRIPTION_RECEIPT.addStock,
     stockSearch: PRESCRIPTION_RECEIPT.stockSearch,
   },
-  medicineStockPopup: { search: MEDICINE_STOCK_POPUP.search },
+  // openStock: liste seçimi (radyo), kayıt yapmaz (spec 2026-10-24).
+  medicineStockPopup: { search: MEDICINE_STOCK_POPUP.search, openStock: MEDICINE_STOCK_POPUP.openStockRadio },
 } as const;
 
 // PerformInsertButton: asi urun satiri "Kaydet" -- TARBIL stogundan duser (2026-10-04 hekim bildirdi), resmi islem sayilir.

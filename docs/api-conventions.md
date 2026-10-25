@@ -153,7 +153,7 @@ Ayrıca frontend'de daha önce **hiç** rol bazlı görünürlük yoktu (`navCon
 ### TARBİL eklentisi: zorunlu güncelleme
 
 Eklenti sunucuyla birlikte yayınlanmayan tek istemcidir. Her isteğe `X-Client-Version: x.y.z` ekler (kaynak: `extension/package.json`).
-`/api/v1/tarbil-extension/**` (`/pair` dahil) altında backend bunu `VETLY_EXTENSION_MIN_VERSION`'la (`vetly.extension.min-version`, varsayılan `0.1.0`) sayısal karşılaştırır:
+`/api/v1/tarbil-extension/**` (`/pair` dahil) altında backend bunu `VETLY_EXTENSION_MIN_VERSION`'la (`vetly.extension.min-version`, varsayılan `0.3.0`; açık/parça stok sürümüyle yükseltildi, bkz. `docs/deployment.md`) sayısal karşılaştırır:
 - Başlık yoksa `0.1.0`, bozuksa `0.0.0` sayılır.
 - Eskiyse **426** döner: `errorCode: CLIENT_UPGRADE_REQUIRED`, Türkçe güncelleme mesajı, `X-Min-Client-Version` başlığı. Eklenti yan panelde kalıcı uyarı gösterir, eşleştirmeyi silmez.
 

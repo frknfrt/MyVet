@@ -9,13 +9,14 @@ import com.vetos.modules.inventory.domain.PendingDeductionStatus;
 import com.vetos.modules.inventory.domain.PendingStockDeduction;
 import com.vetos.modules.inventory.domain.PendingStockDeductionRepository;
 import com.vetos.modules.inventory.domain.ReportedDeductionLine;
-import com.vetos.modules.inventory.domain.StockMovementType;
+import com.vetos.modules.inventory.domain.StockSource;
 import com.vetos.modules.inventory.domain.StockReferenceType;
 import com.vetos.platform.tenancy.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,10 +38,10 @@ public class PendingDeductionService {
     private final RecordStockMovementUseCase movements;
 
     @Transactional
-    public void open(UUID inventoryItemId, int quantity, StockReferenceType type, UUID referenceId) {
+    public void open(UUID inventoryItemId, BigDecimal quantity, StockReferenceType type, UUID referenceId) {
         boolean exists = repository.findByReference(type, referenceId).stream()
             .anyMatch(p -> p.getInventoryItemId().equals(inventoryItemId));
-        if (exists || quantity <= 0) {
+        if (exists || quantity == null || quantity.signum() <= 0) {
             return;
         }
         repository.save(PendingStockDeduction.open(TenantContext.current(), inventoryItemId, quantity, type, referenceId));
@@ -61,7 +62,7 @@ public class PendingDeductionService {
         int settled = 0;
         if (reported == null) {
             for (PendingStockDeduction p : pending) {
-                settled += deduct(p, p.getQuantity(), via, staffId, now);
+                settled += deduct(p, p.getQuantity(), null, via, staffId, now);
             }
             return new DeductionSettlementResult(settled, List.of());
         }
@@ -71,8 +72,8 @@ public class PendingDeductionService {
             Optional<PendingStockDeduction> match = reportedSerial.isEmpty() ? Optional.empty() : pending.stream()
                 .filter(p -> serial(lotOf(p)).equals(reportedSerial))
                 .findFirst();
-            if (match.isPresent() && line.quantity() > 0) {
-                settled += deduct(match.get(), line.quantity(), via, staffId, now);
+            if (match.isPresent() && line.amount() != null && line.amount().signum() > 0) {
+                settled += deduct(match.get(), line.amount(), line.source(), via, staffId, now);
                 pending.remove(match.get());
             } else {
                 unmatched.add(line);
@@ -100,13 +101,14 @@ public class PendingDeductionService {
     }
 
     /** Kosullu UPDATE'i kazanan istek hareketi yazar; kaybeden (es zamanli onay) hicbir sey yapmaz. */
-    private int deduct(PendingStockDeduction p, int quantity, DeductionSettlement via, UUID staffId, Instant now) {
+    /** TARBIL esas (spec 2026-10-24 §8): bildirilen liste ve miktar dusulur; source null ise Vetly kurali. */
+    private int deduct(PendingStockDeduction p, BigDecimal quantity, StockSource source, DeductionSettlement via, UUID staffId, Instant now) {
         if (p.getStatus() != PendingDeductionStatus.PENDING
-            || !repository.claimForSettlement(p.getId(), quantity, via, staffId, now)) {
+            || !repository.claimForSettlement(p.getId(), quantity, source, via, staffId, now)) {
             return 0;
         }
-        p.settle(quantity, via, staffId, now);
-        movements.execute(p.getInventoryItemId(), StockMovementType.OUT, quantity, p.getReferenceType(), p.getReferenceId());
+        p.settle(quantity, source, via, staffId, now);
+        movements.consume(p.getInventoryItemId(), quantity, source, p.getReferenceType(), p.getReferenceId());
         return 1;
     }
 
@@ -118,7 +120,8 @@ public class PendingDeductionService {
         Optional<InventoryItem> item = items.findById(p.getInventoryItemId());
         return new PendingDeductionLine(p.getId(), p.getInventoryItemId(),
             item.map(InventoryItem::getName).orElse("—"), item.map(InventoryItem::getTarbilProductName).orElse(null),
-            item.map(InventoryItem::getLotNumber).orElse(null), p.getQuantity(), p.getStatus(), p.getSettledQuantity());
+            item.map(InventoryItem::getLotNumber).orElse(null), p.getQuantity(), p.getStatus(), p.getSettledQuantity(),
+            item.map(i -> i.getUnit().name()).orElse("ADET"), item.map(InventoryItem::getOpenedQuantity).orElse(BigDecimal.ZERO));
     }
 
     /** Bosluksuz, i/ı/İ -> I, buyuk harf (yerel ayarsiz): Vetly'de "ki7", TARBIL'de "KI7" ayni seri. */

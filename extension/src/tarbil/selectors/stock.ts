@@ -26,6 +26,9 @@ export const VACCINE_STOCK_POPUP = {
   serial: '_UcVaccineStockSearch_txtSerialNo',
   search: '_UcVaccineStockSearch_btnSearch',
   grid: '_UcVaccineStockSearch_radGridStock_ctl00',
+  /** "Parça Stok" radyosu (değer 2) ve ayrı listesi (2026-10-24 canlı). */
+  partStockRadio: '_UcVaccineStockSearch_rbtnStockType_1',
+  partGrid: '_UcVaccineStockSearch_radGridPieceStock_ctl00',
 } as const;
 
 /** hbsapp ilac recetesi stok penceresi (UcPharmacyStockSearchForReceiptModalPage.aspx; 2026-10-10 canli). "Sec" pencereyi kapatir. */
@@ -33,4 +36,7 @@ export const MEDICINE_STOCK_POPUP = {
   serial: '_UcPharmacyStockSearchForReceipt_txtSerialNumber',
   search: '_UcPharmacyStockSearchForReceipt_btnSearch',
   grid: '_UcPharmacyStockSearchForReceipt_radGridStock_ctl00',
+  /** "Açık Stok" radyosu ve listesi (2026-10-24 canlı): son kolon "Açık Stok Miktarı", Seç bağlantısı SelectlinkButton2. */
+  openStockRadio: '_UcPharmacyStockSearchForReceipt_rbtnStockType_1',
+  openGrid: '_UcPharmacyStockSearchForReceipt_radGridOpenStock_ctl00',
 } as const;

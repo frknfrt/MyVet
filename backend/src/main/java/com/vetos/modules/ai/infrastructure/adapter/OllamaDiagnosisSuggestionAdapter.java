@@ -1,5 +1,6 @@
 package com.vetos.modules.ai.infrastructure.adapter;
 
+import com.vetos.modules.ai.domain.PatientHistoryPrompt;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vetos.modules.ai.domain.DiagnosisSuggestionDraft;
@@ -18,7 +19,6 @@ import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Lokal Ollama uzerinden tani destegi uretimi -- OllamaTreatmentRecommendationAdapter
@@ -38,7 +38,8 @@ class OllamaDiagnosisSuggestionAdapter implements DiagnosisSuggestionPort {
         Objective (fizik muayene bulgulari), varsa vital bulgular, fiziksel muayene ozeti ve gecmis muayene \
         kayitlari verilecek. Bu bilgilere dayanarak olasi tani(lar) veya ayirici tani listesi oner. \
         KESIN TANI KOYMA -- bu yalnizca hekimin degerlendirmesine yardimci bir on-oneridir, nihai karar \
-        her zaman hekime aittir. Yanitin sade bir paragraf/madde listesi olsun, JSON veya markdown kullanma.""";
+        her zaman hekime aittir. Yanitin sade bir paragraf/madde listesi olsun, JSON veya markdown kullanma."""
+        + PatientHistoryPrompt.INSTRUCTION + PatientHistoryPrompt.CONCISE;
 
     private final String baseUrl;
     private final String model;
@@ -81,7 +82,8 @@ class OllamaDiagnosisSuggestionAdapter implements DiagnosisSuggestionPort {
             "model", model,
             "system", SYSTEM_PROMPT,
             "prompt", prompt,
-            "stream", false
+            "stream", false,
+            "options", OllamaOptions.wideContext()
         );
         String raw = restClient.post()
             .uri(baseUrl + "/api/generate")
@@ -101,14 +103,7 @@ class OllamaDiagnosisSuggestionAdapter implements DiagnosisSuggestionPort {
         sb.append("Objective: ").append(blankToNone(input.objective())).append("\n");
         sb.append("Vital bulgular: ").append(blankToNone(input.vitalsSummary())).append("\n");
         sb.append("Fiziksel muayene ozeti: ").append(blankToNone(input.physicalExamSummary())).append("\n\n");
-        if (input.history().isEmpty()) {
-            sb.append("Gecmis muayene kaydi yok.");
-        } else {
-            sb.append("Gecmis muayeneler (en yeniden eskiye):\n");
-            sb.append(input.history().stream()
-                .map(h -> "- " + h.date() + " | Degerlendirme: " + h.assessment() + " | Plan: " + h.plan())
-                .collect(Collectors.joining("\n")));
-        }
+        sb.append(input.patientHistory() == null || input.patientHistory().isBlank() ? "Hasta gecmisi yok." : input.patientHistory());
         return sb.toString();
     }
 

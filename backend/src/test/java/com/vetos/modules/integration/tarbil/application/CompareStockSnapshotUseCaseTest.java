@@ -44,8 +44,8 @@ class CompareStockSnapshotUseCaseTest {
     void should_countNewDifferentAndMatchedProducts_againstTheStaffBranchStock() {
         when(staffUserLookupPort.findSummaryById(staffId)).thenReturn(new StaffSummary(staffId, "Dr", StaffRole.VET, branchId));
         when(stockSyncPort.listForBranch(branchId)).thenReturn(List.of(
-            new InventoryStockView(UUID.randomUUID(), "Rabisin", "R9", null, 4, null),
-            new InventoryStockView(UUID.randomUUID(), "Drontal", "D1", null, 8, null)));
+            new InventoryStockView(UUID.randomUUID(), "Rabisin", "R9", null, 4, null, java.math.BigDecimal.ZERO, "ADET"),
+            new InventoryStockView(UUID.randomUUID(), "Drontal", "D1", null, 8, null, java.math.BigDecimal.ZERO, "ADET")));
 
         StockComparison c = useCase().execute(tenantId, staffId, TarbilStockSystem.VETILAC_MEDICINE, List.of(
             line("Biocan R", "B1", 3),      // Vetly'de yok

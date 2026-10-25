@@ -36,13 +36,20 @@ class GenerateTreatmentRecommendationUseCaseTest {
     @Mock private TreatmentRecommendationPort treatmentRecommendationPort;
     @Mock private RecordAiJobUseCase recordAiJobUseCase;
     @Mock private UsageQuotaPort quota;
+    @Mock private PatientHistoryAssembler historyAssembler;
+
+    private static final PatientHistory HISTORY = new PatientHistory(java.time.LocalDate.of(2026, 10, 1), null, null,
+        new PatientHistory.Section<>(List.of(), false, false), new PatientHistory.Section<>(List.of(), false, false),
+        new PatientHistory.Section<>(List.of(), false, false), new PatientHistory.Section<>(List.of(), false, false),
+        new PatientHistory.Section<>(List.of(), false, false), null);
 
     private GenerateTreatmentRecommendationUseCase useCase;
 
     @BeforeEach
     void setUp() {
+        lenient().when(historyAssembler.assemble(any())).thenReturn(HISTORY);
         useCase = new GenerateTreatmentRecommendationUseCase(
-            encounterLookupPort, treatmentRecommendationPort, recordAiJobUseCase, "ollama", quota, new AiCallGate(BulkheadRegistry.of(BulkheadConfig.custom().maxConcurrentCalls(4).build()), new TenantRateLimiter(new RateLimitProperties(600, 10, 2000)))
+            encounterLookupPort, treatmentRecommendationPort, recordAiJobUseCase, "ollama", quota, historyAssembler, new AiCallGate(BulkheadRegistry.of(BulkheadConfig.custom().maxConcurrentCalls(4).build()), new TenantRateLimiter(new RateLimitProperties(600, 10, 2000)))
         );
     }
 
@@ -55,9 +62,9 @@ class GenerateTreatmentRecommendationUseCaseTest {
         EncounterClinicalContext context = new EncounterClinicalContext(
             encounterId, UUID.randomUUID(), "Hafif gastrit supheli",
             "Kusma sikayeti", "Karin hassasiyeti", "Kilo: 5 kg", "",
-            List.of(new PastEncounterSummary(Instant.now(), "Gecmis degerlendirme", "Gecmis plan"))
+            List.of(new PastEncounterSummary(Instant.now(), "Gecmis degerlendirme", "Gecmis plan")), Instant.now(), null
         );
-        when(encounterLookupPort.findClinicalContext(encounterId, 5)).thenReturn(context);
+        when(encounterLookupPort.findClinicalContext(encounterId, 21)).thenReturn(context);
         TreatmentRecommendationDraft draft = new TreatmentRecommendationDraft("Diyet degisikligi onerilir", true, "llama3.1:8b");
         when(treatmentRecommendationPort.generate(any())).thenReturn(draft);
         when(recordAiJobUseCase.execute(any())).thenReturn(aiJobId);
@@ -86,9 +93,9 @@ class GenerateTreatmentRecommendationUseCaseTest {
     void should_throwAssessmentRequired_when_assessmentIsBlank() {
         UUID encounterId = UUID.randomUUID();
         EncounterClinicalContext context = new EncounterClinicalContext(
-            encounterId, UUID.randomUUID(), "   ", "", "", "", "", List.of()
+            encounterId, UUID.randomUUID(), "   ", "", "", "", "", List.of(), Instant.now(), null
         );
-        when(encounterLookupPort.findClinicalContext(encounterId, 5)).thenReturn(context);
+        when(encounterLookupPort.findClinicalContext(encounterId, 21)).thenReturn(context);
 
         assertThatThrownBy(() -> useCase.execute(
             new GenerateTreatmentRecommendationCommand(UUID.randomUUID(), encounterId, UUID.randomUUID())
@@ -101,9 +108,9 @@ class GenerateTreatmentRecommendationUseCaseTest {
     private UUID stubContext() {
         UUID encounterId = UUID.randomUUID();
         EncounterClinicalContext context = new EncounterClinicalContext(
-            encounterId, UUID.randomUUID(), "Gastrit", "", "", "", "", List.of()
+            encounterId, UUID.randomUUID(), "Gastrit", "", "", "", "", List.of(), Instant.now(), null
         );
-        when(encounterLookupPort.findClinicalContext(encounterId, 5)).thenReturn(context);
+        when(encounterLookupPort.findClinicalContext(encounterId, 21)).thenReturn(context);
         return encounterId;
     }
 
@@ -167,12 +174,34 @@ class GenerateTreatmentRecommendationUseCaseTest {
         when(fullGate.run(any(), any())).thenThrow(new AiBusyServiceUnavailableException());
         UUID encounterId = stubContext();
         GenerateTreatmentRecommendationUseCase gated = new GenerateTreatmentRecommendationUseCase(
-            encounterLookupPort, treatmentRecommendationPort, recordAiJobUseCase, "ollama", quota, fullGate
+            encounterLookupPort, treatmentRecommendationPort, recordAiJobUseCase, "ollama", quota, historyAssembler, fullGate
         );
 
         assertThatThrownBy(() -> gated.execute(new GenerateTreatmentRecommendationCommand(UUID.randomUUID(), encounterId, UUID.randomUUID()))).isInstanceOf(AiBusyServiceUnavailableException.class);
 
         verifyNoInteractions(quota);
         verifyNoInteractions(treatmentRecommendationPort, recordAiJobUseCase);
+    }
+
+    private UUID validEncounterForHistory() {
+        UUID encounterId = UUID.randomUUID();
+        when(encounterLookupPort.findClinicalContext(encounterId, 21)).thenReturn(new EncounterClinicalContext(
+            encounterId, UUID.randomUUID(), "Gastrit", "", "", "", "", List.of(), Instant.now(), null));
+        return encounterId;
+    }
+
+    private GenerateTreatmentRecommendationCommand command(UUID encounterId) {
+        return new GenerateTreatmentRecommendationCommand(UUID.randomUUID(), encounterId, UUID.randomUUID());
+    }
+
+    @Test
+    void passesFormattedHistoryToPort() {
+        UUID encounterId = validEncounterForHistory();
+        when(treatmentRecommendationPort.generate(any())).thenReturn(new TreatmentRecommendationDraft("x", true, "m"));
+        useCase.execute(command(encounterId));
+        ArgumentCaptor<TreatmentRecommendationInput> captor = ArgumentCaptor.forClass(TreatmentRecommendationInput.class);
+        verify(treatmentRecommendationPort).generate(captor.capture());
+        assertThat(captor.getValue().patientHistory()).isEqualTo(PatientHistoryFormatter.format(HISTORY));
+        verify(historyAssembler).assemble(any());
     }
 }

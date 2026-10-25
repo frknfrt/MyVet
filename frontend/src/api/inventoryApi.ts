@@ -1,4 +1,5 @@
 import { apiClient } from './client';
+import type { StockUnit } from '../pages/inventory/stockFormat';
 
 export type StockMovementType = 'IN' | 'OUT' | 'ADJUSTMENT';
 export type StockReferenceType = 'ENCOUNTER' | 'PURCHASE_ORDER' | 'MANUAL';
@@ -16,6 +17,21 @@ export interface InventoryItem {
   unitCost: number | null;
   /** TARBİL ürün adı; doluysa kalem TARBİL düşümünü bekler (spec 2026-10-09). */
   tarbilProductName: string | null;
+  /** Kullanım birimi (spec 2026-10-24); quantityOnHand yalnız kapalı adet, openedQuantity açık paketlerde kalan. */
+  unit: StockUnit;
+  packageSize: number | null;
+  openedQuantity: number;
+  /** AUTO: TARBİL bilgisinden tahmin; MANUAL: elle ayarlandı. */
+  unitSource: 'AUTO' | 'MANUAL';
+}
+
+export interface UpdateInventoryItemPayload {
+  name: string;
+  category: string | null;
+  reorderThreshold: number;
+  unitCost: number | null;
+  unit?: StockUnit;
+  packageSize?: number | null;
 }
 
 export type PendingDeductionReference = 'ENCOUNTER' | 'VACCINATION' | 'PRESCRIPTION';
@@ -29,6 +45,7 @@ export interface PendingDeduction {
   referenceType: PendingDeductionReference;
   referenceId: string;
   createdAt: string;
+  unit: StockUnit;
 }
 
 export interface CreateInventoryItemPayload {
@@ -46,6 +63,8 @@ export interface StockMovement {
   id: string;
   movementType: StockMovementType;
   quantity: number;
+  /** Açık miktar değişimi (ml/g/flakon); adet kalemde ve eski hareketlerde null. */
+  openedDelta?: number | null;
   referenceType: StockReferenceType;
   referenceId: string | null;
   createdAt: string;
@@ -54,6 +73,7 @@ export interface StockMovement {
 export const inventoryApi = {
   list: () => apiClient.get<InventoryItem[]>('/api/v1/inventory-items'),
   create: (payload: CreateInventoryItemPayload) => apiClient.postForId('/api/v1/inventory-items', payload),
+  update: (id: string, payload: UpdateInventoryItemPayload) => apiClient.put<void>(`/api/v1/inventory-items/${id}`, payload),
   recordMovement: (id: string, payload: { movementType: StockMovementType; quantity: number }) =>
     apiClient.post<void>(`/api/v1/inventory-items/${id}/movements`, payload),
   listMovements: (id: string) => apiClient.get<StockMovement[]>(`/api/v1/inventory-items/${id}/movements`),

@@ -8,6 +8,7 @@ import com.vetos.modules.inventory.domain.StockMovementRepository;
 import com.vetos.modules.inventory.domain.StockMovementType;
 import com.vetos.modules.inventory.domain.StockReferenceType;
 import com.vetos.modules.inventory.domain.TarbilStockLink;
+import com.vetos.modules.inventory.domain.StockUnit;
 import com.vetos.platform.tenancy.TenantContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,6 +18,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
@@ -32,6 +34,7 @@ class TarbilStockSyncAdapterTest {
 
     @Mock private InventoryItemRepository items;
     @Mock private StockMovementRepository movements;
+    @Mock private com.vetos.modules.inventory.domain.PendingStockDeductionRepository pending;
 
     private final UUID tenantId = UUID.randomUUID();
     private final UUID branchId = UUID.randomUUID();
@@ -48,7 +51,7 @@ class TarbilStockSyncAdapterTest {
     }
 
     private TarbilStockSyncAdapter adapter() {
-        return new TarbilStockSyncAdapter(items, movements);
+        return new TarbilStockSyncAdapter(items, movements, pending);
     }
 
     @Test
@@ -56,7 +59,7 @@ class TarbilStockSyncAdapterTest {
         when(items.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         adapter().createFromTarbil(branchId,
-            new NewTarbilStockItem("VETILAC_MEDICINE", "Test İlaç", "Kutu", "İlaç", "L-1", LocalDate.of(2027, 1, 31), 5), ref);
+            new NewTarbilStockItem("VETILAC_MEDICINE", "Test İlaç", "Kutu", "İlaç", "L-1", LocalDate.of(2027, 1, 31), 5, null, null), ref);
 
         ArgumentCaptor<InventoryItem> item = ArgumentCaptor.forClass(InventoryItem.class);
         verify(items).save(item.capture());
@@ -68,7 +71,7 @@ class TarbilStockSyncAdapterTest {
         assertThat(item.getValue().getTarbilSystem()).isEqualTo("VETILAC_MEDICINE");
         assertThat(item.getValue().getTarbilProductName()).isEqualTo("Test İlaç");
         assertThat(item.getValue().getTarbilPresentation()).isEqualTo("Kutu");
-        assertThat(item.getValue().getUnit()).isEqualTo("ADET");
+        assertThat(item.getValue().getUnit()).isEqualTo(com.vetos.modules.inventory.domain.StockUnit.ADET);
         ArgumentCaptor<StockMovement> movement = ArgumentCaptor.forClass(StockMovement.class);
         verify(movements).save(movement.capture());
         assertThat(movement.getValue().getMovementType()).isEqualTo(StockMovementType.IN);
@@ -83,7 +86,7 @@ class TarbilStockSyncAdapterTest {
         InventoryItem item = InventoryItem.create(tenantId, branchId, "Aşı", "Aşı", null, 8, 0, null, "L-2", null);
         when(items.findById(id)).thenReturn(Optional.of(item));
 
-        adapter().syncFromTarbil(id, 5, new TarbilStockLink("HBSAPP_VACCINE", "Aşı X", "Flakon"), ref);
+        adapter().syncFromTarbil(id, 5, null, null, new TarbilStockLink("HBSAPP_VACCINE", "Aşı X", "Flakon"), ref);
 
         assertThat(item.getQuantityOnHand()).isEqualTo(5);
         assertThat(item.getTarbilProductName()).isEqualTo("Aşı X");
@@ -100,9 +103,116 @@ class TarbilStockSyncAdapterTest {
         InventoryItem item = InventoryItem.create(tenantId, branchId, "Aşı", "Aşı", null, 5, 0, null, "L-3", null);
         when(items.findById(id)).thenReturn(Optional.of(item));
 
-        adapter().syncFromTarbil(id, 5, new TarbilStockLink("HBSAPP_VACCINE", "Aşı Y", null), ref);
+        adapter().syncFromTarbil(id, 5, null, null, new TarbilStockLink("HBSAPP_VACCINE", "Aşı Y", null), ref);
 
         verify(movements, never()).save(any());
         assertThat(item.getTarbilSystem()).isEqualTo("HBSAPP_VACCINE");
+    }
+
+    @Test
+    void createFromTarbil_setsGuessedUnitAndOpened() {
+        when(items.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        adapter().createFromTarbil(branchId, new NewTarbilStockItem("VETILAC_MEDICINE", "CLAVON = Clavon",
+            "50 ml'lik renksiz cam şişeler", "İlaç", "63016", LocalDate.of(2027, 4, 27), 0, new BigDecimal("49"), null), ref);
+
+        ArgumentCaptor<InventoryItem> item = ArgumentCaptor.forClass(InventoryItem.class);
+        verify(items).save(item.capture());
+        assertThat(item.getValue().getUnit()).isEqualTo(StockUnit.ML);
+        assertThat(item.getValue().getPackageSize()).isEqualByComparingTo("50");
+        assertThat(item.getValue().getQuantityOnHand()).isZero();
+        assertThat(item.getValue().getOpenedQuantity()).isEqualByComparingTo("49");
+        assertThat(item.getValue().isUnitManual()).isFalse();
+    }
+
+    @Test
+    void manualUnit_isNotOverwrittenBySync() {
+        UUID id = UUID.randomUUID();
+        InventoryItem item = InventoryItem.create(tenantId, branchId, "Clavon", "İlaç", null, 1, 0, null, "63016", null);
+        item.setStockUnit(StockUnit.ADET, null, true);
+        when(items.findById(id)).thenReturn(Optional.of(item));
+
+        adapter().syncFromTarbil(id, 1, BigDecimal.ZERO, null,
+            new TarbilStockLink("VETILAC_MEDICINE", "CLAVON = Clavon", "50 ml'lik renksiz cam şişeler"), ref);
+
+        assertThat(item.getUnit()).isEqualTo(StockUnit.ADET);
+        assertThat(item.isUnitManual()).isTrue();
+    }
+
+    @Test
+    void syncFromTarbil_writesMovementWithOpenedDelta() {
+        UUID id = UUID.randomUUID();
+        InventoryItem item = InventoryItem.create(tenantId, branchId, "Clavon", "İlaç", null, 1, 0, null, "63016", null);
+        when(items.findById(id)).thenReturn(Optional.of(item));
+
+        adapter().syncFromTarbil(id, 0, new BigDecimal("49"), null,
+            new TarbilStockLink("VETILAC_MEDICINE", "CLAVON = Clavon", "50 ml'lik renksiz cam şişeler"), ref);
+
+        assertThat(item.getUnit()).isEqualTo(StockUnit.ML);
+        assertThat(item.getQuantityOnHand()).isZero();
+        assertThat(item.getOpenedQuantity()).isEqualByComparingTo("49");
+        ArgumentCaptor<StockMovement> movement = ArgumentCaptor.forClass(StockMovement.class);
+        verify(movements).save(movement.capture());
+        assertThat(movement.getValue().getMovementType()).isEqualTo(StockMovementType.OUT);
+        assertThat(movement.getValue().getQuantity()).isEqualTo(1);
+        assertThat(movement.getValue().getOpenedDelta()).isEqualByComparingTo("49");
+        assertThat(movement.getValue().getReferenceType()).isEqualTo(StockReferenceType.TARBIL_SYNC);
+    }
+
+    @Test
+    void vaccineDoses_setPackageSize() {
+        UUID id = UUID.randomUUID();
+        InventoryItem item = InventoryItem.create(tenantId, branchId, "Biocan DHPPI", "Aşı", null, 1, 0, null, "145932", null);
+        when(items.findById(id)).thenReturn(Optional.of(item));
+
+        adapter().syncFromTarbil(id, 1, null, 20,
+            new TarbilStockLink("HBSAPP_VACCINE", "Biocan DHPPI", "1 ml flakonda sulandırıcısı ile birlikte, Kutusunda 20 adet flakon"), ref);
+
+        assertThat(item.getUnit()).isEqualTo(StockUnit.FLAKON);
+        assertThat(item.getPackageSize()).isEqualByComparingTo("20");
+        verify(movements, never()).save(any());
+    }
+
+    // Değerlendirme I4: eşleşen (seçilemeyen) ürüne de birim tahmini.
+    private InventoryItem tenidur() {
+        InventoryItem i = InventoryItem.create(tenantId, branchId, "Tenidur", "İlaç", null, 2, 0, null, "251227", null);
+        when(items.findById(i.getId())).thenReturn(Optional.of(i));
+        return i;
+    }
+
+    @Test
+    void refreshUnitGuess_setsTheGuessedUnitOnAnAutoItem_withoutAMovement() {
+        InventoryItem i = tenidur();
+
+        adapter().refreshUnitGuess(i.getId(), "VETILAC_MEDICINE", "100 ml'lik cam şişe", null);
+
+        assertThat(i.getUnit()).isEqualTo(StockUnit.ML);
+        assertThat(i.getPackageSize()).isEqualByComparingTo("100");
+        assertThat(i.isUnitManual()).isFalse();
+        assertThat(i.getQuantityOnHand()).isEqualTo(2);
+        verify(items).save(i);
+        verify(movements, never()).save(any());
+    }
+
+    @Test
+    void refreshUnitGuess_leavesAManualUnitAlone() {
+        InventoryItem i = tenidur();
+        i.setStockUnit(StockUnit.ADET, null, true);
+
+        adapter().refreshUnitGuess(i.getId(), "VETILAC_MEDICINE", "100 ml'lik cam şişe", null);
+
+        assertThat(i.getUnit()).isEqualTo(StockUnit.ADET);
+        verify(items, never()).save(any());
+    }
+
+    @Test
+    void refreshUnitGuess_waitsWhileDeductionsArePending() {
+        InventoryItem i = tenidur();
+        when(pending.existsPendingForItem(i.getId())).thenReturn(true);
+
+        adapter().refreshUnitGuess(i.getId(), "VETILAC_MEDICINE", "100 ml'lik cam şişe", null);
+
+        assertThat(i.getUnit()).isEqualTo(StockUnit.ADET);
+        verify(items, never()).save(any());
     }
 }

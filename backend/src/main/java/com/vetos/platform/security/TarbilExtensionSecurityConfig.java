@@ -35,7 +35,7 @@ public class TarbilExtensionSecurityConfig {
     public SecurityFilterChain tarbilExtensionSecurityFilterChain(
         HttpSecurity http,
         TenantRateLimiter tenantRateLimiter,
-        @Value("${vetly.extension.min-version:0.1.0}") String minVersion
+        @Value("${vetly.extension.min-version:0.3.0}") String minVersion
     ) throws Exception {
         http
             .securityMatcher("/api/v1/tarbil-extension/**")

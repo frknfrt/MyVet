@@ -156,7 +156,7 @@ describe('prescriptionFlow', () => {
     mutate();
 
     await vi.waitFor(async () => expect((await flow.get())?.step).toBe('productReady'));
-    expect(calls.find((c) => c.op === 'setStockQuantities')?.args).toEqual({ quantity: 1 });
+    expect(calls.find((c) => c.op === 'setStockQuantities')?.args).toEqual({ quantity: 1, amount: 1 });
     expect(text()).toContain('Kaydet');
   });
 
@@ -217,8 +217,8 @@ describe('prescriptionFlow', () => {
     expect(sent.find((r) => r.type === 'MARK_SUBMITTED')).toEqual({
       type: 'MARK_SUBMITTED', id: 's1', method: 'AUTO', tarbilReference: null,
       lines: [
-        { productName: 'Advantage % 10', serialNumber: 'KV04Z81', quantity: 1 },
-        { productName: 'SYNULOX', serialNumber: 'S1', quantity: 2 },
+        { productName: 'Advantage % 10', serialNumber: 'KV04Z81', quantity: 1, amount: 1, source: 'WHOLE' },
+        { productName: 'SYNULOX', serialNumber: 'S1', quantity: 2, amount: 2, source: 'WHOLE' },
       ],
     });
     await vi.waitFor(async () => expect((await flow.get())?.step).toBe('done'));

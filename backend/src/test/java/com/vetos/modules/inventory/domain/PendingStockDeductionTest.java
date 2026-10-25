@@ -12,18 +12,18 @@ class PendingStockDeductionTest {
     private final UUID staff = UUID.randomUUID();
 
     private PendingStockDeduction pending() {
-        return PendingStockDeduction.open(UUID.randomUUID(), UUID.randomUUID(), 2, StockReferenceType.ENCOUNTER, UUID.randomUUID());
+        return PendingStockDeduction.open(UUID.randomUUID(), UUID.randomUUID(), java.math.BigDecimal.valueOf(2), StockReferenceType.ENCOUNTER, UUID.randomUUID());
     }
 
     @Test
     void settlesOnceWithTheGivenQuantity() {
         PendingStockDeduction p = pending();
-        assertThat(p.settle(3, DeductionSettlement.TARBIL, staff, Instant.EPOCH)).isTrue();
+        assertThat(p.settle(java.math.BigDecimal.valueOf(3), null, DeductionSettlement.TARBIL, staff, Instant.EPOCH)).isTrue();
         assertThat(p.getStatus()).isEqualTo(PendingDeductionStatus.DEDUCTED);
-        assertThat(p.getSettledQuantity()).isEqualTo(3);
+        assertThat(p.getSettledQuantity()).isEqualByComparingTo("3");
         assertThat(p.getSettledVia()).isEqualTo(DeductionSettlement.TARBIL);
-        assertThat(p.settle(1, DeductionSettlement.VETLY_ONLY, staff, Instant.EPOCH)).isFalse();
-        assertThat(p.getSettledQuantity()).isEqualTo(3);
+        assertThat(p.settle(java.math.BigDecimal.valueOf(1), null, DeductionSettlement.VETLY_ONLY, staff, Instant.EPOCH)).isFalse();
+        assertThat(p.getSettledQuantity()).isEqualByComparingTo("3");
     }
 
     @Test
@@ -31,10 +31,10 @@ class PendingStockDeductionTest {
         PendingStockDeduction p = pending();
         assertThat(p.cancel()).isTrue();
         assertThat(p.getStatus()).isEqualTo(PendingDeductionStatus.CANCELLED);
-        assertThat(p.settle(2, DeductionSettlement.TARBIL, staff, Instant.EPOCH)).isFalse();
+        assertThat(p.settle(java.math.BigDecimal.valueOf(2), null, DeductionSettlement.TARBIL, staff, Instant.EPOCH)).isFalse();
 
         PendingStockDeduction d = pending();
-        d.settle(2, DeductionSettlement.TARBIL, staff, Instant.EPOCH);
+        d.settle(java.math.BigDecimal.valueOf(2), null, DeductionSettlement.TARBIL, staff, Instant.EPOCH);
         assertThat(d.cancel()).isFalse();
         assertThat(d.getStatus()).isEqualTo(PendingDeductionStatus.DEDUCTED);
     }

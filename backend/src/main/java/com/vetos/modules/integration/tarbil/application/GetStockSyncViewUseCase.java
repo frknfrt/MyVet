@@ -7,12 +7,16 @@ import com.vetos.modules.integration.tarbil.domain.TarbilStockSnapshotLine;
 import com.vetos.modules.integration.tarbil.domain.TarbilStockSnapshotRepository;
 import com.vetos.modules.integration.tarbil.domain.TarbilStockSystem;
 import com.vetos.modules.inventory.domain.InventoryStockView;
+import com.vetos.modules.inventory.domain.PresentationUnitGuesser;
 import com.vetos.modules.inventory.domain.TarbilStockSyncPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -33,14 +37,28 @@ public class GetStockSyncViewUseCase {
         }
         List<InventoryStockView> stock = stockSyncPort.listForBranch(branchId);
         List<TarbilStockSnapshotLine> rows = repository.findLines(snapshot.get().getId());
-        Map<String, Integer> totals = StockSyncMatcher.totals(rows);
+        Map<String, StockSyncMatcher.Target> targets = StockSyncMatcher.targets(system, snapshot.get().isPartStockRead(), rows);
         Map<UUID, Integer> pending = pendingWork.countByItem(tenantId);
-        List<StockSyncLineView> lines = rows.stream().map(l -> {
-            StockSyncMatcher.Match m = StockSyncMatcher.match(l, stock, totals.get(StockSyncMatcher.key(l)));
+        // Spec 2026-10-24: urun+seri basina tek satir (butun stok + parca stok ayni satirda); lineId anahtarin ilk satiri.
+        Map<String, TarbilStockSnapshotLine> first = new LinkedHashMap<>();
+        Set<String> hasPart = new HashSet<>();
+        for (TarbilStockSnapshotLine l : rows) {
+            first.putIfAbsent(StockSyncMatcher.key(l), l);
+            if (l.isPartStock()) {
+                hasPart.add(StockSyncMatcher.key(l));
+            }
+        }
+        List<StockSyncLineView> lines = first.entrySet().stream().map(e -> {
+            TarbilStockSnapshotLine l = e.getValue();
+            StockSyncMatcher.Target t = targets.get(e.getKey());
+            StockSyncMatcher.Match m = StockSyncMatcher.match(l, stock, t);
+            String unit = m.item() != null ? m.item().unit()
+                : PresentationUnitGuesser.guess(system.name(), l.getPresentation(), t.dosesPerPackage()).unit().name();
             return new StockSyncLineView(l.getId(), l.getProductName(), l.getPresentation(), l.getLotNumber(), l.getExpiryDate(),
-                l.getQuantity(), l.getOpenedQuantity(), m.status(),
-                m.item() == null ? null : m.item().id(), m.item() == null ? null : m.item().quantityOnHand(), l.isPartStock(),
-                pendingCount(l, m, pending));
+                t.closed(), t.opened(), m.status(),
+                m.item() == null ? null : m.item().id(), m.item() == null ? null : m.item().quantityOnHand(),
+                m.item() == null ? null : m.item().openedQuantity(), unit,
+                hasPart.contains(e.getKey()), pendingCount(l, m, pending));
         }).toList();
         return new StockSyncView(snapshot.get().getId(), system, snapshot.get().getTakenAt(), lines);
     }

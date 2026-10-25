@@ -1,6 +1,6 @@
 package com.vetos.modules.ai.infrastructure.adapter;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.vetos.modules.ai.domain.PatientHistoryPrompt;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vetos.modules.ai.domain.DiagnosisSuggestionDraft;
 import com.vetos.modules.ai.domain.DiagnosisSuggestionInput;
@@ -13,14 +13,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
-import java.util.List;
 import java.time.Duration;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Anthropic Messages API uzerinden tani destegi uretimi -- ClaudeTreatmentRecommendationAdapter
@@ -46,9 +42,8 @@ class ClaudeDiagnosisSuggestionAdapter implements DiagnosisSuggestionPort {
         Objective (fizik muayene bulgulari), varsa vital bulgular, fiziksel muayene ozeti ve gecmis muayene \
         kayitlari verilecek. Bu bilgilere dayanarak olasi tani(lar) veya ayirici tani listesi oner. \
         KESIN TANI KOYMA -- bu yalnizca hekimin degerlendirmesine yardimci bir on-oneridir, nihai karar \
-        her zaman hekime aittir. Yanitin sade bir paragraf/madde listesi olsun, JSON veya markdown kullanma.""";
-
-    private static final String ANTHROPIC_VERSION = "2023-06-01";
+        her zaman hekime aittir. Yanitin sade bir paragraf/madde listesi olsun, JSON veya markdown kullanma."""
+        + PatientHistoryPrompt.INSTRUCTION + PatientHistoryPrompt.CONCISE;
 
     private final String apiKey;
     private final String model;
@@ -94,41 +89,8 @@ class ClaudeDiagnosisSuggestionAdapter implements DiagnosisSuggestionPort {
     }
 
     private DiagnosisSuggestionDraft generateViaClaude(DiagnosisSuggestionInput input) throws Exception {
-        String prompt = buildPrompt(input);
-        Map<String, Object> body = Map.of(
-            "model", model,
-            "max_tokens", 1024,
-            "system", SYSTEM_PROMPT,
-            "messages", List.of(Map.of("role", "user", "content", prompt))
-        );
-        String raw = restClient.post()
-            .uri(apiUrl)
-            .header("x-api-key", apiKey)
-            .header("anthropic-version", ANTHROPIC_VERSION)
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(body)
-            .retrieve()
-            .body(String.class);
-
-        JsonNode root = objectMapper.readTree(raw);
-        String suggestion = extractText(root);
-        return new DiagnosisSuggestionDraft(suggestion, true, model);
-    }
-
-    /**
-     * content[] her zaman ilk elemanda metin bloğu ICERMEZ -- extended thinking
-     * acik oldugunda model once bir "thinking" blogu (type=thinking, "text" alani
-     * yok), ardindan asil "text" blogunu dondurur. Bu yuzden content[0]'i sabit
-     * varsaymak yerine ilk type=="text" blogunu ariyoruz (2026-09-09, ayni bug
-     * ClaudeTreatmentRecommendationAdapter'da bulundu -- bkz. implementation-plan.md).
-     */
-    private String extractText(JsonNode root) {
-        for (JsonNode block : root.path("content")) {
-            if ("text".equals(block.path("type").asText())) {
-                return block.path("text").asText("").trim();
-            }
-        }
-        return "";
+        String suggestion = ClaudeTextCompletion.complete(restClient, objectMapper, apiUrl, apiKey, model, SYSTEM_PROMPT, buildPrompt(input));
+        return new DiagnosisSuggestionDraft(suggestion.trim(), true, model);
     }
 
     private String buildPrompt(DiagnosisSuggestionInput input) {
@@ -137,14 +99,7 @@ class ClaudeDiagnosisSuggestionAdapter implements DiagnosisSuggestionPort {
         sb.append("Objective: ").append(blankToNone(input.objective())).append("\n");
         sb.append("Vital bulgular: ").append(blankToNone(input.vitalsSummary())).append("\n");
         sb.append("Fiziksel muayene ozeti: ").append(blankToNone(input.physicalExamSummary())).append("\n\n");
-        if (input.history().isEmpty()) {
-            sb.append("Gecmis muayene kaydi yok.");
-        } else {
-            sb.append("Gecmis muayeneler (en yeniden eskiye):\n");
-            sb.append(input.history().stream()
-                .map(h -> "- " + h.date() + " | Degerlendirme: " + h.assessment() + " | Plan: " + h.plan())
-                .collect(Collectors.joining("\n")));
-        }
+        sb.append(input.patientHistory() == null || input.patientHistory().isBlank() ? "Hasta gecmisi yok." : input.patientHistory());
         return sb.toString();
     }
 

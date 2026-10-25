@@ -53,7 +53,8 @@ public class InventoryItemsController {
     @PreAuthorize("hasAnyRole('TECHNICIAN', 'ADMIN')")
     public void update(@PathVariable UUID id, @RequestBody @Valid UpdateInventoryItemRequest request) {
         updateInventoryItemUseCase.execute(new UpdateInventoryItemCommand(
-            id, request.name(), request.category(), request.reorderThreshold(), request.unitCost()
+            id, request.name(), request.category(), request.reorderThreshold(), request.unitCost(),
+            request.unit(), request.packageSize()
         ));
     }
 

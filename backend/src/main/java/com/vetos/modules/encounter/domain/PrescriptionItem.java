@@ -50,14 +50,14 @@ public class PrescriptionItem {
     private UUID inventoryItemId;
 
     @Column(name = "stock_quantity")
-    private Integer stockQuantity;
+    private java.math.BigDecimal stockQuantity;
 
     public static PrescriptionItem add(UUID tenantId, UUID prescriptionId, UUID drugId, String dosage, String frequency, int durationDays, DrugRoute route) {
         return add(tenantId, prescriptionId, drugId, null, dosage, frequency, durationDays, route, null, null);
     }
 
     public static PrescriptionItem add(UUID tenantId, UUID prescriptionId, UUID drugId, String drugName, String dosage, String frequency,
-                                       int durationDays, DrugRoute route, UUID inventoryItemId, Integer stockQuantity) {
+                                       int durationDays, DrugRoute route, UUID inventoryItemId, java.math.BigDecimal stockQuantity) {
         PrescriptionItem item = new PrescriptionItem();
         item.tenantId = tenantId;
         item.prescriptionId = prescriptionId;

@@ -16,6 +16,7 @@ import { inventoryApi, InventoryItem } from '../../api/inventoryApi';
 import encounterStyles from './EncounterPage.module.css';
 import styles from './PrescriptionCard.module.css';
 import { StockGivePicker } from './StockGivePicker';
+import { isDecimalUnit, unitLabel } from '../inventory/stockFormat';
 import { TarbilDiseaseSelect } from './TarbilDiseaseSelect';
 
 interface PrescriptionCardProps {
@@ -107,6 +108,15 @@ export function PrescriptionCard({ encounterId, patientId, readOnly, onChanged }
 
   function stockName(id: string | null) {
     return stockItems.find((s) => s.id === id)?.name ?? 'Stok kalemi';
+  }
+
+  /** Spec 2026-10-24: ml/g ile kullanılan ürün ondalıklı miktarla verilir. */
+  function stockUnit(id: string | null | undefined) {
+    return stockItems.find((s) => s.id === id)?.unit ?? 'ADET';
+  }
+
+  function stockDecimal(id: string | null | undefined) {
+    return isDecimalUnit(stockUnit(id));
   }
 
   async function cancelPrescription(id: string) {
@@ -215,7 +225,7 @@ export function PrescriptionCard({ encounterId, patientId, readOnly, onChanged }
                 {item.inventoryItemId && (
                   <span className={styles.stockNote}>
                     {' '}
-                    · Stoktan: {stockName(item.inventoryItemId)} × {item.stockQuantity}
+                    · Stoktan: {stockName(item.inventoryItemId)} × {item.stockQuantity}{stockDecimal(item.inventoryItemId) ? ` ${unitLabel(stockUnit(item.inventoryItemId))}` : ''}
                   </span>
                 )}
               </div>
@@ -271,10 +281,11 @@ export function PrescriptionCard({ encounterId, patientId, readOnly, onChanged }
                       value={item.inventoryItemId ?? null}
                       onChange={(id, name) => updateItem(index, { inventoryItemId: id, drugName: name })}
                     />
-                    <FieldWrap label="Adet">
+                    <FieldWrap label={stockDecimal(item.inventoryItemId) ? `Miktar (${unitLabel(stockUnit(item.inventoryItemId))})` : 'Adet'}>
                       <Input
                         type="number"
-                        min={1}
+                        min={stockDecimal(item.inventoryItemId) ? 0.01 : 1}
+                        step={stockDecimal(item.inventoryItemId) ? '0.01' : '1'}
                         value={item.stockQuantity ?? 1}
                         onChange={(e) => updateItem(index, { stockQuantity: Number(e.target.value) })}
                         required

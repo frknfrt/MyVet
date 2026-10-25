@@ -26,6 +26,7 @@ const submission = {
       { itemName: 'Advantage', tarbilProductName: 'Advantage % 10', lotNumber: 'KV04Z81', quantity: 1 },
       { itemName: 'Synulox', tarbilProductName: 'SYNULOX', lotNumber: 'S1', quantity: 2 },
       { itemName: 'Ketofen', tarbilProductName: 'KETOFEN', lotNumber: 'ki7', quantity: 1 },
+      { itemName: 'Clavon', tarbilProductName: 'Clavon', lotNumber: '63016', quantity: 0, amount: 1.5, unit: 'ML', source: 'OPEN' },
     ],
   },
 } as Submission;
@@ -51,7 +52,7 @@ describe('runMedicineStockPopupFlow', () => {
     await runMedicineStockPopupFlow(deps);
 
     expect(calls.map((c) => c.op)).toEqual(['ready', 'searchMedicineSerial', 'selectStockRow']);
-    expect(calls[1].args).toEqual({ serial: 'S1' });
+    expect(calls[1].args).toEqual({ serial: 'S1', open: false });
     expect(calls[2].args).toEqual({ linkId: `${G}_ctl04_SelectlinkButton` });
   });
 
@@ -80,7 +81,21 @@ describe('runMedicineStockPopupFlow', () => {
 
     await runMedicineStockPopupFlow(deps);
 
-    expect(calls[1].args).toEqual({ serial: 'KI7' });
+    expect(calls[1].args).toEqual({ serial: 'KI7', open: false });
     expect(calls.map((c) => c.op)).toContain('selectStockRow');
+  });
+
+  it('searches the open-stock list when the line source is OPEN (spec 2026-10-24)', async () => {
+    const O = 'ctl00_ContentPlaceHolder1_ContentPlaceHolderBody_UcPharmacyStockSearchForReceipt_radGridOpenStock_ctl00';
+    document.body.innerHTML = `<table id="${O}"><thead><tr><th></th><th>Ürün Adı</th><th>Takdim Şekli</th><th>Seri Numarası</th>
+      <th>Son Kullanma Tarihi</th><th>Açık Stok Miktarı</th></tr></thead><tbody><tr id="${O}__0"><td><a id="${O}_ctl04_SelectlinkButton2">Seç</a></td>
+      <td>Clavon</td><td>50 ml</td><td>63016</td><td>27.04.2027</td><td>49,00</td></tr></tbody></table>`;
+    const { deps, calls } = await setup('PRESCRIPTION', 3);
+
+    await runMedicineStockPopupFlow(deps);
+
+    expect(calls.map((c) => c.op)).toEqual(['ready', 'searchMedicineSerial', 'selectStockRow']);
+    expect(calls[1].args).toEqual({ serial: '63016', open: true });
+    expect(calls[2].args).toEqual({ linkId: `${O}_ctl04_SelectlinkButton2` });
   });
 });

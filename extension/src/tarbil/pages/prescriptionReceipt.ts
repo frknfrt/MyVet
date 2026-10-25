@@ -223,7 +223,7 @@ export function createPrescriptionFlow(d: ReceiptDeps) {
       return;
     }
     try {
-      await d.bridge.call('setStockQuantities', { quantity: line.quantity });
+      await d.bridge.call('setStockQuantities', { quantity: line.quantity, amount: line.amount ?? line.quantity });
     } catch (e) {
       const message = `Adet yazılamadı (${code(e)}).`;
       await d.flow.update(s.id, { step: 'awaitingConfirm', message });

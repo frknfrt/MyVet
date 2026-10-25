@@ -12,4 +12,6 @@ public interface PatientLookupPort {
 
     /** Hasta yoksa (veya aktif kiracinin @TenantId filtresine takiliyorsa) bos doner -- firlatmaz. */
     Optional<PatientTarbilProfile> findTarbilProfile(UUID patientId);
+    /** AI önerisi için hasta kartı; hasta yoksa boş döner. */
+    Optional<PatientClinicalProfile> findClinicalProfile(UUID patientId);
 }

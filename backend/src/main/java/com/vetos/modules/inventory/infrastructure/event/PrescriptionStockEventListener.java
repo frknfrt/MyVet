@@ -40,7 +40,9 @@ class PrescriptionStockEventListener {
         for (PrescriptionIssuedEvent.StockItem stockItem : event.stockItems()) {
             // Bu kiracida (filtreli oturum), TARBIL'e bagli ve recetede yazilan adla ayni kalem (spec 2026-10-12).
             boolean valid = items.findById(stockItem.inventoryItemId())
-                .map(i -> i.getTarbilProductName() != null && i.getName().trim().equals(stockItem.name()))
+                .map(i -> i.getTarbilProductName() != null && i.getName().trim().equals(stockItem.name())
+                    // Adet ile kullanilan kalemde ondalik miktar olmaz (spec 2026-10-24); ml/g/flakonda olur.
+                    && (i.isOpenable() || stockItem.quantity().stripTrailingZeros().scale() <= 0))
                 .orElse(false);
             if (!valid) {
                 throw new InvalidPrescriptionStockItemException();

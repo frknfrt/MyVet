@@ -34,6 +34,12 @@ public class CompareStockSnapshotUseCase {
 
     @Transactional(readOnly = true)
     public StockComparison execute(UUID tenantId, UUID staffUserId, TarbilStockSystem system, List<StockSnapshotLineInput> inputs) {
+        return execute(tenantId, staffUserId, system, inputs, false);
+    }
+
+    @Transactional(readOnly = true)
+    public StockComparison execute(UUID tenantId, UUID staffUserId, TarbilStockSystem system, List<StockSnapshotLineInput> inputs,
+                                   boolean partStockRead) {
         if (inputs != null && inputs.size() > RecordStockSnapshotUseCase.MAX_LINES) {
             throw new InvalidTarbilStockSnapshotException("satir sayisi en cok " + RecordStockSnapshotUseCase.MAX_LINES + " olmali");
         }
@@ -47,9 +53,9 @@ public class CompareStockSnapshotUseCase {
             StockSnapshotLineInput l = inputs.get(i);
             if (l.productName() == null || l.productName().isBlank()) continue;
             lines.add(TarbilStockSnapshotLine.of(null, tenantId, i + 1, l.productName().trim(), l.presentation(),
-                l.lotNumber() == null || l.lotNumber().isBlank() ? null : l.lotNumber().trim(), l.expiryDate(), l.quantity(), l.openedQuantity()));
+                l.lotNumber() == null || l.lotNumber().isBlank() ? null : l.lotNumber().trim(), l.expiryDate(), l.quantity(), l.openedQuantity(), l.partStock(), l.dosesPerPackage()));
         }
-        Map<String, Integer> totals = StockSyncMatcher.totals(lines);
+        Map<String, StockSyncMatcher.Target> targets = StockSyncMatcher.targets(system, partStockRead, lines);
         Set<String> seen = new HashSet<>();
         int fresh = 0;
         int differs = 0;
@@ -57,7 +63,7 @@ public class CompareStockSnapshotUseCase {
         for (TarbilStockSnapshotLine line : lines) {
             String key = StockSyncMatcher.key(line);
             if (!seen.add(key)) continue;
-            switch (StockSyncMatcher.match(line, stock, totals.get(key)).status()) {
+            switch (StockSyncMatcher.match(line, stock, targets.get(key)).status()) {
                 case NEW -> fresh++;
                 case QUANTITY_DIFFERS -> differs++;
                 default -> matched++;

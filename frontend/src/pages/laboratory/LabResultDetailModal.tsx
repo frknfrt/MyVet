@@ -3,7 +3,7 @@ import { ApiError } from '../../api/client';
 import { labApi, LabResultDetail, LabResultItemInput, LabValueFlag } from '../../api/labApi';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
-import { FieldWrap, Input, Select, Textarea } from '../../components/ui/Field';
+import { FieldWrap, Input, Select, Textarea, AI_FIELD_HINT } from '../../components/ui/Field';
 import { Modal } from '../../components/ui/Modal';
 import { LabResultStatusBadge } from './labResultStatus';
 import styles from './LabResultDetailModal.module.css';
@@ -211,7 +211,7 @@ export function LabResultDetailModal({ resultId, onClose, onChanged }: LabResult
             Sonucu Tamamla
             {aiEvaluated && <Badge tone="ai">AI Önerisi</Badge>}
           </div>
-          <FieldWrap label="Genel değerlendirme">
+          <FieldWrap label="Genel değerlendirme" hint={AI_FIELD_HINT}>
             <Textarea rows={2} value={resultSummary} onChange={(e) => setResultSummary(e.target.value)} required />
           </FieldWrap>
 

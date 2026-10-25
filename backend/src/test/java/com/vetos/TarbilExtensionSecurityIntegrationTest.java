@@ -66,6 +66,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
 
     @Autowired private MockMvc mockMvc;
+
+    /** Güncel eklenti gibi: her istek sürüm başlığı taşır (en düşük 0.3.0; sürüm kontrolü ClientVersionEnforcementIntegrationTest'te). */
+    private org.springframework.test.web.servlet.ResultActions perform(
+        org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder request) throws Exception {
+        return mockMvc.perform(request.header("X-Client-Version", "0.3.0"));
+    }
     @Autowired private TenantRepository tenantRepository;
     @Autowired private BranchRepository branchRepository;
     @Autowired private StaffUserRepository staffUserRepository;
@@ -139,34 +145,32 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
 
     @Test
     void extensionTokenReachesExtensionEndpoints() throws Exception {
-        mockMvc.perform(get("/api/v1/tarbil-extension/pending").header("Authorization", "Bearer " + tokenA))
+        perform(get("/api/v1/tarbil-extension/pending").header("Authorization", "Bearer " + tokenA))
             .andExpect(status().isOk());
     }
 
     @Test
     void lastSeenClientVersionIsRecordedAndListed() throws Exception {
-        mockMvc.perform(get("/api/v1/tarbil-extension/pending").header("Authorization", "Bearer " + tokenA))
-            .andExpect(status().isOk());
         assertThat(listExtensionTokensUseCase.execute(tenantA, staffA, false).get(0).lastClientVersion()).isNull();
 
         mockMvc.perform(get("/api/v1/tarbil-extension/pending")
-                .header("Authorization", "Bearer " + tokenA).header("X-Client-Version", "0.2.0"))
+                .header("Authorization", "Bearer " + tokenA).header("X-Client-Version", "0.3.1"))
             .andExpect(status().isOk());
 
-        mockMvc.perform(get("/api/v1/tarbil/extension/tokens").header("Authorization", "Bearer " + jwtA))
+        perform(get("/api/v1/tarbil/extension/tokens").header("Authorization", "Bearer " + jwtA))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$[0].lastClientVersion").value("0.2.0"));
+            .andExpect(jsonPath("$[0].lastClientVersion").value("0.3.1"));
     }
 
     @Test
     void extensionTokenCannotReachOtherApis() throws Exception {
-        mockMvc.perform(get("/api/v1/patients").header("Authorization", "Bearer " + tokenA))
+        perform(get("/api/v1/patients").header("Authorization", "Bearer " + tokenA))
             .andExpect(status().isUnauthorized());
     }
 
     @Test
     void jwtCannotReachExtensionEndpoints() throws Exception {
-        mockMvc.perform(get("/api/v1/tarbil-extension/pending").header("Authorization", "Bearer " + jwtA))
+        perform(get("/api/v1/tarbil-extension/pending").header("Authorization", "Bearer " + jwtA))
             .andExpect(status().isUnauthorized());
     }
 
@@ -182,7 +186,7 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
             SecurityContextHolder.clearContext();
         }
 
-        mockMvc.perform(get("/api/v1/tarbil-extension/pending").header("Authorization", "Bearer " + tokenA))
+        perform(get("/api/v1/tarbil-extension/pending").header("Authorization", "Bearer " + tokenA))
             .andExpect(status().isUnauthorized());
     }
 
@@ -210,9 +214,9 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
         UUID foreignLogId = foreignPendingSubmission();
 
         // Kontrol: ayni satir kendi kiracisinin anahtariyla gorunur -- 404 yalniz kiraci filtresinden gelir.
-        mockMvc.perform(get("/api/v1/tarbil-extension/submissions/" + foreignLogId).header("Authorization", "Bearer " + tokenFor(tenantB)))
+        perform(get("/api/v1/tarbil-extension/submissions/" + foreignLogId).header("Authorization", "Bearer " + tokenFor(tenantB)))
             .andExpect(status().isOk());
-        mockMvc.perform(get("/api/v1/tarbil-extension/submissions/" + foreignLogId).header("Authorization", "Bearer " + tokenA))
+        perform(get("/api/v1/tarbil-extension/submissions/" + foreignLogId).header("Authorization", "Bearer " + tokenA))
             .andExpect(status().isNotFound());
     }
 
@@ -220,10 +224,10 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
     void tokenCannotMarkOrDismissAnotherTenantsSubmission() throws Exception {
         UUID foreignLogId = foreignPendingSubmission();
 
-        mockMvc.perform(post("/api/v1/tarbil-extension/submissions/" + foreignLogId + "/submitted")
+        perform(post("/api/v1/tarbil-extension/submissions/" + foreignLogId + "/submitted")
                 .header("Authorization", "Bearer " + tokenA).contentType("application/json").content("{\"method\":\"MANUAL\"}"))
             .andExpect(status().isNotFound());
-        mockMvc.perform(post("/api/v1/tarbil-extension/submissions/" + foreignLogId + "/dismiss")
+        perform(post("/api/v1/tarbil-extension/submissions/" + foreignLogId + "/dismiss")
                 .header("Authorization", "Bearer " + tokenA).contentType("application/json").content("{\"reason\":\"x\"}"))
             .andExpect(status().isNotFound());
 
@@ -234,7 +238,7 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
     @Test
     void learnsMappingForVaccineNameContainingSlash() throws Exception {
         // "DHPPi/L" gibi adlar URL yolunda %2F ister ve StrictHttpFirewall reddeder -- anahtar govdede tasinir.
-        mockMvc.perform(put("/api/v1/tarbil-extension/mappings/VACCINE")
+        perform(put("/api/v1/tarbil-extension/mappings/VACCINE")
                 .header("Authorization", "Bearer " + tokenA).contentType("application/json")
                 .content("{\"key\":\"Eurican DHPPi/L\",\"fields\":{\"productId\":\"42\"}}"))
             .andExpect(status().isNoContent());
@@ -253,7 +257,7 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
             return tenantRepository.save(t);
         });
 
-        mockMvc.perform(get("/api/v1/tarbil-extension/pending").header("Authorization", "Bearer " + tokenA))
+        perform(get("/api/v1/tarbil-extension/pending").header("Authorization", "Bearer " + tokenA))
             .andExpect(status().isUnauthorized());
     }
 
@@ -269,19 +273,19 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
         UUID submissionId = asTenant(tenantA, () -> tarbilSyncLogRepository.save(
             TarbilSubmission.queueVaccination(tenantA, patientA, vaccinationA)).getId());
 
-        mockMvc.perform(get("/api/v1/tarbil-extension/pending").header("Authorization", "Bearer " + tokenA))
+        perform(get("/api/v1/tarbil-extension/pending").header("Authorization", "Bearer " + tokenA))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].id").value(submissionId.toString()))
             .andExpect(jsonPath("$[0].vaccinationRecordId").value(vaccinationA.toString()))
             .andExpect(jsonPath("$[0].documentType").value("VACCINATION"));
-        mockMvc.perform(get("/api/v1/tarbil-extension/pending?type=PRESCRIPTION").header("Authorization", "Bearer " + tokenA))
+        perform(get("/api/v1/tarbil-extension/pending?type=PRESCRIPTION").header("Authorization", "Bearer " + tokenA))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(0));
     }
 
     @Test
     void jwtListsTarbilDiseaseCatalog() throws Exception {
-        mockMvc.perform(get("/api/v1/tarbil/diseases").header("Authorization", "Bearer " + jwtA))
+        perform(get("/api/v1/tarbil/diseases").header("Authorization", "Bearer " + jwtA))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(73))
             .andExpect(jsonPath("$[?(@.id == '95860589-0057-42cc-8209-663e1e459594')].path")
@@ -291,7 +295,7 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
 
     @Test
     void extensionTokenCannotListDiseaseCatalogThroughWebApi() throws Exception {
-        mockMvc.perform(get("/api/v1/tarbil/diseases").header("Authorization", "Bearer " + tokenA))
+        perform(get("/api/v1/tarbil/diseases").header("Authorization", "Bearer " + tokenA))
             .andExpect(status().isUnauthorized());
     }
 
@@ -307,7 +311,7 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
         UUID submissionId = asTenant(tenantA, () -> tarbilSyncLogRepository.save(
             TarbilSubmission.queueVaccination(tenantA, patientA, vaccinationA)).getId());
 
-        mockMvc.perform(get("/api/v1/tarbil/sync-logs").header("Authorization", "Bearer " + jwtA))
+        perform(get("/api/v1/tarbil/sync-logs").header("Authorization", "Bearer " + jwtA))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].id").value(submissionId.toString()))
             .andExpect(jsonPath("$[0].status").value("PENDING"))
@@ -321,22 +325,22 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
         String body = "{\"system\":\"VETILAC_MEDICINE\",\"lines\":[{\"productName\":\"Test İlaç\",\"presentation\":\"Kutu\","
             + "\"lotNumber\":\"LOT-1\",\"expiryDate\":\"2027-01-31\",\"quantity\":3,\"openedQuantity\":null}]}";
 
-        mockMvc.perform(post("/api/v1/tarbil-extension/stock-snapshots")
+        perform(post("/api/v1/tarbil-extension/stock-snapshots")
                 .header("Authorization", "Bearer " + tokenA).contentType("application/json").content(body))
             .andExpect(status().isCreated());
 
-        String view = mockMvc.perform(get("/api/v1/tarbil/stock-sync?system=VETILAC_MEDICINE").header("Authorization", "Bearer " + jwt))
+        String view = perform(get("/api/v1/tarbil/stock-sync?system=VETILAC_MEDICINE").header("Authorization", "Bearer " + jwt))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.lines[0].status").value("NEW"))
             .andReturn().getResponse().getContentAsString();
         String snapshotId = JsonPath.read(view, "$.snapshotId");
         String lineId = JsonPath.read(view, "$.lines[0].lineId");
 
-        mockMvc.perform(post("/api/v1/tarbil/stock-sync/" + snapshotId + "/apply").header("Authorization", "Bearer " + jwt)
+        perform(post("/api/v1/tarbil/stock-sync/" + snapshotId + "/apply").header("Authorization", "Bearer " + jwt)
                 .contentType("application/json").content("{\"lineIds\":[\"" + lineId + "\"]}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.applied").value(1));
-        mockMvc.perform(get("/api/v1/tarbil/stock-sync?system=VETILAC_MEDICINE").header("Authorization", "Bearer " + jwt))
+        perform(get("/api/v1/tarbil/stock-sync?system=VETILAC_MEDICINE").header("Authorization", "Bearer " + jwt))
             .andExpect(jsonPath("$.lines[0].status").value("APPLIED"))
             .andExpect(jsonPath("$.lines[0].vetlyQuantity").value(3));
         Integer count = jdbcTemplate.queryForObject(
@@ -354,15 +358,38 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
             + "{\"productName\":\"Biocan DHPPI\",\"lotNumber\":\"145932\",\"quantity\":1},"
             + "{\"productName\":\"Biocan R\",\"lotNumber\":\"665932\",\"quantity\":18,\"partStock\":true}]}";
 
-        mockMvc.perform(post("/api/v1/tarbil-extension/stock-snapshots")
+        perform(post("/api/v1/tarbil-extension/stock-snapshots")
                 .header("Authorization", "Bearer " + tokenA).contentType("application/json").content(body))
             .andExpect(status().isCreated());
 
-        mockMvc.perform(get("/api/v1/tarbil/stock-sync?system=HBSAPP_VACCINE").header("Authorization", "Bearer " + jwt))
+        perform(get("/api/v1/tarbil/stock-sync?system=HBSAPP_VACCINE").header("Authorization", "Bearer " + jwt))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.lines[0].productName").value("Biocan DHPPI"))
             .andExpect(jsonPath("$.lines[0].partStock").value(false))
             .andExpect(jsonPath("$.lines[1].productName").value("Biocan R"))
+            .andExpect(jsonPath("$.lines[1].partStock").value(true));
+    }
+
+    @Test
+    void partStockAndDosesTravelToSyncScreen() throws Exception {
+        UUID branchA = inRootSession(() -> branchRepository.save(Branch.create(tenantA, "Doz Şubesi")).getId());
+        String jwt = jwtTokenProvider.generateToken(staffA, tenantA, List.of(branchA), "VET");
+        String body = "{\"system\":\"HBSAPP_VACCINE\",\"partStockRead\":true,\"lines\":["
+            + "{\"productName\":\"Biocan DHPPI\",\"presentation\":\"Kutusunda 20 adet flakon\",\"lotNumber\":\"145932\",\"quantity\":1,\"dosesPerPackage\":20},"
+            + "{\"productName\":\"Biocan R\",\"presentation\":\"Plastik kutusunda 20 adet flakon\",\"lotNumber\":\"665932\",\"quantity\":18,\"partStock\":true}]}";
+        perform(post("/api/v1/tarbil-extension/stock-snapshots")
+                .header("Authorization", "Bearer " + tokenA).contentType("application/json").content(body))
+            .andExpect(status().isCreated());
+
+        perform(get("/api/v1/tarbil/stock-sync?system=HBSAPP_VACCINE").header("Authorization", "Bearer " + jwt))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.lines.length()").value(2))
+            .andExpect(jsonPath("$.lines[0].tarbilQuantity").value(1))
+            .andExpect(jsonPath("$.lines[0].tarbilOpenedQuantity").value(0))
+            .andExpect(jsonPath("$.lines[0].unit").value("FLAKON"))
+            .andExpect(jsonPath("$.lines[1].productName").value("Biocan R"))
+            .andExpect(jsonPath("$.lines[1].tarbilQuantity").value(0))
+            .andExpect(jsonPath("$.lines[1].tarbilOpenedQuantity").value(18))
             .andExpect(jsonPath("$.lines[1].partStock").value(true));
     }
 
@@ -379,7 +406,7 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
         String body = "{\"patientId\":\"" + patient + "\",\"vaccineName\":\"Biocan R\",\"lotNumber\":\"665932\","
             + "\"administeredDate\":\"" + LocalDate.now() + "\",\"status\":\"ADMINISTERED\",\"inventoryItemId\":\"" + item + "\"}";
 
-        String location = mockMvc.perform(post("/api/v1/vaccination-records").header("Authorization", "Bearer " + jwt)
+        String location = perform(post("/api/v1/vaccination-records").header("Authorization", "Bearer " + jwt)
                 .contentType("application/json").content(body))
             .andExpect(status().isCreated())
             .andReturn().getResponse().getHeader("Location");
@@ -388,8 +415,12 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
         assertThat(afterRecord).isEqualTo(18);
         assertThat(jdbcTemplate.queryForObject("SELECT status FROM pending_stock_deduction WHERE reference_id = ?", String.class, vid))
             .isEqualTo("PENDING");
+        UUID vSubmission = jdbcTemplate.queryForObject(
+            "SELECT id FROM tarbil_submission WHERE source_id = ? AND document_type = 'VACCINATION'", UUID.class, vid);
+        perform(get("/api/v1/tarbil-extension/pending").header("Authorization", "Bearer " + tokenA))
+            .andExpect(jsonPath("$[?(@.id == '" + vSubmission + "')].stockSource").value("WHOLE"));
 
-        mockMvc.perform(post(location + "/cancel").header("Authorization", "Bearer " + jwt))
+        perform(post(location + "/cancel").header("Authorization", "Bearer " + jwt))
             .andExpect(status().is2xxSuccessful());
         Integer afterCancel = jdbcTemplate.queryForObject("SELECT quantity_on_hand FROM inventory_items WHERE id = ?", Integer.class, item);
         assertThat(afterCancel).isEqualTo(18);
@@ -407,23 +438,23 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
             Patient.register(tenantA, owner, speciesId, null, "Boncuk", Sex.FEMALE, null)).getId());
         UUID item = asTenant(tenantA, () -> inventoryItemRepository.save(
             InventoryItem.create(tenantA, branchA, "Biocan DHPPI", "Aşı", null, 5, 0, LocalDate.of(2027, 8, 31), "145932", null)).getId());
-        mockMvc.perform(post("/api/v1/vaccination-records").header("Authorization", "Bearer " + jwt).contentType("application/json")
+        perform(post("/api/v1/vaccination-records").header("Authorization", "Bearer " + jwt).contentType("application/json")
                 .content("{\"patientId\":\"" + patient + "\",\"vaccineName\":\"Biocan DHPPI\",\"lotNumber\":\"145932\","
                     + "\"administeredDate\":\"" + LocalDate.now() + "\",\"status\":\"ADMINISTERED\",\"inventoryItemId\":\"" + item + "\"}"))
             .andExpect(status().isCreated());
         // TARBIL'de miktar farkli (ornegin bir kabul Vetly'ye islenmemis); asi ise henuz TARBIL'e gonderilmedi.
-        mockMvc.perform(post("/api/v1/tarbil-extension/stock-snapshots").header("Authorization", "Bearer " + tokenA)
+        perform(post("/api/v1/tarbil-extension/stock-snapshots").header("Authorization", "Bearer " + tokenA)
                 .contentType("application/json")
                 .content("{\"system\":\"HBSAPP_VACCINE\",\"lines\":[{\"productName\":\"Biocan DHPPI\",\"lotNumber\":\"145932\",\"quantity\":7}]}"))
             .andExpect(status().isCreated());
 
-        String view = mockMvc.perform(get("/api/v1/tarbil/stock-sync?system=HBSAPP_VACCINE").header("Authorization", "Bearer " + jwt))
+        String view = perform(get("/api/v1/tarbil/stock-sync?system=HBSAPP_VACCINE").header("Authorization", "Bearer " + jwt))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.lines[0].status").value("QUANTITY_DIFFERS"))
             .andExpect(jsonPath("$.lines[0].pendingTarbilCount").value(1))
             .andReturn().getResponse().getContentAsString();
 
-        mockMvc.perform(post("/api/v1/tarbil/stock-sync/" + JsonPath.read(view, "$.snapshotId") + "/apply")
+        perform(post("/api/v1/tarbil/stock-sync/" + JsonPath.read(view, "$.snapshotId") + "/apply")
                 .header("Authorization", "Bearer " + jwt).contentType("application/json")
                 .content("{\"lineIds\":[\"" + JsonPath.read(view, "$.lines[0].lineId") + "\"]}"))
             .andExpect(status().isConflict())
@@ -443,7 +474,7 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
             InventoryItem.create(tenantA, branchA, "Biocan R", "Aşı", null, stock, 0, LocalDate.of(2027, 1, 31), "665932", null)).getId());
         String body = "{\"patientId\":\"" + patient + "\",\"vaccineName\":\"Biocan R\",\"lotNumber\":\"665932\","
             + "\"administeredDate\":\"" + LocalDate.now() + "\",\"status\":\"ADMINISTERED\",\"inventoryItemId\":\"" + item + "\"}";
-        String location = mockMvc.perform(post("/api/v1/vaccination-records").header("Authorization", "Bearer " + jwt)
+        String location = perform(post("/api/v1/vaccination-records").header("Authorization", "Bearer " + jwt)
                 .contentType("application/json").content(body))
             .andExpect(status().isCreated())
             .andReturn().getResponse().getHeader("Location");
@@ -461,7 +492,7 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
         assertThat(stockOf(v[1])).isEqualTo(18);
 
         for (int i = 0; i < 2; i++) {
-            mockMvc.perform(post("/api/v1/tarbil-extension/submissions/" + submission + "/submitted")
+            perform(post("/api/v1/tarbil-extension/submissions/" + submission + "/submitted")
                     .header("Authorization", "Bearer " + tokenA).contentType("application/json").content("{\"method\":\"AUTO\"}"))
                 .andExpect(status().isOk());
         }
@@ -476,18 +507,18 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
         UUID[] v = vaccinateFromStock(18);
         UUID submission = jdbcTemplate.queryForObject("SELECT id FROM tarbil_submission WHERE source_id = ?", UUID.class, v[0]);
 
-        mockMvc.perform(get("/api/v1/inventory/pending-deductions").header("Authorization", "Bearer " + jwtA))
+        perform(get("/api/v1/inventory/pending-deductions").header("Authorization", "Bearer " + jwtA))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[?(@.referenceId == '" + v[0] + "')]").isNotEmpty());
 
-        mockMvc.perform(post("/api/v1/inventory/pending-deductions/VACCINATION/" + v[0] + "/settle-vetly-only")
+        perform(post("/api/v1/inventory/pending-deductions/VACCINATION/" + v[0] + "/settle-vetly-only")
                 .header("Authorization", "Bearer " + jwtA))
             .andExpect(status().isNoContent());
         assertThat(stockOf(v[1])).isEqualTo(17);
         // Asi kaydinin kendisi TARBIL'e bildirilmeli: Vetly'den dusmek aktarimi reddetmez (review 2026-10-10).
         assertThat(jdbcTemplate.queryForObject("SELECT status FROM tarbil_submission WHERE id = ?", String.class, submission)).isEqualTo("PENDING");
 
-        mockMvc.perform(post("/api/v1/tarbil-extension/submissions/" + submission + "/submitted")
+        perform(post("/api/v1/tarbil-extension/submissions/" + submission + "/submitted")
                 .header("Authorization", "Bearer " + tokenA).contentType("application/json").content("{\"method\":\"AUTO\"}"))
             .andExpect(status().isOk());
         assertThat(stockOf(v[1])).isEqualTo(17);
@@ -505,14 +536,14 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
             i.linkTarbil("VETILAC_MEDICINE", "SYNULOX 250 MG", "Kutu");
             return inventoryItemRepository.save(i).getId();
         });
-        String location = mockMvc.perform(post("/api/v1/encounters").header("Authorization", "Bearer " + jwtA)
+        String location = perform(post("/api/v1/encounters").header("Authorization", "Bearer " + jwtA)
                 .contentType("application/json").content("{\"patientId\":\"" + patient + "\"}"))
             .andExpect(status().isCreated()).andReturn().getResponse().getHeader("Location");
         UUID encounter = UUID.fromString(location.substring(location.lastIndexOf('/') + 1));
-        mockMvc.perform(post("/api/v1/encounters/" + encounter + "/materials").header("Authorization", "Bearer " + jwtA)
+        perform(post("/api/v1/encounters/" + encounter + "/materials").header("Authorization", "Bearer " + jwtA)
                 .contentType("application/json").content("{\"inventoryItemId\":\"" + item + "\",\"quantity\":" + used + "}"))
             .andExpect(status().isCreated());
-        mockMvc.perform(post("/api/v1/encounters/" + encounter + "/finalize").header("Authorization", "Bearer " + jwtA))
+        perform(post("/api/v1/encounters/" + encounter + "/finalize").header("Authorization", "Bearer " + jwtA))
             .andExpect(status().is2xxSuccessful());
         return new UUID[] { encounter, item };
     }
@@ -526,19 +557,19 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
         UUID[] e = finalizedEncounterUsingLinkedItem(10, 2);
         assertThat(stockOf(e[1])).isEqualTo(10);
 
-        mockMvc.perform(get("/api/v1/tarbil/encounters/" + e[0] + "/deduction").header("Authorization", "Bearer " + jwtA))
+        perform(get("/api/v1/tarbil/encounters/" + e[0] + "/deduction").header("Authorization", "Bearer " + jwtA))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.lines[0].status").value("PENDING"))
             .andExpect(jsonPath("$.lines[0].quantity").value(2))
             .andExpect(jsonPath("$.submissionId").doesNotExist());
 
-        String created = mockMvc.perform(post("/api/v1/tarbil/encounters/" + e[0] + "/deduction").header("Authorization", "Bearer " + jwtA)
+        String created = perform(post("/api/v1/tarbil/encounters/" + e[0] + "/deduction").header("Authorization", "Bearer " + jwtA)
                 .contentType("application/json").content("{\"tarbilDiseaseId\":\"" + selectableDisease() + "\"}"))
             .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         UUID submission = UUID.fromString(created.replaceAll(".*\"submissionId\":\"([^\"]+)\".*", "$1"));
         assertThat(jdbcTemplate.queryForObject("SELECT source_kind FROM tarbil_submission WHERE id = ?", String.class, submission)).isEqualTo("ENCOUNTER");
 
-        mockMvc.perform(post("/api/v1/tarbil-extension/submissions/" + submission + "/submitted")
+        perform(post("/api/v1/tarbil-extension/submissions/" + submission + "/submitted")
                 .header("Authorization", "Bearer " + tokenA).contentType("application/json").content("{\"method\":\"MANUAL\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.documentType").value("PRESCRIPTION"));
@@ -548,10 +579,10 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
     @Test
     void queueWithoutPendingLinesConflicts() throws Exception {
         UUID[] e = finalizedEncounterUsingLinkedItem(10, 1);
-        mockMvc.perform(post("/api/v1/inventory/pending-deductions/ENCOUNTER/" + e[0] + "/settle-vetly-only").header("Authorization", "Bearer " + jwtA))
+        perform(post("/api/v1/inventory/pending-deductions/ENCOUNTER/" + e[0] + "/settle-vetly-only").header("Authorization", "Bearer " + jwtA))
             .andExpect(status().isNoContent());
 
-        mockMvc.perform(post("/api/v1/tarbil/encounters/" + e[0] + "/deduction").header("Authorization", "Bearer " + jwtA)
+        perform(post("/api/v1/tarbil/encounters/" + e[0] + "/deduction").header("Authorization", "Bearer " + jwtA)
                 .contentType("application/json").content("{\"tarbilDiseaseId\":\"" + selectableDisease() + "\"}"))
             .andExpect(status().isConflict());
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM tarbil_submission WHERE source_id = ?", Integer.class, e[0])).isZero();
@@ -563,9 +594,9 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
         UUID staffB = createStaff(tenantB);
         String jwtB = jwtTokenProvider.generateToken(staffB, tenantB, List.of(), "VET");
 
-        mockMvc.perform(get("/api/v1/tarbil/encounters/" + e[0] + "/deduction").header("Authorization", "Bearer " + jwtB))
+        perform(get("/api/v1/tarbil/encounters/" + e[0] + "/deduction").header("Authorization", "Bearer " + jwtB))
             .andExpect(status().isNotFound());
-        mockMvc.perform(post("/api/v1/tarbil/encounters/" + e[0] + "/deduction").header("Authorization", "Bearer " + jwtB)
+        perform(post("/api/v1/tarbil/encounters/" + e[0] + "/deduction").header("Authorization", "Bearer " + jwtB)
                 .contentType("application/json").content("{\"tarbilDiseaseId\":\"" + selectableDisease() + "\"}"))
             .andExpect(status().isNotFound());
     }
@@ -585,10 +616,74 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
         String body = "{\"patientId\":\"" + patient + "\",\"controlledSubstance\":false,\"tarbilDiseaseId\":\"" + selectableDisease() + "\","
             + "\"items\":[{\"drugName\":\"Metacam\",\"dosage\":\"1 ml\",\"frequency\":\"1x1\",\"durationDays\":3,\"route\":\"ORAL\","
             + "\"inventoryItemId\":\"" + item + "\",\"stockQuantity\":" + given + "}]}";
-        String location = mockMvc.perform(post("/api/v1/prescriptions").header("Authorization", "Bearer " + jwtA)
+        String location = perform(post("/api/v1/prescriptions").header("Authorization", "Bearer " + jwtA)
                 .contentType("application/json").content(body))
             .andExpect(status().isCreated()).andReturn().getResponse().getHeader("Location");
         return new UUID[] { UUID.fromString(location.substring(location.lastIndexOf('/') + 1)), item };
+    }
+
+    /** Spec 2026-10-24: ml ile kullanilan ilac (Clavon 50 ml, 1 kapali + 49 ml acik) recetesi; [prescriptionId, itemId]. */
+    private UUID[] mlPrescription(String given) throws Exception {
+        UUID branchA = jdbcTemplate.queryForObject("SELECT branch_id FROM staff_users WHERE id = ?", UUID.class, staffA);
+        UUID speciesId = inRootSession(() -> speciesRepository.findAll().get(0).getId());
+        UUID owner = asTenant(tenantA, () -> ownerRepository.save(Owner.register(tenantA, "M Sahip", "05550000003", null, null)).getId());
+        UUID patient = asTenant(tenantA, () -> patientRepository.save(
+            Patient.register(tenantA, owner, speciesId, null, "Pamuk", Sex.FEMALE, null)).getId());
+        UUID item = asTenant(tenantA, () -> {
+            InventoryItem i = InventoryItem.create(tenantA, branchA, "Clavon", "İlaç", null, 1, 0, LocalDate.of(2027, 4, 27), "63016", null);
+            i.linkTarbil("VETILAC_MEDICINE", "CLAVON = Clavon", "50 ml'lik renksiz cam şişeler");
+            i.setStockUnit(com.vetos.modules.inventory.domain.StockUnit.ML, new java.math.BigDecimal("50"), false);
+            i.syncTo(1, new java.math.BigDecimal("49"));
+            return inventoryItemRepository.save(i).getId();
+        });
+        String body = "{\"patientId\":\"" + patient + "\",\"controlledSubstance\":false,\"tarbilDiseaseId\":\"" + selectableDisease() + "\","
+            + "\"items\":[{\"drugName\":\"Clavon\",\"dosage\":\"1 ml\",\"frequency\":\"1x1\",\"durationDays\":1,\"route\":\"ORAL\","
+            + "\"inventoryItemId\":\"" + item + "\",\"stockQuantity\":" + given + "}]}";
+        String location = perform(post("/api/v1/prescriptions").header("Authorization", "Bearer " + jwtA)
+                .contentType("application/json").content(body))
+            .andExpect(status().isCreated()).andReturn().getResponse().getHeader("Location");
+        return new UUID[] { UUID.fromString(location.substring(location.lastIndexOf('/') + 1)), item };
+    }
+
+    private UUID prescriptionSubmission(UUID prescriptionId) {
+        return jdbcTemplate.queryForObject(
+            "SELECT id FROM tarbil_submission WHERE source_id = ? AND document_type = 'PRESCRIPTION'", UUID.class, prescriptionId);
+    }
+
+    @Test
+    void mlPrescriptionTravelsWithOpenSourceAndSettlesOpenStock() throws Exception {
+        UUID[] rx = mlPrescription("1.5");
+        UUID submission = prescriptionSubmission(rx[0]);
+        String line = "$[?(@.id == '" + submission + "')].prescription.lines[0]";
+        perform(get("/api/v1/tarbil-extension/pending").header("Authorization", "Bearer " + tokenA))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath(line + ".amount").value(1.5))
+            .andExpect(jsonPath(line + ".unit").value("ML"))
+            .andExpect(jsonPath(line + ".source").value("OPEN"))
+            .andExpect(jsonPath(line + ".quantity").value(0));
+
+        perform(post("/api/v1/tarbil-extension/submissions/" + submission + "/submitted")
+                .header("Authorization", "Bearer " + tokenA).contentType("application/json")
+                .content("{\"method\":\"AUTO\",\"lines\":[{\"productName\":\"Clavon\",\"serialNumber\":\"63016\",\"quantity\":0,\"amount\":1.5,\"source\":\"OPEN\"}]}"))
+            .andExpect(status().is2xxSuccessful());
+
+        assertThat(stockOf(rx[1])).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT opened_quantity FROM inventory_items WHERE id = ?", java.math.BigDecimal.class, rx[1]))
+            .isEqualByComparingTo("47.5");
+    }
+
+    @Test
+    void submittedLineNeedsQuantityOrAmount() throws Exception {
+        UUID submission = prescriptionSubmission(mlPrescription("1")[0]);
+        perform(post("/api/v1/tarbil-extension/submissions/" + submission + "/submitted")
+                .header("Authorization", "Bearer " + tokenA).contentType("application/json")
+                .content("{\"method\":\"AUTO\",\"lines\":[{\"productName\":\"Clavon\",\"serialNumber\":\"63016\",\"quantity\":0}]}"))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void prescriptionStockQuantityMustBePositive() {
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> mlPrescription("0")).isInstanceOf(AssertionError.class);
     }
 
     @Test
@@ -597,12 +692,12 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
         assertThat(stockOf(rx[1])).isEqualTo(10);
         UUID submission = jdbcTemplate.queryForObject(
             "SELECT id FROM tarbil_submission WHERE source_id = ? AND document_type = 'PRESCRIPTION' AND source_kind = 'PRESCRIPTION'", UUID.class, rx[0]);
-        mockMvc.perform(get("/api/v1/tarbil-extension/pending").header("Authorization", "Bearer " + tokenA))
+        perform(get("/api/v1/tarbil-extension/pending").header("Authorization", "Bearer " + tokenA))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[?(@.id == '" + submission + "')].prescription.lines[0].tarbilProductName").value("METACAM"))
             .andExpect(jsonPath("$[?(@.id == '" + submission + "')].prescription.lines[0].quantity").value(2));
 
-        mockMvc.perform(post("/api/v1/tarbil-extension/submissions/" + submission + "/submitted")
+        perform(post("/api/v1/tarbil-extension/submissions/" + submission + "/submitted")
                 .header("Authorization", "Bearer " + tokenA).contentType("application/json").content("{\"method\":\"MANUAL\"}"))
             .andExpect(status().is2xxSuccessful());
         assertThat(stockOf(rx[1])).isEqualTo(8);
@@ -612,7 +707,7 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
     void stockGivenItemIsListedUnderItsStockName() throws Exception {
         UUID[] rx = prescriptionGivingFromStock(10, 1);
 
-        mockMvc.perform(get("/api/v1/prescriptions/" + rx[0]).header("Authorization", "Bearer " + jwtA))
+        perform(get("/api/v1/prescriptions/" + rx[0]).header("Authorization", "Bearer " + jwtA))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.items[0].drugId").value(org.hamcrest.Matchers.nullValue()))
             .andExpect(jsonPath("$.items[0].drugName").value("Metacam"));
@@ -622,9 +717,9 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
     void cancellingAPrescriptionClosesItsPendingDeductionAndSubmission() throws Exception {
         UUID[] rx = prescriptionGivingFromStock(10, 1);
 
-        mockMvc.perform(post("/api/v1/prescriptions/" + rx[0] + "/cancel").header("Authorization", "Bearer " + jwtA))
+        perform(post("/api/v1/prescriptions/" + rx[0] + "/cancel").header("Authorization", "Bearer " + jwtA))
             .andExpect(status().isNoContent());
-        mockMvc.perform(post("/api/v1/prescriptions/" + rx[0] + "/cancel").header("Authorization", "Bearer " + jwtA))
+        perform(post("/api/v1/prescriptions/" + rx[0] + "/cancel").header("Authorization", "Bearer " + jwtA))
             .andExpect(status().isConflict());
 
         assertThat(jdbcTemplate.queryForObject("SELECT status FROM pending_stock_deduction WHERE reference_id = ?", String.class, rx[0])).isEqualTo("CANCELLED");
@@ -637,7 +732,7 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
         String body = "{\"patientId\":\"" + UUID.randomUUID() + "\",\"controlledSubstance\":false,"
             + "\"items\":[{\"drugName\":\"Metacam\",\"dosage\":\"1\",\"frequency\":\"1\",\"durationDays\":1,\"route\":\"ORAL\","
             + "\"inventoryItemId\":\"" + UUID.randomUUID() + "\",\"stockQuantity\":1}]}";
-        mockMvc.perform(post("/api/v1/prescriptions").header("Authorization", "Bearer " + jwtA).contentType("application/json").content(body))
+        perform(post("/api/v1/prescriptions").header("Authorization", "Bearer " + jwtA).contentType("application/json").content(body))
             .andExpect(status().isUnprocessableEntity());
     }
 
@@ -665,7 +760,7 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
             InventoryItem.create(tenantA, branchA, "Gazlı bez", "Sarf", null, 5, 0, null, null, null)).getId());
 
         for (Map.Entry<UUID, String> item : Map.of(UUID.randomUUID(), "Metacam", foreignItem, "Metacam", unlinkedItem, "Gazlı bez").entrySet()) {
-            mockMvc.perform(post("/api/v1/prescriptions").header("Authorization", "Bearer " + jwtA)
+            perform(post("/api/v1/prescriptions").header("Authorization", "Bearer " + jwtA)
                     .contentType("application/json").content(stockPrescriptionBody(item.getKey(), selectableDisease(), item.getValue())))
                 .andExpect(status().isUnprocessableEntity());
         }
@@ -681,7 +776,7 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
             return inventoryItemRepository.save(i).getId();
         });
 
-        mockMvc.perform(post("/api/v1/prescriptions").header("Authorization", "Bearer " + jwtA)
+        perform(post("/api/v1/prescriptions").header("Authorization", "Bearer " + jwtA)
                 .contentType("application/json").content(stockPrescriptionBody(item, UUID.randomUUID(), "Metacam")))
             .andExpect(status().isUnprocessableEntity());
     }
@@ -695,7 +790,7 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
             return inventoryItemRepository.save(i).getId();
         });
 
-        mockMvc.perform(post("/api/v1/prescriptions").header("Authorization", "Bearer " + jwtA)
+        perform(post("/api/v1/prescriptions").header("Authorization", "Bearer " + jwtA)
                 .contentType("application/json").content(stockPrescriptionBody(item, selectableDisease(), "Amoksisilin")))
             .andExpect(status().isUnprocessableEntity());
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM prescriptions WHERE tenant_id = ?", Integer.class, tenantA)).isZero();
@@ -710,7 +805,7 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
             return inventoryItemRepository.save(i).getId();
         });
 
-        mockMvc.perform(post("/api/v1/prescriptions").header("Authorization", "Bearer " + jwtA)
+        perform(post("/api/v1/prescriptions").header("Authorization", "Bearer " + jwtA)
                 .contentType("application/json").content(stockPrescriptionBody(item, selectableDisease(), " Metacam ")))
             .andExpect(status().isCreated());
         assertThat(jdbcTemplate.queryForObject("SELECT drug_name FROM prescription_items WHERE inventory_item_id = ?", String.class, item))
@@ -741,9 +836,9 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
         UUID vaccinationB = asTenant(tenantB, () -> vaccinationRecordRepository.save(VaccinationRecord.record(
             tenantB, patientB, null, "Kuduz", null, LocalDate.now(), null, staffB, VaccinationStatus.SCHEDULED, null)).getId());
 
-        mockMvc.perform(post("/api/v1/vaccination-records/" + vaccinationB + "/administer").header("Authorization", "Bearer " + jwtA))
+        perform(post("/api/v1/vaccination-records/" + vaccinationB + "/administer").header("Authorization", "Bearer " + jwtA))
             .andExpect(status().isNotFound());
-        mockMvc.perform(post("/api/v1/vaccination-records/" + vaccinationB + "/cancel").header("Authorization", "Bearer " + jwtA))
+        perform(post("/api/v1/vaccination-records/" + vaccinationB + "/cancel").header("Authorization", "Bearer " + jwtA))
             .andExpect(status().isNotFound());
 
         String statusAfter = jdbcTemplate.queryForObject("SELECT status FROM vaccination_records WHERE id = ?", String.class, vaccinationB);
@@ -764,13 +859,13 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
         asTenant(tenantB, () -> staffInviteRepository.save(StaffInvite.create(tenantB, branchB, pendingEmail, "B Aday", StaffRole.VET, null)));
         String jwt = adminJwtA(branchA);
 
-        mockMvc.perform(post("/api/v1/staff-invites").header("Authorization", "Bearer " + jwt).contentType("application/json")
+        perform(post("/api/v1/staff-invites").header("Authorization", "Bearer " + jwt).contentType("application/json")
                 .content("{\"branchId\":\"" + branchA + "\",\"fullName\":\"Yeni\",\"email\":\"" + takenEmail + "\",\"role\":\"VET\"}"))
             .andExpect(status().isConflict());
-        mockMvc.perform(post("/api/v1/staff-invites").header("Authorization", "Bearer " + jwt).contentType("application/json")
+        perform(post("/api/v1/staff-invites").header("Authorization", "Bearer " + jwt).contentType("application/json")
                 .content("{\"branchId\":\"" + branchA + "\",\"fullName\":\"Yeni\",\"email\":\"" + pendingEmail + "\",\"role\":\"VET\"}"))
             .andExpect(status().isConflict());
-        mockMvc.perform(post("/api/v1/staff-users").header("Authorization", "Bearer " + jwt).contentType("application/json")
+        perform(post("/api/v1/staff-users").header("Authorization", "Bearer " + jwt).contentType("application/json")
                 .content("{\"branchId\":\"" + branchA + "\",\"fullName\":\"Yeni\",\"email\":\"" + takenEmail
                     + "\",\"password\":\"Parola1234\",\"role\":\"VET\"}"))
             .andExpect(status().isConflict());
@@ -782,7 +877,7 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
         String token = asTenant(tenantB, () -> staffInviteRepository.save(StaffInvite.create(
             tenantB, branchB, "davet-" + UUID.randomUUID() + "@test.local", "B Aday", StaffRole.VET, null)).getToken());
 
-        mockMvc.perform(get("/api/v1/public/staff-invites/" + token).header("Authorization", "Bearer " + jwtA))
+        perform(get("/api/v1/public/staff-invites/" + token).header("Authorization", "Bearer " + jwtA))
             .andExpect(status().isOk());
     }
 
@@ -794,11 +889,11 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
             tenantB, branchB, "B Hekim", "vardiya-" + UUID.randomUUID() + "@test.local", "hash", StaffRole.VET)).getId());
         String jwt = adminJwtA(branchA);
 
-        mockMvc.perform(get("/api/v1/branches/" + branchB + "/working-hours").header("Authorization", "Bearer " + jwt))
+        perform(get("/api/v1/branches/" + branchB + "/working-hours").header("Authorization", "Bearer " + jwt))
             .andExpect(status().isNotFound());
-        mockMvc.perform(get("/api/v1/staff-users/" + staffB + "/shifts").header("Authorization", "Bearer " + jwt))
+        perform(get("/api/v1/staff-users/" + staffB + "/shifts").header("Authorization", "Bearer " + jwt))
             .andExpect(status().isNotFound());
-        mockMvc.perform(get("/api/v1/branches/" + branchA + "/working-hours").header("Authorization", "Bearer " + jwt))
+        perform(get("/api/v1/branches/" + branchA + "/working-hours").header("Authorization", "Bearer " + jwt))
             .andExpect(status().isOk());
     }
 
@@ -811,7 +906,7 @@ class TarbilExtensionSecurityIntegrationTest extends TenantScopedTestSupport {
             + "{\"productName\":\"Biocan R\",\"presentation\":\"Flakon\",\"lotNumber\":\"665932\",\"expiryDate\":\"2027-01-31\",\"quantity\":2,\"openedQuantity\":null},"
             + "{\"productName\":\"Nobivac\",\"presentation\":\"Flakon\",\"lotNumber\":\"N1\",\"expiryDate\":\"2027-01-31\",\"quantity\":1,\"openedQuantity\":null}]}";
 
-        mockMvc.perform(post("/api/v1/tarbil-extension/stock-snapshots/compare")
+        perform(post("/api/v1/tarbil-extension/stock-snapshots/compare")
                 .header("Authorization", "Bearer " + tokenA).contentType("application/json").content(body))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.newCount").value(1))

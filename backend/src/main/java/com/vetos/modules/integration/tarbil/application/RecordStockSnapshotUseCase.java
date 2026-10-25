@@ -26,6 +26,11 @@ public class RecordStockSnapshotUseCase {
 
     @Transactional
     public UUID execute(UUID tenantId, UUID staffId, TarbilStockSystem system, List<StockSnapshotLineInput> lines) {
+        return execute(tenantId, staffId, system, lines, false);
+    }
+
+    @Transactional
+    public UUID execute(UUID tenantId, UUID staffId, TarbilStockSystem system, List<StockSnapshotLineInput> lines, boolean partStockRead) {
         if (system == null) {
             throw new InvalidTarbilStockSnapshotException("sistem bos");
         }
@@ -40,12 +45,12 @@ public class RecordStockSnapshotUseCase {
                 throw new InvalidTarbilStockSnapshotException("miktar negatif");
             }
         }
-        TarbilStockSnapshot snapshot = repository.save(TarbilStockSnapshot.take(tenantId, system, staffId, Instant.now()));
+        TarbilStockSnapshot snapshot = repository.save(TarbilStockSnapshot.take(tenantId, system, staffId, Instant.now(), partStockRead));
         List<TarbilStockSnapshotLine> rows = new ArrayList<>();
         for (int i = 0; i < lines.size(); i++) {
             StockSnapshotLineInput l = lines.get(i);
             rows.add(TarbilStockSnapshotLine.of(snapshot.getId(), tenantId, i + 1, l.productName().trim(), trimToNull(l.presentation()),
-                trimToNull(l.lotNumber()), l.expiryDate(), l.quantity(), l.openedQuantity(), l.partStock()));
+                trimToNull(l.lotNumber()), l.expiryDate(), l.quantity(), l.openedQuantity(), l.partStock(), l.dosesPerPackage()));
         }
         repository.saveLines(rows);
         return snapshot.getId();

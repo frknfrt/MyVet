@@ -60,7 +60,7 @@ class QueueEncounterDeductionUseCaseTest {
     }
 
     private PendingDeductionLine line(PendingDeductionStatus status) {
-        return new PendingDeductionLine(UUID.randomUUID(), UUID.randomUUID(), "Synulox", "Synulox", "S1", 1, status, null);
+        return new PendingDeductionLine(UUID.randomUUID(), UUID.randomUUID(), "Synulox", "Synulox", "S1", java.math.BigDecimal.ONE, status, null, "ADET", java.math.BigDecimal.ZERO);
     }
 
     private void finalized() {

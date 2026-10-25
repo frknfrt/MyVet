@@ -16,7 +16,7 @@ public class RecordInventoryUsageUseCase {
     private final EncounterInventoryUsageRepository encounterInventoryUsageRepository;
 
     @Transactional
-    public UUID execute(UUID encounterId, UUID inventoryItemId, int quantity) {
+    public UUID execute(UUID encounterId, UUID inventoryItemId, java.math.BigDecimal quantity) {
         return encounterInventoryUsageRepository.save(
             EncounterInventoryUsage.record(TenantContext.current(), encounterId, inventoryItemId, quantity)
         ).getId();

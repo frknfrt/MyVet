@@ -5,10 +5,10 @@ import com.vetos.modules.inventory.application.ListPendingDeductionsUseCase.Pend
 import java.time.Instant;
 import java.util.UUID;
 
-public record PendingDeductionResponse(UUID id, UUID inventoryItemId, String itemName, String lotNumber, int quantity,
-                                       String referenceType, UUID referenceId, Instant createdAt) {
+public record PendingDeductionResponse(UUID id, UUID inventoryItemId, String itemName, String lotNumber, java.math.BigDecimal quantity,
+                                       String referenceType, UUID referenceId, Instant createdAt, String unit) {
     public static PendingDeductionResponse from(PendingDeductionView v) {
         return new PendingDeductionResponse(v.id(), v.inventoryItemId(), v.itemName(), v.lotNumber(), v.quantity(),
-            v.referenceType().name(), v.referenceId(), v.createdAt());
+            v.referenceType().name(), v.referenceId(), v.createdAt(), v.unit());
     }
 }

@@ -25,8 +25,8 @@ describe('stock lines', () => {
     stockGrid([['Advantage % 10', 'KV04Z81', '1'], ['SYNULOX', 'S1', '']]);
 
     expect(readSavedStockLines(document)).toEqual([
-      { productName: 'Advantage % 10', serial: 'KV04Z81', quantity: 1 },
-      { productName: 'SYNULOX', serial: 'S1', quantity: null },
+      { productName: 'Advantage % 10', serial: 'KV04Z81', quantity: 1, amount: 1, source: 'WHOLE' },
+      { productName: 'SYNULOX', serial: 'S1', quantity: null, amount: null, source: 'WHOLE' },
     ]);
   });
 
@@ -54,8 +54,8 @@ describe('stock lines', () => {
       { productName: 'SYNULOX', serial: 'S1', quantity: null },
       { productName: '', serial: 'ZZ9', quantity: null },
     ], plan)).toEqual([
-      { productName: 'Advantage % 10', serialNumber: 'KV04Z81', quantity: 1 },
-      { productName: 'SYNULOX', serialNumber: 'S1', quantity: 2 },
+      { productName: 'Advantage % 10', serialNumber: 'KV04Z81', quantity: 1, amount: 1, source: null },
+      { productName: 'SYNULOX', serialNumber: 'S1', quantity: 2, amount: 2, source: null },
     ]);
   });
 
@@ -74,5 +74,31 @@ describe('stock lines', () => {
     stockGrid([['A', 'X1', '1,00'], ['B', 'X2', '2,50'], ['C', 'X3', '3 Adet'], ['D', 'X4', '1.000']]);
 
     expect(readSavedStockLines(document).map((l) => l.quantity)).toEqual([1, null, 3, null]);
+  });
+
+  it('reads Kullanılacak Miktarı as a decimal and Stok Tipi as the source (spec 2026-10-24)', () => {
+    document.body.innerHTML = `<table id="${T}"><thead><tr>${HEAD.map((h) => `<th>${h}</th>`).join('')}</tr></thead><tbody>
+      <tr id="${T}__0" class="rgRow"><td></td><td></td><td>Clavon</td><td>Şişe</td><td>63016</td><td>27.04.2027</td><td>49,00 mL</td>
+      <td>Açık Stok</td><td>0</td><td>1,50</td><td></td></tr></tbody></table>`;
+
+    expect(readSavedStockLines(document)).toEqual([{ productName: 'Clavon', serial: '63016', quantity: null, amount: 1.5, source: 'OPEN' }]);
+  });
+
+  it('keeps an ml line without a whole quantity and fills amount and source from the plan', () => {
+    const mlPlan: PlannedLine[] = [{ itemName: 'Clavon', tarbilProductName: 'CLAVON = Clavon', lotNumber: '63016', quantity: 0, amount: 1.5, unit: 'ML', source: 'OPEN' }];
+    expect(confirmedLines([{ productName: 'Clavon', serial: '63016', quantity: null }], mlPlan)).toEqual([
+      { productName: 'Clavon', serialNumber: '63016', quantity: 0, amount: 1.5, source: 'OPEN' },
+    ]);
+  });
+
+  it('reads the open-stock popup grid (spec 2026-10-24)', () => {
+    const O = 'ctl00_ContentPlaceHolder1_ContentPlaceHolderBody_UcPharmacyStockSearchForReceipt_radGridOpenStock_ctl00';
+    document.body.innerHTML = `<table id="${O}"><thead><tr><th></th><th>Ürün Adı</th><th>Takdim Şekli</th><th>Seri Numarası</th>
+      <th>Son Kullanma Tarihi</th><th>Açık Stok Miktarı</th></tr></thead><tbody><tr id="${O}__0"><td><a id="${O}_ctl04_SelectlinkButton2">Seç</a></td>
+      <td>Clavon</td><td>50 ml</td><td>63016</td><td>27.04.2027</td><td>49,00</td></tr></tbody></table>`;
+
+    expect(readMedicinePopupRows(document, true)).toEqual([
+      { productName: 'Clavon', serial: '63016', expiryDate: '2027-04-27', linkId: `${O}_ctl04_SelectlinkButton2` },
+    ]);
   });
 });

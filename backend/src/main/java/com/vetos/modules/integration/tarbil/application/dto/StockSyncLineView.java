@@ -7,6 +7,6 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 public record StockSyncLineView(UUID lineId, String productName, String presentation, String lotNumber, LocalDate expiryDate,
-                                int tarbilQuantity, BigDecimal openedQuantity, TarbilStockSyncStatus status,
-                                UUID inventoryItemId, Integer vetlyQuantity, boolean partStock,
-                                int pendingTarbilCount) {}
+                                int tarbilQuantity, BigDecimal tarbilOpenedQuantity, TarbilStockSyncStatus status,
+                                UUID inventoryItemId, Integer vetlyQuantity, BigDecimal vetlyOpenedQuantity, String unit,
+                                boolean partStock, int pendingTarbilCount) {}

@@ -60,10 +60,13 @@ export interface TarbilStockSyncLine {
   lotNumber: string | null;
   expiryDate: string | null;
   tarbilQuantity: number;
-  openedQuantity: number | null;
+  /** Spec 2026-10-24: ürün+seri başına tek satır; tarbilQuantity kapalı adet, tarbilOpenedQuantity açık/parça (null = bilinmiyor). */
+  tarbilOpenedQuantity: number | null;
   status: TarbilStockSyncStatus;
   inventoryItemId: string | null;
   vetlyQuantity: number | null;
+  vetlyOpenedQuantity: number | null;
+  unit: string;
   /** TARBİL aşı sayfasındaki "Parça Stok Ara" listesinden geldi (2026-10-21). */
   partStock: boolean;
   /** Bu ürünün TARBİL'e henüz işlenmemiş aşı/reçete kaydı sayısı; > 0 ise satır eşitlenemez (2026-10-21). */

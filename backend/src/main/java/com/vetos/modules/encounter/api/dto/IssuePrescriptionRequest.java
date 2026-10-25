@@ -18,5 +18,5 @@ public record IssuePrescriptionRequest(
     @NotEmpty @Valid List<Item> items
 ) {
     public record Item(UUID drugId, String drugName, String dosage, String frequency, int durationDays, DrugRoute route,
-                       UUID inventoryItemId, @Positive Integer stockQuantity) {}
+                       UUID inventoryItemId, @Positive java.math.BigDecimal stockQuantity) {}
 }

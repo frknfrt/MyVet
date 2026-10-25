@@ -1,4 +1,4 @@
-package com.vetos.modules.encounter.application;
+package com.vetos.modules.encounter.domain;
 
 import com.vetos.modules.encounter.domain.DrugCatalog;
 import com.vetos.modules.encounter.domain.DrugCatalogRepository;

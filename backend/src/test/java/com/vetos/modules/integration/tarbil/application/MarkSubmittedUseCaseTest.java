@@ -157,7 +157,7 @@ class MarkSubmittedUseCaseTest {
     @Test
     void settlesReportedLinesOnFirstConfirmation() {
         TarbilSubmission s = encounterSubmission();
-        List<ReportedDeductionLine> lines = List.of(new ReportedDeductionLine("Synulox", "S1", 2));
+        List<ReportedDeductionLine> lines = List.of(new ReportedDeductionLine("Synulox", "S1", java.math.BigDecimal.valueOf(2), null));
 
         useCase().execute(tenantId, staffId, s.getId(), TarbilConfirmationMethod.AUTO, null, lines);
 
@@ -169,7 +169,7 @@ class MarkSubmittedUseCaseTest {
     void manualConfirmationSettlesPlannedQuantities() {
         TarbilSubmission s = encounterSubmission();
 
-        useCase().execute(tenantId, staffId, s.getId(), TarbilConfirmationMethod.MANUAL, null, List.of(new ReportedDeductionLine("X", "Y", 1)));
+        useCase().execute(tenantId, staffId, s.getId(), TarbilConfirmationMethod.MANUAL, null, List.of(new ReportedDeductionLine("X", "Y", java.math.BigDecimal.valueOf(1), null)));
 
         verify(deductions).settleFromTarbil(StockReferenceType.ENCOUNTER, s.getSourceId(), null, staffId);
     }
@@ -190,9 +190,9 @@ class MarkSubmittedUseCaseTest {
         TarbilSubmission s = encounterSubmission();
         MarkSubmittedUseCase useCase = useCase();
         when(deductions.settleFromTarbil(any(), any(), any(), any()))
-            .thenReturn(new DeductionSettlementResult(0, List.of(new ReportedDeductionLine("Baytril", "B9", 1))));
+            .thenReturn(new DeductionSettlementResult(0, List.of(new ReportedDeductionLine("Baytril", "B9", java.math.BigDecimal.valueOf(1), null))));
 
-        useCase.execute(tenantId, staffId, s.getId(), TarbilConfirmationMethod.AUTO, null, List.of(new ReportedDeductionLine("Baytril", "B9", 1)));
+        useCase.execute(tenantId, staffId, s.getId(), TarbilConfirmationMethod.AUTO, null, List.of(new ReportedDeductionLine("Baytril", "B9", java.math.BigDecimal.valueOf(1), null)));
 
         assertThat(s.getSettlementNote()).contains("Baytril").contains("B9");
     }

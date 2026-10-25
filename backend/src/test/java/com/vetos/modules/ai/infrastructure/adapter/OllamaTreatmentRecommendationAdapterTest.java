@@ -3,7 +3,6 @@ package com.vetos.modules.ai.infrastructure.adapter;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
-import com.vetos.modules.ai.domain.HistoryEntry;
 import com.vetos.modules.ai.domain.TreatmentRecommendationDraft;
 import com.vetos.modules.ai.domain.TreatmentRecommendationInput;
 import com.vetos.modules.ai.domain.TreatmentRecommendationPort;
@@ -35,11 +34,13 @@ class OllamaTreatmentRecommendationAdapterTest {
 
     private HttpServer stubServer;
     private String stubResponseBody;
+    private String capturedBody;
 
     @BeforeEach
     void startStubServer() throws IOException {
         stubServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         stubServer.createContext("/api/generate", ex -> {
+            capturedBody = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
             byte[] payload = stubResponseBody.getBytes(StandardCharsets.UTF_8);
             ex.getResponseHeaders().add("Content-Type", "application/json");
             ex.sendResponseHeaders(200, payload.length);
@@ -61,7 +62,7 @@ class OllamaTreatmentRecommendationAdapterTest {
     private TreatmentRecommendationInput anInput() {
         return new TreatmentRecommendationInput(
             "Hafif gastrit supheli",
-            List.of(new HistoryEntry(Instant.now().toString(), "Gecmis degerlendirme", "Gecmis plan"))
+            "HASTA BİLGİSİ Tür: Köpek | Kritik uyarı: Penisilin alerjisi"
         );
     }
 
@@ -96,5 +97,14 @@ class OllamaTreatmentRecommendationAdapterTest {
         TreatmentRecommendationDraft draft = adapter.generate(anInput());
 
         assertThat(draft.modelConnected()).isFalse();
+    }
+
+    @Test
+    void requestsAWideContextWindow_soTheHistoryIsNotCutOff() {
+        stubResponseBody = "{\"response\":\"ok\"}";
+        new OllamaTreatmentRecommendationAdapter(stubUrl(), "llama3.1", new ObjectMapper(), outcomes, CircuitBreakerRegistry.ofDefaults())
+            .generate(anInput());
+
+        assertThat(capturedBody).contains("\"num_ctx\":16384");
     }
 }

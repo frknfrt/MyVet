@@ -568,7 +568,7 @@ class TenantIsolationTest extends TenantScopedTestSupport {
         UUID itemBId = createInventoryItem(b);
 
         asTenantVoid(b.tenantId(), () -> encounterInventoryUsageRepository.save(
-            EncounterInventoryUsage.record(b.tenantId(), encounterBId, itemBId, 2)
+            EncounterInventoryUsage.record(b.tenantId(), encounterBId, itemBId, java.math.BigDecimal.valueOf(2))
         ));
 
         assertThat(asTenant(a.tenantId(), () -> encounterInventoryUsageRepository.findByEncounterId(encounterBId))).isEmpty();

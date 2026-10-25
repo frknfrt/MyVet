@@ -10,6 +10,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -31,7 +32,7 @@ public class PendingStockDeduction {
     private UUID inventoryItemId;
 
     @Column(nullable = false)
-    private int quantity;
+    private BigDecimal quantity;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "reference_type", nullable = false)
@@ -49,7 +50,12 @@ public class PendingStockDeduction {
     private DeductionSettlement settledVia;
 
     @Column(name = "settled_quantity")
-    private Integer settledQuantity;
+    private BigDecimal settledQuantity;
+
+    /** TARBIL'de dusumun yapildigi liste (spec 2026-10-24); bilinmiyorsa null. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "settled_source")
+    private StockSource settledSource;
 
     @Column(name = "settled_at")
     private Instant settledAt;
@@ -60,7 +66,7 @@ public class PendingStockDeduction {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
-    public static PendingStockDeduction open(UUID tenantId, UUID inventoryItemId, int quantity, StockReferenceType type, UUID referenceId) {
+    public static PendingStockDeduction open(UUID tenantId, UUID inventoryItemId, BigDecimal quantity, StockReferenceType type, UUID referenceId) {
         PendingStockDeduction p = new PendingStockDeduction();
         p.id = UUID.randomUUID();
         p.tenantId = tenantId;
@@ -74,12 +80,13 @@ public class PendingStockDeduction {
     }
 
     /** @return false ise zaten dusulmus/iptal (idempotent). */
-    public boolean settle(int settledQuantity, DeductionSettlement via, UUID staffId, Instant now) {
+    public boolean settle(BigDecimal settledQuantity, StockSource source, DeductionSettlement via, UUID staffId, Instant now) {
         if (status != PendingDeductionStatus.PENDING) {
             return false;
         }
         this.status = PendingDeductionStatus.DEDUCTED;
         this.settledQuantity = settledQuantity;
+        this.settledSource = source;
         this.settledVia = via;
         this.settledByStaffId = staffId;
         this.settledAt = now;

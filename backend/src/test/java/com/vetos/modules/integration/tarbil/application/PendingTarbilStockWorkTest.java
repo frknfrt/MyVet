@@ -39,7 +39,7 @@ class PendingTarbilStockWorkTest {
     }
 
     private PendingDeductionLine deduction(UUID itemId, PendingDeductionStatus status) {
-        return new PendingDeductionLine(UUID.randomUUID(), itemId, "Kalem", null, "L1", 1, status, null);
+        return new PendingDeductionLine(UUID.randomUUID(), itemId, "Kalem", null, "L1", java.math.BigDecimal.ONE, status, null, "ADET", java.math.BigDecimal.ZERO);
     }
 
     @Test

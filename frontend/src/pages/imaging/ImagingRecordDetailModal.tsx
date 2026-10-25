@@ -2,7 +2,7 @@ import { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
 import { ApiError } from '../../api/client';
 import { imagingApi, ImagingRecordDetail } from '../../api/imagingApi';
 import { Button } from '../../components/ui/Button';
-import { FieldWrap, Textarea } from '../../components/ui/Field';
+import { FieldWrap, Textarea, AI_FIELD_HINT } from '../../components/ui/Field';
 import { Modal } from '../../components/ui/Modal';
 import { ImagingStatusBadge, MODALITY_LABELS } from './imagingStatus';
 import styles from './ImagingRecordDetailModal.module.css';
@@ -218,7 +218,7 @@ export function ImagingRecordDetailModal({ recordId, onClose, onChanged }: Imagi
       {isPending ? (
         <form onSubmit={handleComplete}>
           <div className={styles.sectionLabel}>Sonucu Tamamla</div>
-          <FieldWrap label="Radyolojik bulgular / yorum">
+          <FieldWrap label="Radyolojik bulgular / yorum" hint={AI_FIELD_HINT}>
             <Textarea rows={4} value={findings} onChange={(e) => setFindings(e.target.value)} required />
           </FieldWrap>
           <div className={styles.actionsSplit}>

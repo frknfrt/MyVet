@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { inventoryApi, InventoryItem } from '../../api/inventoryApi';
 import { FieldWrap, Select } from '../../components/ui/Field';
+import { formatStock, hasStock } from '../inventory/stockFormat';
 
 const todayIso = () => {
   const d = new Date();
@@ -18,7 +19,7 @@ export function StockGivePicker({ value, onChange }: { value: string | null; onC
     const today = todayIso();
     inventoryApi
       .list()
-      .then((all) => setItems(all.filter((i) => i.tarbilProductName && i.quantityOnHand > 0 && !(i.expiryDate && i.expiryDate < today))))
+      .then((all) => setItems(all.filter((i) => i.tarbilProductName && hasStock(i) && !(i.expiryDate && i.expiryDate < today))))
       .catch(() => setItems([]));
   }, []);
 
@@ -35,7 +36,7 @@ export function StockGivePicker({ value, onChange }: { value: string | null; onC
         <option value="">Seçiniz</option>
         {items.map((i) => (
           <option key={i.id} value={i.id}>
-            {`${i.name} · Seri ${i.lotNumber ?? '—'} · ${i.quantityOnHand} adet`}
+            {`${i.name} · Seri ${i.lotNumber ?? '—'} · ${formatStock(i.quantityOnHand, i.openedQuantity, i.unit)}`}
           </option>
         ))}
       </Select>

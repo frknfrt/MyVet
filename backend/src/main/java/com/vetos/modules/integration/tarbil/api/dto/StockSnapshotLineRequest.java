@@ -15,5 +15,7 @@ public record StockSnapshotLineRequest(
     @Min(0) int quantity,
     BigDecimal openedQuantity,
     /** Asi sayfasindaki "Parca Stok Ara" tablosundan (2026-10-21). Eski eklenti gondermez = false. */
-    Boolean partStock
+    Boolean partStock,
+    /** Asi butun stok "Uretilen Doz-Kucuk Hayvan" (spec 2026-10-24); eski eklenti gondermez. */
+    @jakarta.validation.constraints.Min(1) Integer dosesPerPackage
 ) {}

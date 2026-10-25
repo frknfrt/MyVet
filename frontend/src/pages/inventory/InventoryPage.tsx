@@ -9,6 +9,17 @@ import { NewInventoryItemModal } from './NewInventoryItemModal';
 import { PendingDeductionsPanel } from './PendingDeductionsPanel';
 import { TarbilStockSyncPanel } from './TarbilStockSyncPanel';
 import styles from './InventoryPage.module.css';
+import { formatStock, unitLabel } from './stockFormat';
+
+/** Kapalı kısım: "2 şişe", "1 kutu", "5 adet" (spec 2026-10-24). */
+function closedLabel(item: InventoryItem): string {
+  return formatStock(item.quantityOnHand, null, item.unit);
+}
+
+/** Açık kısım: "49 ml", "19 flakon"; adetle kullanılanda "—". */
+function openLabel(item: InventoryItem): string {
+  return item.unit === 'ADET' ? '—' : `${item.openedQuantity.toLocaleString('tr-TR')} ${unitLabel(item.unit)}`;
+}
 
 export function InventoryPage() {
   const { session } = useAuth();
@@ -70,7 +81,8 @@ export function InventoryPage() {
         <div className={styles.tableHead}>
           <div>Ürün</div>
           <div>Kategori</div>
-          <div>Miktar</div>
+          <div>Kapalı</div>
+          <div>Açık</div>
           <div>Kritik Eşik</div>
           <div>Son Kullanma</div>
           <div>Durum</div>
@@ -86,7 +98,8 @@ export function InventoryPage() {
               <div key={item.id} className={styles.row} onClick={() => setSelected(item)}>
                 <div>{item.name}</div>
                 <div className={styles.muted}>{item.category ?? '—'}</div>
-                <div>{item.quantityOnHand}</div>
+                <div>{closedLabel(item)}</div>
+                <div className={item.unit === 'ADET' ? styles.muted : undefined}>{openLabel(item)}</div>
                 <div className={styles.muted}>{item.reorderThreshold}</div>
                 <div>
                   {expiry.tone ? <Badge tone={expiry.tone}>{expiry.label}</Badge> : <span className={styles.muted}>{expiry.label}</span>}

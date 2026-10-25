@@ -40,13 +40,20 @@ class GenerateDiagnosisSuggestionUseCaseTest {
     @Mock private DiagnosisSuggestionPort diagnosisSuggestionPort;
     @Mock private RecordAiJobUseCase recordAiJobUseCase;
     @Mock private UsageQuotaPort quota;
+    @Mock private PatientHistoryAssembler historyAssembler;
+
+    private static final PatientHistory HISTORY = new PatientHistory(java.time.LocalDate.of(2026, 10, 1), null, null,
+        new PatientHistory.Section<>(List.of(), false, false), new PatientHistory.Section<>(List.of(), false, false),
+        new PatientHistory.Section<>(List.of(), false, false), new PatientHistory.Section<>(List.of(), false, false),
+        new PatientHistory.Section<>(List.of(), false, false), null);
 
     private GenerateDiagnosisSuggestionUseCase useCase;
 
     @BeforeEach
     void setUp() {
+        lenient().when(historyAssembler.assemble(any())).thenReturn(HISTORY);
         useCase = new GenerateDiagnosisSuggestionUseCase(
-            encounterLookupPort, diagnosisSuggestionPort, recordAiJobUseCase, "ollama", quota, new AiCallGate(BulkheadRegistry.of(BulkheadConfig.custom().maxConcurrentCalls(4).build()), new TenantRateLimiter(new RateLimitProperties(600, 10, 2000)))
+            encounterLookupPort, diagnosisSuggestionPort, recordAiJobUseCase, "ollama", quota, historyAssembler, new AiCallGate(BulkheadRegistry.of(BulkheadConfig.custom().maxConcurrentCalls(4).build()), new TenantRateLimiter(new RateLimitProperties(600, 10, 2000)))
         );
     }
 
@@ -59,9 +66,9 @@ class GenerateDiagnosisSuggestionUseCaseTest {
         EncounterClinicalContext context = new EncounterClinicalContext(
             encounterId, UUID.randomUUID(), "",
             "Sahip kusma bildiriyor", "Karin hassasiyeti", "Nabiz: 185 /dk", "Gastrointestinal: Anormal",
-            List.of(new PastEncounterSummary(Instant.now(), "Gecmis degerlendirme", "Gecmis plan"))
+            List.of(new PastEncounterSummary(Instant.now(), "Gecmis degerlendirme", "Gecmis plan")), Instant.now(), null
         );
-        when(encounterLookupPort.findClinicalContext(encounterId, 5)).thenReturn(context);
+        when(encounterLookupPort.findClinicalContext(encounterId, 21)).thenReturn(context);
         DiagnosisSuggestionDraft draft = new DiagnosisSuggestionDraft("Olasi gastroenterit", true, "llama3.1:8b");
         when(diagnosisSuggestionPort.generate(any())).thenReturn(draft);
         when(recordAiJobUseCase.execute(any())).thenReturn(aiJobId);
@@ -90,9 +97,9 @@ class GenerateDiagnosisSuggestionUseCaseTest {
     void should_throwClinicalFindingsRequired_when_subjectiveAndObjectiveAreBothBlank() {
         UUID encounterId = UUID.randomUUID();
         EncounterClinicalContext context = new EncounterClinicalContext(
-            encounterId, UUID.randomUUID(), "", "   ", "   ", "", "", List.of()
+            encounterId, UUID.randomUUID(), "", "   ", "   ", "", "", List.of(), Instant.now(), null
         );
-        when(encounterLookupPort.findClinicalContext(encounterId, 5)).thenReturn(context);
+        when(encounterLookupPort.findClinicalContext(encounterId, 21)).thenReturn(context);
 
         assertThatThrownBy(() -> useCase.execute(
             new GenerateDiagnosisSuggestionCommand(UUID.randomUUID(), encounterId, UUID.randomUUID())
@@ -105,9 +112,9 @@ class GenerateDiagnosisSuggestionUseCaseTest {
     private UUID stubContext() {
         UUID encounterId = UUID.randomUUID();
         EncounterClinicalContext context = new EncounterClinicalContext(
-            encounterId, UUID.randomUUID(), "", "Kusma", "", "", "", List.of()
+            encounterId, UUID.randomUUID(), "", "Kusma", "", "", "", List.of(), Instant.now(), null
         );
-        when(encounterLookupPort.findClinicalContext(encounterId, 5)).thenReturn(context);
+        when(encounterLookupPort.findClinicalContext(encounterId, 21)).thenReturn(context);
         return encounterId;
     }
 
@@ -171,12 +178,34 @@ class GenerateDiagnosisSuggestionUseCaseTest {
         when(fullGate.run(any(), any())).thenThrow(new AiBusyServiceUnavailableException());
         UUID encounterId = stubContext();
         GenerateDiagnosisSuggestionUseCase gated = new GenerateDiagnosisSuggestionUseCase(
-            encounterLookupPort, diagnosisSuggestionPort, recordAiJobUseCase, "ollama", quota, fullGate
+            encounterLookupPort, diagnosisSuggestionPort, recordAiJobUseCase, "ollama", quota, historyAssembler, fullGate
         );
 
         assertThatThrownBy(() -> gated.execute(new GenerateDiagnosisSuggestionCommand(UUID.randomUUID(), encounterId, UUID.randomUUID()))).isInstanceOf(AiBusyServiceUnavailableException.class);
 
         verifyNoInteractions(quota);
         verifyNoInteractions(diagnosisSuggestionPort, recordAiJobUseCase);
+    }
+
+    private UUID validEncounterForHistory() {
+        UUID encounterId = UUID.randomUUID();
+        when(encounterLookupPort.findClinicalContext(encounterId, 21)).thenReturn(new EncounterClinicalContext(
+            encounterId, UUID.randomUUID(), "", "Kusma", "", "", "", List.of(), Instant.now(), null));
+        return encounterId;
+    }
+
+    private GenerateDiagnosisSuggestionCommand command(UUID encounterId) {
+        return new GenerateDiagnosisSuggestionCommand(UUID.randomUUID(), encounterId, UUID.randomUUID());
+    }
+
+    @Test
+    void passesFormattedHistoryToPort() {
+        UUID encounterId = validEncounterForHistory();
+        when(diagnosisSuggestionPort.generate(any())).thenReturn(new DiagnosisSuggestionDraft("x", true, "m"));
+        useCase.execute(command(encounterId));
+        ArgumentCaptor<DiagnosisSuggestionInput> captor = ArgumentCaptor.forClass(DiagnosisSuggestionInput.class);
+        verify(diagnosisSuggestionPort).generate(captor.capture());
+        assertThat(captor.getValue().patientHistory()).isEqualTo(PatientHistoryFormatter.format(HISTORY));
+        verify(historyAssembler).assemble(any());
     }
 }

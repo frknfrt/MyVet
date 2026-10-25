@@ -20,6 +20,7 @@ import com.vetos.modules.integration.tarbil.application.MarkSubmittedUseCase;
 import com.vetos.modules.integration.tarbil.application.PairExtensionUseCase;
 import com.vetos.modules.integration.tarbil.application.CompareStockSnapshotUseCase;
 import com.vetos.modules.integration.tarbil.application.RecordStockSnapshotUseCase;
+import com.vetos.modules.integration.tarbil.application.RefreshStockUnitGuessesUseCase;
 import com.vetos.modules.integration.tarbil.domain.TarbilMappingKind;
 import com.vetos.platform.security.AuthenticatedStaffUser;
 import com.vetos.platform.tenancy.TenantContext;
@@ -27,6 +28,7 @@ import com.vetos.platform.feature.Feature;
 import com.vetos.platform.feature.RequiresFeature;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -39,6 +41,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/tarbil-extension")
 @RequiredArgsConstructor
+@Slf4j
 public class TarbilExtensionController {
 
     private final PairExtensionUseCase pairExtensionUseCase;
@@ -50,6 +53,7 @@ public class TarbilExtensionController {
     private final LearnTarbilMappingUseCase learnTarbilMappingUseCase;
     private final RecordStockSnapshotUseCase recordStockSnapshotUseCase;
     private final CompareStockSnapshotUseCase compareStockSnapshotUseCase;
+    private final RefreshStockUnitGuessesUseCase refreshStockUnitGuessesUseCase;
 
     @PostMapping("/pair")
     public PairResponse pair(@Valid @RequestBody PairRequest request) {
@@ -104,8 +108,15 @@ public class TarbilExtensionController {
     @ResponseStatus(HttpStatus.CREATED)
     public StockSnapshotResponse uploadStockSnapshot(@Valid @RequestBody StockSnapshotRequest request,
                                                      @AuthenticationPrincipal AuthenticatedStaffUser user) {
-        return new StockSnapshotResponse(recordStockSnapshotUseCase.execute(
-            TenantContext.current(), user.staffUserId(), request.system(), request.toInputs()));
+        UUID snapshotId = recordStockSnapshotUseCase.execute(
+            TenantContext.current(), user.staffUserId(), request.system(), request.toInputs(), request.isPartStockRead());
+        // Eşleşen ürünlere birim tahmini (değerlendirme I4); kayıttan ayrı işlem, hata gönderimi bozmaz.
+        try {
+            refreshStockUnitGuessesUseCase.execute(user.staffUserId(), snapshotId);
+        } catch (RuntimeException e) {
+            log.warn("Birim tahmini uygulanamadı: snapshotId={}", snapshotId, e);
+        }
+        return new StockSnapshotResponse(snapshotId);
     }
 
     /** Stok sayfasi acilinca: Vetly stoguyla karsilastirma, hicbir sey kaydedilmez (2026-10-07). */
@@ -114,7 +125,7 @@ public class TarbilExtensionController {
     public StockComparisonResponse compareStockSnapshot(@Valid @RequestBody StockSnapshotRequest request,
                                                         @AuthenticationPrincipal AuthenticatedStaffUser user) {
         return StockComparisonResponse.from(compareStockSnapshotUseCase.execute(
-            TenantContext.current(), user.staffUserId(), request.system(), request.toInputs()));
+            TenantContext.current(), user.staffUserId(), request.system(), request.toInputs(), request.isPartStockRead()));
     }
 }
 

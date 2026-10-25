@@ -381,4 +381,66 @@ describe('page ops', () => {
 
     expect(log).toEqual(['adet:2', 'miktar:2']);
   });
+
+  it('writes only the amount for an ml line and leaves Adet alone (spec 2026-10-24)', async () => {
+    const R = `${RP}RadGridStock_ctl00_ctl02_ctl03_`;
+    document.body.innerHTML = `<input id="${R}txtStockQuantity"><input id="${R}txtStockAmount">`;
+    const log: string[] = [];
+    const comps: Record<string, Record<string, unknown>> = {
+      [`${R}txtStockQuantity`]: { set_value: (v: string) => log.push(`adet:${v}`) },
+      [`${R}txtStockAmount`]: { set_value: (v: string) => log.push(`miktar:${v}`) },
+    };
+    const ops = createPageOps({ doc: document, find: (id) => comps[id] ?? null, prm: () => null, isReady: () => true });
+
+    await ops.setStockQuantities({ quantity: 0, amount: 1.5 });
+    await expect(ops.setStockQuantities({ quantity: 0, amount: 0 })).rejects.toMatchObject({ code: 'BAD_INPUT' });
+
+    expect(log).toEqual(['miktar:1,5']);
+  });
+
+  it('chooses Açık Stok before searching the medicine popup when asked (spec 2026-10-24)', async () => {
+    const P = 'ctl00_ContentPlaceHolder1_ContentPlaceHolderBody_UcPharmacyStockSearchForReceipt_';
+    document.body.innerHTML = `<input type="radio" id="${P}rbtnStockType_1"><input id="${P}txtSerialNumber"><a id="${P}btnSearch"></a>`;
+    const prm = instantPrm();
+    const log: string[] = [];
+    document.getElementById(`${P}rbtnStockType_1`)!.addEventListener('click', () => { log.push('acik'); prm.fire(); });
+    const comps: Record<string, Record<string, unknown>> = { [`${P}btnSearch`]: { click: () => { log.push('ara'); prm.fire(); } } };
+    const env: TelerikEnv = { doc: document, find: (id) => comps[id] ?? null, prm: () => prm, isReady: () => true };
+
+    await createPageOps(env).searchMedicineSerial({ serial: '63016', open: true });
+
+    expect(log).toEqual(['acik', 'ara']);
+  });
+
+  it('chooses Parça Stok before searching the vaccine popup when asked (spec 2026-10-24)', async () => {
+    const P = 'ctl00_ctl00_ContentPlaceHolder1_ContentPlaceHolderBody_UcVaccineStockSearch_';
+    document.body.innerHTML = `<input type="radio" id="${P}rbtnStockType_1"><input id="${P}txtSerialNo"><a id="${P}btnSearch"></a>`;
+    const prm = instantPrm();
+    const log: string[] = [];
+    document.getElementById(`${P}rbtnStockType_1`)!.addEventListener('click', () => { log.push('parca'); prm.fire(); });
+    const comps: Record<string, Record<string, unknown>> = {
+      [`${P}txtSerialNo`]: { set_value: (v: string) => log.push(`serial:${v}`) },
+      [`${P}btnSearch`]: { click: () => { log.push('ara'); prm.fire(); } },
+    };
+    const env: TelerikEnv = { doc: document, find: (id) => comps[id] ?? null, prm: () => prm, isReady: () => true };
+
+    await createPageOps(env).searchSerial({ serial: '665932', part: true });
+
+    expect(log).toEqual(['parca', 'serial:665932', 'ara']);
+  });
+
+  it('clicks Seç in the open-stock and part-stock lists too (spec 2026-10-24)', async () => {
+    const O = 'ctl00_ContentPlaceHolder1_ContentPlaceHolderBody_UcPharmacyStockSearchForReceipt_radGridOpenStock_ctl00';
+    const PP = 'ctl00_ctl00_ContentPlaceHolder1_ContentPlaceHolderBody_UcVaccineStockSearch_radGridPieceStock_ctl00';
+    document.body.innerHTML = `<table id="${O}"><tbody><tr><td><a id="${O}_ctl04_SelectlinkButton2">Seç</a></td></tr></tbody></table>
+      <table id="${PP}"><tbody><tr><td><a id="${PP}_ctl04_SelectlinkButton">Seç</a></td></tr></tbody></table>`;
+    let clicked = 0;
+    for (const id of [`${O}_ctl04_SelectlinkButton2`, `${PP}_ctl04_SelectlinkButton`]) document.getElementById(id)!.addEventListener('click', () => clicked++);
+    const ops = createPageOps({ doc: document, find: () => null, prm: () => null, isReady: () => true });
+
+    await ops.selectStockRow({ linkId: `${O}_ctl04_SelectlinkButton2` });
+    await ops.selectStockRow({ linkId: `${PP}_ctl04_SelectlinkButton` });
+
+    expect(clicked).toBe(2);
+  });
 });

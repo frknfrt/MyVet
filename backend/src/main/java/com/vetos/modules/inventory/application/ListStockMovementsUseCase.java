@@ -19,7 +19,7 @@ public class ListStockMovementsUseCase {
     @Transactional(readOnly = true)
     public List<StockMovementSummary> execute(UUID inventoryItemId) {
         return stockMovementRepository.findByInventoryItemId(inventoryItemId).stream()
-            .map(m -> new StockMovementSummary(m.getId(), m.getMovementType(), m.getQuantity(), m.getReferenceType(), m.getReferenceId(), m.getCreatedAt()))
+            .map(m -> new StockMovementSummary(m.getId(), m.getMovementType(), m.getQuantity(), m.getOpenedDelta(), m.getReferenceType(), m.getReferenceId(), m.getCreatedAt()))
             .sorted(Comparator.comparing(StockMovementSummary::createdAt).reversed())
             .toList();
     }

@@ -27,12 +27,18 @@ class PendingStockDeductionRepositoryAdapter implements PendingStockDeductionRep
     }
 
     @Override
-    public boolean claimForSettlement(UUID id, int settledQuantity, DeductionSettlement via, UUID staffId, Instant now) {
-        return jpaRepository.claim(id, settledQuantity, via, staffId, now) == 1;
+    public boolean claimForSettlement(UUID id, java.math.BigDecimal settledQuantity, com.vetos.modules.inventory.domain.StockSource source,
+                                      DeductionSettlement via, UUID staffId, Instant now) {
+        return jpaRepository.claim(id, settledQuantity, source, via, staffId, now) == 1;
     }
 
     @Override
     public List<PendingStockDeduction> findAllPending() {
         return jpaRepository.findByStatusOrderByCreatedAt(PendingDeductionStatus.PENDING);
+    }
+
+    @Override
+    public boolean existsPendingForItem(UUID inventoryItemId) {
+        return jpaRepository.existsByInventoryItemIdAndStatus(inventoryItemId, PendingDeductionStatus.PENDING);
     }
 }

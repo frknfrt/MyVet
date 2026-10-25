@@ -1,5 +1,7 @@
 package com.vetos.modules.encounter.application;
 
+import com.vetos.modules.encounter.domain.PrescriptionItemNames;
+
 import com.vetos.modules.encounter.application.dto.EncounterReportData;
 import com.vetos.modules.encounter.domain.DrugCatalogRepository;
 import com.vetos.modules.encounter.domain.Encounter;

@@ -60,7 +60,7 @@ class InventoryFeatureListenersTest {
     void should_skipEncounterDeduction_when_inventoryDisabled() {
         inventory(false);
         var event = new EncounterFinalizedEvent(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-            List.of(new EncounterFinalizedEvent.UsedItem(UUID.randomUUID(), 2)));
+            List.of(new EncounterFinalizedEvent.UsedItem(UUID.randomUUID(), java.math.BigDecimal.valueOf(2))));
 
         new EncounterFinalizedEventListener(autoDeduct, featureAccess).onEncounterFinalized(event);
 
@@ -103,7 +103,7 @@ class InventoryFeatureListenersTest {
     void should_rejectStockPrescription_when_inventoryDisabled() {
         inventory(false);
         var event = new PrescriptionIssuedEvent(UUID.randomUUID(), UUID.randomUUID(), null,
-            List.of(new PrescriptionIssuedEvent.StockItem(UUID.randomUUID(), 1, "Metacam")));
+            List.of(new PrescriptionIssuedEvent.StockItem(UUID.randomUUID(), java.math.BigDecimal.ONE, "Metacam")));
         var listener = new PrescriptionStockEventListener(pending, items, featureAccess);
 
         assertThatThrownBy(() -> listener.onIssued(event)).isInstanceOf(FeatureNotInPlanForbiddenException.class);
@@ -127,5 +127,21 @@ class InventoryFeatureListenersTest {
         new PrescriptionStockEventListener(pending, items, featureAccess).onCancelled(new PrescriptionCancelledEvent(prescriptionId));
 
         verify(pending).cancel(com.vetos.modules.inventory.domain.StockReferenceType.PRESCRIPTION, prescriptionId);
+    }
+
+    @Test
+    void should_rejectFractionalQuantity_when_prescriptionStockItemIsUsedByTheUnit() {
+        inventory(true);
+        UUID itemId = UUID.randomUUID();
+        com.vetos.modules.inventory.domain.InventoryItem tablet = com.vetos.modules.inventory.domain.InventoryItem.create(
+            TENANT, UUID.randomUUID(), "Metacam", "İlaç", null, 5, 0, null, "MC7", null);
+        tablet.linkTarbil("VETILAC_MEDICINE", "METACAM", "10 tabletlik blister");
+        when(items.findById(itemId)).thenReturn(java.util.Optional.of(tablet));
+        var event = new PrescriptionIssuedEvent(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+            List.of(new PrescriptionIssuedEvent.StockItem(itemId, new java.math.BigDecimal("0.5"), "Metacam")));
+
+        assertThatThrownBy(() -> new PrescriptionStockEventListener(pending, items, featureAccess).onIssued(event))
+            .isInstanceOf(com.vetos.modules.inventory.domain.exception.InvalidPrescriptionStockItemException.class);
+        verifyNoInteractions(pending);
     }
 }

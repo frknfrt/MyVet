@@ -11,14 +11,16 @@ export interface StockRow {
   expiryDate: string | null;
   quantity: number;
   openedQuantity: number | null;
+  /** Aşı bütün stok: kutudaki flakon ("Üretilen Doz-Küçük Hayvan"; spec 2026-10-24). Kolon yoksa alan yok. */
+  dosesPerPackage?: number | null;
 }
 
-interface Columns { product: string; presentation: string; lot: string; expiry: string; quantity: string; opened?: string }
+interface Columns { product: string; presentation: string; lot: string; expiry: string; quantity: string; opened?: string; doses?: string }
 
 // Basliklar 2026-10-04 canli okumasindan; tam esitlikle aranir ("Acilmis Kalan Miktar Son Kullanma Tarihi" karismasin).
 const VACCINE_COLUMNS: Columns = { product: 'Aşı Adı', presentation: 'Takdim Şekli', lot: 'Seri Numarası', expiry: 'Son Kullanma Tarihi', quantity: 'Ürün Miktarı' };
 const TABLES: Record<StockTable, { grid: string; cols: Columns }> = {
-  vaccineStock: { grid: VACCINE_STOCK.grid, cols: VACCINE_COLUMNS },
+  vaccineStock: { grid: VACCINE_STOCK.grid, cols: { ...VACCINE_COLUMNS, doses: 'Üretilen Doz-Küçük Hayvan' } },
   vaccinePartStock: { grid: VACCINE_STOCK.partGrid, cols: VACCINE_COLUMNS },
   medicineStock: {
     grid: MEDICINE_STOCK.grid,
@@ -46,6 +48,12 @@ function headerCells(doc: Document, table: HTMLTableElement): string[] {
   return head && head.length > 0 ? Array.from(head[head.length - 1].cells).map((c) => clean(c.textContent)) : [];
 }
 
+/** "20" -> 20; boş, sıfır ya da bozuk -> null (doz bilgisi tahmine yardımcı, satırı reddetmez). */
+function positiveInt(s: string | null | undefined): number | null {
+  const n = parseTrNumber(s);
+  return n !== null && Number.isInteger(n) && n > 0 ? n : null;
+}
+
 /** Bilinen sutunlardan biri yoksa (TARBIL ekrani degismis) bos liste doner; yanlis veri gonderilmez. */
 export function readStockRows(doc: Document, table: StockTable): StockRow[] {
   return readStockTable(doc, table) ?? [];
@@ -67,6 +75,8 @@ export function readStockTable(doc: Document, which: StockTable): StockRow[] | n
   const expiry = idx(cols.expiry);
   const quantity = idx(cols.quantity);
   const opened = idx(cols.opened);
+  // Doz kolonu opsiyonel (eski ekran / test): yoksa satıra alan eklenmez.
+  const doses = idx(cols.doses);
   if ([product, presentation, lot, expiry, quantity].some((i) => i < 0) || (cols.opened && opened < 0)) return null;
   const rows: StockRow[] = [];
   for (const r of Array.from(table.tBodies[0]?.rows ?? [])) {
@@ -90,6 +100,7 @@ export function readStockTable(doc: Document, which: StockTable): StockRow[] | n
       expiryDate,
       quantity: qty,
       openedQuantity,
+      ...(doses >= 0 ? { dosesPerPackage: positiveInt(r.cells[doses]?.textContent) } : {}),
     });
   }
   return rows;

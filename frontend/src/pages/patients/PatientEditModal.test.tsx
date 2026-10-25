@@ -55,6 +55,11 @@ beforeEach(() => vi.clearAllMocks());
 afterEach(() => container?.remove());
 
 describe('PatientEditModal', () => {
+  it('warns that the critical alert is sent to the AI suggestion', async () => {
+    await render();
+    expect(document.body.textContent).toContain('Bu alan yapay zekâ önerisine gönderilir');
+  });
+
   it('shows the current name and saves the edited one, trimmed', async () => {
     const { name } = await render();
     expect(name.value).toBe('Pamuk');

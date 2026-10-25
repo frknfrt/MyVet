@@ -30,13 +30,13 @@ export async function runMedicineStockPopupFlow(d: StockPopupDeps): Promise<void
   d.card.show(views.stockPopup(`Seri ${serial} aranıyor…`, 'muted'));
   try {
     await d.bridge.call('ready');
-    await d.bridge.call('searchMedicineSerial', { serial });
+    await d.bridge.call('searchMedicineSerial', { serial, open: line.source === 'OPEN' });
   } catch (e) {
     await handOver(`Stokta arama yapılamadı (${code(e)}).`);
     return;
   }
 
-  const pick = pickStockRow(readMedicinePopupRows(d.doc), { serial, productName: line.tarbilProductName, today: d.today() });
+  const pick = pickStockRow(readMedicinePopupRows(d.doc, line.source === 'OPEN'), { serial, productName: line.tarbilProductName, today: d.today() });
   switch (pick.kind) {
     case 'none':
       await handOver(`Seri ${serial} TARBİL stoğunuzda bulunamadı.`);

@@ -42,7 +42,7 @@ describe('runStockPopupFlow', () => {
     await runStockPopupFlow(deps);
 
     expect(calls.map((c) => c.op)).toEqual(['ready', 'searchSerial', 'selectStockRow']);
-    expect(calls[1].args).toEqual({ serial: '665932' });
+    expect(calls[1].args).toEqual({ serial: '665932', part: false });
     expect(calls[2].args).toEqual({ linkId: `${SP}_ctl04_SelectlinkButton` });
   });
 
@@ -103,5 +103,18 @@ describe('runStockPopupFlow', () => {
 
     expect(calls.map((c) => c.op)).toEqual(['ready', 'searchSerial']);
     expect((await flow.get())?.message).toContain('okunamadı');
+  });
+
+  it('searches the part-stock list when the vaccination stockSource is OPEN (spec 2026-10-24)', async () => {
+    const PP = 'ctl00_ctl00_ContentPlaceHolder1_ContentPlaceHolderBody_UcVaccineStockSearch_radGridPieceStock_ctl00';
+    document.body.innerHTML = `<table id="${PP}"><thead><tr><th></th><th>Aşı Adı</th><th>Takdim Şekli</th><th>Seri Numarası</th>
+      <th>Son Kullanma Tarihi</th><th>Ürün Miktarı</th></tr></thead><tbody><tr id="${PP}__0"><td><a id="${PP}_ctl04_SelectlinkButton">Seç</a></td>
+      <td>Biocan R</td><td>Flakon</td><td>665932</td><td>31.08.2027</td><td>18</td></tr></tbody></table>`;
+    const { deps, calls } = await setup('choosingProduct', { ...submission, stockSource: 'OPEN' } as Submission);
+
+    await runStockPopupFlow(deps);
+
+    expect(calls[1].args).toEqual({ serial: '665932', part: true });
+    expect(calls[2].args).toEqual({ linkId: `${PP}_ctl04_SelectlinkButton` });
   });
 });

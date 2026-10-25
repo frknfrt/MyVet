@@ -53,15 +53,18 @@ export function createPageOps(env: TelerikEnv): Record<string, PageHandler> {
       await showAllRows(env, VACCINE_STOCK.partGridComponent, 500);
     },
     // Asi stok penceresi (spec 2026-10-04 P2): seri ile ara, tek satirin "Sec" baglantisi, urun satirina adet.
-    searchSerial: async ({ serial }: { serial: string }) => {
+    // part: önce "Parça Stok" listesi seçilir (açılmış kutudan flakon; spec 2026-10-24).
+    searchSerial: async ({ serial, part = false }: { serial: string; part?: boolean }) => {
+      if (part) await clickButton(env, allowed('vaccineStockPopup', 'partStock'));
       setText(env, VACCINE_STOCK_POPUP.serial, serial);
       await clickButton(env, allowed('vaccineStockPopup', 'search'));
     },
     // Yalniz stok pencerelerindeki (asi ya da ilac) "Sec" baglantilari; tiklama pencereyi kapatir, sonuc beklenmez.
     selectStockRow: ({ linkId }: { linkId: string }) => {
       const link = env.doc.getElementById(linkId);
-      const inGrid = [VACCINE_STOCK_POPUP.grid, MEDICINE_STOCK_POPUP.grid]
-        .map((g) => `table${bySuffix(g)} a[id$="SelectlinkButton"]`)
+      // Açık/parça stok listeleri de (2026-10-24); açık stokta bağlantı SelectlinkButton2.
+      const inGrid = [VACCINE_STOCK_POPUP.grid, VACCINE_STOCK_POPUP.partGrid, MEDICINE_STOCK_POPUP.grid, MEDICINE_STOCK_POPUP.openGrid]
+        .map((g) => `table${bySuffix(g)} a[id*="SelectlinkButton"]`)
         .join(', ');
       if (!link || !link.matches(inGrid)) {
         return Promise.reject(new PageError('NOT_FOUND', 'Stok tablosunda böyle bir Seç bağlantısı yok'));
@@ -98,15 +101,19 @@ export function createPageOps(env: TelerikEnv): Record<string, PageHandler> {
       await clickButton(env, allowed('prescriptionReceipt', 'addDisease'));
       return { added: true, listed: listed() };
     },
-    searchMedicineSerial: async ({ serial }: { serial: string }) => {
+    // open: önce "Açık Stok" listesi seçilir (açılmış şişeden kullanım; spec 2026-10-24).
+    searchMedicineSerial: async ({ serial, open = false }: { serial: string; open?: boolean }) => {
+      if (open) await clickButton(env, allowed('medicineStockPopup', 'openStock'));
       setTextLoose(env, MEDICINE_STOCK_POPUP.serial, serial);
       await clickButton(env, allowed('medicineStockPopup', 'search'));
     },
-    // Kullanici karari (2026-10-10): TARBIL Adet'i duser; Miktar ayni sayi.
-    setStockQuantities: async ({ quantity }: { quantity: number }) => {
-      if (!Number.isInteger(quantity) || quantity < 1) throw new PageError('BAD_INPUT', `Geçersiz adet: ${quantity}`);
-      setText(env, PRESCRIPTION_RECEIPT.stockQuantity, String(quantity));
-      setText(env, PRESCRIPTION_RECEIPT.stockAmount, String(quantity));
+    // 2026-10-24 canlı: TARBİL Adet alanını kapalı tutar, Miktar'ı kullanır. Adet kalemde (quantity > 0) bugünkü gibi
+    // Adet + Miktar = adet; paketli kalemde (quantity 0) yalnız Miktar = kullanılan ml/g/flakon.
+    setStockQuantities: async ({ quantity, amount }: { quantity: number; amount?: number }) => {
+      const value = amount ?? quantity;
+      if (!Number.isInteger(quantity) || quantity < 0 || !(value > 0)) throw new PageError('BAD_INPUT', `Geçersiz miktar: ${quantity} / ${amount}`);
+      if (quantity > 0) setText(env, PRESCRIPTION_RECEIPT.stockQuantity, String(quantity));
+      setText(env, PRESCRIPTION_RECEIPT.stockAmount, String(Math.round(value * 100) / 100).replace('.', ','));
     },
   };
 }

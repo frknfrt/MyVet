@@ -44,7 +44,7 @@ public class ApplyStockSyncUseCase {
         String system = snapshot.getTarbilSystem().name();
         String category = snapshot.getTarbilSystem() == TarbilStockSystem.HBSAPP_VACCINE ? "Aşı" : "İlaç";
         List<TarbilStockSnapshotLine> lines = repository.findLines(snapshotId);
-        Map<String, Integer> totals = StockSyncMatcher.totals(lines);
+        Map<String, StockSyncMatcher.Target> targets = StockSyncMatcher.targets(snapshot.getTarbilSystem(), snapshot.isPartStockRead(), lines);
         List<InventoryStockView> stock = stockSyncPort.listForBranch(branchId);
         Instant now = Instant.now();
         // TARBIL'e islenmemis aktarimi olan kalem esitlenmez (2026-10-21): ekran bu satirlari sectirmez, burada da reddedilir.
@@ -53,7 +53,7 @@ public class ApplyStockSyncUseCase {
             if (!wanted.contains(line.getId()) || line.isApplied()) {
                 continue;
             }
-            StockSyncMatcher.Match match = StockSyncMatcher.match(line, stock, totals.get(StockSyncMatcher.key(line)));
+            StockSyncMatcher.Match match = StockSyncMatcher.match(line, stock, targets.get(StockSyncMatcher.key(line)));
             if (match.item() != null && pending.getOrDefault(match.item().id(), 0) > 0) {
                 throw new TarbilStockLinePendingConflictException();
             }
@@ -64,15 +64,16 @@ public class ApplyStockSyncUseCase {
                 continue;
             }
             String key = StockSyncMatcher.key(line);
-            int target = totals.get(key);
+            StockSyncMatcher.Target target = targets.get(key);
             StockSyncMatcher.Match match = StockSyncMatcher.match(line, stock, target);
             UUID itemId;
             if (match.status() == TarbilStockSyncStatus.NEW) {
                 itemId = stockSyncPort.createFromTarbil(branchId, new NewTarbilStockItem(system, line.getProductName(),
-                    line.getPresentation(), category, line.getLotNumber(), line.getExpiryDate(), target), snapshotId);
+                    line.getPresentation(), category, line.getLotNumber(), line.getExpiryDate(), target.closed(), target.opened(),
+                    target.dosesPerPackage()), snapshotId);
             } else {
                 itemId = match.item().id();
-                stockSyncPort.syncFromTarbil(itemId, target,
+                stockSyncPort.syncFromTarbil(itemId, target.closed(), target.opened(), target.dosesPerPackage(),
                     new TarbilStockLink(system, line.getProductName(), line.getPresentation()), snapshotId);
             }
             // Ayni urun+lotun diger satirlari ayni kaleme islendi: tekrar islenmesinler.

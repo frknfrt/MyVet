@@ -67,6 +67,11 @@ export function createStockSync(d: StockSyncDeps) {
     return { lines: [...main, ...partLines], main: main.length, part: part === null ? null : part.length };
   }
 
+  /** Aşıda Vetly parça stoğu ancak tablo okunduysa eşitler (spec 2026-10-24); ilaçta alan yok. */
+  function partFlag(r: StockRead): { partStockRead?: boolean } {
+    return hasPart ? { partStockRead: r.part !== null && r.part !== undefined } : {};
+  }
+
   function details(r: StockRead): CardLine[] {
     if (r.part === undefined) return [];
     if (r.part === null) {
@@ -79,7 +84,7 @@ export function createStockSync(d: StockSyncDeps) {
     try {
       const read = await readTable();
       if (!read || read.lines.length === 0) return null;
-      const res = await d.send<StockComparison>({ type: 'COMPARE_STOCK_SNAPSHOT', system: SYSTEM[d.kind], lines: read.lines });
+      const res = await d.send<StockComparison>({ type: 'COMPARE_STOCK_SNAPSHOT', system: SYSTEM[d.kind], lines: read.lines, ...partFlag(read) });
       return res.ok ? { c: res.data, read } : null;
     } catch {
       return null;
@@ -106,7 +111,7 @@ export function createStockSync(d: StockSyncDeps) {
         d.card.show(views.stock('Stok tablosu tanınmadı ya da boş. TARBİL ekranı değişmiş olabilir; Vetly ekibine haber verin.', 'warn', SEND_ACTION));
         return;
       }
-      const res = await d.send<{ snapshotId: string }>({ type: 'UPLOAD_STOCK_SNAPSHOT', system: SYSTEM[d.kind], lines: read.lines });
+      const res = await d.send<{ snapshotId: string }>({ type: 'UPLOAD_STOCK_SNAPSHOT', system: SYSTEM[d.kind], lines: read.lines, ...partFlag(read) });
       if (!res.ok) {
         d.card.show(views.stock(res.error, 'warn', SEND_ACTION));
         return;

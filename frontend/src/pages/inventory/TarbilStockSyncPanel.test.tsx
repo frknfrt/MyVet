@@ -14,7 +14,7 @@ import { TarbilStockSyncPanel } from './TarbilStockSyncPanel';
 
 const line = (over: Partial<TarbilStockSyncLine>): TarbilStockSyncLine => ({
   lineId: 'l', productName: 'Ürün', presentation: null, lotNumber: 'L1', expiryDate: null, tarbilQuantity: 1,
-  openedQuantity: null, status: 'QUANTITY_DIFFERS', inventoryItemId: 'i', vetlyQuantity: 0, partStock: false,
+  tarbilOpenedQuantity: 0, status: 'QUANTITY_DIFFERS', inventoryItemId: 'i', vetlyQuantity: 0, vetlyOpenedQuantity: 0, unit: 'ADET', partStock: false,
   pendingTarbilCount: 0, ...over,
 });
 
@@ -64,5 +64,21 @@ describe('TarbilStockSyncPanel', () => {
     expect(selectAll.disabled).toBe(true);
     expect(text).toContain("Farklı görünen ürünlerin TARBİL'e gönderilmeyi bekleyen kaydı var.");
     expect(text).not.toContain('Vetly stoğu TARBİL ile aynı.');
+  });
+
+  it('shows closed and open parts for an ml item', async () => {
+    const { text } = await render([
+      line({ lineId: 'c', productName: 'CLAVON = Clavon', unit: 'ML', tarbilQuantity: 0, tarbilOpenedQuantity: 49, vetlyQuantity: 1, vetlyOpenedQuantity: 0 }),
+    ]);
+    expect(text).toContain('0 şişe + 49 ml');
+    expect(text).toContain('1 şişe + 0 ml');
+  });
+
+  it('shows only boxes when the part stock was not read', async () => {
+    const { text } = await render([
+      line({ lineId: 'v', productName: 'Biocan DHPPI', unit: 'FLAKON', tarbilQuantity: 1, tarbilOpenedQuantity: null, vetlyQuantity: 1, vetlyOpenedQuantity: 19 }),
+    ]);
+    expect(text).toContain('1 kutu');
+    expect(text).not.toContain('1 kutu + ' + '0 flakon');
   });
 });

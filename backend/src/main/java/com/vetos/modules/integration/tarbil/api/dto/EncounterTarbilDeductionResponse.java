@@ -7,7 +7,7 @@ import java.util.UUID;
 
 public record EncounterTarbilDeductionResponse(List<Line> lines, UUID submissionId, String submissionStatus) {
 
-    public record Line(String itemName, String lotNumber, int quantity, String status, Integer settledQuantity) {}
+    public record Line(String itemName, String lotNumber, java.math.BigDecimal quantity, String status, java.math.BigDecimal settledQuantity) {}
 
     public static EncounterTarbilDeductionResponse from(GetEncounterTarbilDeductionUseCase.View v) {
         return new EncounterTarbilDeductionResponse(

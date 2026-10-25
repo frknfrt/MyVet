@@ -68,7 +68,7 @@ class IssuePrescriptionUseCaseTest {
     }
 
     private PrescriptionItemInput stockItem(UUID inventoryItemId, Integer qty) {
-        return new PrescriptionItemInput(null, "Metacam", "1 tb", "2x1", 5, DrugRoute.ORAL, inventoryItemId, qty);
+        return new PrescriptionItemInput(null, "Metacam", "1 tb", "2x1", 5, DrugRoute.ORAL, inventoryItemId, qty == null ? null : java.math.BigDecimal.valueOf(qty));
     }
 
     private PrescriptionItemInput plainItem() {
@@ -82,7 +82,7 @@ class IssuePrescriptionUseCaseTest {
 
         UUID id = useCase().execute(new IssuePrescriptionCommand(patient, null, staff, false, disease, List.of(stockItem(inv, 2), plainItem())));
 
-        verify(publisher).publish(new PrescriptionIssuedEvent(id, patient, disease, List.of(new PrescriptionIssuedEvent.StockItem(inv, 2, "Metacam"))));
+        verify(publisher).publish(new PrescriptionIssuedEvent(id, patient, disease, List.of(new PrescriptionIssuedEvent.StockItem(inv, java.math.BigDecimal.valueOf(2), "Metacam"))));
     }
 
     @Test
@@ -115,8 +115,8 @@ class IssuePrescriptionUseCaseTest {
     @Test
     void stockItemTakesItsNameInsteadOfACatalogDrug() {
         UUID inv = UUID.randomUUID();
-        PrescriptionItemInput withCatalogDrug = new PrescriptionItemInput(drug, "Metacam", "1", "1", 1, DrugRoute.ORAL, inv, 1);
-        PrescriptionItemInput withoutName = new PrescriptionItemInput(null, "  ", "1", "1", 1, DrugRoute.ORAL, inv, 1);
+        PrescriptionItemInput withCatalogDrug = new PrescriptionItemInput(drug, "Metacam", "1", "1", 1, DrugRoute.ORAL, inv, java.math.BigDecimal.valueOf(1));
+        PrescriptionItemInput withoutName = new PrescriptionItemInput(null, "  ", "1", "1", 1, DrugRoute.ORAL, inv, java.math.BigDecimal.valueOf(1));
 
         for (PrescriptionItemInput item : List.of(withCatalogDrug, withoutName)) {
             assertThatThrownBy(() -> useCase().execute(new IssuePrescriptionCommand(patient, null, staff, false, UUID.randomUUID(), List.of(item))))
@@ -142,7 +142,7 @@ class IssuePrescriptionUseCaseTest {
         ArgumentCaptor<PrescriptionItem> saved = ArgumentCaptor.forClass(PrescriptionItem.class);
 
         UUID id = useCase().execute(new IssuePrescriptionCommand(patient, null, staff, false, UUID.randomUUID(),
-            List.of(new PrescriptionItemInput(null, " Metacam ", "1", "1", 1, DrugRoute.ORAL, inv, 1))));
+            List.of(new PrescriptionItemInput(null, " Metacam ", "1", "1", 1, DrugRoute.ORAL, inv, java.math.BigDecimal.valueOf(1)))));
 
         verify(items).save(saved.capture());
         assertThat(saved.getValue().getDrugId()).isNull();
@@ -150,7 +150,7 @@ class IssuePrescriptionUseCaseTest {
         ArgumentCaptor<PrescriptionIssuedEvent> event = ArgumentCaptor.forClass(PrescriptionIssuedEvent.class);
         verify(publisher).publish(event.capture());
         assertThat(event.getValue().prescriptionId()).isEqualTo(id);
-        assertThat(event.getValue().stockItems()).containsExactly(new PrescriptionIssuedEvent.StockItem(inv, 1, "Metacam"));
+        assertThat(event.getValue().stockItems()).containsExactly(new PrescriptionIssuedEvent.StockItem(inv, java.math.BigDecimal.valueOf(1), "Metacam"));
     }
 
     @Test

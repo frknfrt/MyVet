@@ -1,5 +1,4 @@
 package com.vetos.modules.ai.domain;
 
-import java.util.List;
-
-public record TreatmentRecommendationInput(String currentAssessment, List<HistoryEntry> history) {}
+/** patientHistory: PatientHistoryFormatter çıktısı (son 1 yıl; spec 2026-10-25). */
+public record TreatmentRecommendationInput(String currentAssessment, String patientHistory) {}

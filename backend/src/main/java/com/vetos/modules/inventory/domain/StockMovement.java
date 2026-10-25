@@ -5,6 +5,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -32,6 +33,10 @@ public class StockMovement {
     @Column(nullable = false)
     private int quantity;
 
+    /** Acik miktar degisimi (spec 2026-10-24); paketsiz kalemde ve eski hareketlerde null. */
+    @Column(name = "opened_delta")
+    private BigDecimal openedDelta;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "reference_type", nullable = false)
     private StockReferenceType referenceType;
@@ -46,11 +51,19 @@ public class StockMovement {
         UUID tenantId, UUID inventoryItemId, StockMovementType movementType, int quantity,
         StockReferenceType referenceType, UUID referenceId
     ) {
+        return record(tenantId, inventoryItemId, movementType, quantity, null, referenceType, referenceId);
+    }
+
+    public static StockMovement record(
+        UUID tenantId, UUID inventoryItemId, StockMovementType movementType, int quantity, BigDecimal openedDelta,
+        StockReferenceType referenceType, UUID referenceId
+    ) {
         StockMovement movement = new StockMovement();
         movement.tenantId = tenantId;
         movement.inventoryItemId = inventoryItemId;
         movement.movementType = movementType;
         movement.quantity = quantity;
+        movement.openedDelta = openedDelta;
         movement.referenceType = referenceType;
         movement.referenceId = referenceId;
         movement.createdAt = Instant.now();

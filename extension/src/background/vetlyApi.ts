@@ -78,16 +78,16 @@ export function createVetlyApi({ baseUrl, tokens, fetchFn = fetch }: Options) {
         method: 'POST',
         body: JSON.stringify({ reason }),
       }),
-    uploadStockSnapshot: (system: StockSystem, lines: StockSnapshotLine[]) =>
+    uploadStockSnapshot: (system: StockSystem, lines: StockSnapshotLine[], partStockRead?: boolean) =>
       request<{ snapshotId: string }>('/api/v1/tarbil-extension/stock-snapshots', {
         method: 'POST',
-        body: JSON.stringify({ system, lines }),
+        body: JSON.stringify({ system, lines, partStockRead }),
       }),
     /** Kaydetmeden karsilastirma (stok sayfasi acilinca). */
-    compareStockSnapshot: (system: StockSystem, lines: StockSnapshotLine[]) =>
+    compareStockSnapshot: (system: StockSystem, lines: StockSnapshotLine[], partStockRead?: boolean) =>
       request<StockComparison>('/api/v1/tarbil-extension/stock-snapshots/compare', {
         method: 'POST',
-        body: JSON.stringify({ system, lines }),
+        body: JSON.stringify({ system, lines, partStockRead }),
       }),
   };
 }

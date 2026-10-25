@@ -14,7 +14,8 @@ import java.util.UUID;
 @Service
 public class GenerateTreatmentRecommendationUseCase {
 
-    private static final int HISTORY_LIMIT = 5;
+    /** Tavanın bir fazlası: PatientHistoryAssembler kısaltıldığını anlayabilsin. */
+    private static final int HISTORY_LIMIT = PatientHistoryAssembler.MAX_ENCOUNTERS + 1;
 
     private final EncounterLookupPort encounterLookupPort;
     private final TreatmentRecommendationPort treatmentRecommendationPort;
@@ -22,6 +23,7 @@ public class GenerateTreatmentRecommendationUseCase {
     private final String providerName;
     private final UsageQuotaPort usageQuotaPort;
     private final AiCallGate aiCallGate;
+    private final PatientHistoryAssembler patientHistoryAssembler;
 
     public GenerateTreatmentRecommendationUseCase(
         EncounterLookupPort encounterLookupPort,
@@ -29,6 +31,7 @@ public class GenerateTreatmentRecommendationUseCase {
         RecordAiJobUseCase recordAiJobUseCase,
         @Value("${ai.provider:ollama}") String providerName,
         UsageQuotaPort usageQuotaPort,
+        PatientHistoryAssembler patientHistoryAssembler,
         AiCallGate aiCallGate
     ) {
         this.encounterLookupPort = encounterLookupPort;
@@ -37,6 +40,7 @@ public class GenerateTreatmentRecommendationUseCase {
         this.providerName = providerName;
         this.usageQuotaPort = usageQuotaPort;
         this.aiCallGate = aiCallGate;
+        this.patientHistoryAssembler = patientHistoryAssembler;
     }
 
     public TreatmentRecommendationResult execute(GenerateTreatmentRecommendationCommand command) {
@@ -47,9 +51,7 @@ public class GenerateTreatmentRecommendationUseCase {
 
         TreatmentRecommendationInput input = new TreatmentRecommendationInput(
             context.currentAssessment(),
-            context.recentHistory().stream()
-                .map(h -> new HistoryEntry(h.date().toString(), h.assessment(), h.plan()))
-                .toList()
+            PatientHistoryFormatter.format(patientHistoryAssembler.assemble(context))
         );
         // Kota ayirma kapinin icinde: AI yogunsa hak dusmez.
         TreatmentRecommendationDraft draft = aiCallGate.run(command.tenantId(), () -> {

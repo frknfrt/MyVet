@@ -1,5 +1,6 @@
 package com.vetos.modules.ai.infrastructure.adapter;
 
+import com.vetos.modules.ai.domain.PatientHistoryPrompt;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vetos.modules.ai.domain.TreatmentRecommendationDraft;
@@ -18,7 +19,6 @@ import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Lokal Ollama uzerinden tedavi onerisi uretimi -- OllamaSoapGenerationAdapter
@@ -43,7 +43,8 @@ class OllamaTreatmentRecommendationAdapter implements TreatmentRecommendationPor
         Sen bir veteriner klinik karar destegi asistanisin. Sana hekimin bir hasta icin yazdigi \
         degerlendirme (assessment) ve hastanin gecmis muayene ozetleri verilecek. Bu bilgilere \
         dayanarak olasi bir tedavi plani oner. Kesin tani koyma, sadece tedavi secenekleri sun. \
-        Yanitin sade bir paragraf/madde listesi olsun, JSON veya markdown kullanma.""";
+        Yanitin sade bir paragraf/madde listesi olsun, JSON veya markdown kullanma."""
+        + PatientHistoryPrompt.INSTRUCTION + PatientHistoryPrompt.CONCISE + PatientHistoryPrompt.DOSE_BY_WEIGHT;
 
     private final String baseUrl;
     private final String model;
@@ -86,7 +87,8 @@ class OllamaTreatmentRecommendationAdapter implements TreatmentRecommendationPor
             "model", model,
             "system", SYSTEM_PROMPT,
             "prompt", prompt,
-            "stream", false
+            "stream", false,
+            "options", OllamaOptions.wideContext()
         );
         String raw = restClient.post()
             .uri(baseUrl + "/api/generate")
@@ -103,14 +105,7 @@ class OllamaTreatmentRecommendationAdapter implements TreatmentRecommendationPor
     private String buildPrompt(TreatmentRecommendationInput input) {
         StringBuilder sb = new StringBuilder();
         sb.append("Guncel degerlendirme: ").append(input.currentAssessment()).append("\n\n");
-        if (input.history().isEmpty()) {
-            sb.append("Gecmis muayene kaydi yok.");
-        } else {
-            sb.append("Gecmis muayeneler (en yeniden eskiye):\n");
-            sb.append(input.history().stream()
-                .map(h -> "- " + h.date() + " | Degerlendirme: " + h.assessment() + " | Plan: " + h.plan())
-                .collect(Collectors.joining("\n")));
-        }
+        sb.append(input.patientHistory() == null || input.patientHistory().isBlank() ? "Hasta gecmisi yok." : input.patientHistory());
         return sb.toString();
     }
 

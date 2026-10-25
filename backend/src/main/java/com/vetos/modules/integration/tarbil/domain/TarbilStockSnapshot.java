@@ -31,8 +31,17 @@ public class TarbilStockSnapshot {
     @Column(name = "taken_by_staff_id", nullable = false)
     private UUID takenByStaffId;
 
+    /** Asi: eklenti "Parca Stok Ara" tablosunu okuyabildi (spec 2026-10-24); false ise parca/acik miktar bilinmiyor. */
+    @Column(name = "part_stock_read", nullable = false)
+    private boolean partStockRead;
+
     public static TarbilStockSnapshot take(UUID tenantId, TarbilStockSystem system, UUID staffId, Instant now) {
+        return take(tenantId, system, staffId, now, false);
+    }
+
+    public static TarbilStockSnapshot take(UUID tenantId, TarbilStockSystem system, UUID staffId, Instant now, boolean partStockRead) {
         TarbilStockSnapshot snapshot = new TarbilStockSnapshot();
+        snapshot.partStockRead = partStockRead;
         snapshot.tenantId = tenantId;
         snapshot.tarbilSystem = system;
         snapshot.takenByStaffId = staffId;

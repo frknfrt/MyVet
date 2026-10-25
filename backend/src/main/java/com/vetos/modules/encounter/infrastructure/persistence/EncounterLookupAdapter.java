@@ -9,12 +9,18 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.time.LocalDate;
+import org.springframework.data.domain.PageRequest;
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
 class EncounterLookupAdapter implements EncounterLookupPort {
 
     private final EncounterJpaRepository jpaRepository;
+    private final PrescriptionJpaRepository prescriptionRepository;
+    private final PrescriptionItemJpaRepository prescriptionItemRepository;
+    private final DrugCatalogRepository drugCatalogRepository;
 
     @Override
     public EncounterSummary findSummaryById(UUID encounterId) {
@@ -31,6 +37,8 @@ class EncounterLookupAdapter implements EncounterLookupPort {
         List<PastEncounterSummary> history = jpaRepository.findByPatientId(current.getPatientId()).stream()
             .filter(e -> !e.getId().equals(encounterId))
             .filter(e -> e.getStatus() == EncounterStatus.FINALIZED || e.getStatus() == EncounterStatus.AMENDED)
+            // Bu muayeneden sonraki muayeneler "geçmiş" değil; sınırdan önce elenir (2026-10-25).
+            .filter(e -> e.getEncounterDate() != null && !e.getEncounterDate().isAfter(current.getEncounterDate()))
             .sorted(Comparator.comparing(Encounter::getEncounterDate).reversed())
             .limit(historyLimit)
             .map(e -> new PastEncounterSummary(e.getEncounterDate(), e.getAssessment(), e.getPlan()))
@@ -40,8 +48,25 @@ class EncounterLookupAdapter implements EncounterLookupPort {
             current.getId(), current.getPatientId(), current.getAssessment(),
             current.getSubjective(), current.getObjective(),
             buildVitalsSummary(current), buildPhysicalExamSummary(current),
-            history
+            history, current.getEncounterDate(), current.getWeightKg()
         );
+    }
+
+    @Override
+    public List<PrescriptionHistoryEntry> findPrescriptionHistory(UUID patientId, LocalDate from, LocalDate to, int limit) {
+        List<Prescription> found = prescriptionRepository.findByPatientIdAndStatusNotAndIssuedDateBetweenOrderByIssuedDateDesc(
+            patientId, PrescriptionStatus.CANCELLED, from, to, PageRequest.of(0, limit));
+        if (found.isEmpty()) return List.of();
+        // Kalemler tek sorguda (2026-10-25).
+        Map<UUID, List<PrescriptionItem>> byPrescription = prescriptionItemRepository
+            .findByPrescriptionIdIn(found.stream().map(Prescription::getId).toList()).stream()
+            .collect(Collectors.groupingBy(PrescriptionItem::getPrescriptionId));
+        return found.stream()
+            .map(p -> new PrescriptionHistoryEntry(p.getEncounterId(), p.getIssuedDate(),
+                byPrescription.getOrDefault(p.getId(), List.of()).stream()
+                    .map(i -> new PrescriptionHistoryEntry.Item(PrescriptionItemNames.of(i, drugCatalogRepository), i.getDosage(), i.getFrequency(), i.getDurationDays(), i.getRoute()))
+                    .toList()))
+            .toList();
     }
 
     private String buildVitalsSummary(Encounter e) {

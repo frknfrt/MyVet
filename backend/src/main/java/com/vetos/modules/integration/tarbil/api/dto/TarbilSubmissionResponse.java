@@ -17,12 +17,13 @@ public record TarbilSubmissionResponse(
     Instant submittedAt, TarbilConfirmationMethod confirmationMethod, String tarbilReference,
     String vaccineKey, @JsonRawValue String vaccineMapping, @JsonRawValue String speciesMapping,
     TarbilDocumentType documentType,
-    TarbilSubmissionView.PrescriptionPayload prescription
+    TarbilSubmissionView.PrescriptionPayload prescription,
+    String stockSource
 ) {
     public static TarbilSubmissionResponse from(TarbilSubmissionView v) {
         return new TarbilSubmissionResponse(v.id(), v.vaccinationRecordId(), v.status(), v.patientName(), v.microchipNumber(), v.passportNumber(),
             v.speciesId(), v.speciesName(), v.breedName(), v.sex(), v.birthDate(), v.vaccineName(), v.lotNumber(), v.tarbilProductName(),
             v.administeredDate(), v.submittedAt(), v.confirmationMethod(), v.tarbilReference(),
-            v.vaccineKey(), v.vaccineMappingJson(), v.speciesMappingJson(), v.documentType(), v.prescription());
+            v.vaccineKey(), v.vaccineMappingJson(), v.speciesMappingJson(), v.documentType(), v.prescription(), v.stockSource());
     }
 }

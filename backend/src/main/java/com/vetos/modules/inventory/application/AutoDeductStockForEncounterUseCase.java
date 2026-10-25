@@ -23,19 +23,20 @@ public class AutoDeductStockForEncounterUseCase {
     private final PendingDeductionService pendingDeductionService;
     private final InventoryItemRepository inventoryItemRepository;
 
-    public record UsedItem(UUID inventoryItemId, int quantity) {}
+    public record UsedItem(UUID inventoryItemId, java.math.BigDecimal quantity) {}
 
     @Transactional
     public void execute(UUID encounterId, List<UsedItem> usedItems) {
-        for (UsedItem used : usedItems) {
-            boolean linked = inventoryItemRepository.findById(used.inventoryItemId())
-                .map(i -> i.getTarbilProductName() != null).orElse(false);
+        for (UsedItem raw : usedItems) {
+            var item = inventoryItemRepository.findById(raw.inventoryItemId());
+            boolean linked = item.map(i -> i.getTarbilProductName() != null).orElse(false);
+            // Adet ile kullanilan kalemde ondalik miktar yukari yuvarlanir: muayene kapanisi hicbir zaman takilmasin (spec 2026-10-24).
+            boolean whole = item.map(i -> !i.isOpenable()).orElse(true);
+            UsedItem used = whole ? new UsedItem(raw.inventoryItemId(), raw.quantity().setScale(0, java.math.RoundingMode.CEILING)) : raw;
             if (linked) {
                 pendingDeductionService.open(used.inventoryItemId(), used.quantity(), StockReferenceType.ENCOUNTER, encounterId);
             } else {
-                recordStockMovementUseCase.execute(
-                    used.inventoryItemId(), StockMovementType.OUT, used.quantity(), StockReferenceType.ENCOUNTER, encounterId
-                );
+                recordStockMovementUseCase.consume(used.inventoryItemId(), used.quantity(), null, StockReferenceType.ENCOUNTER, encounterId);
             }
         }
     }

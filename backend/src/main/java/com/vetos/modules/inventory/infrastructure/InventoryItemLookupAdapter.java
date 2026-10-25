@@ -22,4 +22,11 @@ class InventoryItemLookupAdapter implements InventoryItemLookupPort {
         return items.findById(inventoryItemId)
             .map(i -> i.getTarbilProductName() != null ? i.getTarbilProductName() : i.getName());
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<java.math.BigDecimal> findOpenedQuantity(UUID inventoryItemId) {
+        if (inventoryItemId == null) return Optional.empty();
+        return items.findById(inventoryItemId).map(i -> i.getOpenedQuantity());
+    }
 }

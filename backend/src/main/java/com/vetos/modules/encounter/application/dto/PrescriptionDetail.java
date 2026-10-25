@@ -17,5 +17,5 @@ public record PrescriptionDetail(
     List<PrescriptionItemDetail> items
 ) {
     public record PrescriptionItemDetail(UUID drugId, String drugName, String dosage, String frequency, int durationDays, String route,
-                                         UUID inventoryItemId, Integer stockQuantity) {}
+                                         UUID inventoryItemId, java.math.BigDecimal stockQuantity) {}
 }

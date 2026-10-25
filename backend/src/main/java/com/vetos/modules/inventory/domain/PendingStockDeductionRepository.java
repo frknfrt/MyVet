@@ -13,8 +13,11 @@ public interface PendingStockDeductionRepository {
      * Satiri yalniz hala PENDING ise atomik olarak DEDUCTED yapar (kosullu UPDATE). Es zamanli iki onaydan yalniz biri
      * true alir; stok hareketi yalniz o yazar (review 2026-10-10, cift dusum).
      */
-    boolean claimForSettlement(UUID id, int settledQuantity, DeductionSettlement via, UUID staffId, Instant now);
+    boolean claimForSettlement(UUID id, java.math.BigDecimal settledQuantity, StockSource source, DeductionSettlement via, UUID staffId, Instant now);
 
     /** Kiraci filtresi @TenantId ile gelir. */
     List<PendingStockDeduction> findAllPending();
+
+    /** Kalemin PENDING düşümü var mı (birim değişikliği kilidi, değerlendirme I3). */
+    boolean existsPendingForItem(UUID inventoryItemId);
 }

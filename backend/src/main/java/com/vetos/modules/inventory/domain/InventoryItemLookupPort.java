@@ -6,4 +6,7 @@ import java.util.UUID;
 /** integration/tarbil icin: asinin stok kaleminin TARBIL'deki urun adi (yoksa kalem adi). */
 public interface InventoryItemLookupPort {
     Optional<String> findTarbilProductName(UUID inventoryItemId);
+
+    /** Kalemin acik/parca miktari (spec 2026-10-24); kalem yoksa bos. */
+    Optional<java.math.BigDecimal> findOpenedQuantity(UUID inventoryItemId);
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { inventoryApi, InventoryItem } from '../../api/inventoryApi';
 import { Select } from '../../components/ui/Field';
+import { formatStock, hasStock } from '../inventory/stockFormat';
 
 /**
  * Kategorisi tam olarak "Aşı" (büyük/küçük harf ve ş/ı farkı gözetmeden) olan kalemler -- sunucu da yalnız bunları
@@ -40,7 +41,7 @@ export function VaccineStockPicker({
   useEffect(() => {
     inventoryApi
       .list()
-      .then((all) => setItems(all.filter((i) => isVaccine(i) && i.quantityOnHand > 0)))
+      .then((all) => setItems(all.filter((i) => isVaccine(i) && hasStock(i))))
       .catch(() => setItems([]));
   }, []);
 
@@ -53,7 +54,7 @@ export function VaccineStockPicker({
         const expired = !!i.expiryDate && i.expiryDate < today;
         return (
           <option key={i.id} value={i.id} disabled={expired} style={expired ? { color: 'var(--color-danger-700)' } : undefined}>
-            {`${i.name} · Seri ${i.lotNumber ?? '—'} · SKT ${trDate(i.expiryDate)} · ${i.quantityOnHand} adet${expired ? ' (SKT geçmiş)' : ''}`}
+            {`${i.name} · Seri ${i.lotNumber ?? '—'} · SKT ${trDate(i.expiryDate)} · ${formatStock(i.quantityOnHand, i.openedQuantity, i.unit)}${expired ? ' (SKT geçmiş)' : ''}`}
           </option>
         );
       })}

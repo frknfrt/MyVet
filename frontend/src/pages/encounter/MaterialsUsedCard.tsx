@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button';
 import { FieldWrap, Input, Select } from '../../components/ui/Field';
 import encounterStyles from './EncounterPage.module.css';
 import styles from './MaterialsUsedCard.module.css';
+import { formatStock, isDecimalUnit, unitLabel } from '../inventory/stockFormat';
 
 interface MaterialsUsedCardProps {
   encounterId: string;
@@ -48,6 +49,9 @@ export function MaterialsUsedCard({ encounterId, readOnly }: MaterialsUsedCardPr
     return items.find((i) => i.id === id)?.name ?? id;
   }
 
+  const selected = items.find((i) => i.id === itemId);
+  const decimal = isDecimalUnit(selected?.unit);
+
   return (
     <div className={encounterStyles.card}>
       <div className={encounterStyles.cardTitle}>Kullanılan Malzeme</div>
@@ -57,7 +61,7 @@ export function MaterialsUsedCard({ encounterId, readOnly }: MaterialsUsedCardPr
         usage.map((u) => (
           <div key={u.id} className={styles.row}>
             <span>{itemName(u.inventoryItemId)}</span>
-            <span>{u.quantity} adet</span>
+            <span>{u.quantity.toLocaleString('tr-TR')} {unitLabel(items.find((i) => i.id === u.inventoryItemId)?.unit)}</span>
           </div>
         ))
       )}
@@ -67,13 +71,13 @@ export function MaterialsUsedCard({ encounterId, readOnly }: MaterialsUsedCardPr
             <Select value={itemId} onChange={(e) => setItemId(e.target.value)} disabled={items.length === 0}>
               {items.map((i) => (
                 <option key={i.id} value={i.id}>
-                  {i.name} ({i.quantityOnHand} adet mevcut)
+                  {i.name} ({formatStock(i.quantityOnHand, i.openedQuantity, i.unit)} mevcut)
                 </option>
               ))}
             </Select>
           </FieldWrap>
-          <FieldWrap label="Adet">
-            <Input type="number" min={1} value={quantity} onChange={(e) => setQuantity(e.target.value)} required />
+          <FieldWrap label={decimal ? `Miktar (${unitLabel(selected?.unit)})` : 'Adet'}>
+            <Input type="number" min={decimal ? 0.01 : 1} step={decimal ? '0.01' : '1'} value={quantity} onChange={(e) => setQuantity(e.target.value)} required />
           </FieldWrap>
           <Button type="submit" variant="secondary" disabled={busy || items.length === 0}>
             Ekle

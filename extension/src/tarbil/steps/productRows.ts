@@ -55,13 +55,15 @@ export function readPopupRows(doc: Document, gridSuffix: string, nameHeader: str
       productName: clean(r.cells[name]?.textContent),
       serial: normalizeSerial(r.cells[serial]?.textContent),
       expiryDate: isoDate(r.cells[expiry]?.textContent),
-      linkId: r.querySelector<HTMLAnchorElement>('a[id$="SelectlinkButton"]')?.id ?? '',
+      // Açık stok listesinde bağlantı SelectlinkButton2 (2026-10-24 canlı).
+      linkId: r.querySelector<HTMLAnchorElement>('a[id*="SelectlinkButton"]')?.id ?? '',
     }))
     .filter((r) => r.serial && r.linkId);
 }
 
-export function readStockPopupRows(doc: Document): StockPopupRow[] {
-  return readPopupRows(doc, VACCINE_STOCK_POPUP.grid, 'Aşı Adı');
+/** part: "Parça Stok" listesi (spec 2026-10-24). */
+export function readStockPopupRows(doc: Document, part = false): StockPopupRow[] {
+  return readPopupRows(doc, part ? VACCINE_STOCK_POPUP.partGrid : VACCINE_STOCK_POPUP.grid, 'Aşı Adı');
 }
 
 /**

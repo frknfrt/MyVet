@@ -102,7 +102,10 @@ class TarbilSubmissionAssembler {
             v.vaccineName(), v.lotNumber(), inventoryItemLookupPort.findTarbilProductName(v.inventoryItemId()).orElse(null),
             v.administeredDate(),
             log.getSubmittedAt(), log.getConfirmationMethod(), log.getTarbilReference(),
-            vaccineKey, vaccineMapping, speciesMapping, log.getDocumentType(), null
+            vaccineKey, vaccineMapping, speciesMapping, log.getDocumentType(), null,
+            v.inventoryItemId() == null ? null
+                : inventoryItemLookupPort.findOpenedQuantity(v.inventoryItemId()).filter(o -> o.compareTo(java.math.BigDecimal.ONE) >= 0)
+                    .map(o -> "OPEN").orElse("WHOLE")
         ));
     }
 
@@ -116,7 +119,7 @@ class TarbilSubmissionAssembler {
             log.getTarbilDiseaseId() == null ? null : diseaseRepository.findById(log.getTarbilDiseaseId()).map(TarbilDisease::getName).orElse(null),
             LocalDate.ofInstant(log.getQueuedAt(), ISTANBUL),
             pendingLines(log).stream()
-                .map(l -> new TarbilSubmissionView.PrescriptionPayload.Line(l.itemName(), l.tarbilProductName(), l.lotNumber(), l.quantity()))
+                .map(TarbilSubmissionAssembler::planLine)
                 .toList());
         return new TarbilSubmissionView(
             log.getId(), log.getSourceId(), log.getStatus(),
@@ -130,7 +133,22 @@ class TarbilSubmissionAssembler {
             patient.map(PatientTarbilProfile::birthDate).orElse(null),
             "Reçete", null, null, null,
             log.getSubmittedAt(), log.getConfirmationMethod(), log.getTarbilReference(),
-            "", null, speciesMapping, log.getDocumentType(), payload);
+            "", null, speciesMapping, log.getDocumentType(), payload, null);
+    }
+
+    /**
+     * Eklentiye plan (spec 2026-10-24): ADET kalem bugunku gibi adetle; paketli kalemde TARBIL yalniz Miktar alir (Adet kapali,
+     * 2026-10-24 canli) - acik miktar yetiyorsa Acik Stok, yoksa Butun Stok listesinden secilir.
+     */
+    static TarbilSubmissionView.PrescriptionPayload.Line planLine(com.vetos.modules.inventory.domain.PendingDeductionLine l) {
+        boolean packaged = l.unit() != null && !"ADET".equals(l.unit());
+        if (!packaged) {
+            return new TarbilSubmissionView.PrescriptionPayload.Line(l.itemName(), l.tarbilProductName(), l.lotNumber(),
+                l.quantity().intValue(), l.quantity(), "ADET", "WHOLE");
+        }
+        boolean open = l.itemOpenedQuantity() != null && l.itemOpenedQuantity().compareTo(l.quantity()) >= 0;
+        return new TarbilSubmissionView.PrescriptionPayload.Line(l.itemName(), l.tarbilProductName(), l.lotNumber(),
+            0, l.quantity(), l.unit(), open ? "OPEN" : "WHOLE");
     }
 
     private static final ZoneId ISTANBUL = ZoneId.of("Europe/Istanbul");

@@ -14,6 +14,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -46,8 +47,8 @@ class ApplyVaccinationStockUseCaseTest {
     }
 
     private PendingDeductionLine line(PendingDeductionStatus status) {
-        return new PendingDeductionLine(UUID.randomUUID(), itemId, "Biocan R", null, "665932", 1, status,
-            status == PendingDeductionStatus.DEDUCTED ? 1 : null);
+        return new PendingDeductionLine(UUID.randomUUID(), itemId, "Biocan R", null, "665932", BigDecimal.ONE, status,
+            status == PendingDeductionStatus.DEDUCTED ? BigDecimal.ONE : null, "FLAKON", BigDecimal.ZERO);
     }
 
     @Test
@@ -58,7 +59,7 @@ class ApplyVaccinationStockUseCaseTest {
 
         useCase().administered(vaccinationId, itemId, "665932");
 
-        verify(pending).open(itemId, 1, StockReferenceType.VACCINATION, vaccinationId);
+        verify(pending).open(itemId, BigDecimal.ONE, StockReferenceType.VACCINATION, vaccinationId);
         verify(movements, never()).save(any());
         assertThat(item.getQuantityOnHand()).isEqualTo(18);
     }
@@ -71,7 +72,7 @@ class ApplyVaccinationStockUseCaseTest {
 
         useCase().administered(vaccinationId, itemId, "665932");
 
-        verify(pending).open(itemId, 1, StockReferenceType.VACCINATION, vaccinationId);
+        verify(pending).open(itemId, BigDecimal.ONE, StockReferenceType.VACCINATION, vaccinationId);
     }
 
     @Test
@@ -81,7 +82,7 @@ class ApplyVaccinationStockUseCaseTest {
         useCase().administered(vaccinationId, itemId, "665932");
 
         verify(items, never()).findById(any());
-        verify(pending, never()).open(any(), anyInt(), any(), any());
+        verify(pending, never()).open(any(), any(), any(), any());
     }
 
     @Test
@@ -91,7 +92,7 @@ class ApplyVaccinationStockUseCaseTest {
 
         useCase().administered(vaccinationId, itemId, "665932");
 
-        verify(pending, never()).open(any(), anyInt(), any(), any());
+        verify(pending, never()).open(any(), any(), any(), any());
     }
 
     @Test
@@ -101,7 +102,7 @@ class ApplyVaccinationStockUseCaseTest {
 
         verify(items, never()).findById(any());
         verify(movements, never()).save(any());
-        verify(pending, never()).open(any(), anyInt(), any(), any());
+        verify(pending, never()).open(any(), any(), any(), any());
     }
 
     @Test
@@ -159,7 +160,7 @@ class ApplyVaccinationStockUseCaseTest {
 
         useCase().administered(vaccinationId, itemId, "665932");
 
-        verify(pending, never()).open(any(), anyInt(), any(), any());
+        verify(pending, never()).open(any(), any(), any(), any());
     }
 
     @Test
@@ -169,7 +170,7 @@ class ApplyVaccinationStockUseCaseTest {
 
         useCase().administered(vaccinationId, itemId, "999999");
 
-        verify(pending, never()).open(any(), anyInt(), any(), any());
+        verify(pending, never()).open(any(), any(), any(), any());
     }
 
     @Test
@@ -181,6 +182,6 @@ class ApplyVaccinationStockUseCaseTest {
 
         useCase().administered(vaccinationId, itemId, " 665 932 ");
 
-        verify(pending).open(itemId, 1, StockReferenceType.VACCINATION, vaccinationId);
+        verify(pending).open(itemId, BigDecimal.ONE, StockReferenceType.VACCINATION, vaccinationId);
     }
 }

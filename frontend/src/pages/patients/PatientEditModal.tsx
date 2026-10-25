@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useRef, useState } from 'react';
 import { ApiError } from '../../api/client';
 import { BreedItem, patientApi, PatientProfile, Sex, SpeciesItem } from '../../api/patientApi';
 import { Button } from '../../components/ui/Button';
-import { FieldWrap, Input, Select, Textarea } from '../../components/ui/Field';
+import { FieldWrap, Input, Select, Textarea, AI_FIELD_HINT } from '../../components/ui/Field';
 import { Modal } from '../../components/ui/Modal';
 import styles from './PatientEditModal.module.css';
 
@@ -227,7 +227,7 @@ export function PatientEditModal({ open, profile, onClose, onSaved }: PatientEdi
             <Input value={distinguishingMarks} onChange={(e) => setDistinguishingMarks(e.target.value)} />
           </FieldWrap>
         </div>
-        <FieldWrap label="Kritik Uyarı (kırmızı banner ile gösterilir)">
+        <FieldWrap label="Kritik Uyarı (kırmızı banner ile gösterilir)" hint={AI_FIELD_HINT}>
           <Textarea rows={2} value={criticalAlert} onChange={(e) => setCriticalAlert(e.target.value)} />
         </FieldWrap>
         <FieldWrap label="Genel Notlar">

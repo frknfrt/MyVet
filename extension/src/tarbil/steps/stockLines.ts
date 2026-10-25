@@ -1,4 +1,4 @@
-import type { ConfirmedLine, PlannedLine } from '../../shared/types';
+import type { ConfirmedLine, PlannedLine, StockSource } from '../../shared/types';
 import { MEDICINE_STOCK_POPUP, PRESCRIPTION_RECEIPT, bySuffix } from '../selectors';
 import { headerIndex, normalizeSerial, readPopupRows, type StockPopupRow } from './productRows';
 
@@ -8,12 +8,26 @@ export interface SavedStockLine {
   productName: string;
   serial: string;
   quantity: number | null;
+  /** "Kullanılacak Miktarı" (ondalık) ve "Stok Tipi" (spec 2026-10-24); okunamazsa null. */
+  amount?: number | null;
+  source?: StockSource | null;
 }
 
 const clean = (s: string | null | undefined) => (s ?? '').replace(/\s+/g, ' ').trim();
 
-export function readMedicinePopupRows(doc: Document): StockPopupRow[] {
-  return readPopupRows(doc, MEDICINE_STOCK_POPUP.grid, 'Ürün Adı');
+/** open: "Açık Stok" listesi (spec 2026-10-24). */
+export function readMedicinePopupRows(doc: Document, open = false): StockPopupRow[] {
+  return readPopupRows(doc, open ? MEDICINE_STOCK_POPUP.openGrid : MEDICINE_STOCK_POPUP.grid, 'Ürün Adı');
+}
+
+function decimal(s: string): number | null {
+  const m = /^(\d+(?:,\d{1,2})?)(?:\s*[a-zA-Z]+)?$/.exec(s);
+  const n = m ? Number(m[1].replace(',', '.')) : Number.NaN;
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function stockSource(s: string): StockSource | null {
+  return s === 'Açık Stok' ? 'OPEN' : s === 'Bütün Stok' ? 'WHOLE' : null;
 }
 
 /** "Stok Ekle" ekleme satiri: urun secilmeden seri bos gelir (2026-10-10 canli). */
@@ -31,6 +45,8 @@ export function readSavedStockLines(doc: Document): SavedStockLine[] {
   const name = headerIndex(table, 'Ürün', 2);
   const serial = headerIndex(table, 'Seri Numarası', 4);
   const quantity = headerIndex(table, 'Kullanılacak Adet', 8);
+  const amount = headerIndex(table, 'Kullanılacak Miktarı', 9);
+  const type = headerIndex(table, 'Stok Tipi', 7);
   return Array.from(table.tBodies[0]?.rows ?? [])
     .filter((r) => r.id.startsWith(`${table.id}__`) && !r.classList.contains('rgEditRow'))
     .map((r) => {
@@ -41,6 +57,8 @@ export function readSavedStockLines(doc: Document): SavedStockLine[] {
         productName: clean(r.cells[name]?.textContent),
         serial: normalizeSerial(r.cells[serial]?.textContent),
         quantity: Number.isInteger(n) && n > 0 ? n : null,
+        amount: decimal(clean(r.cells[amount]?.textContent)),
+        source: stockSource(clean(r.cells[type]?.textContent)),
       };
     })
     .filter((l) => l.serial.length > 0);
@@ -58,6 +76,10 @@ export function confirmedLines(saved: SavedStockLine[], planned: PlannedLine[]):
     const plan = planned.find((p) => normalizeSerial(p.lotNumber) === l.serial);
     const productName = l.productName || plan?.tarbilProductName || plan?.itemName || '';
     const quantity = l.quantity ?? plan?.quantity ?? null;
-    return productName && quantity ? [{ productName, serialNumber: l.serial, quantity }] : [];
+    // TARBİL esas (spec 2026-10-24): okunan miktar ve stok tipi; okunamazsa plandan. Paketli kalemde adet 0 olabilir.
+    const amount = l.amount ?? plan?.amount ?? (quantity || null);
+    const source = l.source ?? plan?.source ?? null;
+    if (!productName || quantity === null || !(quantity > 0 || (amount ?? 0) > 0)) return [];
+    return [{ productName, serialNumber: l.serial, quantity, amount: amount ?? undefined, source }];
   });
 }

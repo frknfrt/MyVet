@@ -64,4 +64,39 @@ class PatientLookupAdapterTest {
 
         assertThat(adapter().findTarbilProfile(patientId)).isEmpty();
     }
+
+    @Test
+    void findClinicalProfile_mapsCardFieldsWithSpeciesAndBreedNames() {
+        UUID patientId = UUID.randomUUID();
+        UUID speciesId = UUID.randomUUID();
+        UUID breedId = UUID.randomUUID();
+        Patient patient = mock(Patient.class);
+        when(patient.getSpeciesId()).thenReturn(speciesId);
+        when(patient.getBreedId()).thenReturn(breedId);
+        when(patient.getSex()).thenReturn(Sex.FEMALE);
+        when(patient.isNeutered()).thenReturn(true);
+        when(patient.getBirthDate()).thenReturn(LocalDate.of(2018, 7, 1));
+        when(patient.getWeightKg()).thenReturn(new java.math.BigDecimal("31.5"));
+        when(patient.getBloodType()).thenReturn("DEA 1.1+");
+        when(patient.getCriticalAlert()).thenReturn("Penisilin alerjisi");
+        Species species = mock(Species.class);
+        when(species.getName()).thenReturn("Köpek");
+        Breed breed = mock(Breed.class);
+        when(breed.getName()).thenReturn("Golden");
+        when(patientJpaRepository.findById(patientId)).thenReturn(Optional.of(patient));
+        when(speciesJpaRepository.findById(speciesId)).thenReturn(Optional.of(species));
+        when(breedJpaRepository.findById(breedId)).thenReturn(Optional.of(breed));
+
+        assertThat(adapter().findClinicalProfile(patientId)).contains(new com.vetos.modules.patient.domain.PatientClinicalProfile(
+            "Köpek", "Golden", Sex.FEMALE, true, LocalDate.of(2018, 7, 1), new java.math.BigDecimal("31.5"),
+            "DEA 1.1+", "Penisilin alerjisi"));
+    }
+
+    @Test
+    void findClinicalProfile_returnsEmpty_whenPatientMissing() {
+        UUID patientId = UUID.randomUUID();
+        when(patientJpaRepository.findById(patientId)).thenReturn(Optional.empty());
+
+        assertThat(adapter().findClinicalProfile(patientId)).isEmpty();
+    }
 }

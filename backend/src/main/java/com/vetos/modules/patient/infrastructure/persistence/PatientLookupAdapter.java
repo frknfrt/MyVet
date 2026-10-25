@@ -33,4 +33,13 @@ class PatientLookupAdapter implements PatientLookupPort {
             p.getSex(), p.getBirthDate()
         ));
     }
+
+    @Override
+    public Optional<PatientClinicalProfile> findClinicalProfile(UUID patientId) {
+        return jpaRepository.findById(patientId).map(p -> new PatientClinicalProfile(
+            speciesJpaRepository.findById(p.getSpeciesId()).map(Species::getName).orElse(null),
+            p.getBreedId() == null ? null : breedJpaRepository.findById(p.getBreedId()).map(Breed::getName).orElse(null),
+            p.getSex(), p.isNeutered(), p.getBirthDate(), p.getWeightKg(), p.getBloodType(), p.getCriticalAlert()
+        ));
+    }
 }

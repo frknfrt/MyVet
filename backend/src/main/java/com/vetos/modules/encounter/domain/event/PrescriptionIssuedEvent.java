@@ -9,5 +9,5 @@ import java.util.UUID;
  */
 public record PrescriptionIssuedEvent(UUID prescriptionId, UUID patientId, UUID tarbilDiseaseId, List<StockItem> stockItems) {
     /** name: recetede yazilan stok urunu adi; inventory kalemin adiyla dogrular (spec 2026-10-12). */
-    public record StockItem(UUID inventoryItemId, int quantity, String name) {}
+    public record StockItem(UUID inventoryItemId, java.math.BigDecimal quantity, String name) {}
 }

@@ -16,5 +16,12 @@ public record InventoryItemDetail(
     String lotNumber,
     BigDecimal unitCost,
     /** TARBIL urun adi; doluysa kalem TARBIL dusumunu bekler (spec 2026-10-09). */
-    String tarbilProductName
+    String tarbilProductName,
+    /** Kullanim birimi ADET | ML | G | FLAKON (spec 2026-10-24). */
+    String unit,
+    BigDecimal packageSize,
+    /** Acik paketlerde kalan; quantityOnHand yalniz kapali adet. */
+    BigDecimal openedQuantity,
+    /** AUTO (TARBIL bilgisinden tahmin) | MANUAL */
+    String unitSource
 ) {}

@@ -34,9 +34,9 @@ public class EncounterInventoryUsage {
     private UUID inventoryItemId;
 
     @Column(nullable = false)
-    private int quantity;
+    private java.math.BigDecimal quantity;
 
-    public static EncounterInventoryUsage record(UUID tenantId, UUID encounterId, UUID inventoryItemId, int quantity) {
+    public static EncounterInventoryUsage record(UUID tenantId, UUID encounterId, UUID inventoryItemId, java.math.BigDecimal quantity) {
         EncounterInventoryUsage usage = new EncounterInventoryUsage();
         usage.tenantId = tenantId;
         usage.encounterId = encounterId;

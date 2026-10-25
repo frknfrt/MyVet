@@ -4,10 +4,15 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public record StockSnapshotLineInput(String productName, String presentation, String lotNumber, LocalDate expiryDate,
-                                     int quantity, BigDecimal openedQuantity, boolean partStock) {
+                                     int quantity, BigDecimal openedQuantity, boolean partStock, Integer dosesPerPackage) {
+    public StockSnapshotLineInput(String productName, String presentation, String lotNumber, LocalDate expiryDate,
+                                  int quantity, BigDecimal openedQuantity, boolean partStock) {
+        this(productName, presentation, lotNumber, expiryDate, quantity, openedQuantity, partStock, null);
+    }
+
 
     public StockSnapshotLineInput(String productName, String presentation, String lotNumber, LocalDate expiryDate,
                                   int quantity, BigDecimal openedQuantity) {
-        this(productName, presentation, lotNumber, expiryDate, quantity, openedQuantity, false);
+        this(productName, presentation, lotNumber, expiryDate, quantity, openedQuantity, false, null);
     }
 }

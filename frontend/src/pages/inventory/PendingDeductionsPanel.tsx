@@ -3,6 +3,7 @@ import { ApiError } from '../../api/client';
 import { inventoryApi, PendingDeduction, PendingDeductionReference } from '../../api/inventoryApi';
 import { Button } from '../../components/ui/Button';
 import styles from './PendingDeductionsPanel.module.css';
+import { unitLabel } from './stockFormat';
 
 const SOURCE: Record<PendingDeductionReference, string> = {
   ENCOUNTER: 'Muayene',
@@ -102,7 +103,7 @@ export function PendingDeductionsPanel({ canAct, onSettled }: { canAct: boolean;
                 <tr key={r.id}>
                   <td>{r.itemName}</td>
                   <td>Seri {r.lotNumber ?? '—'}</td>
-                  <td>{r.quantity} adet</td>
+                  <td>{r.quantity.toLocaleString('tr-TR')} {unitLabel(r.unit)}</td>
                 </tr>
               ))}
             </tbody>

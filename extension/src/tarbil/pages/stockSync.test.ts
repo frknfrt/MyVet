@@ -215,7 +215,7 @@ describe('vaccine stock page with Parça Stok (2026-10-21)', () => {
     await vi.waitFor(() => expect(s.uploads()).toHaveLength(1));
     expect(s.calls.map((c) => c.op)).toEqual(['ready', 'loadStockTable', 'loadVaccinePartStock', 'ready', 'loadStockTable', 'loadVaccinePartStock']);
     expect(s.uploads()[0]).toEqual({
-      type: 'UPLOAD_STOCK_SNAPSHOT', system: 'HBSAPP_VACCINE',
+      type: 'UPLOAD_STOCK_SNAPSHOT', system: 'HBSAPP_VACCINE', partStockRead: true,
       lines: [line('Biocan DHPPI', '145932', 1), { ...line('Biocan R', '665932', 18), partStock: true }],
     });
     await vi.waitFor(() => expect(s.text()).toContain('2 satır'));
@@ -253,6 +253,17 @@ describe('vaccine stock page with Parça Stok (2026-10-21)', () => {
     expect(s.uploads()[0]).toMatchObject({ lines: [line('Biocan DHPPI', '145932', 1)] });
     await vi.waitFor(() => expect(s.text()).toContain('Parça stok okunamadı'));
     expect(s.shown.at(-1)?.lines.at(-1)?.tone).toBe('warn');
+  });
+
+  it('tells Vetly the part stock is unknown when Parça Stok cannot be read (spec 2026-10-24)', async () => {
+    document.body.innerHTML = vaccineGrid('radGridStock', [['Biocan DHPPI', '145932', 1]]);
+    const s = setup(undefined, BROKEN);
+    await createStockSync({ ...s.deps, kind: 'vaccineStock' }).start();
+
+    s.click('sendStock');
+
+    await vi.waitFor(() => expect(s.uploads()).toHaveLength(1));
+    expect(s.uploads()[0]).toMatchObject({ partStockRead: false });
   });
 
   it('still sends the whole stock when pressing Parça Stok Ara fails', async () => {

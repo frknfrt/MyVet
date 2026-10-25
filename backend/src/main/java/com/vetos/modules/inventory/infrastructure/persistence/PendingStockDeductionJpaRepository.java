@@ -18,10 +18,13 @@ interface PendingStockDeductionJpaRepository extends JpaRepository<PendingStockD
 
     List<PendingStockDeduction> findByStatusOrderByCreatedAt(PendingDeductionStatus status);
 
+    boolean existsByInventoryItemIdAndStatus(UUID inventoryItemId, PendingDeductionStatus status);
+
     @Modifying(flushAutomatically = true)
     @Query("UPDATE PendingStockDeduction p SET p.status = com.vetos.modules.inventory.domain.PendingDeductionStatus.DEDUCTED,"
-        + " p.settledQuantity = :quantity, p.settledVia = :via, p.settledByStaffId = :staffId, p.settledAt = :now"
+        + " p.settledQuantity = :quantity, p.settledSource = :source, p.settledVia = :via, p.settledByStaffId = :staffId, p.settledAt = :now"
         + " WHERE p.id = :id AND p.status = com.vetos.modules.inventory.domain.PendingDeductionStatus.PENDING")
-    int claim(@Param("id") UUID id, @Param("quantity") int quantity, @Param("via") DeductionSettlement via,
+    int claim(@Param("id") UUID id, @Param("quantity") java.math.BigDecimal quantity,
+              @Param("source") com.vetos.modules.inventory.domain.StockSource source, @Param("via") DeductionSettlement via,
               @Param("staffId") UUID staffId, @Param("now") Instant now);
 }

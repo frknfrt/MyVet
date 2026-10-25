@@ -10,5 +10,5 @@ import java.util.UUID;
  */
 public record EncounterFinalizedEvent(UUID encounterId, UUID patientId, UUID staffUserId, List<UsedItem> usedItems) {
 
-    public record UsedItem(UUID inventoryItemId, int quantity) {}
+    public record UsedItem(UUID inventoryItemId, java.math.BigDecimal quantity) {}
 }

@@ -16,6 +16,8 @@ describe('button allowlist', () => {
     expect(allowedButtonSuffix('prescriptionReceipt', 'addStock')).toBe('_RadGridStock_ctl00_ctl02_ctl00_InitInsertButton');
     expect(allowedButtonSuffix('prescriptionReceipt', 'stockSearch')).toBe('_RadGridStock_ctl00_ctl02_ctl03_imgSearch');
     expect(allowedButtonSuffix('medicineStockPopup', 'search')).toBe('_UcPharmacyStockSearchForReceipt_btnSearch');
+    expect(allowedButtonSuffix('medicineStockPopup', 'openStock')).toBe('_UcPharmacyStockSearchForReceipt_rbtnStockType_1');
+    expect(allowedButtonSuffix('vaccineStockPopup', 'partStock')).toBe('_UcVaccineStockSearch_rbtnStockType_1');
     expect(allowedButtonSuffix('prescriptionReceipt', 'insert')).toBeNull();
   });
 

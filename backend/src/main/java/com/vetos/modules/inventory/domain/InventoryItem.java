@@ -59,8 +59,22 @@ public class InventoryItem {
     @Column(name = "tarbil_presentation")
     private String tarbilPresentation;
 
+    /** Kullanim birimi (spec 2026-10-24). ADET disindakilerde paket buyuklugu dolu olur. */
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String unit = "ADET";
+    private StockUnit unit = StockUnit.ADET;
+
+    /** Bir kapali adetteki miktar: sisede ml/g, asi kutusunda flakon. ADET'te null. */
+    @Column(name = "package_size")
+    private BigDecimal packageSize;
+
+    /** Acilmis paketlerde kalan miktar (kullanim biriminde). quantityOnHand yalniz kapali adettir. */
+    @Column(name = "opened_quantity", nullable = false)
+    private BigDecimal openedQuantity = BigDecimal.ZERO;
+
+    /** AUTO: birim TARBIL takdim seklinden tahmin edildi; MANUAL: kullanici ayarladi, esitleme ezmez. */
+    @Column(name = "unit_source", nullable = false)
+    private String unitSource = "AUTO";
 
     public static InventoryItem create(
         UUID tenantId, UUID branchId, String name, String category, String skuBarcode,
@@ -93,6 +107,67 @@ public class InventoryItem {
         this.category = category;
         this.reorderThreshold = reorderThreshold;
         this.unitCost = unitCost;
+    }
+
+    public boolean isUnitManual() {
+        return "MANUAL".equals(unitSource);
+    }
+
+    /** Paketten kullanilan kalem mi (ML/G/FLAKON ve paket buyuklugu bilinir). */
+    public boolean isOpenable() {
+        return unit != StockUnit.ADET && packageSize != null && packageSize.signum() > 0;
+    }
+
+    public void setStockUnit(StockUnit unit, BigDecimal packageSize, boolean manual) {
+        this.unit = unit == null ? StockUnit.ADET : unit;
+        this.packageSize = this.unit == StockUnit.ADET ? null : packageSize;
+        this.unitSource = manual ? "MANUAL" : "AUTO";
+    }
+
+    /**
+     * Kullanimi duser (spec 2026-10-24 §3.3). ADET: kapali adetten (kesir yukari yuvarlanir). Paketli kalem: source WHOLE ise once yeni
+     * paket acilir; sonra acik miktar yetene kadar paket acilir ve miktar acik miktardan duser. Kapali 0 olsa da paket
+     * acilir (kapali eksiye iner; bugunku adet davranisi gibi, fark esitlemede gorunur).
+     */
+    public StockChange consume(BigDecimal amount, StockSource source) {
+        if (amount == null || amount.signum() <= 0) {
+            throw new IllegalArgumentException("Kullanım miktarı pozitif olmalı: " + amount);
+        }
+        if (!isOpenable()) {
+            // TARBİL esas (değerlendirme C1): TARBİL'den "0,5" gibi kesirli miktar gelebilir; düşüm hata vermez, yukarı yuvarlanır.
+            int whole = amount.setScale(0, java.math.RoundingMode.CEILING).intValueExact();
+            quantityOnHand -= whole;
+            return new StockChange(-whole, BigDecimal.ZERO);
+        }
+        int opened = 0;
+        BigDecimal before = openedQuantity;
+        if (source == StockSource.WHOLE) {
+            openPackage();
+            opened++;
+        }
+        while (openedQuantity.compareTo(amount) < 0) {
+            openPackage();
+            opened++;
+        }
+        openedQuantity = openedQuantity.subtract(amount);
+        return new StockChange(-opened, openedQuantity.subtract(before));
+    }
+
+    /** TARBIL esitlemesi: kapali adet hedefe; acik miktar biliniyorsa hedefe (null = bilinmiyor, degismez). */
+    public StockChange syncTo(int closed, BigDecimal openedOrNull) {
+        int closedDelta = closed - quantityOnHand;
+        BigDecimal openedDelta = BigDecimal.ZERO;
+        quantityOnHand = closed;
+        if (openedOrNull != null) {
+            openedDelta = openedOrNull.subtract(openedQuantity);
+            openedQuantity = openedOrNull;
+        }
+        return new StockChange(closedDelta, openedDelta);
+    }
+
+    private void openPackage() {
+        quantityOnHand -= 1;
+        openedQuantity = openedQuantity.add(packageSize);
     }
 
     public void linkTarbil(String system, String productName, String presentation) {

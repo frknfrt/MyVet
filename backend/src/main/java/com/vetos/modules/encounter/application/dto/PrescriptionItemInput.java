@@ -9,4 +9,4 @@ import java.util.UUID;
  * stok urunudur: drugName dolu, drugId bos; digerlerinde drugId dolu, drugName bos (spec 2026-10-12).
  */
 public record PrescriptionItemInput(UUID drugId, String drugName, String dosage, String frequency, int durationDays, DrugRoute route,
-                                    UUID inventoryItemId, Integer stockQuantity) {}
+                                    UUID inventoryItemId, java.math.BigDecimal stockQuantity) {}

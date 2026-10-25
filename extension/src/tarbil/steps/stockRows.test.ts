@@ -78,4 +78,13 @@ describe('Parça Stok table (2026-10-21)', () => {
     expect(readStockTable(document, 'vaccinePartStock')).toBeNull();
     expect(readStockRows(document, 'vaccinePartStock')).toEqual([]);
   });
+
+  it('reads doses per package from the vaccine whole-stock grid (spec 2026-10-24)', () => {
+    vaccineTable(
+      `<tr id="${VP}__0"><td></td><td></td><td></td><td>R</td><td>Biocan DHPPI</td><td>Kutusunda 20 adet flakon</td><td>145932</td><td>31.08.2027</td><td>1</td><td>20</td><td>20</td><td>Kendi Ürünü</td></tr>`,
+      ['', '', '', 'Ruhsat Tipi', 'Aşı Adı', 'Takdim Şekli', 'Seri Numarası', 'Son Kullanma Tarihi', 'Ürün Miktarı', 'Üretilen Doz-Küçük Hayvan', 'Üretilen Doz-Büyük Hayvan', 'Stok Tipi'],
+    );
+
+    expect(readStockRows(document, 'vaccineStock')[0]).toMatchObject({ productName: 'Biocan DHPPI', quantity: 1, dosesPerPackage: 20 });
+  });
 });

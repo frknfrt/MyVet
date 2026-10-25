@@ -4,6 +4,8 @@ import com.vetos.modules.inventory.domain.InventoryItem;
 import com.vetos.modules.inventory.domain.InventoryItemRepository;
 import com.vetos.modules.inventory.domain.InventoryStockView;
 import com.vetos.modules.inventory.domain.NewTarbilStockItem;
+import com.vetos.modules.inventory.domain.PresentationUnitGuesser;
+import com.vetos.modules.inventory.domain.StockChange;
 import com.vetos.modules.inventory.domain.StockMovement;
 import com.vetos.modules.inventory.domain.StockMovementRepository;
 import com.vetos.modules.inventory.domain.StockMovementType;
@@ -16,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -25,12 +28,14 @@ class TarbilStockSyncAdapter implements TarbilStockSyncPort {
 
     private final InventoryItemRepository items;
     private final StockMovementRepository movements;
+    private final com.vetos.modules.inventory.domain.PendingStockDeductionRepository pendingDeductions;
 
     @Override
     @Transactional(readOnly = true)
     public List<InventoryStockView> listForBranch(UUID branchId) {
         return items.findByBranchId(branchId).stream()
-            .map(i -> new InventoryStockView(i.getId(), i.getName(), i.getLotNumber(), i.getExpiryDate(), i.getQuantityOnHand(), i.getTarbilProductName()))
+            .map(i -> new InventoryStockView(i.getId(), i.getName(), i.getLotNumber(), i.getExpiryDate(), i.getQuantityOnHand(),
+                i.getTarbilProductName(), i.getOpenedQuantity(), i.getUnit().name()))
             .toList();
     }
 
@@ -39,28 +44,64 @@ class TarbilStockSyncAdapter implements TarbilStockSyncPort {
     public UUID createFromTarbil(UUID branchId, NewTarbilStockItem n, UUID referenceId) {
         InventoryItem item = InventoryItem.create(
             TenantContext.current(), branchId, n.productName(), n.category(), null,
-            n.quantity(), 0, n.expiryDate(), n.lotNumber(), null
+            0, 0, n.expiryDate(), n.lotNumber(), null
         );
         item.linkTarbil(n.tarbilSystem(), n.productName(), n.presentation());
+        guessUnit(item, n.dosesPerPackage());
+        StockChange change = item.syncTo(n.quantity(), n.openedQuantity() == null ? BigDecimal.ZERO : n.openedQuantity());
         InventoryItem saved = items.save(item);
-        if (n.quantity() > 0) {
-            movements.save(StockMovement.record(saved.getTenantId(), saved.getId(), StockMovementType.IN, n.quantity(),
-                StockReferenceType.TARBIL_SYNC, referenceId));
-        }
+        record(saved, change, referenceId);
         return saved.getId();
     }
 
     @Override
     @Transactional
-    public void syncFromTarbil(UUID inventoryItemId, int targetQuantity, TarbilStockLink link, UUID referenceId) {
+    public void syncFromTarbil(UUID inventoryItemId, int targetClosed, BigDecimal targetOpenedOrNull, Integer dosesPerPackage,
+                               TarbilStockLink link, UUID referenceId) {
         InventoryItem item = items.findById(inventoryItemId).orElseThrow(() -> new InventoryItemNotFoundException(inventoryItemId));
         item.linkTarbil(link.tarbilSystem(), link.productName(), link.presentation());
-        int delta = targetQuantity - item.getQuantityOnHand();
-        if (delta != 0) {
-            item.adjustQuantity(delta);
-            movements.save(StockMovement.record(item.getTenantId(), inventoryItemId,
-                delta > 0 ? StockMovementType.IN : StockMovementType.OUT, Math.abs(delta), StockReferenceType.TARBIL_SYNC, referenceId));
-        }
+        guessUnit(item, dosesPerPackage);
+        record(item, item.syncTo(targetClosed, targetOpenedOrNull), referenceId);
         items.save(item);
+    }
+
+    @Override
+    @Transactional
+    public void refreshUnitGuess(UUID inventoryItemId, String tarbilSystem, String presentation, Integer dosesPerPackage) {
+        InventoryItem item = items.findById(inventoryItemId).orElse(null);
+        if (item == null || item.isUnitManual() || pendingDeductions.existsPendingForItem(inventoryItemId)) {
+            return;
+        }
+        String system = item.getTarbilSystem() != null ? item.getTarbilSystem() : tarbilSystem;
+        String text = presentation != null ? presentation : item.getTarbilPresentation();
+        var guess = PresentationUnitGuesser.guess(system, text, dosesPerPackage);
+        boolean sameSize = guess.packageSize() == null ? item.getPackageSize() == null
+            : item.getPackageSize() != null && guess.packageSize().compareTo(item.getPackageSize()) == 0;
+        if (guess.unit() == item.getUnit() && sameSize) {
+            return;
+        }
+        item.setStockUnit(guess.unit(), guess.packageSize(), false);
+        items.save(item);
+    }
+
+    /** Elle ayarlanmis birime dokunulmaz (spec 2026-10-24 §3.4). */
+    private static void guessUnit(InventoryItem item, Integer dosesPerPackage) {
+        if (item.isUnitManual()) {
+            return;
+        }
+        var guess = PresentationUnitGuesser.guess(item.getTarbilSystem(), item.getTarbilPresentation(), dosesPerPackage);
+        item.setStockUnit(guess.unit(), guess.packageSize(), false);
+    }
+
+    /** Tek TARBIL_SYNC hareketi: kapali fark (IN/OUT) + acik miktar farki. Hic fark yoksa hareket yazilmaz. */
+    private void record(InventoryItem item, StockChange change, UUID referenceId) {
+        int closed = change.closedDelta();
+        BigDecimal opened = change.openedDelta();
+        if (closed == 0 && opened.signum() == 0) {
+            return;
+        }
+        boolean in = closed != 0 ? closed > 0 : opened.signum() > 0;
+        movements.save(StockMovement.record(item.getTenantId(), item.getId(), in ? StockMovementType.IN : StockMovementType.OUT,
+            Math.abs(closed), opened.signum() == 0 ? null : opened, StockReferenceType.TARBIL_SYNC, referenceId));
     }
 }

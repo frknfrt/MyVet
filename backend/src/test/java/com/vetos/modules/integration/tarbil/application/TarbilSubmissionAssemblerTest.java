@@ -43,7 +43,7 @@ class TarbilSubmissionAssemblerTest {
     }
 
     private PendingDeductionLine line(String name, String product, String lot, int qty, PendingDeductionStatus status) {
-        return new PendingDeductionLine(UUID.randomUUID(), UUID.randomUUID(), name, product, lot, qty, status, null);
+        return new PendingDeductionLine(UUID.randomUUID(), UUID.randomUUID(), name, product, lot, java.math.BigDecimal.valueOf(qty), status, null, "ADET", java.math.BigDecimal.ZERO);
     }
 
     @Test
@@ -61,7 +61,7 @@ class TarbilSubmissionAssemblerTest {
         assertThat(v.documentType()).isEqualTo(TarbilDocumentType.PRESCRIPTION);
         assertThat(v.prescription().sourceKind()).isEqualTo("ENCOUNTER");
         assertThat(v.prescription().tarbilDiseaseName()).isEqualTo("Pnömoni");
-        assertThat(v.prescription().lines()).containsExactly(new TarbilSubmissionView.PrescriptionPayload.Line("Synulox", "SYNULOX 250 MG", "S1", 2));
+        assertThat(v.prescription().lines()).containsExactly(new TarbilSubmissionView.PrescriptionPayload.Line("Synulox", "SYNULOX 250 MG", "S1", 2, java.math.BigDecimal.valueOf(2), "ADET", "WHOLE"));
         assertThat(v.vaccineName()).isEqualTo("Reçete");
         assertThat(assembler().isVisible(s)).isTrue();
     }
@@ -73,5 +73,26 @@ class TarbilSubmissionAssemblerTest {
 
         assertThat(assembler().isVisible(s)).isFalse();
         assertThat(assembler().assemble(s)).isEmpty();
+    }
+
+    private static com.vetos.modules.inventory.domain.PendingDeductionLine mlLine(String amount, String opened) {
+        return new com.vetos.modules.inventory.domain.PendingDeductionLine(UUID.randomUUID(), UUID.randomUUID(), "Clavon", "CLAVON = Clavon",
+            "63016", new java.math.BigDecimal(amount), com.vetos.modules.inventory.domain.PendingDeductionStatus.PENDING, null,
+            "ML", new java.math.BigDecimal(opened));
+    }
+
+    @Test
+    void planLine_packagedItemUsesOpenStockWhenEnough() {
+        var l = TarbilSubmissionAssembler.planLine(mlLine("1.5", "49"));
+        assertThat(l.source()).isEqualTo("OPEN");
+        assertThat(l.quantity()).isZero();
+        assertThat(l.amount()).isEqualByComparingTo("1.5");
+        assertThat(l.unit()).isEqualTo("ML");
+    }
+
+    @Test
+    void planLine_packagedItemUsesWholeStockWhenOpenIsShort() {
+        assertThat(TarbilSubmissionAssembler.planLine(mlLine("5", "2")).source()).isEqualTo("WHOLE");
+        assertThat(TarbilSubmissionAssembler.planLine(mlLine("5", "2")).quantity()).isZero();
     }
 }

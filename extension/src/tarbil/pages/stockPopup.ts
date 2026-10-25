@@ -34,6 +34,7 @@ export async function runStockPopupFlow(d: StockPopupDeps): Promise<void> {
   const s = res.ok ? res.data : null;
   if (!s || s.id !== state.submissionId || !s.lotNumber) return;
   const serial = s.lotNumber;
+  const part = s.stockSource === 'OPEN';
 
   const handOver = async (message: string) => {
     await d.flow.update(s.id, { step: 'awaitingConfirm', message });
@@ -43,13 +44,13 @@ export async function runStockPopupFlow(d: StockPopupDeps): Promise<void> {
   d.card.show(views.stockPopup(`Seri ${serial} aranıyor…`, 'muted'));
   try {
     await d.bridge.call('ready');
-    await d.bridge.call('searchSerial', { serial });
+    await d.bridge.call('searchSerial', { serial, part });
   } catch (e) {
     await handOver(`Stokta arama yapılamadı (${code(e)}).`);
     return;
   }
 
-  const pick = pickStockRow(readStockPopupRows(d.doc), { serial, productName: s.tarbilProductName, today: d.today() });
+  const pick = pickStockRow(readStockPopupRows(d.doc, part), { serial, productName: s.tarbilProductName, today: d.today() });
   switch (pick.kind) {
     case 'none':
       await handOver(`Seri ${serial} TARBİL stoğunuzda bulunamadı.`);

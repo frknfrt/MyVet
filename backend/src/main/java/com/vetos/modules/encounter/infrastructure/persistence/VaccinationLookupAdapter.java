@@ -1,5 +1,6 @@
 package com.vetos.modules.encounter.infrastructure.persistence;
 
+import com.vetos.modules.encounter.domain.VaccinationHistoryEntry;
 import com.vetos.modules.encounter.domain.VaccinationLookupPort;
 import com.vetos.modules.encounter.domain.VaccinationReminderCandidate;
 import com.vetos.modules.encounter.domain.VaccinationStatus;
@@ -11,6 +12,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.PageRequest;
 
 @Component
 @RequiredArgsConstructor
@@ -31,5 +33,13 @@ class VaccinationLookupAdapter implements VaccinationLookupPort {
             r.getId(), r.getTenantId(), r.getPatientId(), r.getVaccineName(), r.getLotNumber(),
             r.getAdministeredDate(), r.getStatus(), r.getInventoryItemId()
         ));
+    }
+
+    @Override
+    public List<VaccinationHistoryEntry> findAdministeredBetween(UUID patientId, LocalDate from, LocalDate to, int limit) {
+        return jpaRepository.findByPatientIdAndStatusAndAdministeredDateBetweenOrderByAdministeredDateDesc(
+                patientId, VaccinationStatus.ADMINISTERED, from, to, PageRequest.of(0, limit)).stream()
+            .map(r -> new VaccinationHistoryEntry(r.getVaccineName(), r.getAdministeredDate(), r.getNextDueDate()))
+            .toList();
     }
 }

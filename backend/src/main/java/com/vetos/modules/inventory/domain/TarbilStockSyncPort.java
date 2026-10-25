@@ -1,5 +1,6 @@
 package com.vetos.modules.inventory.domain;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -13,6 +14,16 @@ public interface TarbilStockSyncPort {
     /** Yeni kalem + IN hareketi (TARBIL_SYNC). */
     UUID createFromTarbil(UUID branchId, NewTarbilStockItem item, UUID referenceId);
 
-    /** Miktari TARBIL'deki degere getirir (fark kadar IN/OUT, TARBIL_SYNC) ve TARBIL baglantisini yazar. */
-    void syncFromTarbil(UUID inventoryItemId, int targetQuantity, TarbilStockLink link, UUID referenceId);
+    /**
+     * Kapali adeti (ve biliniyorsa acik miktari) TARBIL'deki degere getirir (fark kadar IN/OUT, TARBIL_SYNC), TARBIL
+     * baglantisini yazar; birim elle ayarlanmadiysa takdim seklinden tahmin eder (spec 2026-10-24).
+     */
+    void syncFromTarbil(UUID inventoryItemId, int targetClosed, BigDecimal targetOpenedOrNull, Integer dosesPerPackage,
+                        TarbilStockLink link, UUID referenceId);
+
+    /**
+     * Yalnız birimi tahmin eder (miktar ve hareket yok; değerlendirme I4). Elle ayarlanmış birime ve bekleyen düşümü olan
+     * kaleme dokunmaz: bekleyen miktar birimle okunur.
+     */
+    void refreshUnitGuess(UUID inventoryItemId, String tarbilSystem, String presentation, Integer dosesPerPackage);
 }

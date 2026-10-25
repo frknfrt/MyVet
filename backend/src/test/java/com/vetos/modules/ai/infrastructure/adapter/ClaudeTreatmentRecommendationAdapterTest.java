@@ -4,7 +4,6 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpServer;
-import com.vetos.modules.ai.domain.HistoryEntry;
 import com.vetos.modules.ai.domain.TreatmentRecommendationDraft;
 import com.vetos.modules.ai.domain.TreatmentRecommendationInput;
 import com.vetos.modules.ai.domain.TreatmentRecommendationPort;
@@ -37,13 +36,18 @@ class ClaudeTreatmentRecommendationAdapterTest {
     private HttpServer stubServer;
     private String stubResponseBody;
     private Headers capturedHeaders;
+    private String capturedBody;
+    private final java.util.Deque<String> queued = new java.util.ArrayDeque<>();
+    private final List<String> bodies = new java.util.ArrayList<>();
 
     @BeforeEach
     void startStubServer() throws IOException {
         stubServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         stubServer.createContext("/v1/messages", ex -> {
             capturedHeaders = ex.getRequestHeaders();
-            byte[] payload = stubResponseBody.getBytes(StandardCharsets.UTF_8);
+            capturedBody = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+            bodies.add(capturedBody);
+            byte[] payload = (queued.isEmpty() ? stubResponseBody : queued.poll()).getBytes(StandardCharsets.UTF_8);
             ex.getResponseHeaders().add("Content-Type", "application/json");
             ex.sendResponseHeaders(200, payload.length);
             ex.getResponseBody().write(payload);
@@ -60,7 +64,7 @@ class ClaudeTreatmentRecommendationAdapterTest {
     private TreatmentRecommendationInput anInput() {
         return new TreatmentRecommendationInput(
             "Hafif gastrit supheli",
-            List.of(new HistoryEntry(Instant.now().toString(), "Gecmis degerlendirme", "Gecmis plan"))
+            "HASTA BİLGİSİ Tür: Köpek | Kritik uyarı: Penisilin alerjisi"
         );
     }
 
@@ -119,5 +123,68 @@ class ClaudeTreatmentRecommendationAdapterTest {
 
         assertThat(draft.modelConnected()).isTrue();
         assertThat(draft.suggestionText()).isEqualTo("IV sivi tedavisi ve analjezik onerilir.");
+    }
+
+    @Test
+    void promptIncludesPatientHistoryBlock() {
+        stubResponseBody = "{\"content\":[{\"type\":\"text\",\"text\":\"ok\"}]}";
+        String stubUrl = "http://127.0.0.1:" + stubServer.getAddress().getPort() + "/v1/messages";
+        TreatmentRecommendationPort adapter =
+            new ClaudeTreatmentRecommendationAdapter("test-api-key", "claude-sonnet-5", new ObjectMapper(), stubUrl, outcomes, CircuitBreakerRegistry.ofDefaults());
+
+        adapter.generate(anInput());
+
+        assertThat(capturedBody).contains("HASTA BİLGİSİ Tür: Köpek | Kritik uyarı: Penisilin alerjisi")
+            .contains("son 1 yillik gecmisi");
+    }
+
+    private TreatmentRecommendationPort connected() {
+        String stubUrl = "http://127.0.0.1:" + stubServer.getAddress().getPort() + "/v1/messages";
+        return new ClaudeTreatmentRecommendationAdapter("test-api-key", "claude-sonnet-5", new ObjectMapper(), stubUrl, outcomes, CircuitBreakerRegistry.ofDefaults());
+    }
+
+    private static String reply(String text, String stopReason) {
+        return "{\"content\":[{\"type\":\"text\",\"text\":\"" + text + "\"}],\"stop_reason\":\"" + stopReason + "\"}";
+    }
+
+    @Test
+    void requestsAllow2048TokensPerPart_andAskForConciseAnswers() {
+        stubResponseBody = reply("ok", "end_turn");
+
+        connected().generate(anInput());
+
+        assertThat(capturedBody).contains("\"max_tokens\":2048").contains("Kisa ve oz yaz");
+    }
+
+    @Test
+    void continuesOnce_whenAnswerIsCutAtTheLimit_andJoinsBothParts() {
+        queued.add(reply("1. Gastrit, 2. Pank", "max_tokens"));
+        queued.add(reply("reatit", "end_turn"));
+
+        String text = connected().generate(anInput()).suggestionText();
+
+        assertThat(text).isEqualTo("1. Gastrit, 2. Pankreatit");
+        assertThat(bodies).hasSize(2);
+        assertThat(bodies.get(1)).contains("\"role\":\"assistant\"").contains("1. Gastrit, 2. Pank")
+            .contains("Kaldigin yerden");
+    }
+
+    @Test
+    void marksTheAnswer_whenTheContinuationIsAlsoCut() {
+        queued.add(reply("Birinci", "max_tokens"));
+        queued.add(reply(" ikinci", "max_tokens"));
+
+        String text = connected().generate(anInput()).suggestionText();
+
+        assertThat(text).isEqualTo("Birinci ikinci\n\n(yanit uzunluk sinirinda kesildi)");
+        assertThat(bodies).hasSize(2);
+    }
+
+    @Test
+    void doesNotContinue_whenAnswerIsComplete() {
+        stubResponseBody = reply("Tam cevap", "end_turn");
+
+        assertThat(connected().generate(anInput()).suggestionText()).isEqualTo("Tam cevap");
+        assertThat(bodies).hasSize(1);
     }
 }

@@ -8,6 +8,6 @@ describe('EXTENSION_VERSION', () => {
     const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
     expect(EXTENSION_VERSION).toBe(pkg.version);
     expect(manifest.version).toBe(pkg.version);
-    expect(EXTENSION_VERSION).toBe('0.2.1');
+    expect(EXTENSION_VERSION).toBe('0.3.0');
   });
 });

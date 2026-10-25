@@ -35,7 +35,7 @@ public class ApplyVaccinationStockUseCase {
         }
         items.findById(inventoryItemId)
             .filter(i -> isVaccine(i) && serial(i.getLotNumber()).equals(serial(lotNumber)))
-            .ifPresent(item -> pending.open(inventoryItemId, 1, StockReferenceType.VACCINATION, vaccinationRecordId));
+            .ifPresent(item -> pending.open(inventoryItemId, java.math.BigDecimal.ONE, StockReferenceType.VACCINATION, vaccinationRecordId));
     }
 
     @Transactional
