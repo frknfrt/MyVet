@@ -70,11 +70,11 @@ public class ApplyStockSyncUseCase {
             if (match.status() == TarbilStockSyncStatus.NEW) {
                 itemId = stockSyncPort.createFromTarbil(branchId, new NewTarbilStockItem(system, line.getProductName(),
                     line.getPresentation(), category, line.getLotNumber(), line.getExpiryDate(), target.closed(), target.opened(),
-                    target.dosesPerPackage()), snapshotId);
+                    target.dosesPerPackage(), line.getOpenedExpiryDate()), snapshotId);
             } else {
                 itemId = match.item().id();
                 stockSyncPort.syncFromTarbil(itemId, target.closed(), target.opened(), target.dosesPerPackage(),
-                    new TarbilStockLink(system, line.getProductName(), line.getPresentation()), snapshotId);
+                    new TarbilStockLink(system, line.getProductName(), line.getPresentation()), snapshotId, line.getOpenedExpiryDate());
             }
             // Ayni urun+lotun diger satirlari ayni kaleme islendi: tekrar islenmesinler.
             for (TarbilStockSnapshotLine sibling : lines) {

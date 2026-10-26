@@ -17,7 +17,7 @@ import { MaterialsUsedCard } from './MaterialsUsedCard';
 const item = (over: Partial<InventoryItem>): InventoryItem => ({
   id: 'i', name: 'Kalem', category: 'İlaç', skuBarcode: null, quantityOnHand: 1, reorderThreshold: 0, belowReorderThreshold: false,
   expiryDate: null, lotNumber: null, unitCost: null, tarbilProductName: null, unit: 'ADET', packageSize: null, openedQuantity: 0,
-  unitSource: 'AUTO', ...over,
+  unitSource: 'AUTO', pieceSize: null, pieceLabel: null, openedExpiryDate: null, ...over,
 });
 
 let container: HTMLDivElement;

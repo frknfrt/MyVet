@@ -23,6 +23,11 @@ export interface InventoryItem {
   openedQuantity: number;
   /** AUTO: TARBİL bilgisinden tahmin; MANUAL: elle ayarlandı. */
   unitSource: 'AUTO' | 'MANUAL';
+  /** ML kalemde bir pipetin ml'si ve adı; stok ve TARBİL ml (spec 2026-10-25). */
+  pieceSize: number | null;
+  pieceLabel: string | null;
+  /** TARBİL açılmış ürün son kullanma tarihi (yyyy-MM-dd). */
+  openedExpiryDate: string | null;
 }
 
 export interface UpdateInventoryItemPayload {
@@ -32,6 +37,8 @@ export interface UpdateInventoryItemPayload {
   unitCost: number | null;
   unit?: StockUnit;
   packageSize?: number | null;
+  pieceSize?: number | null;
+  pieceLabel?: string | null;
 }
 
 export type PendingDeductionReference = 'ENCOUNTER' | 'VACCINATION' | 'PRESCRIPTION';
@@ -74,7 +81,8 @@ export const inventoryApi = {
   list: () => apiClient.get<InventoryItem[]>('/api/v1/inventory-items'),
   create: (payload: CreateInventoryItemPayload) => apiClient.postForId('/api/v1/inventory-items', payload),
   update: (id: string, payload: UpdateInventoryItemPayload) => apiClient.put<void>(`/api/v1/inventory-items/${id}`, payload),
-  recordMovement: (id: string, payload: { movementType: StockMovementType; quantity: number }) =>
+  /** openedDelta: açık miktar farkı (işaretli; spec 2026-10-25). */
+  recordMovement: (id: string, payload: { movementType: StockMovementType; quantity: number; openedDelta?: number }) =>
     apiClient.post<void>(`/api/v1/inventory-items/${id}/movements`, payload),
   listMovements: (id: string) => apiClient.get<StockMovement[]>(`/api/v1/inventory-items/${id}/movements`),
   listPendingDeductions: () => apiClient.get<PendingDeduction[]>('/api/v1/inventory/pending-deductions'),

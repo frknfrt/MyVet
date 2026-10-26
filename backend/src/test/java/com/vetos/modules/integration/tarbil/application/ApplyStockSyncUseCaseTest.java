@@ -75,7 +75,7 @@ class ApplyStockSyncUseCaseTest {
         verify(port).createFromTarbil(eq(branchId), item.capture(), eq(snapshotId));
         assertThat(item.getValue().category()).isEqualTo("İlaç");
         assertThat(item.getValue().tarbilSystem()).isEqualTo("VETILAC_MEDICINE");
-        verify(port).syncFromTarbil(eq(existing), eq(10), eq(java.math.BigDecimal.ZERO), isNull(), any(TarbilStockLink.class), eq(snapshotId));
+        verify(port).syncFromTarbil(eq(existing), eq(10), eq(java.math.BigDecimal.ZERO), isNull(), any(TarbilStockLink.class), eq(snapshotId), any());
         assertThat(fresh.getAppliedInventoryItemId()).isEqualTo(created);
         assertThat(differs.getAppliedInventoryItemId()).isEqualTo(existing);
     }
@@ -96,7 +96,7 @@ class ApplyStockSyncUseCaseTest {
         ArgumentCaptor<NewTarbilStockItem> item = ArgumentCaptor.forClass(NewTarbilStockItem.class);
         verify(port, times(1)).createFromTarbil(eq(branchId), item.capture(), eq(snapshotId));
         assertThat(item.getValue().quantity()).isEqualTo(8);
-        verify(port, never()).syncFromTarbil(any(), anyInt(), any(), any(), any(), any());
+        verify(port, never()).syncFromTarbil(any(), anyInt(), any(), any(), any(), any(), any());
         assertThat(applied).isEqualTo(1);
         assertThat(second.getAppliedInventoryItemId()).isEqualTo(created);
     }
@@ -113,7 +113,7 @@ class ApplyStockSyncUseCaseTest {
         useCase().execute(tenantId, branchId, snapshotId, List.of(lotless.getId()));
 
         verify(port, never()).createFromTarbil(any(), any(), any());
-        verify(port).syncFromTarbil(eq(existing), eq(6), eq(java.math.BigDecimal.ZERO), isNull(), any(TarbilStockLink.class), eq(snapshotId));
+        verify(port).syncFromTarbil(eq(existing), eq(6), eq(java.math.BigDecimal.ZERO), isNull(), any(TarbilStockLink.class), eq(snapshotId), any());
     }
 
     @Test
@@ -127,7 +127,7 @@ class ApplyStockSyncUseCaseTest {
 
         assertThat(useCase().execute(tenantId, branchId, snapshotId, List.of(done.getId()))).isZero();
         verify(port, never()).createFromTarbil(any(), any(), any());
-        verify(port, never()).syncFromTarbil(any(), anyInt(), any(), any(), any(), any());
+        verify(port, never()).syncFromTarbil(any(), anyInt(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -155,7 +155,7 @@ class ApplyStockSyncUseCaseTest {
         assertThatThrownBy(() -> useCase().execute(tenantId, branchId, snapshotId, List.of(fresh.getId(), differs.getId())))
             .isInstanceOf(TarbilStockLinePendingConflictException.class);
         verify(port, never()).createFromTarbil(any(), any(), any());
-        verify(port, never()).syncFromTarbil(any(), anyInt(), any(), any(), any(), any());
+        verify(port, never()).syncFromTarbil(any(), anyInt(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -175,7 +175,7 @@ class ApplyStockSyncUseCaseTest {
         int applied = useCase().execute(tenantId, branchId, snapshotId, List.of(differs.getId()));
 
         assertThat(applied).isEqualTo(1);
-        verify(port).syncFromTarbil(eq(rabisin), eq(10), isNull(), isNull(), any(TarbilStockLink.class), eq(snapshotId));
+        verify(port).syncFromTarbil(eq(rabisin), eq(10), isNull(), isNull(), any(TarbilStockLink.class), eq(snapshotId), any());
     }
 
     @Test
@@ -190,7 +190,7 @@ class ApplyStockSyncUseCaseTest {
 
         useCase().execute(tenantId, branchId, snapshotId, List.of(l.getId()));
 
-        verify(port).syncFromTarbil(eq(existing), eq(1), isNull(), eq(20), any(TarbilStockLink.class), eq(snapshotId));
+        verify(port).syncFromTarbil(eq(existing), eq(1), isNull(), eq(20), any(TarbilStockLink.class), eq(snapshotId), any());
     }
 
     @Test
@@ -206,7 +206,7 @@ class ApplyStockSyncUseCaseTest {
         useCase().execute(tenantId, branchId, snapshotId, List.of(l.getId()));
 
         ArgumentCaptor<java.math.BigDecimal> opened = ArgumentCaptor.forClass(java.math.BigDecimal.class);
-        verify(port).syncFromTarbil(eq(existing), eq(0), opened.capture(), isNull(), any(TarbilStockLink.class), eq(snapshotId));
+        verify(port).syncFromTarbil(eq(existing), eq(0), opened.capture(), isNull(), any(TarbilStockLink.class), eq(snapshotId), any());
         assertThat(opened.getValue()).isEqualByComparingTo("49");
     }
 }

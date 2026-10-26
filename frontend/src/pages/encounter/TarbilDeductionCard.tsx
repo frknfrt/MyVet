@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button';
 import encounterStyles from './EncounterPage.module.css';
 import styles from './TarbilDeductionCard.module.css';
 import { TarbilDiseaseSelect } from './TarbilDiseaseSelect';
+import { formatAmount } from '../inventory/stockFormat';
 
 /**
  * Muayene tamamlanınca TARBİL'e bağlı ilaçların düşümü (spec 2026-10-09 S5.1): stok TARBİL'de onaylanınca düşer.
@@ -74,7 +75,7 @@ export function TarbilDeductionCard({ encounterId, canAct }: { encounterId: stri
         <ul className={styles.lines}>
           {shown.map((l, i) => (
             <li key={i}>
-              {l.itemName} · Seri {l.lotNumber ?? '—'} · {l.settledQuantity ?? l.quantity} adet
+              {l.itemName} · Seri {l.lotNumber ?? '—'} · {formatAmount(l.settledQuantity ?? l.quantity, l.unit)}
             </li>
           ))}
         </ul>

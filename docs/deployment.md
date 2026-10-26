@@ -258,3 +258,11 @@ Uygulama bazı sık okunan, az değişen bilgileri kendi belleğinde tutar (Redi
 - [ ] WhatsApp numarasi hala Meta "Test Number"inda -- gercek musteri numaralarina gonderim #131030 ("Recipient phone number not in allowed list") ile reddediliyor. Cozum: WhatsApp Yoneticisi > Telefon numaralari'na WhatsApp'ta aktif OLMAYAN gercek bir numara eklemek (kullanicinin kendi numarasi WhatsApp'ta aktif oldugu icin su an kullanilamiyor, ayri bir SIM gerekiyor), SMS/arama ile dogrulamak, kalici bir System User token'i olusturmak, ve META_WHATSAPP_PHONE_NUMBER_ID / META_WHATSAPP_ACCESS_TOKEN'i guncelleyip servisi yeniden baslatmak.
 - [ ] Tanıtım sitesi (`vetly.com.tr`) API adresini `https://myvet-21n4.onrender.com`'dan `https://uygulama.vetly.com.tr`'ye taşımak — ardından Render servisini kapatmak
 - [ ] Bu adımları bir `deploy.ps1` betiğine çevirmek
+
+## Eklenti 0.3.1 ve stok birimi düzeltmeleri (2026-10-25)
+
+- Migration **V87** (inventory_items: piece_size, piece_label, opened_expiry_date; tarbil_stock_snapshot_line: opened_expiry_date). Çıkıştan önce canlıdaki migration listesini kontrol edin.
+- Eklenti **0.3.1** zip'i: TARBİL Miktar'ına 0,01 altını yazmaz, açık ürün son kullanma tarihini okur. Sunucunun en düşük eklenti sürümü **0.3.0 kalır** (birim çevirisini sunucu yapar; 0.3.0 da doğru miktarı yazar).
+- Mevcut ürünlerin birimi (tablet, pipet) bir sonraki TARBİL stok yüklemesinde kendiliğinden güncellenir; elle ayarlanmış birim ve bekleyen düşümü olan ürün atlanır.
+- Sıra: önce web (0.3.1 zip indirilebilir), sonra backend.
+

@@ -23,5 +23,9 @@ public record InventoryItemDetail(
     /** Acik paketlerde kalan; quantityOnHand yalniz kapali adet. */
     BigDecimal openedQuantity,
     /** AUTO (TARBIL bilgisinden tahmin) | MANUAL */
-    String unitSource
+    String unitSource,
+    /** ML kalemde pipet ml'si ve adi; acik urun son kullanma tarihi (spec 2026-10-25). */
+    BigDecimal pieceSize,
+    String pieceLabel,
+    LocalDate openedExpiryDate
 ) {}

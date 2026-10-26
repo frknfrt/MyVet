@@ -94,6 +94,8 @@ export interface EncounterDeductionLine {
   quantity: number;
   status: 'PENDING' | 'DEDUCTED' | 'CANCELLED';
   settledQuantity: number | null;
+  /** Kalemin kullanım birimi (spec 2026-10-25); eski sunucu göndermez. */
+  unit?: string | null;
 }
 
 export interface EncounterDeduction {

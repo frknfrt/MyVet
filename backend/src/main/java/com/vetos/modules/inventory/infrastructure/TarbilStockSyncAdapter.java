@@ -49,6 +49,7 @@ class TarbilStockSyncAdapter implements TarbilStockSyncPort {
         item.linkTarbil(n.tarbilSystem(), n.productName(), n.presentation());
         guessUnit(item, n.dosesPerPackage());
         StockChange change = item.syncTo(n.quantity(), n.openedQuantity() == null ? BigDecimal.ZERO : n.openedQuantity());
+        item.setOpenedExpiry(n.openedExpiryDate());
         InventoryItem saved = items.save(item);
         record(saved, change, referenceId);
         return saved.getId();
@@ -57,30 +58,44 @@ class TarbilStockSyncAdapter implements TarbilStockSyncPort {
     @Override
     @Transactional
     public void syncFromTarbil(UUID inventoryItemId, int targetClosed, BigDecimal targetOpenedOrNull, Integer dosesPerPackage,
-                               TarbilStockLink link, UUID referenceId) {
+                               TarbilStockLink link, UUID referenceId, java.time.LocalDate openedExpiryDate) {
         InventoryItem item = items.findById(inventoryItemId).orElseThrow(() -> new InventoryItemNotFoundException(inventoryItemId));
         item.linkTarbil(link.tarbilSystem(), link.productName(), link.presentation());
         guessUnit(item, dosesPerPackage);
         record(item, item.syncTo(targetClosed, targetOpenedOrNull), referenceId);
+        if (targetOpenedOrNull != null) {
+            item.setOpenedExpiry(openedExpiryDate);
+        }
         items.save(item);
     }
 
     @Override
     @Transactional
-    public void refreshUnitGuess(UUID inventoryItemId, String tarbilSystem, String presentation, Integer dosesPerPackage) {
+    public void refreshFromSnapshot(UUID inventoryItemId, String tarbilSystem, String presentation, Integer dosesPerPackage,
+                                    java.time.LocalDate openedExpiryDate) {
         InventoryItem item = items.findById(inventoryItemId).orElse(null);
-        if (item == null || item.isUnitManual() || pendingDeductions.existsPendingForItem(inventoryItemId)) {
+        if (item == null) {
+            return;
+        }
+        boolean expiryChanged = !java.util.Objects.equals(item.getOpenedExpiryDate(), openedExpiryDate);
+        item.setOpenedExpiry(openedExpiryDate);
+        expiryChanged = expiryChanged && java.util.Objects.equals(item.getOpenedExpiryDate(), openedExpiryDate);
+        if (item.isUnitManual() || pendingDeductions.existsPendingForItem(inventoryItemId)) {
+            if (expiryChanged) {
+                items.save(item);
+            }
             return;
         }
         String system = item.getTarbilSystem() != null ? item.getTarbilSystem() : tarbilSystem;
         String text = presentation != null ? presentation : item.getTarbilPresentation();
         var guess = PresentationUnitGuesser.guess(system, text, dosesPerPackage);
-        boolean sameSize = guess.packageSize() == null ? item.getPackageSize() == null
-            : item.getPackageSize() != null && guess.packageSize().compareTo(item.getPackageSize()) == 0;
-        if (guess.unit() == item.getUnit() && sameSize) {
+        if (guess.unit() == item.getUnit() && same(guess.packageSize(), item.getPackageSize()) && same(guess.pieceSize(), item.getPieceSize())) {
+            if (expiryChanged) {
+                items.save(item);
+            }
             return;
         }
-        item.setStockUnit(guess.unit(), guess.packageSize(), false);
+        item.setStockUnit(guess.unit(), guess.packageSize(), guess.pieceSize(), guess.pieceLabel(), false);
         items.save(item);
     }
 
@@ -90,7 +105,11 @@ class TarbilStockSyncAdapter implements TarbilStockSyncPort {
             return;
         }
         var guess = PresentationUnitGuesser.guess(item.getTarbilSystem(), item.getTarbilPresentation(), dosesPerPackage);
-        item.setStockUnit(guess.unit(), guess.packageSize(), false);
+        item.setStockUnit(guess.unit(), guess.packageSize(), guess.pieceSize(), guess.pieceLabel(), false);
+    }
+
+    private static boolean same(BigDecimal a, BigDecimal b) {
+        return a == null ? b == null : b != null && a.compareTo(b) == 0;
     }
 
     /** Tek TARBIL_SYNC hareketi: kapali fark (IN/OUT) + acik miktar farki. Hic fark yoksa hareket yazilmaz. */

@@ -22,7 +22,8 @@ public class ListInventoryItemsUseCase {
                 item.getId(), item.getName(), item.getCategory(), item.getSkuBarcode(), item.getQuantityOnHand(),
                 item.getReorderThreshold(), item.isBelowReorderThreshold(), item.getExpiryDate(), item.getLotNumber(), item.getUnitCost(),
                 item.getTarbilProductName(), item.getUnit().name(), item.getPackageSize(), item.getOpenedQuantity(),
-                item.isUnitManual() ? "MANUAL" : "AUTO"
+                item.isUnitManual() ? "MANUAL" : "AUTO",
+                item.getPieceSize(), item.getPieceLabel(), item.getOpenedExpiryDate()
             ))
             .toList();
     }

@@ -181,10 +181,10 @@ class TarbilStockSyncAdapterTest {
     }
 
     @Test
-    void refreshUnitGuess_setsTheGuessedUnitOnAnAutoItem_withoutAMovement() {
+    void refreshFromSnapshot_setsTheGuessedUnitOnAnAutoItem_withoutAMovement() {
         InventoryItem i = tenidur();
 
-        adapter().refreshUnitGuess(i.getId(), "VETILAC_MEDICINE", "100 ml'lik cam şişe", null);
+        adapter().refreshFromSnapshot(i.getId(), "VETILAC_MEDICINE", "100 ml'lik cam şişe", null, null);
 
         assertThat(i.getUnit()).isEqualTo(StockUnit.ML);
         assertThat(i.getPackageSize()).isEqualByComparingTo("100");
@@ -195,24 +195,87 @@ class TarbilStockSyncAdapterTest {
     }
 
     @Test
-    void refreshUnitGuess_leavesAManualUnitAlone() {
+    void refreshFromSnapshot_leavesAManualUnitAlone() {
         InventoryItem i = tenidur();
         i.setStockUnit(StockUnit.ADET, null, true);
 
-        adapter().refreshUnitGuess(i.getId(), "VETILAC_MEDICINE", "100 ml'lik cam şişe", null);
+        adapter().refreshFromSnapshot(i.getId(), "VETILAC_MEDICINE", "100 ml'lik cam şişe", null, null);
 
         assertThat(i.getUnit()).isEqualTo(StockUnit.ADET);
         verify(items, never()).save(any());
     }
 
     @Test
-    void refreshUnitGuess_waitsWhileDeductionsArePending() {
+    void refreshFromSnapshot_waitsWhileDeductionsArePending() {
         InventoryItem i = tenidur();
         when(pending.existsPendingForItem(i.getId())).thenReturn(true);
 
-        adapter().refreshUnitGuess(i.getId(), "VETILAC_MEDICINE", "100 ml'lik cam şişe", null);
+        adapter().refreshFromSnapshot(i.getId(), "VETILAC_MEDICINE", "100 ml'lik cam şişe", null, null);
 
         assertThat(i.getUnit()).isEqualTo(StockUnit.ADET);
         verify(items, never()).save(any());
+    }
+
+    @Test
+    void refresh_adetTabletBecomesTablet_keepsClosedBoxes() {
+        InventoryItem i = InventoryItem.create(tenantId, branchId, "Baytril Flavour", "İlaç", null, 3, 0, null, "B1", null);
+        when(items.findById(i.getId())).thenReturn(Optional.of(i));
+
+        adapter().refreshFromSnapshot(i.getId(), "VETILAC_MEDICINE", "Karton kutu içerisinde 10 tabletlik blisterlerde", null, null);
+
+        assertThat(i.getUnit()).isEqualTo(StockUnit.TABLET);
+        assertThat(i.getPackageSize()).isEqualByComparingTo("10");
+        assertThat(i.getQuantityOnHand()).isEqualTo(3);
+        assertThat(i.getOpenedQuantity()).isEqualByComparingTo("0");
+        verify(movements, never()).save(any());
+    }
+
+    @Test
+    void refresh_setsPieceForPipetBox() {
+        InventoryItem i = InventoryItem.create(tenantId, branchId, "Fiproes Kedi", "İlaç", null, 22, 0, null, "F1", null);
+        when(items.findById(i.getId())).thenReturn(Optional.of(i));
+
+        adapter().refreshFromSnapshot(i.getId(), "VETILAC_MEDICINE", "0.5 ml’lik pipetler 3 adetlik karton kutuda", null, null);
+
+        assertThat(i.getUnit()).isEqualTo(StockUnit.ML);
+        assertThat(i.getPackageSize()).isEqualByComparingTo("1.5");
+        assertThat(i.getPieceSize()).isEqualByComparingTo("0.5");
+        assertThat(i.getPieceLabel()).isEqualTo("pipet");
+    }
+
+    @Test
+    void refresh_writesOpenedExpiry_evenWhenUnitManual() {
+        InventoryItem i = tenidur();
+        i.setStockUnit(StockUnit.ML, new BigDecimal("20"), true);
+        i.syncTo(2, new BigDecimal("18"));
+
+        adapter().refreshFromSnapshot(i.getId(), "VETILAC_MEDICINE", "20 ml amber flakon", null, LocalDate.of(2026, 11, 1));
+
+        assertThat(i.getOpenedExpiryDate()).isEqualTo(LocalDate.of(2026, 11, 1));
+        assertThat(i.isUnitManual()).isTrue();
+        verify(items).save(i);
+    }
+
+    @Test
+    void syncFromTarbil_writesOpenedExpiryAfterOpenedArrives() {
+        UUID id = UUID.randomUUID();
+        InventoryItem item = InventoryItem.create(tenantId, branchId, "Clavon", "İlaç", null, 1, 0, null, "63016", null);
+        when(items.findById(id)).thenReturn(Optional.of(item));
+
+        adapter().syncFromTarbil(id, 0, new BigDecimal("49"), null,
+            new TarbilStockLink("VETILAC_MEDICINE", "CLAVON = Clavon", "50 ml'lik renksiz cam şişeler"), ref, LocalDate.of(2026, 11, 20));
+
+        assertThat(item.getOpenedExpiryDate()).isEqualTo(LocalDate.of(2026, 11, 20));
+    }
+
+    @Test
+    void createFromTarbil_carriesOpenedExpiry() {
+        when(items.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        adapter().createFromTarbil(branchId, new NewTarbilStockItem("VETILAC_MEDICINE", "CLAVON = Clavon", "50 ml'lik renksiz cam şişeler",
+            "İlaç", "63016", null, 0, new BigDecimal("49"), null, LocalDate.of(2026, 11, 20)), ref);
+
+        org.mockito.ArgumentCaptor<InventoryItem> saved = org.mockito.ArgumentCaptor.forClass(InventoryItem.class);
+        verify(items).save(saved.capture());
+        assertThat(saved.getValue().getOpenedExpiryDate()).isEqualTo(LocalDate.of(2026, 11, 20));
     }
 }

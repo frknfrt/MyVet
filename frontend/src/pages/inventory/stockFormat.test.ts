@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatMovement, formatStock, isDecimalUnit } from './stockFormat';
+import { formatAmount, formatMovement, formatStock, inputModeFor, isDecimalUnit, openedExpiryStatus } from './stockFormat';
 
 describe('formatStock (spec 2026-10-24)', () => {
   it('shows closed bottles and open ml for ml items', () => {
@@ -41,5 +41,39 @@ describe('formatMovement (stok hareketi satırı)', () => {
   it('keeps the plain count for adet items and old movements', () => {
     expect(formatMovement('OUT', 2, null, 'ADET')).toBe('-2');
     expect(formatMovement('IN', 1, null, 'ML')).toBe('+1 şişe');
+  });
+});
+
+describe('TABLET ve parça (spec 2026-10-25)', () => {
+  it('shows boxes and loose tablets', () => {
+    expect(formatStock(2, 8, 'TABLET')).toBe('2 kutu + 8 tablet');
+    expect(formatMovement('OUT', 1, 5, 'TABLET')).toBe('-1 kutu, +5 tablet açık');
+  });
+  it('shows opened amount on ADET rows when present', () => {
+    expect(formatStock(2, 0.5, 'ADET')).toBe('2 adet, 0,5 açık');
+    expect(formatStock(2, 0, 'ADET')).toBe('2 adet');
+  });
+  it('formats amounts by unit and piece', () => {
+    expect(formatAmount(1, 'ML', 0.5, 'pipet')).toBe('2 pipet (1 ml)');
+    expect(formatAmount(2, 'TABLET')).toBe('2 tablet');
+    expect(formatAmount(1.5, 'ML')).toBe('1,5 ml');
+    expect(formatAmount(2, 'ADET')).toBe('2 adet');
+  });
+  it('gives the input mode for each unit', () => {
+    const pipet = inputModeFor('ML', 0.5, 'pipet');
+    expect(pipet).toMatchObject({ label: 'Miktar (pipet)', step: '1', min: 1 });
+    expect(pipet.toBase(2)).toBe(1);
+    expect(pipet.fromBase(1.5)).toBe(3);
+    expect(inputModeFor('TABLET')).toMatchObject({ label: 'Miktar (tablet)', step: '1', min: 1 });
+    expect(inputModeFor('ML')).toMatchObject({ label: 'Miktar (ml)', step: '0.01', min: 0.01 });
+    expect(inputModeFor('ADET')).toMatchObject({ label: 'Adet', step: '1', min: 1 });
+    expect(inputModeFor('TABLET').toBase(3)).toBe(3);
+  });
+  it('tells expired and soon-to-expire opened products', () => {
+    const today = new Date('2026-10-25T09:00:00');
+    expect(openedExpiryStatus('2026-10-24', today)).toBe('expired');
+    expect(openedExpiryStatus('2026-10-27', today)).toBe('soon');
+    expect(openedExpiryStatus('2026-11-04', today)).toBeNull();
+    expect(openedExpiryStatus(null, today)).toBeNull();
   });
 });

@@ -33,7 +33,7 @@ describe('stock rows', () => {
       <table id="${MP}"><tbody><tr id="${MP}__0"><td></td><td>Klinik</td><td>İlaç Y</td><td>Kutu</td><td>2</td><td>01.02.2027</td><td>0,5</td><td>01.03.2027</td><td>A1B2</td><td>X</td></tr></tbody></table>`;
 
     expect(readStockRows(document, 'medicineStock')).toEqual([
-      { productName: 'İlaç Y', presentation: 'Kutu', lotNumber: 'A1B2', expiryDate: '2027-02-01', quantity: 2, openedQuantity: 0.5 },
+      { productName: 'İlaç Y', presentation: 'Kutu', lotNumber: 'A1B2', expiryDate: '2027-02-01', quantity: 2, openedQuantity: 0.5, openedExpiryDate: '2027-03-01' },
     ]);
   });
 
@@ -86,5 +86,34 @@ describe('Parça Stok table (2026-10-21)', () => {
     );
 
     expect(readStockRows(document, 'vaccineStock')[0]).toMatchObject({ productName: 'Biocan DHPPI', quantity: 1, dosesPerPackage: 20 });
+  });
+});
+
+describe('opened expiry date (spec 2026-10-25)', () => {
+  function medicine(header: string[], cells: string[]) {
+    document.body.innerHTML = `
+      <table id="${MP}_Header"><thead><tr>${header.map((h) => `<th>${h}</th>`).join('')}</tr></thead></table>
+      <table id="${MP}"><tbody><tr id="${MP}__0">${cells.map((c) => `<td>${c}</td>`).join('')}</tr></tbody></table>`;
+  }
+  const base = ['', 'Satış Yeri', 'Ürün', 'Takdim Şekli', 'Miktar', 'Son Kullanma Tarihi', 'Açılmış Kalan Miktar'];
+
+  it('readsOpenedExpiryDate', () => {
+    medicine([...base, 'Açılmış Kalan Miktar Son Kullanma Tarihi', 'Seri Numarası'], ['', 'K', 'CLAVON', '50 ml', '0', '01.02.2027', '49,00', '30.11.2027', '63016']);
+    expect(readStockRows(document, 'medicineStock')[0].openedExpiryDate).toBe('2027-11-30');
+  });
+
+  it('emptyOpenedExpiryCell_isNull', () => {
+    medicine([...base, 'Açılmış Kalan Miktar Son Kullanma Tarihi', 'Seri Numarası'], ['', 'K', 'TENIFEN', 'Kutu', '3', '01.02.2027', '', '', 'T1']);
+    expect(readStockRows(document, 'medicineStock')[0].openedExpiryDate).toBeNull();
+  });
+
+  it('missingOpenedExpiryColumn_omitsField', () => {
+    medicine([...base, 'Seri Numarası'], ['', 'K', 'CLAVON', '50 ml', '0', '01.02.2027', '49,00', '63016']);
+    expect('openedExpiryDate' in readStockRows(document, 'medicineStock')[0]).toBe(false);
+  });
+
+  it('unreadableOpenedExpiry_rejectsTheTable', () => {
+    medicine([...base, 'Açılmış Kalan Miktar Son Kullanma Tarihi', 'Seri Numarası'], ['', 'K', 'CLAVON', '50 ml', '0', '01.02.2027', '49,00', 'yarın', '63016']);
+    expect(readStockTable(document, 'medicineStock')).toBeNull();
   });
 });

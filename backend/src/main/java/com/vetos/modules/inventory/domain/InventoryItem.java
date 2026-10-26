@@ -76,6 +76,17 @@ public class InventoryItem {
     @Column(name = "unit_source", nullable = false)
     private String unitSource = "AUTO";
 
+    /** ML kalemde bir parcanin (pipet/tup) ml'si; stok ve TARBIL ml, parca yalniz giris/gosterim (spec 2026-10-25). */
+    @Column(name = "piece_size")
+    private BigDecimal pieceSize;
+
+    @Column(name = "piece_label")
+    private String pieceLabel;
+
+    /** TARBIL "Acilmis Kalan Miktar Son Kullanma Tarihi"; acik miktar 0 olunca temizlenir (spec 2026-10-25). */
+    @Column(name = "opened_expiry_date")
+    private LocalDate openedExpiryDate;
+
     public static InventoryItem create(
         UUID tenantId, UUID branchId, String name, String category, String skuBarcode,
         int initialQuantity, int reorderThreshold, LocalDate expiryDate, String lotNumber, BigDecimal unitCost
@@ -98,8 +109,13 @@ public class InventoryItem {
         this.quantityOnHand += delta;
     }
 
+    /** Acilabilir kalemde acik miktar kutu karsiligiyla sayilir: 0 kutu + 19/20 flakon = 0,95 kutu (spec 2026-10-25). */
     public boolean isBelowReorderThreshold() {
-        return quantityOnHand <= reorderThreshold;
+        if (!isOpenable()) {
+            return quantityOnHand <= reorderThreshold;
+        }
+        BigDecimal boxes = BigDecimal.valueOf(quantityOnHand).add(openedQuantity.divide(packageSize, 2, java.math.RoundingMode.HALF_UP));
+        return boxes.compareTo(BigDecimal.valueOf(reorderThreshold)) <= 0;
     }
 
     public void updateDetails(String name, String category, int reorderThreshold, BigDecimal unitCost) {
@@ -119,9 +135,27 @@ public class InventoryItem {
     }
 
     public void setStockUnit(StockUnit unit, BigDecimal packageSize, boolean manual) {
+        setStockUnit(unit, packageSize, null, null, manual);
+    }
+
+    /** Parca (pipet) yalniz ML'de saklanir; diger birimlerde temizlenir. */
+    public void setStockUnit(StockUnit unit, BigDecimal packageSize, BigDecimal pieceSize, String pieceLabel, boolean manual) {
         this.unit = unit == null ? StockUnit.ADET : unit;
         this.packageSize = this.unit == StockUnit.ADET ? null : packageSize;
+        boolean piece = this.unit == StockUnit.ML && pieceSize != null && pieceSize.signum() > 0;
+        this.pieceSize = piece ? pieceSize : null;
+        this.pieceLabel = piece ? pieceLabel : null;
         this.unitSource = manual ? "MANUAL" : "AUTO";
+    }
+
+    public void setOpenedExpiry(LocalDate date) {
+        this.openedExpiryDate = openedQuantity.signum() == 0 ? null : date;
+    }
+
+    private void clearOpenedExpiryIfEmpty() {
+        if (openedQuantity.signum() == 0) {
+            openedExpiryDate = null;
+        }
     }
 
     /**
@@ -150,6 +184,7 @@ public class InventoryItem {
             opened++;
         }
         openedQuantity = openedQuantity.subtract(amount);
+        clearOpenedExpiryIfEmpty();
         return new StockChange(-opened, openedQuantity.subtract(before));
     }
 
@@ -161,8 +196,26 @@ public class InventoryItem {
         if (openedOrNull != null) {
             openedDelta = openedOrNull.subtract(openedQuantity);
             openedQuantity = openedOrNull;
+            clearOpenedExpiryIfEmpty();
         }
         return new StockChange(closedDelta, openedDelta);
+    }
+
+    /**
+     * Elle acik miktar duzeltmesi (kirilma, dokulme; spec 2026-10-25 §4.4/14). Yalniz acilabilir kalemde; sonuc eksi olamaz,
+     * |fark| en fazla 100.000. 0'a inerse acik urun tarihi temizlenir.
+     */
+    public StockChange adjustOpened(BigDecimal delta) {
+        if (!isOpenable() || delta == null || delta.signum() == 0 || delta.abs().compareTo(new BigDecimal("100000")) > 0) {
+            throw new com.vetos.modules.inventory.domain.exception.InvalidStockUnitException();
+        }
+        BigDecimal next = openedQuantity.add(delta);
+        if (next.signum() < 0) {
+            throw new com.vetos.modules.inventory.domain.exception.OpenedQuantityNegativeException();
+        }
+        openedQuantity = next;
+        clearOpenedExpiryIfEmpty();
+        return new StockChange(0, delta);
     }
 
     private void openPackage() {

@@ -12,7 +12,7 @@ import { StockGivePicker } from './StockGivePicker';
 
 const item = (over: Partial<InventoryItem>): InventoryItem => ({
   id: 'i', name: 'Kalem', category: 'İlaç', skuBarcode: null, quantityOnHand: 1, reorderThreshold: 0, belowReorderThreshold: false,
-  expiryDate: null, lotNumber: 'L1', unitCost: null, tarbilProductName: 'KALEM', unit: 'ADET', packageSize: null, openedQuantity: 0,
+  expiryDate: null, lotNumber: 'L1', unitCost: null, tarbilProductName: 'KALEM', unit: 'ADET', packageSize: null, openedQuantity: 0, pieceSize: null, pieceLabel: null, openedExpiryDate: null,
   unitSource: 'AUTO', ...over,
 });
 

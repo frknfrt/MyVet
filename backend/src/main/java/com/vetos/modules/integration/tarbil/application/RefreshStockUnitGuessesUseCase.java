@@ -42,7 +42,8 @@ public class RefreshStockUnitGuessesUseCase {
             StockSyncMatcher.Target target = targets.get(StockSyncMatcher.key(line));
             InventoryStockView item = StockSyncMatcher.match(line, stock, target).item();
             if (item != null && done.add(item.id())) {
-                stockSyncPort.refreshUnitGuess(item.id(), snapshot.getTarbilSystem().name(), line.getPresentation(), target.dosesPerPackage());
+                stockSyncPort.refreshFromSnapshot(item.id(), snapshot.getTarbilSystem().name(), line.getPresentation(), target.dosesPerPackage(),
+                    line.getOpenedExpiryDate());
             }
         }
     }

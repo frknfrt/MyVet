@@ -16,7 +16,7 @@ import { ItemDetailModal } from './ItemDetailModal';
 const CLAVON: InventoryItem = {
   id: 'c', name: 'Clavon', category: 'İlaç', skuBarcode: null, quantityOnHand: 0, reorderThreshold: 1, belowReorderThreshold: true,
   expiryDate: null, lotNumber: '63016', unitCost: null, tarbilProductName: 'CLAVON = Clavon', unit: 'ADET', packageSize: null,
-  openedQuantity: 0, unitSource: 'AUTO',
+  openedQuantity: 0, unitSource: 'AUTO', pieceSize: null, pieceLabel: null, openedExpiryDate: null,
 };
 
 let container: HTMLDivElement;
@@ -46,7 +46,7 @@ describe('ItemDetailModal — kullanım birimi (spec 2026-10-24)', () => {
     await act(async () => save.click());
 
     expect(inventoryApi.update).toHaveBeenCalledWith('c', {
-      name: 'Clavon', category: 'İlaç', reorderThreshold: 1, unitCost: null, unit: 'ML', packageSize: 50,
+      name: 'Clavon', category: 'İlaç', reorderThreshold: 1, unitCost: null, unit: 'ML', packageSize: 50, pieceSize: null, pieceLabel: null,
     });
     expect(onChanged).toHaveBeenCalled();
   });
@@ -68,5 +68,42 @@ describe('ItemDetailModal — stok hareketleri', () => {
     expect(document.body.textContent).toContain('-1 ml açık');
     expect(document.body.textContent).toContain('-1 şişe, +49 ml açık');
     expect(document.body.textContent).not.toContain('-0');
+  });
+});
+
+describe('ItemDetailModal — açık miktar ve tarih (spec 2026-10-25)', () => {
+  async function render(item: InventoryItem) {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      createRoot(container).render(<ItemDetailModal item={item} onClose={() => undefined} onChanged={() => undefined} />);
+    });
+  }
+
+  it('opened adjustment sends openedDelta', async () => {
+    vi.mocked(inventoryApi.recordMovement).mockResolvedValue(undefined);
+    await render({ ...CLAVON, unit: 'ML', packageSize: 50, openedQuantity: 49 });
+    await change(document.querySelector<HTMLSelectElement>('select[aria-label="Hareket türü"]')!, 'ADJUSTMENT');
+    await change(document.querySelector<HTMLInputElement>('input[aria-label="Kapalı adet"]')!, '0');
+    await change(document.querySelector<HTMLInputElement>('input[aria-label="Açık miktar farkı"]')!, '-3');
+    const apply = Array.from(document.querySelectorAll('button')).find((b) => b.textContent === 'Uygula')!;
+    await act(async () => apply.closest('form')!.requestSubmit());
+
+    expect(inventoryApi.recordMovement).toHaveBeenCalledWith('c', { movementType: 'ADJUSTMENT', quantity: 0, openedDelta: -3 });
+  });
+
+  it('shows expired opened badge', async () => {
+    await render({ ...CLAVON, unit: 'ML', packageSize: 50, openedQuantity: 20, openedExpiryDate: '2020-01-01' });
+    expect(document.body.textContent).toContain('Açık ürünün süresi doldu');
+  });
+
+  it('offers tablet unit and pipet size for ml items', async () => {
+    await render({ ...CLAVON, unit: 'ML', packageSize: 1.5 });
+    const select = document.querySelector<HTMLSelectElement>('select[aria-label="Kullanım birimi"]')!;
+    expect(Array.from(select.options).map((o) => o.value)).toContain('TABLET');
+    await change(document.querySelector<HTMLInputElement>('input[aria-label="Pipet ml"]')!, '0.5');
+    const save = Array.from(document.querySelectorAll('button')).find((b) => b.textContent === 'Birimi Kaydet')!;
+    await act(async () => save.click());
+    expect(inventoryApi.update).toHaveBeenLastCalledWith('c', expect.objectContaining({ unit: 'ML', packageSize: 1.5, pieceSize: 0.5, pieceLabel: 'pipet' }));
   });
 });

@@ -80,4 +80,19 @@ class AutoDeductStockForEncounterUseCaseTest {
         verify(movements).consume(plain, new BigDecimal("2"), null, StockReferenceType.ENCOUNTER, encounter);
         verify(pending).open(linked, new BigDecimal("1"), StockReferenceType.ENCOUNTER, encounter);
     }
+
+    @Test
+    void tabletUsage_isRoundedUpToWholeTablets() {
+        UUID encounter = UUID.randomUUID();
+        InventoryItem i = InventoryItem.create(UUID.randomUUID(), UUID.randomUUID(), "Baytril Flavour", null, null, 5, 0, null, "B1", null);
+        ReflectionTestUtils.setField(i, "id", UUID.randomUUID());
+        i.linkTarbil("VETILAC_MEDICINE", "BAYTRIL", "10 tabletlik blister");
+        i.setStockUnit(com.vetos.modules.inventory.domain.StockUnit.TABLET, new BigDecimal("10"), false);
+        when(items.findById(i.getId())).thenReturn(Optional.of(i));
+
+        new AutoDeductStockForEncounterUseCase(movements, pending, items).execute(encounter, List.of(
+            new AutoDeductStockForEncounterUseCase.UsedItem(i.getId(), new BigDecimal("1.5"))));
+
+        verify(pending).open(i.getId(), new BigDecimal("2"), StockReferenceType.ENCOUNTER, encounter);
+    }
 }

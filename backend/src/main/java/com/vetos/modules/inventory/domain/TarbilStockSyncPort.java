@@ -19,11 +19,17 @@ public interface TarbilStockSyncPort {
      * baglantisini yazar; birim elle ayarlanmadiysa takdim seklinden tahmin eder (spec 2026-10-24).
      */
     void syncFromTarbil(UUID inventoryItemId, int targetClosed, BigDecimal targetOpenedOrNull, Integer dosesPerPackage,
-                        TarbilStockLink link, UUID referenceId);
+                        TarbilStockLink link, UUID referenceId, java.time.LocalDate openedExpiryDate);
+
+    default void syncFromTarbil(UUID inventoryItemId, int targetClosed, BigDecimal targetOpenedOrNull, Integer dosesPerPackage,
+                                TarbilStockLink link, UUID referenceId) {
+        syncFromTarbil(inventoryItemId, targetClosed, targetOpenedOrNull, dosesPerPackage, link, referenceId, null);
+    }
 
     /**
-     * Yalnız birimi tahmin eder (miktar ve hareket yok; değerlendirme I4). Elle ayarlanmış birime ve bekleyen düşümü olan
-     * kaleme dokunmaz: bekleyen miktar birimle okunur.
+     * Her TARBIL stok yuklemesinde eslesen kalem icin (miktar ve hareket yok): birimi tahmin eder (değerlendirme I4; elle
+     * ayarlanmış birime ve bekleyen düşümü olan kaleme dokunmaz) ve açık ürün son kullanma tarihini yazar (spec 2026-10-25).
      */
-    void refreshUnitGuess(UUID inventoryItemId, String tarbilSystem, String presentation, Integer dosesPerPackage);
+    void refreshFromSnapshot(UUID inventoryItemId, String tarbilSystem, String presentation, Integer dosesPerPackage,
+                             java.time.LocalDate openedExpiryDate);
 }

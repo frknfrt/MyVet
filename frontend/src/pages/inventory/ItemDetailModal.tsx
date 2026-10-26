@@ -6,9 +6,11 @@ import { Button } from '../../components/ui/Button';
 import { FieldWrap, Input, Select } from '../../components/ui/Field';
 import { Modal } from '../../components/ui/Modal';
 import styles from './ItemDetailModal.module.css';
-import { formatMovement, formatStock, StockUnit } from './stockFormat';
+import { formatMovement, formatStock, openedExpiryStatus, StockUnit } from './stockFormat';
 
-const UNIT_LABELS: Record<StockUnit, string> = { ADET: 'Adet', ML: 'ml (şişeden)', G: 'g (tüpten)', FLAKON: 'Flakon (aşı kutusundan)' };
+const UNIT_LABELS: Record<StockUnit, string> = {
+  ADET: 'Adet', ML: 'ml (şişeden / pipetten)', G: 'g (tüpten)', FLAKON: 'Flakon (aşı kutusundan)', TABLET: 'Tablet (kutudan)',
+};
 
 const MOVEMENT_LABELS: Record<StockMovementType, string> = { IN: 'Giriş', OUT: 'Çıkış', ADJUSTMENT: 'Düzeltme' };
 const REFERENCE_LABELS: Record<string, string> = { ENCOUNTER: 'Muayene', PURCHASE_ORDER: 'Satın Alma', MANUAL: 'Manuel' };
@@ -26,9 +28,11 @@ export function ItemDetailModal({ item, onClose, onChanged }: ItemDetailModalPro
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [movementType, setMovementType] = useState<StockMovementType>('IN');
   const [quantity, setQuantity] = useState('1');
+  const [openedDelta, setOpenedDelta] = useState('');
   const [busy, setBusy] = useState(false);
   const [unit, setUnit] = useState<StockUnit>('ADET');
   const [packageSize, setPackageSize] = useState('');
+  const [pieceSize, setPieceSize] = useState('');
   const [unitError, setUnitError] = useState<string | null>(null);
 
   function reload() {
@@ -39,8 +43,10 @@ export function ItemDetailModal({ item, onClose, onChanged }: ItemDetailModalPro
   useEffect(() => {
     reload();
     setQuantity('1');
+    setOpenedDelta('');
     setUnit(item?.unit ?? 'ADET');
     setPackageSize(item?.packageSize != null ? String(item.packageSize) : '');
+    setPieceSize(item?.pieceSize != null ? String(item.pieceSize) : '');
     setUnitError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item?.id]);
@@ -50,7 +56,11 @@ export function ItemDetailModal({ item, onClose, onChanged }: ItemDetailModalPro
     if (!item || busy) return;
     setBusy(true);
     try {
-      await inventoryApi.recordMovement(item.id, { movementType, quantity: Number(quantity) });
+      const opened = Number(openedDelta.replace(',', '.'));
+      await inventoryApi.recordMovement(item.id, {
+        movementType, quantity: Number(quantity), ...(openedDelta && opened !== 0 ? { openedDelta: opened } : {}),
+      });
+      setOpenedDelta('');
       reload();
       onChanged();
     } finally {
@@ -66,11 +76,17 @@ export function ItemDetailModal({ item, onClose, onChanged }: ItemDetailModalPro
       setUnitError('Paket büyüklüğü girin (ör. 50 ml).');
       return;
     }
+    if (unit === 'TABLET' && size !== null && !Number.isInteger(size)) {
+      setUnitError('Kutudaki tablet sayısı tam sayı olmalı.');
+      return;
+    }
+    const piece = unit === 'ML' && pieceSize ? Number(pieceSize.replace(',', '.')) : null;
     setBusy(true);
     setUnitError(null);
     try {
       await inventoryApi.update(item.id, {
         name: item.name, category: item.category, reorderThreshold: item.reorderThreshold, unitCost: item.unitCost, unit, packageSize: size,
+        pieceSize: piece && piece > 0 ? piece : null, pieceLabel: piece && piece > 0 ? (item.pieceLabel ?? 'pipet') : null,
       });
       onChanged();
     } catch (e) {
@@ -80,8 +96,11 @@ export function ItemDetailModal({ item, onClose, onChanged }: ItemDetailModalPro
     }
   }
 
-  const unitDirty = !!item && (unit !== item.unit || packageSize !== (item.packageSize != null ? String(item.packageSize) : ''));
-  const dirty = movementType !== 'IN' || quantity !== '1' || unitDirty;
+  const unitDirty = !!item && (unit !== item.unit || packageSize !== (item.packageSize != null ? String(item.packageSize) : '')
+    || pieceSize !== (item.pieceSize != null ? String(item.pieceSize) : ''));
+  const dirty = movementType !== 'IN' || quantity !== '1' || openedDelta !== '' || unitDirty;
+  const openable = !!item && item.unit !== 'ADET' && (item.packageSize ?? 0) > 0;
+  const openedExpiry = item ? openedExpiryStatus(item.openedExpiryDate) : null;
 
   return (
     <Modal open={item !== null} onClose={onClose} width={480} dirty={dirty}>
@@ -106,6 +125,13 @@ export function ItemDetailModal({ item, onClose, onChanged }: ItemDetailModalPro
             <div>
               <div className={styles.qtyValue}>{formatStock(item.quantityOnHand, item.openedQuantity, item.unit)}</div>
               {item.belowReorderThreshold && <Badge tone="warning">Düşük Stok</Badge>}
+              {item.openedExpiryDate && (
+                <div className={styles.subline}>
+                  Açık ürün son kullanma: {new Date(item.openedExpiryDate).toLocaleDateString('tr-TR')}{' '}
+                  {openedExpiry === 'expired' && <Badge tone="danger">Açık ürünün süresi doldu</Badge>}
+                  {openedExpiry === 'soon' && <Badge tone="warning">3 gün içinde bitiyor</Badge>}
+                </div>
+              )}
             </div>
           </div>
 
@@ -122,8 +148,13 @@ export function ItemDetailModal({ item, onClose, onChanged }: ItemDetailModalPro
                   </Select>
                 </FieldWrap>
                 {unit !== 'ADET' && (
-                  <FieldWrap label={unit === 'FLAKON' ? 'Kutudaki flakon' : `Bir paketteki ${unit === 'G' ? 'g' : 'ml'}`}>
-                    <Input aria-label="Paket büyüklüğü" type="number" min={0.01} step="0.01" value={packageSize} onChange={(e) => setPackageSize(e.target.value)} />
+                  <FieldWrap label={unit === 'FLAKON' ? 'Kutudaki flakon' : unit === 'TABLET' ? 'Kutudaki tablet' : `Bir paketteki ${unit === 'G' ? 'g' : 'ml'}`}>
+                    <Input aria-label="Paket büyüklüğü" type="number" min={unit === 'TABLET' ? 1 : 0.01} step={unit === 'TABLET' ? '1' : '0.01'} value={packageSize} onChange={(e) => setPackageSize(e.target.value)} />
+                  </FieldWrap>
+                )}
+                {unit === 'ML' && (
+                  <FieldWrap label="Bir pipetin ml'si (pipetli kutuda)">
+                    <Input aria-label="Pipet ml" type="number" min={0.01} step="0.01" value={pieceSize} onChange={(e) => setPieceSize(e.target.value)} />
                   </FieldWrap>
                 )}
                 <Button type="button" variant="secondary" disabled={busy || !unitDirty} onClick={saveUnit}>
@@ -151,15 +182,20 @@ export function ItemDetailModal({ item, onClose, onChanged }: ItemDetailModalPro
           {canWrite && (
             <form className={styles.adjustForm} onSubmit={handleAdjust}>
               <FieldWrap label="Hareket türü">
-                <Select value={movementType} onChange={(e) => setMovementType(e.target.value as StockMovementType)}>
+                <Select aria-label="Hareket türü" value={movementType} onChange={(e) => setMovementType(e.target.value as StockMovementType)}>
                   <option value="IN">Giriş</option>
                   <option value="OUT">Çıkış</option>
                   <option value="ADJUSTMENT">Düzeltme</option>
                 </Select>
               </FieldWrap>
-              <FieldWrap label="Miktar">
-                <Input type="number" min={1} value={quantity} onChange={(e) => setQuantity(e.target.value)} required />
+              <FieldWrap label={openable ? 'Kapalı adet' : 'Miktar'}>
+                <Input aria-label="Kapalı adet" type="number" min={openable ? 0 : 1} value={quantity} onChange={(e) => setQuantity(e.target.value)} required />
               </FieldWrap>
+              {openable && (
+                <FieldWrap label="Açık miktar farkı (ör. -3)">
+                  <Input aria-label="Açık miktar farkı" type="number" step="0.01" value={openedDelta} onChange={(e) => setOpenedDelta(e.target.value)} />
+                </FieldWrap>
+              )}
               <Button type="submit" variant="secondary" disabled={busy}>
                 Uygula
               </Button>

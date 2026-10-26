@@ -16,7 +16,7 @@ import { inventoryApi, InventoryItem } from '../../api/inventoryApi';
 import encounterStyles from './EncounterPage.module.css';
 import styles from './PrescriptionCard.module.css';
 import { StockGivePicker } from './StockGivePicker';
-import { isDecimalUnit, unitLabel } from '../inventory/stockFormat';
+import { formatAmount, inputModeFor } from '../inventory/stockFormat';
 import { TarbilDiseaseSelect } from './TarbilDiseaseSelect';
 
 interface PrescriptionCardProps {
@@ -110,13 +110,19 @@ export function PrescriptionCard({ encounterId, patientId, readOnly, onChanged }
     return stockItems.find((s) => s.id === id)?.name ?? 'Stok kalemi';
   }
 
-  /** Spec 2026-10-24: ml/g ile kullanılan ürün ondalıklı miktarla verilir. */
-  function stockUnit(id: string | null | undefined) {
-    return stockItems.find((s) => s.id === id)?.unit ?? 'ADET';
+  /** Spec 2026-10-24/25: ml/g ondalıklı, tablet ve pipet tam sayı; pipet ml'ye çevrilerek gönderilir. */
+  function stockItem(id: string | null | undefined) {
+    return stockItems.find((s) => s.id === id);
   }
 
-  function stockDecimal(id: string | null | undefined) {
-    return isDecimalUnit(stockUnit(id));
+  function stockMode(id: string | null | undefined) {
+    const s = stockItem(id);
+    return inputModeFor(s?.unit ?? 'ADET', s?.pieceSize, s?.pieceLabel);
+  }
+
+  function stockAmount(id: string | null | undefined, quantity: number) {
+    const s = stockItem(id);
+    return formatAmount(quantity, s?.unit ?? 'ADET', s?.pieceSize, s?.pieceLabel);
   }
 
   async function cancelPrescription(id: string) {
@@ -168,9 +174,10 @@ export function PrescriptionCard({ encounterId, patientId, readOnly, onChanged }
     try {
       const controlledSubstance = items.some((it) => !it.giveFromStock && drugs.find((d) => d.id === it.drugId)?.isControlled);
       // Stoktan verilen kalemin ilacı stok ürünüdür: katalog ilacı gönderilmez, ad stok ürününden (spec 2026-10-12).
+      // Taslakta miktar ekrandaki birimde (pipet/tablet/ml); stok birimine (pipet → ml) yalnız burada çevrilir (değerlendirme C1).
       const payloadItems: PrescriptionItemPayload[] = items.map(({ giveFromStock, ...it }) =>
         giveFromStock
-          ? { ...it, drugId: null }
+          ? { ...it, drugId: null, stockQuantity: it.stockQuantity == null ? null : stockMode(it.inventoryItemId).toBase(it.stockQuantity) }
           : { ...it, drugName: null, inventoryItemId: null, stockQuantity: null },
       );
       await clinicalApi.issuePrescription({
@@ -225,7 +232,7 @@ export function PrescriptionCard({ encounterId, patientId, readOnly, onChanged }
                 {item.inventoryItemId && (
                   <span className={styles.stockNote}>
                     {' '}
-                    · Stoktan: {stockName(item.inventoryItemId)} × {item.stockQuantity}{stockDecimal(item.inventoryItemId) ? ` ${unitLabel(stockUnit(item.inventoryItemId))}` : ''}
+                    · Stoktan: {stockName(item.inventoryItemId)} × {stockAmount(item.inventoryItemId, item.stockQuantity ?? 0)}
                   </span>
                 )}
               </div>
@@ -281,11 +288,11 @@ export function PrescriptionCard({ encounterId, patientId, readOnly, onChanged }
                       value={item.inventoryItemId ?? null}
                       onChange={(id, name) => updateItem(index, { inventoryItemId: id, drugName: name })}
                     />
-                    <FieldWrap label={stockDecimal(item.inventoryItemId) ? `Miktar (${unitLabel(stockUnit(item.inventoryItemId))})` : 'Adet'}>
+                    <FieldWrap label={stockMode(item.inventoryItemId).label}>
                       <Input
                         type="number"
-                        min={stockDecimal(item.inventoryItemId) ? 0.01 : 1}
-                        step={stockDecimal(item.inventoryItemId) ? '0.01' : '1'}
+                        min={stockMode(item.inventoryItemId).min}
+                        step={stockMode(item.inventoryItemId).step}
                         value={item.stockQuantity ?? 1}
                         onChange={(e) => updateItem(index, { stockQuantity: Number(e.target.value) })}
                         required

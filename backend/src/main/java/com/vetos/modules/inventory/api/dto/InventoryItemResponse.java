@@ -21,13 +21,17 @@ public record InventoryItemResponse(
     String unit,
     BigDecimal packageSize,
     BigDecimal openedQuantity,
-    String unitSource
+    String unitSource,
+    BigDecimal pieceSize,
+    String pieceLabel,
+    LocalDate openedExpiryDate
 ) {
     public static InventoryItemResponse from(InventoryItemDetail d) {
         return new InventoryItemResponse(
             d.id(), d.name(), d.category(), d.skuBarcode(), d.quantityOnHand(), d.reorderThreshold(),
             d.belowReorderThreshold(), d.expiryDate(), d.lotNumber(), d.unitCost(), d.tarbilProductName(),
-            d.unit(), d.packageSize(), d.openedQuantity(), d.unitSource()
+            d.unit(), d.packageSize(), d.openedQuantity(), d.unitSource(),
+            d.pieceSize(), d.pieceLabel(), d.openedExpiryDate()
         );
     }
 }

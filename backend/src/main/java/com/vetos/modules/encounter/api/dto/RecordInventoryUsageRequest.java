@@ -5,4 +5,4 @@ import jakarta.validation.constraints.Positive;
 
 import java.util.UUID;
 
-public record RecordInventoryUsageRequest(@NotNull UUID inventoryItemId, @NotNull @Positive java.math.BigDecimal quantity) {}
+public record RecordInventoryUsageRequest(@NotNull UUID inventoryItemId, @NotNull @com.vetos.platform.validation.StockAmount java.math.BigDecimal quantity) {}

@@ -56,8 +56,8 @@ class RefreshStockUnitGuessesUseCaseTest {
 
         new RefreshStockUnitGuessesUseCase(repository, staff, stockSyncPort).execute(staffId, snapshot.getId());
 
-        verify(stockSyncPort, times(1)).refreshUnitGuess(eq(id), eq("VETILAC_MEDICINE"), eq("100 ml'lik şişe"), any());
-        verify(stockSyncPort, times(1)).refreshUnitGuess(any(), any(), any(), any());
+        verify(stockSyncPort, times(1)).refreshFromSnapshot(eq(id), eq("VETILAC_MEDICINE"), eq("100 ml'lik şişe"), any(), any());
+        verify(stockSyncPort, times(1)).refreshFromSnapshot(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -68,6 +68,23 @@ class RefreshStockUnitGuessesUseCaseTest {
 
         new RefreshStockUnitGuessesUseCase(repository, staff, stockSyncPort).execute(staffId, snapshot.getId());
 
-        verify(stockSyncPort, never()).refreshUnitGuess(any(), any(), any(), any());
+        verify(stockSyncPort, never()).refreshFromSnapshot(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void passesTheLinesOpenedExpiryDate() {
+        TarbilStockSnapshot snapshot = TarbilStockSnapshot.take(tenant, TarbilStockSystem.VETILAC_MEDICINE, staffId, Instant.now());
+        UUID id = UUID.randomUUID();
+        when(repository.findById(snapshot.getId())).thenReturn(Optional.of(snapshot));
+        when(repository.findLines(snapshot.getId())).thenReturn(List.of(
+            TarbilStockSnapshotLine.of(snapshot.getId(), tenant, 1, "CLAVON", "50 ml'lik şişe", "63016", null, 0, new BigDecimal("49"),
+                false, null, java.time.LocalDate.of(2026, 11, 20))));
+        when(staff.findSummaryById(staffId)).thenReturn(new StaffSummary(staffId, "Dr", StaffRole.VET, branch));
+        when(stockSyncPort.listForBranch(branch)).thenReturn(List.of(
+            new InventoryStockView(id, "Clavon", "63016", null, 0, "CLAVON", new BigDecimal("49"), "ML")));
+
+        new RefreshStockUnitGuessesUseCase(repository, staff, stockSyncPort).execute(staffId, snapshot.getId());
+
+        verify(stockSyncPort).refreshFromSnapshot(eq(id), eq("VETILAC_MEDICINE"), eq("50 ml'lik şişe"), any(), eq(java.time.LocalDate.of(2026, 11, 20)));
     }
 }

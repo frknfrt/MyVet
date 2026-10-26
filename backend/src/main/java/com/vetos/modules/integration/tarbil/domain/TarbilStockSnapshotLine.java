@@ -53,6 +53,10 @@ public class TarbilStockSnapshotLine {
     @Column(name = "doses_per_package")
     private Integer dosesPerPackage;
 
+    /** Ilac stok acik urun son kullanma tarihi (spec 2026-10-25); yoksa null. */
+    @Column(name = "opened_expiry_date")
+    private LocalDate openedExpiryDate;
+
     @Column(name = "applied_inventory_item_id")
     private UUID appliedInventoryItemId;
 
@@ -74,7 +78,15 @@ public class TarbilStockSnapshotLine {
     public static TarbilStockSnapshotLine of(UUID snapshotId, UUID tenantId, int lineNo, String productName, String presentation,
                                              String lotNumber, LocalDate expiryDate, int quantity, BigDecimal openedQuantity,
                                              boolean partStock, Integer dosesPerPackage) {
+        return of(snapshotId, tenantId, lineNo, productName, presentation, lotNumber, expiryDate, quantity, openedQuantity, partStock,
+            dosesPerPackage, null);
+    }
+
+    public static TarbilStockSnapshotLine of(UUID snapshotId, UUID tenantId, int lineNo, String productName, String presentation,
+                                             String lotNumber, LocalDate expiryDate, int quantity, BigDecimal openedQuantity,
+                                             boolean partStock, Integer dosesPerPackage, LocalDate openedExpiryDate) {
         TarbilStockSnapshotLine line = new TarbilStockSnapshotLine();
+        line.openedExpiryDate = openedExpiryDate;
         line.id = UUID.randomUUID();
         line.snapshotId = snapshotId;
         line.tenantId = tenantId;

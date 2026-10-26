@@ -144,4 +144,41 @@ class InventoryFeatureListenersTest {
             .isInstanceOf(com.vetos.modules.inventory.domain.exception.InvalidPrescriptionStockItemException.class);
         verifyNoInteractions(pending);
     }
+
+    private com.vetos.modules.inventory.domain.InventoryItem tabletItem() {
+        com.vetos.modules.inventory.domain.InventoryItem tablet = com.vetos.modules.inventory.domain.InventoryItem.create(
+            TENANT, UUID.randomUUID(), "Baytril Flavour", "İlaç", null, 5, 0, null, "B1", null);
+        tablet.linkTarbil("VETILAC_MEDICINE", "BAYTRIL", "10 tabletlik blister");
+        tablet.setStockUnit(com.vetos.modules.inventory.domain.StockUnit.TABLET, new java.math.BigDecimal("10"), false);
+        return tablet;
+    }
+
+    @Test
+    void tabletItem_rejectsHalfTablet() {
+        inventory(true);
+        UUID itemId = UUID.randomUUID();
+        var tablet = tabletItem();
+        when(items.findById(itemId)).thenReturn(java.util.Optional.of(tablet));
+        var event = new PrescriptionIssuedEvent(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+            List.of(new PrescriptionIssuedEvent.StockItem(itemId, new java.math.BigDecimal("1.5"), "Baytril Flavour")));
+
+        assertThatThrownBy(() -> new PrescriptionStockEventListener(pending, items, featureAccess).onIssued(event))
+            .isInstanceOf(com.vetos.modules.inventory.domain.exception.InvalidPrescriptionStockItemException.class);
+        verifyNoInteractions(pending);
+    }
+
+    @Test
+    void tabletItem_acceptsWholeTablets() {
+        inventory(true);
+        UUID itemId = UUID.randomUUID();
+        var tablet = tabletItem();
+        when(items.findById(itemId)).thenReturn(java.util.Optional.of(tablet));
+        UUID prescriptionId = UUID.randomUUID();
+        var event = new PrescriptionIssuedEvent(prescriptionId, UUID.randomUUID(), UUID.randomUUID(),
+            List.of(new PrescriptionIssuedEvent.StockItem(itemId, new java.math.BigDecimal("2"), "Baytril Flavour")));
+
+        new PrescriptionStockEventListener(pending, items, featureAccess).onIssued(event);
+
+        verify(pending).open(itemId, new java.math.BigDecimal("2"), com.vetos.modules.inventory.domain.StockReferenceType.PRESCRIPTION, prescriptionId);
+    }
 }

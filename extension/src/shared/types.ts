@@ -83,6 +83,8 @@ export interface StockSnapshotLine {
   partStock?: boolean;
   /** Aşı bütün stok: kutudaki flakon (spec 2026-10-24). */
   dosesPerPackage?: number | null;
+  /** İlaç: açık ürün son kullanma tarihi, yyyy-MM-dd (spec 2026-10-25). */
+  openedExpiryDate?: string | null;
 }
 
 /** Stok sayfasi karsilastirmasi: urun+lot gruplari sayilir, hicbir sey kaydedilmez. */

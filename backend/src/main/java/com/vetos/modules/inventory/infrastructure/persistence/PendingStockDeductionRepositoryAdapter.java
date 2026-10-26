@@ -41,4 +41,9 @@ class PendingStockDeductionRepositoryAdapter implements PendingStockDeductionRep
     public boolean existsPendingForItem(UUID inventoryItemId) {
         return jpaRepository.existsByInventoryItemIdAndStatus(inventoryItemId, PendingDeductionStatus.PENDING);
     }
+
+    @Override
+    public List<PendingStockDeduction> findPendingForItem(UUID inventoryItemId) {
+        return jpaRepository.findByInventoryItemIdAndStatusOrderByCreatedAt(inventoryItemId, PendingDeductionStatus.PENDING);
+    }
 }

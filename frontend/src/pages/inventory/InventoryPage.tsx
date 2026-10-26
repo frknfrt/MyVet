@@ -9,7 +9,7 @@ import { NewInventoryItemModal } from './NewInventoryItemModal';
 import { PendingDeductionsPanel } from './PendingDeductionsPanel';
 import { TarbilStockSyncPanel } from './TarbilStockSyncPanel';
 import styles from './InventoryPage.module.css';
-import { formatStock, unitLabel } from './stockFormat';
+import { formatStock, openedExpiryStatus, unitLabel } from './stockFormat';
 
 /** Kapalı kısım: "2 şişe", "1 kutu", "5 adet" (spec 2026-10-24). */
 function closedLabel(item: InventoryItem): string {
@@ -18,7 +18,8 @@ function closedLabel(item: InventoryItem): string {
 
 /** Açık kısım: "49 ml", "19 flakon"; adetle kullanılanda "—". */
 function openLabel(item: InventoryItem): string {
-  return item.unit === 'ADET' ? '—' : `${item.openedQuantity.toLocaleString('tr-TR')} ${unitLabel(item.unit)}`;
+  if (item.unit === 'ADET') return item.openedQuantity > 0 ? `${item.openedQuantity.toLocaleString('tr-TR')} açık` : '—';
+  return `${item.openedQuantity.toLocaleString('tr-TR')} ${unitLabel(item.unit)}`;
 }
 
 export function InventoryPage() {
@@ -99,7 +100,11 @@ export function InventoryPage() {
                 <div>{item.name}</div>
                 <div className={styles.muted}>{item.category ?? '—'}</div>
                 <div>{closedLabel(item)}</div>
-                <div className={item.unit === 'ADET' ? styles.muted : undefined}>{openLabel(item)}</div>
+                <div className={item.unit === 'ADET' ? styles.muted : undefined}>
+                  {openLabel(item)}
+                  {openedExpiryStatus(item.openedExpiryDate) === 'expired' && <> <Badge tone="danger">Açık ürünün süresi doldu</Badge></>}
+                  {openedExpiryStatus(item.openedExpiryDate) === 'soon' && <> <Badge tone="warning">Açık ürün bitiyor</Badge></>}
+                </div>
                 <div className={styles.muted}>{item.reorderThreshold}</div>
                 <div>
                   {expiry.tone ? <Badge tone={expiry.tone}>{expiry.label}</Badge> : <span className={styles.muted}>{expiry.label}</span>}

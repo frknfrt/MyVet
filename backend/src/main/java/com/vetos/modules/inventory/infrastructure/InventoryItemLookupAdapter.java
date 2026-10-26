@@ -29,4 +29,12 @@ class InventoryItemLookupAdapter implements InventoryItemLookupPort {
         if (inventoryItemId == null) return Optional.empty();
         return items.findById(inventoryItemId).map(i -> i.getOpenedQuantity());
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<String> findVaccineStockSource(UUID inventoryItemId) {
+        if (inventoryItemId == null) return Optional.empty();
+        return items.findById(inventoryItemId)
+            .map(i -> i.isOpenable() && i.getOpenedQuantity().compareTo(java.math.BigDecimal.ONE) >= 0 ? "OPEN" : "WHOLE");
+    }
 }

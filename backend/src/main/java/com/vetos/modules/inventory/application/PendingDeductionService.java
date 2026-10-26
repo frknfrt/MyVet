@@ -101,7 +101,11 @@ public class PendingDeductionService {
     }
 
     /** Kosullu UPDATE'i kazanan istek hareketi yazar; kaybeden (es zamanli onay) hicbir sey yapmaz. */
-    /** TARBIL esas (spec 2026-10-24 §8): bildirilen liste ve miktar dusulur; source null ise Vetly kurali. */
+    /**
+     * TARBIL esas (spec 2026-10-24 §8): bildirilen liste ve miktar dusulur; source null ise Vetly kurali (acik varsa once
+     * oradan). Asi onayinda liste bilgisi gelmez; bu kural ATS kilavuzu 9.2.4.4 ile aynidir (daha once acilmis urun Acik
+     * Stok listesinden). Hekim elle farkli secerse sonraki esitleme duzeltir (spec 2026-10-25 §4.5/17).
+     */
     private int deduct(PendingStockDeduction p, BigDecimal quantity, StockSource source, DeductionSettlement via, UUID staffId, Instant now) {
         if (p.getStatus() != PendingDeductionStatus.PENDING
             || !repository.claimForSettlement(p.getId(), quantity, source, via, staffId, now)) {
@@ -121,7 +125,21 @@ public class PendingDeductionService {
         return new PendingDeductionLine(p.getId(), p.getInventoryItemId(),
             item.map(InventoryItem::getName).orElse("—"), item.map(InventoryItem::getTarbilProductName).orElse(null),
             item.map(InventoryItem::getLotNumber).orElse(null), p.getQuantity(), p.getStatus(), p.getSettledQuantity(),
-            item.map(i -> i.getUnit().name()).orElse("ADET"), item.map(InventoryItem::getOpenedQuantity).orElse(BigDecimal.ZERO));
+            item.map(i -> i.getUnit().name()).orElse("ADET"), item.map(i -> plannedOpened(i, p)).orElse(BigDecimal.ZERO));
+    }
+
+    /** Kuyrukta bu satirdan once bekleyen ayni kalem dusumleri uygulanmis acik miktar (spec 2026-10-25 §4.3/9). */
+    private BigDecimal plannedOpened(InventoryItem item, PendingStockDeduction p) {
+        if (!item.isOpenable() || p.getStatus() != PendingDeductionStatus.PENDING) {
+            return item.getOpenedQuantity();
+        }
+        List<BigDecimal> earlier = repository.findPendingForItem(item.getId()).stream()
+            .filter(o -> !o.getId().equals(p.getId()))
+            .filter(o -> o.getCreatedAt().isBefore(p.getCreatedAt())
+                || (o.getCreatedAt().equals(p.getCreatedAt()) && o.getId().compareTo(p.getId()) < 0))
+            .map(PendingStockDeduction::getQuantity)
+            .toList();
+        return com.vetos.modules.inventory.domain.OpenedQueuePlanner.openedBefore(item.getOpenedQuantity(), item.getPackageSize(), earlier);
     }
 
     /** Bosluksuz, i/ı/İ -> I, buyuk harf (yerel ayarsiz): Vetly'de "ki7", TARBIL'de "KI7" ayni seri. */

@@ -398,6 +398,36 @@ describe('page ops', () => {
     expect(log).toEqual(['miktar:1,5']);
   });
 
+  it('amountBelowMinimumAfterRounding_isNotWritten (spec 2026-10-25)', async () => {
+    const R = `${RP}RadGridStock_ctl00_ctl02_ctl03_`;
+    document.body.innerHTML = `<input id="${R}txtStockQuantity"><input id="${R}txtStockAmount">`;
+    const log: string[] = [];
+    const comps: Record<string, Record<string, unknown>> = {
+      [`${R}txtStockQuantity`]: { set_value: (v: string) => log.push(`adet:${v}`) },
+      [`${R}txtStockAmount`]: { set_value: (v: string) => log.push(`miktar:${v}`) },
+    };
+    const ops = createPageOps({ doc: document, find: (id) => comps[id] ?? null, prm: () => null, isReady: () => true });
+
+    await expect(ops.setStockQuantities({ quantity: 0, amount: 0.004 })).rejects.toMatchObject({ code: 'BAD_INPUT' });
+    expect(log).toEqual([]);
+  });
+
+  it('amountIsWrittenWithCommaAndNoDot (spec 2026-10-25)', async () => {
+    const R = `${RP}RadGridStock_ctl00_ctl02_ctl03_`;
+    document.body.innerHTML = `<input id="${R}txtStockQuantity"><input id="${R}txtStockAmount">`;
+    const log: string[] = [];
+    const comps: Record<string, Record<string, unknown>> = {
+      [`${R}txtStockAmount`]: { set_value: (v: string) => log.push(v) },
+    };
+    const ops = createPageOps({ doc: document, find: (id) => comps[id] ?? null, prm: () => null, isReady: () => true });
+
+    await ops.setStockQuantities({ quantity: 0, amount: 1234.5 });
+    await ops.setStockQuantities({ quantity: 0, amount: 0.01 });
+    await ops.setStockQuantities({ quantity: 0, amount: 2.675 });
+    expect(log).toEqual(['1234,5', '0,01', '2,68']);
+    expect(log.every((v) => !v.includes('.'))).toBe(true);
+  });
+
   it('chooses Açık Stok before searching the medicine popup when asked (spec 2026-10-24)', async () => {
     const P = 'ctl00_ContentPlaceHolder1_ContentPlaceHolderBody_UcPharmacyStockSearchForReceipt_';
     document.body.innerHTML = `<input type="radio" id="${P}rbtnStockType_1"><input id="${P}txtSerialNumber"><a id="${P}btnSearch"></a>`;

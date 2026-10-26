@@ -20,6 +20,8 @@ interface PendingStockDeductionJpaRepository extends JpaRepository<PendingStockD
 
     boolean existsByInventoryItemIdAndStatus(UUID inventoryItemId, PendingDeductionStatus status);
 
+    List<PendingStockDeduction> findByInventoryItemIdAndStatusOrderByCreatedAt(UUID inventoryItemId, PendingDeductionStatus status);
+
     @Modifying(flushAutomatically = true)
     @Query("UPDATE PendingStockDeduction p SET p.status = com.vetos.modules.inventory.domain.PendingDeductionStatus.DEDUCTED,"
         + " p.settledQuantity = :quantity, p.settledSource = :source, p.settledVia = :via, p.settledByStaffId = :staffId, p.settledAt = :now"

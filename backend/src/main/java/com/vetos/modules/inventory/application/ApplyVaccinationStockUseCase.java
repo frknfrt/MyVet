@@ -38,6 +38,11 @@ public class ApplyVaccinationStockUseCase {
             .ifPresent(item -> pending.open(inventoryItemId, java.math.BigDecimal.ONE, StockReferenceType.VACCINATION, vaccinationRecordId));
     }
 
+    /**
+     * Iptal: bekleyen dusum kapanir; dusulmus olana dokunulmaz (TARBIL esas). Eski kayit (V77 oncesi, bekleyen dusumsuz OUT)
+     * iptalinde kalem artik FLAKON olsa bile bir kapali kutu geri eklenir; sonraki TARBIL esitlemesi bunu duzeltir
+     * (degerlendirme madde 13, spec 2026-10-25 §4.5/16).
+     */
     @Transactional
     public void cancelled(UUID vaccinationRecordId, UUID inventoryItemId) {
         if (inventoryItemId == null) {

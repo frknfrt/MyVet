@@ -32,7 +32,7 @@ public class UpdateInventoryItemUseCase {
             if (unitChanges(item, unit, command.packageSize()) && pendingDeductions.existsPendingForItem(command.itemId())) {
                 throw new StockUnitPendingConflictException();
             }
-            item.setStockUnit(unit, command.packageSize(), true);
+            item.setStockUnit(unit, command.packageSize(), command.pieceSize(), command.pieceLabel(), true);
         }
         inventoryItemRepository.save(item);
     }
@@ -54,6 +54,10 @@ public class UpdateInventoryItemUseCase {
             throw new InvalidStockUnitException();
         }
         if (parsed != StockUnit.ADET && (packageSize == null || packageSize.signum() <= 0)) {
+            throw new InvalidStockUnitException();
+        }
+        // Kutudaki tablet sayisi tam olmali (yarim tablet yok; spec 2026-10-25).
+        if (parsed == StockUnit.TABLET && packageSize.stripTrailingZeros().scale() > 0) {
             throw new InvalidStockUnitException();
         }
         return parsed;

@@ -95,4 +95,14 @@ class TarbilSubmissionAssemblerTest {
         assertThat(TarbilSubmissionAssembler.planLine(mlLine("5", "2")).source()).isEqualTo("WHOLE");
         assertThat(TarbilSubmissionAssembler.planLine(mlLine("5", "2")).quantity()).isZero();
     }
+
+    @Test
+    void adetLine_roundsFractionalUp() {
+        var line = new com.vetos.modules.inventory.domain.PendingDeductionLine(UUID.randomUUID(), UUID.randomUUID(), "Synulox", "SYNULOX",
+            "S1", new java.math.BigDecimal("1.5"), com.vetos.modules.inventory.domain.PendingDeductionStatus.PENDING, null,
+            "ADET", java.math.BigDecimal.ZERO);
+        var l = TarbilSubmissionAssembler.planLine(line);
+        assertThat(l.quantity()).isEqualTo(2);
+        assertThat(l.amount()).isEqualByComparingTo("2");
+    }
 }

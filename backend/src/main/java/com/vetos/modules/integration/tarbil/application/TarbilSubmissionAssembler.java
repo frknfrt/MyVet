@@ -103,9 +103,7 @@ class TarbilSubmissionAssembler {
             v.administeredDate(),
             log.getSubmittedAt(), log.getConfirmationMethod(), log.getTarbilReference(),
             vaccineKey, vaccineMapping, speciesMapping, log.getDocumentType(), null,
-            v.inventoryItemId() == null ? null
-                : inventoryItemLookupPort.findOpenedQuantity(v.inventoryItemId()).filter(o -> o.compareTo(java.math.BigDecimal.ONE) >= 0)
-                    .map(o -> "OPEN").orElse("WHOLE")
+            v.inventoryItemId() == null ? null : inventoryItemLookupPort.findVaccineStockSource(v.inventoryItemId()).orElse("WHOLE")
         ));
     }
 
@@ -143,10 +141,12 @@ class TarbilSubmissionAssembler {
     static TarbilSubmissionView.PrescriptionPayload.Line planLine(com.vetos.modules.inventory.domain.PendingDeductionLine l) {
         boolean packaged = l.unit() != null && !"ADET".equals(l.unit());
         if (!packaged) {
+            // Kesirli ADET miktari yukari yuvarlanir (degerlendirme madde 7; C1 kurali ile ayni).
+            java.math.BigDecimal whole = l.quantity().setScale(0, java.math.RoundingMode.CEILING);
             return new TarbilSubmissionView.PrescriptionPayload.Line(l.itemName(), l.tarbilProductName(), l.lotNumber(),
-                l.quantity().intValue(), l.quantity(), "ADET", "WHOLE");
+                whole.intValueExact(), whole, "ADET", "WHOLE");
         }
-        boolean open = l.itemOpenedQuantity() != null && l.itemOpenedQuantity().compareTo(l.quantity()) >= 0;
+        boolean open = l.plannedOpenedQuantity() != null && l.plannedOpenedQuantity().compareTo(l.quantity()) >= 0;
         return new TarbilSubmissionView.PrescriptionPayload.Line(l.itemName(), l.tarbilProductName(), l.lotNumber(),
             0, l.quantity(), l.unit(), open ? "OPEN" : "WHOLE");
     }

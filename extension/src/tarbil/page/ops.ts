@@ -111,9 +111,14 @@ export function createPageOps(env: TelerikEnv): Record<string, PageHandler> {
     // Adet + Miktar = adet; paketli kalemde (quantity 0) yalnız Miktar = kullanılan ml/g/flakon.
     setStockQuantities: async ({ quantity, amount }: { quantity: number; amount?: number }) => {
       const value = amount ?? quantity;
-      if (!Number.isInteger(quantity) || quantity < 0 || !(value > 0)) throw new PageError('BAD_INPUT', `Geçersiz miktar: ${quantity} / ${amount}`);
+      // TARBİL Miktar: en az 0,01, 2 ondalık; altını sessizce 0,01 yapar (2026-10-25 canlı). Yuvarlanmış değer kontrol edilir,
+      // 0,01 altı hiç yazılmaz. Metin her zaman virgüllü: "1.5" yazılırsa TARBİL 15 okur.
+      const rounded = Math.round((value + Number.EPSILON) * 100) / 100;
+      if (!Number.isInteger(quantity) || quantity < 0 || !(rounded >= 0.01)) {
+        throw new PageError('BAD_INPUT', `Geçersiz miktar (en az 0,01): ${quantity} / ${amount}`);
+      }
       if (quantity > 0) setText(env, PRESCRIPTION_RECEIPT.stockQuantity, String(quantity));
-      setText(env, PRESCRIPTION_RECEIPT.stockAmount, String(Math.round(value * 100) / 100).replace('.', ','));
+      setText(env, PRESCRIPTION_RECEIPT.stockAmount, String(rounded).replace('.', ','));
     },
   };
 }

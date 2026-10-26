@@ -20,4 +20,7 @@ public interface PendingStockDeductionRepository {
 
     /** Kalemin PENDING düşümü var mı (birim değişikliği kilidi, değerlendirme I3). */
     boolean existsPendingForItem(UUID inventoryItemId);
+
+    /** Kalemin PENDING düşümleri, kuyruğa giriş sırasıyla (gönderim planı, spec 2026-10-25). */
+    List<PendingStockDeduction> findPendingForItem(UUID inventoryItemId);
 }

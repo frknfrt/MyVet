@@ -5,7 +5,7 @@ import { Button } from '../../components/ui/Button';
 import { FieldWrap, Input, Select } from '../../components/ui/Field';
 import encounterStyles from './EncounterPage.module.css';
 import styles from './MaterialsUsedCard.module.css';
-import { formatStock, isDecimalUnit, unitLabel } from '../inventory/stockFormat';
+import { formatAmount, formatStock, inputModeFor } from '../inventory/stockFormat';
 
 interface MaterialsUsedCardProps {
   encounterId: string;
@@ -32,12 +32,15 @@ export function MaterialsUsedCard({ encounterId, readOnly }: MaterialsUsedCardPr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [encounterId]);
 
+  const selected = items.find((i) => i.id === itemId);
+  const mode = inputModeFor(selected?.unit, selected?.pieceSize, selected?.pieceLabel);
+
   async function handleAdd(e: FormEvent) {
     e.preventDefault();
     if (busy || !itemId) return;
     setBusy(true);
     try {
-      await encounterApi.addMaterial(encounterId, { inventoryItemId: itemId, quantity: Number(quantity) });
+      await encounterApi.addMaterial(encounterId, { inventoryItemId: itemId, quantity: mode.toBase(Number(quantity)) });
       setQuantity('1');
       reloadUsage();
     } finally {
@@ -49,8 +52,6 @@ export function MaterialsUsedCard({ encounterId, readOnly }: MaterialsUsedCardPr
     return items.find((i) => i.id === id)?.name ?? id;
   }
 
-  const selected = items.find((i) => i.id === itemId);
-  const decimal = isDecimalUnit(selected?.unit);
 
   return (
     <div className={encounterStyles.card}>
@@ -61,7 +62,7 @@ export function MaterialsUsedCard({ encounterId, readOnly }: MaterialsUsedCardPr
         usage.map((u) => (
           <div key={u.id} className={styles.row}>
             <span>{itemName(u.inventoryItemId)}</span>
-            <span>{u.quantity.toLocaleString('tr-TR')} {unitLabel(items.find((i) => i.id === u.inventoryItemId)?.unit)}</span>
+            <span>{(() => { const it = items.find((i) => i.id === u.inventoryItemId); return formatAmount(u.quantity, it?.unit, it?.pieceSize, it?.pieceLabel); })()}</span>
           </div>
         ))
       )}
@@ -76,8 +77,8 @@ export function MaterialsUsedCard({ encounterId, readOnly }: MaterialsUsedCardPr
               ))}
             </Select>
           </FieldWrap>
-          <FieldWrap label={decimal ? `Miktar (${unitLabel(selected?.unit)})` : 'Adet'}>
-            <Input type="number" min={decimal ? 0.01 : 1} step={decimal ? '0.01' : '1'} value={quantity} onChange={(e) => setQuantity(e.target.value)} required />
+          <FieldWrap label={mode.label}>
+            <Input type="number" min={mode.min} step={mode.step} value={quantity} onChange={(e) => setQuantity(e.target.value)} required />
           </FieldWrap>
           <Button type="submit" variant="secondary" disabled={busy || items.length === 0}>
             Ekle

@@ -112,4 +112,76 @@ class InventoryItemConsumeTest {
         assertThat(i.getOpenedQuantity()).isEqualByComparingTo("0");
         assertThat(i.isUnitManual()).isFalse();
     }
+
+    @Test
+    void tablet_consumesFromOpenedThenOpensBox() {
+        InventoryItem i = item(StockUnit.TABLET, "10", 2, "3");
+        StockChange c = i.consume(bd("5"), null);
+        assertThat(c.closedDelta()).isEqualTo(-1);
+        assertThat(c.openedDelta()).isEqualByComparingTo("5");
+        assertThat(i.getQuantityOnHand()).isEqualTo(1);
+        assertThat(i.getOpenedQuantity()).isEqualByComparingTo("8");
+    }
+
+    @Test
+    void openedExpiryClearedWhenOpenedReachesZero() {
+        InventoryItem i = clavon(1, "2");
+        i.setOpenedExpiry(java.time.LocalDate.of(2026, 11, 1));
+        i.consume(bd("2"), null);
+        assertThat(i.getOpenedQuantity()).isEqualByComparingTo("0");
+        assertThat(i.getOpenedExpiryDate()).isNull();
+    }
+
+    @Test
+    void openedExpiryClearedWhenSyncSetsOpenedToZero() {
+        InventoryItem i = clavon(1, "2");
+        i.setOpenedExpiry(java.time.LocalDate.of(2026, 11, 1));
+        i.syncTo(1, bd("0"));
+        assertThat(i.getOpenedExpiryDate()).isNull();
+    }
+
+    @Test
+    void setStockUnit_keepsPieceOnlyForMl() {
+        InventoryItem ml = item(StockUnit.ADET, null, 1, "0");
+        ml.setStockUnit(StockUnit.ML, bd("1.5"), bd("0.5"), "pipet", false);
+        assertThat(ml.getPieceSize()).isEqualByComparingTo("0.5");
+        assertThat(ml.getPieceLabel()).isEqualTo("pipet");
+
+        InventoryItem tablet = item(StockUnit.ADET, null, 1, "0");
+        tablet.setStockUnit(StockUnit.TABLET, bd("10"), bd("0.5"), "pipet", false);
+        assertThat(tablet.getPieceSize()).isNull();
+        assertThat(tablet.getPieceLabel()).isNull();
+    }
+
+    @Test
+    void adjustOpened_minus3ml() {
+        InventoryItem i = clavon(1, "49");
+        StockChange c = i.adjustOpened(bd("-3"));
+        assertThat(c.closedDelta()).isZero();
+        assertThat(c.openedDelta()).isEqualByComparingTo("-3");
+        assertThat(i.getOpenedQuantity()).isEqualByComparingTo("46");
+    }
+
+    @Test
+    void adjustOpened_belowZero_rejected() {
+        InventoryItem i = clavon(1, "2");
+        assertThatThrownBy(() -> i.adjustOpened(bd("-3")))
+            .isInstanceOf(com.vetos.modules.inventory.domain.exception.OpenedQuantityNegativeException.class);
+        assertThat(i.getOpenedQuantity()).isEqualByComparingTo("2");
+    }
+
+    @Test
+    void adjustOpened_onAdet_rejected() {
+        InventoryItem i = item(StockUnit.ADET, null, 3, "0");
+        assertThatThrownBy(() -> i.adjustOpened(bd("1")))
+            .isInstanceOf(com.vetos.modules.inventory.domain.exception.InvalidStockUnitException.class);
+    }
+
+    @Test
+    void adjustOpened_toZero_clearsOpenedExpiry() {
+        InventoryItem i = clavon(1, "3");
+        i.setOpenedExpiry(java.time.LocalDate.of(2026, 11, 1));
+        i.adjustOpened(bd("-3"));
+        assertThat(i.getOpenedExpiryDate()).isNull();
+    }
 }

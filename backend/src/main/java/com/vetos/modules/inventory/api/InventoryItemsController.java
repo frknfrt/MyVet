@@ -54,17 +54,14 @@ public class InventoryItemsController {
     public void update(@PathVariable UUID id, @RequestBody @Valid UpdateInventoryItemRequest request) {
         updateInventoryItemUseCase.execute(new UpdateInventoryItemCommand(
             id, request.name(), request.category(), request.reorderThreshold(), request.unitCost(),
-            request.unit(), request.packageSize()
+            request.unit(), request.packageSize(), request.pieceSize(), request.pieceLabel()
         ));
     }
 
     @PostMapping("/{id}/movements")
     @PreAuthorize("hasAnyRole('TECHNICIAN', 'ADMIN')")
     public void recordMovement(@PathVariable UUID id, @RequestBody @Valid StockMovementRequest request) {
-        recordStockMovementUseCase.execute(
-            id, request.movementType(), request.quantity(),
-            com.vetos.modules.inventory.domain.StockReferenceType.MANUAL, null
-        );
+        recordStockMovementUseCase.recordManual(id, request.movementType(), request.quantity(), request.openedDelta());
     }
 
     @GetMapping("/{id}/movements")

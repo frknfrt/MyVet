@@ -19,6 +19,9 @@ vi.mock('./StockGivePicker', () => ({
     <>
       <button type="button" onClick={() => onChange('c', 'Clavon')}>Clavon seç</button>
       <button type="button" onClick={() => onChange('m', 'Metacam')}>Metacam seç</button>
+      <button type="button" onClick={() => onChange('f', 'Fiproes')}>Fiproes seç</button>
+      <button type="button" onClick={() => onChange('b', 'Baytril')}>Baytril seç</button>
+      <button type="button" onClick={() => onChange('a', 'Advantage')}>Advantage seç</button>
     </>
   ),
 }));
@@ -37,7 +40,7 @@ import { PrescriptionCard } from './PrescriptionCard';
 const item = (over: Partial<InventoryItem>): InventoryItem => ({
   id: 'i', name: 'Kalem', category: 'İlaç', skuBarcode: null, quantityOnHand: 1, reorderThreshold: 0, belowReorderThreshold: false,
   expiryDate: null, lotNumber: null, unitCost: null, tarbilProductName: null, unit: 'ADET', packageSize: null, openedQuantity: 0,
-  unitSource: 'AUTO', ...over,
+  unitSource: 'AUTO', pieceSize: null, pieceLabel: null, openedExpiryDate: null, ...over,
 });
 
 let container: HTMLDivElement;
@@ -57,6 +60,9 @@ async function openStockLine(pick: string) {
   vi.mocked(inventoryApi.list).mockResolvedValue([
     item({ id: 'c', name: 'Clavon', unit: 'ML', packageSize: 50, quantityOnHand: 0, openedQuantity: 49 }),
     item({ id: 'm', name: 'Metacam', quantityOnHand: 5 }),
+    item({ id: 'f', name: 'Fiproes', unit: 'ML', packageSize: 1.5, pieceSize: 0.5, pieceLabel: 'pipet', quantityOnHand: 3 }),
+    item({ id: 'b', name: 'Baytril', unit: 'TABLET', packageSize: 10, quantityOnHand: 2 }),
+    item({ id: 'a', name: 'Advantage', unit: 'ML', packageSize: 3.2, pieceSize: 0.8, pieceLabel: 'pipet', quantityOnHand: 2 }),
   ]);
   container = document.createElement('div');
   document.body.appendChild(container);
@@ -95,5 +101,40 @@ describe('PrescriptionCard — stoktan verilen miktar (spec 2026-10-24)', () => 
     expect(container.textContent).not.toContain('Miktar (');
     expect(amount.step).toBe('1');
     expect(amount.min).toBe('1');
+  });
+
+  it('pipet item sends ml', async () => {
+    const amount = await openStockLine('Fiproes seç');
+    expect(container.textContent).toContain('Miktar (pipet)');
+    expect(amount.step).toBe('1');
+    await change(amount, '2');
+    await change(container.querySelector<HTMLInputElement>('input[placeholder="Örn. 10 mg/kg"]')!, '1 pipet');
+    await change(container.querySelector<HTMLInputElement>('input[placeholder="Örn. Günde 2 kez"]')!, 'Tek doz');
+    await click(button('Hastalık seç'));
+    await act(async () => container.querySelector<HTMLFormElement>('form')!.requestSubmit());
+
+    expect(clinicalApi.issuePrescription).toHaveBeenCalledWith(expect.objectContaining({
+      items: [expect.objectContaining({ inventoryItemId: 'f', stockQuantity: 1 })],
+    }));
+  });
+
+  it('tablet item has step 1 and label tablet', async () => {
+    const amount = await openStockLine('Baytril seç');
+    expect(container.textContent).toContain('Miktar (tablet)');
+    expect(amount.step).toBe('1');
+    expect(amount.min).toBe('1');
+  });
+
+  it('default one pipet sends that pipets ml (review C1)', async () => {
+    const amount = await openStockLine('Advantage seç');
+    expect(amount.value).toBe('1');
+    await change(container.querySelector<HTMLInputElement>('input[placeholder="Örn. 10 mg/kg"]')!, '1 pipet');
+    await change(container.querySelector<HTMLInputElement>('input[placeholder="Örn. Günde 2 kez"]')!, 'Tek doz');
+    await click(button('Hastalık seç'));
+    await act(async () => container.querySelector<HTMLFormElement>('form')!.requestSubmit());
+
+    expect(clinicalApi.issuePrescription).toHaveBeenLastCalledWith(expect.objectContaining({
+      items: [expect.objectContaining({ inventoryItemId: 'a', stockQuantity: 0.8 })],
+    }));
   });
 });

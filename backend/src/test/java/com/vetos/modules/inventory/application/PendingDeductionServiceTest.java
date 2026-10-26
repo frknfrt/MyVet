@@ -204,4 +204,24 @@ class PendingDeductionServiceTest {
         verify(movements).consume(a, new BigDecimal("2.5"), null, StockReferenceType.ENCOUNTER, ref);
         assertThat(p.getSettledSource()).isNull();
     }
+
+    @Test
+    void secondLineExceedingRemainingOpened_isPlannedAgainstWhatTheFirstLeaves() {
+        InventoryItem clavon = InventoryItem.create(tenant, UUID.randomUUID(), "Clavon", "İlaç", null, 2, 0, null, "63016", null);
+        ReflectionTestUtils.setField(clavon, "id", UUID.randomUUID());
+        clavon.setStockUnit(com.vetos.modules.inventory.domain.StockUnit.ML, new BigDecimal("50"), false);
+        clavon.syncTo(2, new BigDecimal("49"));
+        lenient().when(items.findById(clavon.getId())).thenReturn(Optional.of(clavon));
+        UUID otherRef = UUID.randomUUID();
+        PendingStockDeduction first = PendingStockDeduction.open(tenant, clavon.getId(), new BigDecimal("30"), StockReferenceType.PRESCRIPTION, otherRef);
+        ReflectionTestUtils.setField(first, "createdAt", java.time.Instant.parse("2026-10-25T08:00:00Z"));
+        PendingStockDeduction second = pending(clavon.getId(), 30);
+        ReflectionTestUtils.setField(second, "createdAt", java.time.Instant.parse("2026-10-25T09:00:00Z"));
+        when(repository.findPendingForItem(clavon.getId())).thenReturn(List.of(first, second));
+
+        var line = service.lines(StockReferenceType.ENCOUNTER, ref).stream()
+            .filter(l -> l.inventoryItemId().equals(clavon.getId())).findFirst().orElseThrow();
+
+        assertThat(line.plannedOpenedQuantity()).isEqualByComparingTo("19");
+    }
 }

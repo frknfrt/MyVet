@@ -37,8 +37,8 @@ class RecordStockMovementUseCaseConsumeTest {
         InventoryItem i = InventoryItem.create(UUID.randomUUID(), UUID.randomUUID(), "Clavon", "İlaç", null, closed, 0, null, "63016", null);
         i.setStockUnit(StockUnit.ML, new BigDecimal("50"), false);
         i.syncTo(closed, new BigDecimal(opened));
-        when(items.findById(id)).thenReturn(Optional.of(i));
-        when(movements.save(any())).thenAnswer(a -> a.getArgument(0));
+        when(items.findByIdForUpdate(id)).thenReturn(Optional.of(i));
+        org.mockito.Mockito.lenient().when(movements.save(any())).thenAnswer(a -> a.getArgument(0));
         return i;
     }
 
@@ -72,5 +72,38 @@ class RecordStockMovementUseCaseConsumeTest {
         StockMovement m = saved();
         assertThat(m.getQuantity()).isEqualTo(1);
         assertThat(m.getOpenedDelta()).isEqualByComparingTo("49");
+    }
+
+    @Test
+    void adjustOpened_writesAdjustmentMovementWithOpenedDelta() {
+        InventoryItem i = clavon(1, "49");
+        new RecordStockMovementUseCase(items, movements).adjustOpened(id, new BigDecimal("-3"));
+
+        assertThat(i.getOpenedQuantity()).isEqualByComparingTo("46");
+        StockMovement m = saved();
+        assertThat(m.getMovementType()).isEqualTo(StockMovementType.ADJUSTMENT);
+        assertThat(m.getQuantity()).isZero();
+        assertThat(m.getOpenedDelta()).isEqualByComparingTo("-3");
+        assertThat(m.getReferenceType()).isEqualTo(StockReferenceType.MANUAL);
+    }
+
+    @Test
+    void manual_outPlusOpenedBelowZero_changesNothing() {
+        InventoryItem i = clavon(1, "49");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> new RecordStockMovementUseCase(items, movements)
+                .recordManual(id, StockMovementType.OUT, 1, new BigDecimal("-60")))
+            .isInstanceOf(com.vetos.modules.inventory.domain.exception.OpenedQuantityNegativeException.class);
+        assertThat(i.getQuantityOnHand()).isEqualTo(1);
+        assertThat(i.getOpenedQuantity()).isEqualByComparingTo("49");
+        org.mockito.Mockito.verify(movements, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    void manual_closedAndOpenedTogether_writesBothMovements() {
+        InventoryItem i = clavon(2, "49");
+        new RecordStockMovementUseCase(items, movements).recordManual(id, StockMovementType.OUT, 1, new BigDecimal("-3"));
+        assertThat(i.getQuantityOnHand()).isEqualTo(1);
+        assertThat(i.getOpenedQuantity()).isEqualByComparingTo("46");
+        org.mockito.Mockito.verify(movements, org.mockito.Mockito.times(2)).save(any());
     }
 }

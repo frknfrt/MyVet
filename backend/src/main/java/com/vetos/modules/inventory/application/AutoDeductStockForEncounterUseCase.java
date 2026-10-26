@@ -30,8 +30,9 @@ public class AutoDeductStockForEncounterUseCase {
         for (UsedItem raw : usedItems) {
             var item = inventoryItemRepository.findById(raw.inventoryItemId());
             boolean linked = item.map(i -> i.getTarbilProductName() != null).orElse(false);
-            // Adet ile kullanilan kalemde ondalik miktar yukari yuvarlanir: muayene kapanisi hicbir zaman takilmasin (spec 2026-10-24).
-            boolean whole = item.map(i -> !i.isOpenable()).orElse(true);
+            // Adet ve tablet ile kullanilan kalemde ondalik miktar yukari yuvarlanir: muayene kapanisi hicbir zaman takilmasin
+            // (spec 2026-10-24/25; muayene modulu stok birimini goremez, ekran tam sayi ister).
+            boolean whole = item.map(i -> !i.isOpenable() || i.getUnit() == com.vetos.modules.inventory.domain.StockUnit.TABLET).orElse(true);
             UsedItem used = whole ? new UsedItem(raw.inventoryItemId(), raw.quantity().setScale(0, java.math.RoundingMode.CEILING)) : raw;
             if (linked) {
                 pendingDeductionService.open(used.inventoryItemId(), used.quantity(), StockReferenceType.ENCOUNTER, encounterId);

@@ -31,7 +31,7 @@ class UpdateInventoryItemUnitTest {
     private void update(String unit, String packageSize) {
         when(repository.findById(id)).thenReturn(Optional.of(item));
         new UpdateInventoryItemUseCase(repository, pending).execute(new UpdateInventoryItemCommand(id, "Clavon", "İlaç", 0, null,
-            unit, packageSize == null ? null : new BigDecimal(packageSize)));
+            unit, packageSize == null ? null : new BigDecimal(packageSize), null, null));
     }
 
     @Test
@@ -72,5 +72,19 @@ class UpdateInventoryItemUnitTest {
         item.setStockUnit(StockUnit.ML, new BigDecimal("50"), false);
         update("ML", "50.00");
         assertThat(item.isUnitManual()).isTrue();
+    }
+
+    @Test
+    void update_rejectsFractionalTabletPackage() {
+        assertThatThrownBy(() -> update("TABLET", "10.5")).isInstanceOf(InvalidStockUnitException.class);
+    }
+
+    @Test
+    void update_savesPieceForMl() {
+        when(repository.findById(id)).thenReturn(Optional.of(item));
+        new UpdateInventoryItemUseCase(repository, pending).execute(new UpdateInventoryItemCommand(id, "Fiproes", "İlaç", 0, null,
+            "ML", new BigDecimal("1.5"), new BigDecimal("0.5"), "pipet"));
+        assertThat(item.getPieceSize()).isEqualByComparingTo("0.5");
+        assertThat(item.getPieceLabel()).isEqualTo("pipet");
     }
 }

@@ -13,7 +13,7 @@ public record StockSnapshotRequest(@NotNull TarbilStockSystem system, @NotNull @
                                    Boolean partStockRead) {
     public List<StockSnapshotLineInput> toInputs() {
         return lines.stream().map(l -> new StockSnapshotLineInput(l.productName(), l.presentation(), l.lotNumber(),
-            l.expiryDate(), l.quantity(), l.openedQuantity(), Boolean.TRUE.equals(l.partStock()), l.dosesPerPackage())).toList();
+            l.expiryDate(), l.quantity(), l.openedQuantity(), Boolean.TRUE.equals(l.partStock()), l.dosesPerPackage(), l.openedExpiryDate())).toList();
     }
 
     /** Eski eklenti bayrağı göndermez: Parça Stok satırı geldiyse tablo okunmuştur (değerlendirme I2). */

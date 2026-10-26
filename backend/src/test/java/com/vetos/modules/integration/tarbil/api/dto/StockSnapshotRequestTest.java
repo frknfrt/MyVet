@@ -31,4 +31,12 @@ class StockSnapshotRequestTest {
     void explicitFlagFromNewExtensionWins() {
         assertThat(new StockSnapshotRequest(TarbilStockSystem.HBSAPP_VACCINE, List.of(line(true)), false).isPartStockRead()).isFalse();
     }
+
+    @Test
+    void snapshotRequest_mapsOpenedExpiryDate() {
+        var l = new StockSnapshotLineRequest("CLAVON", "50 ml'lik", "63016", null, 0, new java.math.BigDecimal("49"), false, null,
+            java.time.LocalDate.of(2026, 11, 20));
+        var input = new StockSnapshotRequest(TarbilStockSystem.VETILAC_MEDICINE, List.of(l), null).toInputs().get(0);
+        assertThat(input.openedExpiryDate()).isEqualTo(java.time.LocalDate.of(2026, 11, 20));
+    }
 }

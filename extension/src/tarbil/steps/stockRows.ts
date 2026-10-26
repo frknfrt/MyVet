@@ -13,9 +13,11 @@ export interface StockRow {
   openedQuantity: number | null;
   /** Aşı bütün stok: kutudaki flakon ("Üretilen Doz-Küçük Hayvan"; spec 2026-10-24). Kolon yoksa alan yok. */
   dosesPerPackage?: number | null;
+  /** İlaç: "Açılmış Kalan Miktar Son Kullanma Tarihi" (spec 2026-10-25). Kolon yoksa alan yok. */
+  openedExpiryDate?: string | null;
 }
 
-interface Columns { product: string; presentation: string; lot: string; expiry: string; quantity: string; opened?: string; doses?: string }
+interface Columns { product: string; presentation: string; lot: string; expiry: string; quantity: string; opened?: string; doses?: string; openedExpiry?: string }
 
 // Basliklar 2026-10-04 canli okumasindan; tam esitlikle aranir ("Acilmis Kalan Miktar Son Kullanma Tarihi" karismasin).
 const VACCINE_COLUMNS: Columns = { product: 'Aşı Adı', presentation: 'Takdim Şekli', lot: 'Seri Numarası', expiry: 'Son Kullanma Tarihi', quantity: 'Ürün Miktarı' };
@@ -24,7 +26,10 @@ const TABLES: Record<StockTable, { grid: string; cols: Columns }> = {
   vaccinePartStock: { grid: VACCINE_STOCK.partGrid, cols: VACCINE_COLUMNS },
   medicineStock: {
     grid: MEDICINE_STOCK.grid,
-    cols: { product: 'Ürün', presentation: 'Takdim Şekli', lot: 'Seri Numarası', expiry: 'Son Kullanma Tarihi', quantity: 'Miktar', opened: 'Açılmış Kalan Miktar' },
+    cols: {
+      product: 'Ürün', presentation: 'Takdim Şekli', lot: 'Seri Numarası', expiry: 'Son Kullanma Tarihi', quantity: 'Miktar',
+      opened: 'Açılmış Kalan Miktar', openedExpiry: 'Açılmış Kalan Miktar Son Kullanma Tarihi',
+    },
   },
 };
 
@@ -77,6 +82,8 @@ export function readStockTable(doc: Document, which: StockTable): StockRow[] | n
   const opened = idx(cols.opened);
   // Doz kolonu opsiyonel (eski ekran / test): yoksa satıra alan eklenmez.
   const doses = idx(cols.doses);
+  // Açık ürün son kullanma tarihi opsiyonel (spec 2026-10-25): yoksa satıra alan eklenmez.
+  const openedExpiry = idx(cols.openedExpiry);
   if ([product, presentation, lot, expiry, quantity].some((i) => i < 0) || (cols.opened && opened < 0)) return null;
   const rows: StockRow[] = [];
   for (const r of Array.from(table.tBodies[0]?.rows ?? [])) {
@@ -93,6 +100,9 @@ export function readStockTable(doc: Document, which: StockTable): StockRow[] | n
     if (qty === null || !Number.isInteger(qty) || qty < 0) return null;
     if (expiryText && !expiryDate) return null;
     if (openedText && openedQuantity === null) return null;
+    const openedExpiryText = openedExpiry >= 0 ? clean(r.cells[openedExpiry]?.textContent) : '';
+    const openedExpiryDate = parseTrDate(openedExpiryText);
+    if (openedExpiryText && !openedExpiryDate) return null;
     rows.push({
       productName,
       presentation: clean(r.cells[presentation]?.textContent) || null,
@@ -101,6 +111,7 @@ export function readStockTable(doc: Document, which: StockTable): StockRow[] | n
       quantity: qty,
       openedQuantity,
       ...(doses >= 0 ? { dosesPerPackage: positiveInt(r.cells[doses]?.textContent) } : {}),
+      ...(openedExpiry >= 0 ? { openedExpiryDate } : {}),
     });
   }
   return rows;
