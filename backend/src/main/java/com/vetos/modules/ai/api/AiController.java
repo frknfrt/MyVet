@@ -28,6 +28,11 @@ public class AiController {
     private final GenerateTreatmentRecommendationUseCase generateTreatmentRecommendationUseCase;
     private final GenerateDiagnosisSuggestionUseCase generateDiagnosisSuggestionUseCase;
     private final RecordAiJobDecisionUseCase recordAiJobDecisionUseCase;
+    // Lab/goruntuleme sonuc fotografindan AI ile otomatik doldurma (2026-10-29):
+    // bu uc noktalar LabResultsController/ImagingRecordsController'a eklenemez --
+    // o moduller ai modulune bagimli olamaz (bkz. plan Architecture notu).
+    private final ReadLabResultFromImageUseCase readLabResultFromImageUseCase;
+    private final ReadImagingFindingsFromImageUseCase readImagingFindingsFromImageUseCase;
 
     @PostMapping("/soap-drafts")
     public SoapDraftResponse generateSoapDraft(
@@ -78,6 +83,26 @@ public class AiController {
     ) {
         recordAiJobDecisionUseCase.execute(new RecordAiJobDecisionCommand(
             principal.tenantId(), aiJobId, request.status(), request.appliedContent(), principal.staffUserId()
+        ));
+    }
+
+    @PostMapping("/lab-result-ocr")
+    public LabResultOcrResponse readLabResultFromImage(
+        @RequestBody @Valid LabResultOcrRequest request,
+        @AuthenticationPrincipal AuthenticatedStaffUser principal
+    ) {
+        return LabResultOcrResponse.from(readLabResultFromImageUseCase.execute(
+            new ReadLabResultFromImageCommand(principal.tenantId(), request.labResultId(), request.fileIds(), principal.staffUserId())
+        ));
+    }
+
+    @PostMapping("/imaging-findings-ocr")
+    public ImagingFindingsOcrResponse readImagingFindingsFromImage(
+        @RequestBody @Valid ImagingFindingsOcrRequest request,
+        @AuthenticationPrincipal AuthenticatedStaffUser principal
+    ) {
+        return ImagingFindingsOcrResponse.from(readImagingFindingsFromImageUseCase.execute(
+            new ReadImagingFindingsFromImageCommand(principal.tenantId(), request.imagingRecordId(), request.fileIds(), principal.staffUserId())
         ));
     }
 }

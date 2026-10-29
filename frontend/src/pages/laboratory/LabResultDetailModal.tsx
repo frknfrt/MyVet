@@ -18,6 +18,12 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+// Lab/goruntuleme sonuc fotografindan AI ile otomatik doldurma (2026-10-29):
+// AI okuma sadece image/* dosyalarda denenir (DICOM/diger dosyalar kapsam disi).
+function isImage(contentType: string | null): boolean {
+  return !!contentType && contentType.startsWith('image/');
+}
+
 const FLAG_LABELS: Record<LabValueFlag, string> = { NORMAL: 'Normal', LOW: 'Düşük', HIGH: 'Yüksek', ABNORMAL: 'Anormal' };
 
 interface LabResultDetailModalProps {
@@ -35,6 +41,8 @@ export function LabResultDetailModal({ resultId, onClose, onChanged }: LabResult
   const [aiEvaluated, setAiEvaluated] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Lab/goruntuleme sonuc fotografindan AI ile otomatik doldurma (2026-10-29).
+  const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const initialFormRef = useRef({ resultSummary: '', items: [] as LabResultItemInput[] });
 
@@ -43,6 +51,7 @@ export function LabResultDetailModal({ resultId, onClose, onChanged }: LabResult
     labApi.get(resultId).then((d) => {
       setDetail(d);
       setAiEvaluated(false);
+      setSelectedFileIds([]);
       const summary = d.resultSummary ?? '';
       const loadedItems =
         d.items.length > 0
@@ -106,6 +115,41 @@ export function LabResultDetailModal({ resultId, onClose, onChanged }: LabResult
       setError(errorMessageOf(err));
     } finally {
       setEvaluating(false);
+    }
+  }
+
+  // Lab/goruntuleme sonuc fotografindan AI ile otomatik doldurma (2026-10-29):
+  // secili dosya(lar) varsa once OCR ile oku, donen taslak degerler (referans
+  // araligi dahil) mevcut alanlarin UZERINE YAZAR -- onay istenmez (kararlastirilan
+  // ilke, @docs/superpowers/specs/2026-10-28-lab-goruntuleme-ai-foto-okuma.md §7).
+  function toggleFileSelection(fileId: string) {
+    setSelectedFileIds((prev) => (prev.includes(fileId) ? prev.filter((id) => id !== fileId) : [...prev, fileId]));
+  }
+
+  async function handleOcr() {
+    if (evaluating || !resultId || selectedFileIds.length === 0) return;
+    setEvaluating(true);
+    setError(null);
+    try {
+      const result = await labApi.ocrFromImages(resultId, selectedFileIds);
+      setItems(result.items);
+      setResultSummary(result.draftSummary);
+      setAiEvaluated(true);
+      if (!result.modelConnected) {
+        setError('AI modeline bağlanılamadı, değerleri elle girin.');
+      }
+    } catch (err) {
+      setError(errorMessageOf(err));
+    } finally {
+      setEvaluating(false);
+    }
+  }
+
+  function handleEvaluateOrOcr() {
+    if (selectedFileIds.length > 0) {
+      void handleOcr();
+    } else {
+      void handleEvaluate();
     }
   }
 
@@ -256,14 +300,21 @@ export function LabResultDetailModal({ resultId, onClose, onChanged }: LabResult
             <Button
               type="button"
               variant="ai"
-              onClick={handleEvaluate}
-              disabled={evaluating || items.every((i) => !i.parameterName.trim() || !i.value.trim())}
+              onClick={handleEvaluateOrOcr}
+              disabled={
+                evaluating ||
+                (selectedFileIds.length === 0 && items.every((i) => !i.parameterName.trim() || !i.value.trim()))
+              }
             >
-              {evaluating ? 'Değerlendiriliyor...' : '⚡ Otomatik Ön-Değerlendirme'}
+              {evaluating
+                ? (selectedFileIds.length > 0 ? 'Okunuyor...' : 'Değerlendiriliyor...')
+                : (selectedFileIds.length > 0 ? '📷 Oku + Değerlendir' : '⚡ Otomatik Ön-Değerlendirme')}
             </Button>
           </div>
           <div className={styles.evaluateHint}>
-            Değerler kural tabanlı olarak işaretlenir ve taslak bir özet oluşturulur; sonuç hekim onayına sunulur, siz kaydetmeden uygulanmaz.
+            {selectedFileIds.length > 0
+              ? 'Seçili dosya(lar) fotoğraftan okunur, parametre/değer/birim/referans alanları ve değerlendirme taslak olarak doldurulur (mevcut değerlerin üzerine yazılır); sonuç hekim onayına sunulur, siz kaydetmeden uygulanmaz.'
+              : 'Değerler kural tabanlı olarak işaretlenir ve taslak bir özet oluşturulur; sonuç hekim onayına sunulur, siz kaydetmeden uygulanmaz.'}
           </div>
 
           <div className={styles.actionsSplit}>
@@ -324,6 +375,15 @@ export function LabResultDetailModal({ resultId, onClose, onChanged }: LabResult
         ) : (
           detail.files.map((f) => (
             <div key={f.id} className={styles.fileRow} onClick={() => handleDownload(f.id, f.fileName)}>
+              {isPending && isImage(f.contentType) && (
+                <input
+                  type="checkbox"
+                  checked={selectedFileIds.includes(f.id)}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={() => toggleFileSelection(f.id)}
+                  title="Fotoğraftan Oku için seç"
+                />
+              )}
               <span className={styles.fileName}>{f.fileName}</span>
               <span className={styles.muted}>{formatBytes(f.fileSize)}</span>
             </div>

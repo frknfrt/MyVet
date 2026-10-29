@@ -38,7 +38,14 @@ export function InventoryPage() {
     setLoading(true);
     inventoryApi
       .list()
-      .then(setItems)
+      .then((data) => {
+        setItems(data);
+        // Modal acikken "Birimi Kaydet" gibi bir degisiklik sonrasi onChanged={load}
+        // cagrilir; selected'i de taze veriyle degistirmezsek ItemDetailModal eski
+        // item prop'uyla kalir (ornek: packageSize hala null gorunur, "openable"
+        // yanlis hesaplanir, acik miktar alani gorunmez). Bkz. bulunan bug notu.
+        setSelected((prev) => (prev ? data.find((i) => i.id === prev.id) ?? prev : prev));
+      })
       .finally(() => setLoading(false));
   }
 

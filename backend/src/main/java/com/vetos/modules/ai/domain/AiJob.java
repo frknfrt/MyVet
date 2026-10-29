@@ -24,7 +24,10 @@ public class AiJob {
     @Column(nullable = false)
     private AiTaskType taskType;
 
-    @Column(nullable = false)
+    // Lab/goruntuleme sonuc fotografindan AI ile otomatik doldurma (2026-10-29, V88):
+    // bu is kayitlari bir muayeneye bagli olmayabilir (lab/imaging sonuclari
+    // encounter'dan bagimsiz) -- bu yuzden nullable.
+    @Column
     private UUID encounterId;
 
     @Column(nullable = false, columnDefinition = "text")

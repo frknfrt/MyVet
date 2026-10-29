@@ -64,6 +64,11 @@ export interface LabResultEvaluation {
   draftSummary: string;
 }
 
+// Lab/goruntuleme sonuc fotografindan AI ile otomatik doldurma (2026-10-29).
+export interface LabResultOcrResult extends LabResultEvaluation {
+  modelConnected: boolean;
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
 
 export const labApi = {
@@ -76,6 +81,8 @@ export const labApi = {
     apiClient.put<void>(`/api/v1/lab-results/${id}/complete`, payload),
   evaluate: (items: LabResultItemInput[]) =>
     apiClient.post<LabResultEvaluation>('/api/v1/lab-results/evaluate', { items }),
+  ocrFromImages: (labResultId: string, fileIds: string[]) =>
+    apiClient.post<LabResultOcrResult>('/api/v1/ai/lab-result-ocr', { labResultId, fileIds }),
   cancel: (id: string) => apiClient.post<void>(`/api/v1/lab-results/${id}/cancel`),
   uploadFile: (id: string, file: File) => {
     const form = new FormData();

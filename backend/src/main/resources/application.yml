@@ -88,6 +88,13 @@ ai:
     # (bkz. OllamaSoapGenerationAdapter).
     base-url: ${OLLAMA_BASE_URL:}
     model: ${OLLAMA_MODEL:llama3.1}
+    # Lab/goruntuleme sonuc fotografindan AI ile otomatik doldurma (2026-10-29):
+    # gorsel (vision) model metin modelinden FARKLI olabilir (ornek: llava,
+    # llama3.2-vision) -- tam model adi ve CPU performansi yerel olarak test
+    # edilip buraya/env'e yazilmali. Vision cagrilari CPU'da metin cagrilarindan
+    # cok daha yavas olabilir, bu yuzden okuma zaman asimi daha yuksek tutulur.
+    vision-model: ${OLLAMA_VISION_MODEL:llava}
+    vision-timeout-seconds: ${OLLAMA_VISION_TIMEOUT_SECONDS:120}
   anthropic:
     # ai.provider=claude oldugunda kullanilir. ANTHROPIC_API_KEY asla commit
     # edilmemeli -- backend/.env.local (gitignored) veya ortam degiskeni olarak

@@ -38,6 +38,12 @@ export interface RequestImagingRecordPayload {
   notes?: string;
 }
 
+// Lab/goruntuleme sonuc fotografindan AI ile otomatik doldurma (2026-10-29).
+export interface ImagingFindingsOcrResult {
+  findings: string;
+  modelConnected: boolean;
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
 
 export const imagingApi = {
@@ -47,6 +53,8 @@ export const imagingApi = {
     apiClient.get<ImagingRecordSummary[]>(`/api/v1/imaging-records${patientId ? `?patientId=${patientId}` : ''}`),
   get: (id: string) => apiClient.get<ImagingRecordDetail>(`/api/v1/imaging-records/${id}`),
   complete: (id: string, findings: string) => apiClient.put<void>(`/api/v1/imaging-records/${id}/complete`, { findings }),
+  ocrFromImages: (imagingRecordId: string, fileIds: string[]) =>
+    apiClient.post<ImagingFindingsOcrResult>('/api/v1/ai/imaging-findings-ocr', { imagingRecordId, fileIds }),
   cancel: (id: string) => apiClient.post<void>(`/api/v1/imaging-records/${id}/cancel`),
   uploadFile: (id: string, file: File) => {
     const form = new FormData();

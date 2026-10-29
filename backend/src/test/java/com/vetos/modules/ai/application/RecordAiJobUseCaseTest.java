@@ -48,4 +48,24 @@ class RecordAiJobUseCaseTest {
         assertThat(saved.getSuggestionText()).isEqualTo("Sivi tedavisi onerilir");
         assertThat(resultId).isEqualTo(saved.getId());
     }
+
+    // Lab/goruntuleme sonuc fotografindan AI ile otomatik doldurma (2026-10-29):
+    // lab/imaging AiJob kayitlari bir muayeneye bagli degil -- encounterId null olabilmeli (V88).
+    @Test
+    void recordsJobWithoutEncounter_whenEncounterIdIsNull() {
+        UUID tenantId = UUID.randomUUID();
+        UUID staffUserId = UUID.randomUUID();
+        RecordAiJobCommand command = new RecordAiJobCommand(
+            tenantId, AiTaskType.LAB_RESULT_OCR, null,
+            "Referans araligi disinda 1 parametre tespit edildi", "ollama", "llava", staffUserId
+        );
+        when(aiJobRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        useCase.execute(command);
+
+        ArgumentCaptor<AiJob> captor = ArgumentCaptor.forClass(AiJob.class);
+        verify(aiJobRepository).save(captor.capture());
+        assertThat(captor.getValue().getEncounterId()).isNull();
+        assertThat(captor.getValue().getTaskType()).isEqualTo(AiTaskType.LAB_RESULT_OCR);
+    }
 }

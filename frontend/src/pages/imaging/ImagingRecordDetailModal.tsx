@@ -34,6 +34,9 @@ export function ImagingRecordDetailModal({ recordId, onClose, onChanged }: Imagi
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Lab/goruntuleme sonuc fotografindan AI ile otomatik doldurma (2026-10-29).
+  const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
+  const [ocrRunning, setOcrRunning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function load() {
@@ -41,6 +44,7 @@ export function ImagingRecordDetailModal({ recordId, onClose, onChanged }: Imagi
     imagingApi.get(recordId).then((d) => {
       setDetail(d);
       setFindings(d.findings ?? '');
+      setSelectedFileIds([]);
     });
   }
 
@@ -101,6 +105,32 @@ export function ImagingRecordDetailModal({ recordId, onClose, onChanged }: Imagi
       setError(errorMessageOf(err));
     } finally {
       setBusy(false);
+    }
+  }
+
+  // Lab/goruntuleme sonuc fotografindan AI ile otomatik doldurma (2026-10-29):
+  // bu modalde onceden hic AI butonu yoktu -- lab'daki gibi "genisletilecek"
+  // bir buton olmadigi icin YENI bir buton eklendi. Secili gorsel(ler) OCR ile
+  // okunur, donen metin findings alaninin UZERINE YAZAR -- onay istenmez (ayni
+  // ilke, @docs/superpowers/specs/2026-10-28-lab-goruntuleme-ai-foto-okuma.md §7).
+  function toggleFileSelection(fileId: string) {
+    setSelectedFileIds((prev) => (prev.includes(fileId) ? prev.filter((id) => id !== fileId) : [...prev, fileId]));
+  }
+
+  async function handleOcr() {
+    if (ocrRunning || !recordId || selectedFileIds.length === 0) return;
+    setOcrRunning(true);
+    setError(null);
+    try {
+      const result = await imagingApi.ocrFromImages(recordId, selectedFileIds);
+      setFindings(result.findings);
+      if (!result.modelConnected) {
+        setError('AI modeline bağlanılamadı, bulguları elle girin.');
+      }
+    } catch (err) {
+      setError(errorMessageOf(err));
+    } finally {
+      setOcrRunning(false);
     }
   }
 
@@ -194,6 +224,15 @@ export function ImagingRecordDetailModal({ recordId, onClose, onChanged }: Imagi
           {detail.files.map((f) =>
             isImage(f.contentType) ? (
               <div key={f.id} className={styles.thumb} onClick={() => handleDownload(f.id, f.fileName)}>
+                {isPending && (
+                  <input
+                    type="checkbox"
+                    checked={selectedFileIds.includes(f.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={() => toggleFileSelection(f.id)}
+                    title="Fotoğraftan Oku için seç"
+                  />
+                )}
                 {previewUrls[f.id] ? (
                   <img src={previewUrls[f.id]} alt={f.fileName} />
                 ) : (
@@ -218,6 +257,16 @@ export function ImagingRecordDetailModal({ recordId, onClose, onChanged }: Imagi
       {isPending ? (
         <form onSubmit={handleComplete}>
           <div className={styles.sectionLabel}>Sonucu Tamamla</div>
+          <div className={styles.itemsFooter}>
+            <Button type="button" variant="ai" onClick={handleOcr} disabled={ocrRunning || selectedFileIds.length === 0}>
+              {ocrRunning ? 'Okunuyor...' : '📷 Fotoğraftan Oku'}
+            </Button>
+          </div>
+          <div className={styles.evaluateHint}>
+            Yukarıda görsel seçip bu butona basarsanız, dış merkezden gelen yazılı rapor fotoğrafı okunup bulgular
+            alanı taslak olarak doldurulur (mevcut metnin üzerine yazılır); sonuç hekim onayına sunulur, siz
+            kaydetmeden uygulanmaz.
+          </div>
           <FieldWrap label="Radyolojik bulgular / yorum" hint={AI_FIELD_HINT}>
             <Textarea rows={4} value={findings} onChange={(e) => setFindings(e.target.value)} required />
           </FieldWrap>
