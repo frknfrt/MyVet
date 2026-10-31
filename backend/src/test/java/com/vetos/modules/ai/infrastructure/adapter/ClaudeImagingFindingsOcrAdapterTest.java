@@ -137,4 +137,28 @@ class ClaudeImagingFindingsOcrAdapterTest {
 
         assertThat(draft.modelConnected()).isFalse();
     }
+
+    @Test
+    void generateViaClaude_reportSource_setsRawImageInterpretationFalse() {
+        stubResponseBody = "{\"content\": [{\"type\": \"text\", \"text\": \"{\\\"source\\\": \\\"report\\\", \\\"findings\\\": \\\"Sol akciger alt lobda hafif infiltrasyon.\\\"}\"}]}";
+        ImagingFindingsOcrPort adapter = adapter("test-api-key");
+
+        ImagingFindingsOcrDraft draft = adapter.generate(anInput("fake-image-bytes".getBytes()));
+
+        assertThat(draft.modelConnected()).isTrue();
+        assertThat(draft.rawImageInterpretation()).isFalse();
+        assertThat(draft.findings()).isEqualTo("Sol akciger alt lobda hafif infiltrasyon.");
+    }
+
+    @Test
+    void generateViaClaude_rawImageSource_setsRawImageInterpretationTrue() {
+        stubResponseBody = "{\"content\": [{\"type\": \"text\", \"text\": \"{\\\"source\\\": \\\"raw_image\\\", \\\"findings\\\": \\\"Sol bobrekte hafif buyume izlenimi vermektedir.\\\"}\"}]}";
+        ImagingFindingsOcrPort adapter = adapter("test-api-key");
+
+        ImagingFindingsOcrDraft draft = adapter.generate(anInput("fake-image-bytes".getBytes()));
+
+        assertThat(draft.modelConnected()).isTrue();
+        assertThat(draft.rawImageInterpretation()).isTrue();
+        assertThat(draft.findings()).isEqualTo("Sol bobrekte hafif buyume izlenimi vermektedir.");
+    }
 }

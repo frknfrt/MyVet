@@ -119,7 +119,7 @@ class ReadImagingFindingsFromImageUseCaseTest {
         UUID fileId = UUID.randomUUID();
         UUID staffId = UUID.randomUUID();
         when(imagingRecordFileLookupPort.findFiles(recordId, List.of(fileId))).thenReturn(List.of(imageFile(fileId)));
-        when(imagingFindingsOcrPort.generate(any())).thenReturn(new ImagingFindingsOcrDraft("Sol akciger alt lobda hafif infiltrasyon.", true, "llava"));
+        when(imagingFindingsOcrPort.generate(any())).thenReturn(new ImagingFindingsOcrDraft("Sol akciger alt lobda hafif infiltrasyon.", true, "llava", false));
         when(recordAiJobUseCase.execute(any())).thenReturn(UUID.randomUUID());
 
         ReadImagingFindingsFromImageResult result = useCase.execute(
@@ -141,7 +141,7 @@ class ReadImagingFindingsFromImageUseCaseTest {
         UUID recordId = UUID.randomUUID();
         UUID fileId = UUID.randomUUID();
         when(imagingRecordFileLookupPort.findFiles(recordId, List.of(fileId))).thenReturn(List.of(imageFile(fileId)));
-        when(imagingFindingsOcrPort.generate(any())).thenReturn(new ImagingFindingsOcrDraft("", false, "llava"));
+        when(imagingFindingsOcrPort.generate(any())).thenReturn(new ImagingFindingsOcrDraft("", false, "llava", false));
         when(recordAiJobUseCase.execute(any())).thenReturn(UUID.randomUUID());
 
         ReadImagingFindingsFromImageResult result = useCase.execute(
@@ -167,5 +167,62 @@ class ReadImagingFindingsFromImageUseCaseTest {
             .isInstanceOf(AiBusyServiceUnavailableException.class);
 
         verifyNoInteractions(quota, recordAiJobUseCase);
+    }
+
+    @Test
+    void rawImageInterpretation_prependsDisclaimer_toFindingsAndJobText() {
+        UUID tenantId = UUID.randomUUID();
+        UUID recordId = UUID.randomUUID();
+        UUID fileId = UUID.randomUUID();
+        when(imagingRecordFileLookupPort.findFiles(recordId, List.of(fileId))).thenReturn(List.of(imageFile(fileId)));
+        when(imagingFindingsOcrPort.generate(any()))
+            .thenReturn(new ImagingFindingsOcrDraft("Sol bobrekte hafif buyume izlenimi vermektedir.", true, "claude-sonnet-5", true));
+        when(recordAiJobUseCase.execute(any())).thenReturn(UUID.randomUUID());
+
+        ReadImagingFindingsFromImageResult result = useCase.execute(
+            new ReadImagingFindingsFromImageCommand(tenantId, recordId, List.of(fileId), UUID.randomUUID())
+        );
+
+        assertThat(result.findings())
+            .startsWith("[AI gorsel on-degerlendirme")
+            .contains("Sol bobrekte hafif buyume izlenimi vermektedir.");
+
+        ArgumentCaptor<RecordAiJobCommand> captor = ArgumentCaptor.forClass(RecordAiJobCommand.class);
+        verify(recordAiJobUseCase).execute(captor.capture());
+        assertThat(captor.getValue().suggestionText()).isEqualTo(result.findings());
+    }
+
+    @Test
+    void reportSource_doesNotPrependDisclaimer() {
+        UUID tenantId = UUID.randomUUID();
+        UUID recordId = UUID.randomUUID();
+        UUID fileId = UUID.randomUUID();
+        when(imagingRecordFileLookupPort.findFiles(recordId, List.of(fileId))).thenReturn(List.of(imageFile(fileId)));
+        when(imagingFindingsOcrPort.generate(any()))
+            .thenReturn(new ImagingFindingsOcrDraft("Sol akciger alt lobda hafif infiltrasyon.", true, "llava", false));
+        when(recordAiJobUseCase.execute(any())).thenReturn(UUID.randomUUID());
+
+        ReadImagingFindingsFromImageResult result = useCase.execute(
+            new ReadImagingFindingsFromImageCommand(tenantId, recordId, List.of(fileId), UUID.randomUUID())
+        );
+
+        assertThat(result.findings()).isEqualTo("Sol akciger alt lobda hafif infiltrasyon.");
+    }
+
+    @Test
+    void rawImageInterpretation_withBlankFindings_doesNotPrependDisclaimer() {
+        UUID tenantId = UUID.randomUUID();
+        UUID recordId = UUID.randomUUID();
+        UUID fileId = UUID.randomUUID();
+        when(imagingRecordFileLookupPort.findFiles(recordId, List.of(fileId))).thenReturn(List.of(imageFile(fileId)));
+        when(imagingFindingsOcrPort.generate(any()))
+            .thenReturn(new ImagingFindingsOcrDraft("", true, "claude-sonnet-5", true));
+        when(recordAiJobUseCase.execute(any())).thenReturn(UUID.randomUUID());
+
+        ReadImagingFindingsFromImageResult result = useCase.execute(
+            new ReadImagingFindingsFromImageCommand(tenantId, recordId, List.of(fileId), UUID.randomUUID())
+        );
+
+        assertThat(result.findings()).isEmpty();
     }
 }

@@ -101,4 +101,39 @@ class OllamaImagingFindingsOcrAdapterTest {
         assertThat(draft.modelConnected()).isFalse();
         assertThat(draft.findings()).isEmpty();
     }
+
+
+    @Test
+    void generateViaOllama_reportSource_setsRawImageInterpretationFalse() {
+        stubResponseBody = "{\"response\": \"{\\\"source\\\": \\\"report\\\", \\\"findings\\\": \\\"Sol akciger alt lobda hafif infiltrasyon.\\\"}\"}";
+        ImagingFindingsOcrPort adapter = adapter(stubUrl());
+
+        ImagingFindingsOcrDraft draft = adapter.generate(new ImagingFindingsOcrInput(List.of(new OcrImageInput("image/jpeg", "fake-image-bytes".getBytes()))));
+
+        assertThat(draft.modelConnected()).isTrue();
+        assertThat(draft.rawImageInterpretation()).isFalse();
+        assertThat(draft.findings()).isEqualTo("Sol akciger alt lobda hafif infiltrasyon.");
+    }
+
+    @Test
+    void generateViaOllama_rawImageSource_setsRawImageInterpretationTrue() {
+        stubResponseBody = "{\"response\": \"{\\\"source\\\": \\\"raw_image\\\", \\\"findings\\\": \\\"Sol bobrekte hafif buyume izlenimi vermektedir.\\\"}\"}";
+        ImagingFindingsOcrPort adapter = adapter(stubUrl());
+
+        ImagingFindingsOcrDraft draft = adapter.generate(new ImagingFindingsOcrInput(List.of(new OcrImageInput("image/jpeg", "fake-image-bytes".getBytes()))));
+
+        assertThat(draft.modelConnected()).isTrue();
+        assertThat(draft.rawImageInterpretation()).isTrue();
+        assertThat(draft.findings()).isEqualTo("Sol bobrekte hafif buyume izlenimi vermektedir.");
+    }
+
+    @Test
+    void generateViaOllama_missingSourceField_defaultsToReport_rawImageInterpretationFalse() {
+        stubResponseBody = "{\"response\": \"{\\\"findings\\\": \\\"Sol akciger alt lobda hafif infiltrasyon.\\\"}\"}";
+        ImagingFindingsOcrPort adapter = adapter(stubUrl());
+
+        ImagingFindingsOcrDraft draft = adapter.generate(new ImagingFindingsOcrInput(List.of(new OcrImageInput("image/jpeg", "fake-image-bytes".getBytes()))));
+
+        assertThat(draft.rawImageInterpretation()).isFalse();
+    }
 }

@@ -25,11 +25,23 @@ import java.util.List;
  * docs/superpowers/plans/2026-10-29-lab-goruntuleme-ai-foto-okuma.md Task 5).
  * ReadLabResultFromImageUseCase ile AYNI AiCallGate/UsageQuotaPort deseni --
  * tek fark: kural motoru yok, OCR'dan donen findings metni dogrudan taslaktir.
+ *
+ * REVIZE (2026-10-31, Task 11): kullanici talebi uzerine AI artik HAM rontgen/
+ * USG goruntulerini de gorsel olarak tanimliyor (bkz. ImagingFindingsOcrDraft
+ * javadoc'u ve Ollama/ClaudeImagingFindingsOcrAdapter'daki prompt revizyonu).
+ * Guvenlik/sorumluluk nedeniyle, draft.rawImageInterpretation() true oldugunda
+ * RAW_IMAGE_DISCLAIMER metni findings'in basina BURADA, DETERMINISTIK olarak
+ * eklenir -- modelin kendisinin her zaman bir uyari yazacagina guvenilmez
+ * (bkz. Task 10 markdown-fence dersi). Bu uyari, AI is kaydina (RecordAiJobUseCase)
+ * yazilan metne VE frontend'e donen sonuca AYNI sekilde uygulanir, boylece
+ * ikisi arasinda tutarsizlik olmaz.
  */
 @Service
 public class ReadImagingFindingsFromImageUseCase {
 
     private static final String MODEL_NOT_CONNECTED_FINDINGS = "[AI modeli fotografi okuyamadi -- bulgulari elle girin.]";
+    private static final String RAW_IMAGE_DISCLAIMER =
+        "[AI gorsel on-degerlendirme -- bu kesin bir tani DEGILDIR, goruntuyu mutlaka kendiniz degerlendirin] ";
 
     private final ImagingRecordFileLookupPort imagingRecordFileLookupPort;
     private final ImagingFindingsOcrPort imagingFindingsOcrPort;
@@ -94,8 +106,14 @@ public class ReadImagingFindingsFromImageUseCase {
             return generated;
         });
 
+        // REVIZE (2026-10-31, Task 11): uyari metni modelin kendi ciktisina degil, buradaki
+        // deterministik kontrole birakilir -- bkz. sinif javadoc'u.
+        String findings = (draft.rawImageInterpretation() && !draft.findings().isBlank())
+            ? RAW_IMAGE_DISCLAIMER + draft.findings()
+            : draft.findings();
+
         String jobText = draft.modelConnected()
-            ? (draft.findings().isBlank() ? "[Bulgu metni bos geldi -- elle girin.]" : draft.findings())
+            ? (findings.isBlank() ? "[Bulgu metni bos geldi -- elle girin.]" : findings)
             : MODEL_NOT_CONNECTED_FINDINGS;
 
         var aiJobId = recordAiJobUseCase.execute(new RecordAiJobCommand(
@@ -103,6 +121,6 @@ public class ReadImagingFindingsFromImageUseCase {
             jobText, providerName, draft.modelVersion(), command.requestedByStaffUserId()
         ));
 
-        return new ReadImagingFindingsFromImageResult(aiJobId, draft.findings(), draft.modelConnected());
+        return new ReadImagingFindingsFromImageResult(aiJobId, findings, draft.modelConnected());
     }
 }

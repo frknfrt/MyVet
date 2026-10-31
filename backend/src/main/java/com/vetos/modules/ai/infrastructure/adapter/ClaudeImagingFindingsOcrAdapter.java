@@ -25,6 +25,11 @@ import java.time.Duration;
  * (findings) alani doner, parametre listesi yok. ai.provider=claude oldugunda
  * aktif olur. Bu adaptorun neden ZORUNLU oldugu icin bkz.
  * ClaudeLabResultOcrAdapter javadoc'u (2026-10-29 bulgusu).
+ *
+ * REVIZE (2026-10-31, Task 11): bkz. OllamaImagingFindingsOcrAdapter'daki
+ * ayni revizyon notu -- ham goruntu (rontgen/USG) artik DIKKATLI/hedge'li
+ * bir dille AI tarafindan tanimlaniyor, zorunlu uyari metni ise
+ * ReadImagingFindingsFromImageUseCase'te deterministik olarak eklenir.
  */
 @Component
 @ConditionalOnProperty(prefix = "ai", name = "provider", havingValue = "claude")
@@ -32,19 +37,33 @@ import java.time.Duration;
 class ClaudeImagingFindingsOcrAdapter implements ImagingFindingsOcrPort {
 
     private static final String SYSTEM_PROMPT = """
-        Sana dis bir merkezden gelen yazili bir radyoloji/goruntuleme raporunun \
-        fotografi verilecek. Bu rapordaki bulgular/yorum metnini oku ve asagidaki \
-        KESIN JSON semasinda, BASKA HICBIR METIN EKLEMEDEN don:
-        {"findings":"..."}
+        Sana bir veteriner goruntuleme kaydina ait bir fotograf verilecek. Bu \
+        fotograf IKI TURDEN biri olabilir: (1) dis bir merkezden gelen YAZILI \
+        bir radyoloji/goruntuleme raporu, veya (2) rontgen/USG/tomografi gibi \
+        HAM bir tibbi goruntu (yazili rapor degil, dogrudan cihaz ciktisi/ekran \
+        goruntusu). Asagidaki KESIN JSON semasinda, BASKA HICBIR METIN \
+        EKLEMEDEN don:
+        {"source":"report"|"raw_image","findings":"..."}
         Kurallar:
-        - findings: raporda yazili bulgular/sonuc metnini, mumkun oldugunca \
-        orijinaline sadik kalarak, duzgun Turkce paragraf(lar) halinde aktar.
-        - Bu bir ham rontgen/USG goruntusu ise (yazili rapor degilse) ya da rapor \
-        okunamiyorsa findings alanini bos string "" birak -- UYDURMA, tibbi yorum \
-        yapma.
+        - Fotografta YAZILI bir rapor metni varsa: source="report" don, \
+        findings alanina raporda yazili bulgular/sonuc metnini, mumkun \
+        oldugunca orijinaline sadik kalarak, duzgun Turkce paragraf(lar) \
+        halinde aktar.
+        - Fotograf HAM bir rontgen/USG/tomografi goruntusu ise (yazili rapor \
+        degilse): source="raw_image" don, findings alanina goruntude gozle \
+        gorulen seyleri DIKKATLI ve HEDGE'li (kesin olmayan) bir dille yaz -- \
+        ornek ifadeler: "...izlenimi vermektedir", "...gibi gorunmektedir", \
+        "ileri degerlendirme onerilir". KESIN tani ifadeleri ("kirik var", \
+        "tumor var", "normaldir" gibi kesin sonuc cumleleri) KULLANMA -- bu \
+        sadece gorsel bir on-izlenimdir, nihai teshis her zaman veteriner \
+        hekime aittir. UYDURMA -- goruntude gercekten gordugunu yaz, \
+        gormedigini yazma.
+        - Fotograf okunamiyorsa, cok bulanik/karanliksa veya hic \
+        degerlendirilemiyorsa: source alanini en iyi tahminine gore doldur, \
+        findings alanini bos string "" birak.
         - Sadece JSON don, aciklama/markdown ekleme.""";
 
-    private static final String INSTRUCTION = "Yukarida verilen goruntuleme raporu fotografini oku ve JSON semasina gore don.";
+    private static final String INSTRUCTION = "Yukarida verilen goruntuleme fotografini oku ve JSON semasina gore don.";
 
     private final String apiKey;
     private final String model;
@@ -93,10 +112,11 @@ class ClaudeImagingFindingsOcrAdapter implements ImagingFindingsOcrPort {
         JsonNode parsed = ClaudeVisionCompletion.completeJson(
             restClient, objectMapper, apiUrl, apiKey, model, SYSTEM_PROMPT, input.images(), INSTRUCTION);
         String findings = parsed.path("findings").asText("");
-        return new ImagingFindingsOcrDraft(findings, true, model);
+        boolean rawImageInterpretation = "raw_image".equals(parsed.path("source").asText("report"));
+        return new ImagingFindingsOcrDraft(findings, true, model, rawImageInterpretation);
     }
 
     private ImagingFindingsOcrDraft fallback() {
-        return new ImagingFindingsOcrDraft("", false, model);
+        return new ImagingFindingsOcrDraft("", false, model, false);
     }
 }

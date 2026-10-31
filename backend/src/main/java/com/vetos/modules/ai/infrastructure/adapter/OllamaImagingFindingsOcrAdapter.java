@@ -25,9 +25,15 @@ import java.util.Map;
  * Lab/goruntuleme sonuc fotografindan AI ile otomatik doldurma (2026-10-29,
  * docs/superpowers/plans/2026-10-29-lab-goruntuleme-ai-foto-okuma.md Task 4).
  * OllamaLabResultOcrAdapter ile AYNI desen -- fark: tek bir serbest metin
- * (findings) alani doner, parametre listesi yok. Kapsam bilinçli dar: SADECE
- * dis merkezden gelen yazili rapor fotografini okur (OCR), ham goruntuyu
- * (rontgen/USG) AI yorumlamaz (spec 2026-10-28 §3.2).
+ * (findings) alani doner, parametre listesi yok.
+ *
+ * REVIZE (2026-10-31, Task 11): eskiden kapsam BILINCLI olarak dar tutulup
+ * ham goruntu (rontgen/USG) AI tarafindan yorumlanmiyordu (spec 2026-10-28
+ * §3.2) -- kullanici talebi ve kendi karari (DIKKATLI/hedge'li aciklama +
+ * zorunlu uyari) uzerine bu kisitlama kaldirildi. Model artik ham goruntuyu
+ * de gorsel olarak tanimliyor ama KESIN tani KOYMUYOR (prompt'taki kati
+ * kurallara bkz.); zorunlu uyari metni ise modelin kendisine degil
+ * ReadImagingFindingsFromImageUseCase'teki deterministik koda birakilmistir.
  */
 @Component
 @ConditionalOnProperty(prefix = "ai", name = "provider", havingValue = "ollama", matchIfMissing = true)
@@ -35,16 +41,30 @@ import java.util.Map;
 class OllamaImagingFindingsOcrAdapter implements ImagingFindingsOcrPort {
 
     private static final String PROMPT = """
-        Sana dis bir merkezden gelen yazili bir radyoloji/goruntuleme raporunun \
-        fotografi verilecek. Bu rapordaki bulgular/yorum metnini oku ve asagidaki \
-        KESIN JSON semasinda, BASKA HICBIR METIN EKLEMEDEN don:
-        {"findings":"..."}
+        Sana bir veteriner goruntuleme kaydina ait bir fotograf verilecek. Bu \
+        fotograf IKI TURDEN biri olabilir: (1) dis bir merkezden gelen YAZILI \
+        bir radyoloji/goruntuleme raporu, veya (2) rontgen/USG/tomografi gibi \
+        HAM bir tibbi goruntu (yazili rapor degil, dogrudan cihaz ciktisi/ekran \
+        goruntusu). Asagidaki KESIN JSON semasinda, BASKA HICBIR METIN \
+        EKLEMEDEN don:
+        {"source":"report"|"raw_image","findings":"..."}
         Kurallar:
-        - findings: raporda yazili bulgular/sonuc metnini, mumkun oldugunca \
-        orijinaline sadik kalarak, duzgun Turkce paragraf(lar) halinde aktar.
-        - Bu bir ham rontgen/USG goruntusu ise (yazili rapor degilse) ya da rapor \
-        okunamiyorsa findings alanini bos string "" birak -- UYDURMA, tibbi yorum \
-        yapma.
+        - Fotografta YAZILI bir rapor metni varsa: source="report" don, \
+        findings alanina raporda yazili bulgular/sonuc metnini, mumkun \
+        oldugunca orijinaline sadik kalarak, duzgun Turkce paragraf(lar) \
+        halinde aktar.
+        - Fotograf HAM bir rontgen/USG/tomografi goruntusu ise (yazili rapor \
+        degilse): source="raw_image" don, findings alanina goruntude gozle \
+        gorulen seyleri DIKKATLI ve HEDGE'li (kesin olmayan) bir dille yaz -- \
+        ornek ifadeler: "...izlenimi vermektedir", "...gibi gorunmektedir", \
+        "ileri degerlendirme onerilir". KESIN tani ifadeleri ("kirik var", \
+        "tumor var", "normaldir" gibi kesin sonuc cumleleri) KULLANMA -- bu \
+        sadece gorsel bir on-izlenimdir, nihai teshis her zaman veteriner \
+        hekime aittir. UYDURMA -- goruntude gercekten gordugunu yaz, \
+        gormedigini yazma.
+        - Fotograf okunamiyorsa, cok bulanik/karanliksa veya hic \
+        degerlendirilemiyorsa: source alanini en iyi tahminine gore doldur, \
+        findings alanini bos string "" birak.
         - Sadece JSON don, aciklama/markdown ekleme.""";
 
     private final String baseUrl;
@@ -106,10 +126,11 @@ class OllamaImagingFindingsOcrAdapter implements ImagingFindingsOcrPort {
         String modelOutput = envelope.path("response").asText("");
         JsonNode parsed = objectMapper.readTree(modelOutput);
         String findings = parsed.path("findings").asText("");
-        return new ImagingFindingsOcrDraft(findings, true, visionModel);
+        boolean rawImageInterpretation = "raw_image".equals(parsed.path("source").asText("report"));
+        return new ImagingFindingsOcrDraft(findings, true, visionModel, rawImageInterpretation);
     }
 
     private ImagingFindingsOcrDraft fallback() {
-        return new ImagingFindingsOcrDraft("", false, visionModel);
+        return new ImagingFindingsOcrDraft("", false, visionModel, false);
     }
 }
