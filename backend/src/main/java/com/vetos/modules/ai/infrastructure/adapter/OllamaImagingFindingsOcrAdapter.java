@@ -78,7 +78,7 @@ class OllamaImagingFindingsOcrAdapter implements ImagingFindingsOcrPort {
         try {
             return circuitBreaker.executeCallable(() -> outcomes.recordAiCall("imaging-ocr", "ollama", () -> generateViaOllama(input)));
         } catch (Exception e) {
-            log.warn("Ollama goruntuleme foto-okuma basarisiz, mock'a duseluyor: {}", e.getMessage());
+            log.warn("Ollama goruntuleme foto-okuma basarisiz, mock'a duseluyor: {}", OcrFailureLogging.describe(e), e);
             return fallback();
         }
     }

@@ -6,8 +6,11 @@ import com.vetos.modules.ai.domain.LabResultOcrInput;
 import com.vetos.modules.ai.domain.LabResultOcrPort;
 import com.vetos.modules.ai.domain.OcrImageInput;
 import com.vetos.modules.ai.domain.OcrLabItem;
+import com.vetos.modules.ai.domain.OcrImageFormatDetector;
+import com.vetos.modules.ai.domain.OcrImageNormalizer;
 import com.vetos.modules.ai.domain.exception.NoFileSelectedForOcrException;
 import com.vetos.modules.ai.domain.exception.UnsupportedOcrFileTypeException;
+import com.vetos.modules.ai.domain.exception.UnsupportedOcrImageFormatException;
 import com.vetos.modules.lab.domain.LabReferenceRangeEvaluator;
 import com.vetos.modules.lab.domain.LabResultFileForOcr;
 import com.vetos.modules.lab.domain.LabResultFileLookupPort;
@@ -68,9 +71,22 @@ public class ReadLabResultFromImageUseCase {
                 throw new UnsupportedOcrFileTypeException(file.id());
             }
         }
-        List<OcrImageInput> images = files.stream()
-            .map(f -> new OcrImageInput(f.contentType(), f.content()))
-            .toList();
+        // REVIZE (2026-10-31): declare edilen contentType'a degil, GERCEK baytlara (magic number) bakilir --
+        // AI saglayicilari (Claude/Ollama) sadece JPEG/PNG/GIF/WEBP isler; ozellikle iPhone HEIC fotograflari
+        // (veya content-type/bayt uyumsuzlugu) burada erken ve ACIK bir mesajla elenir, bosuna AI kotasi
+        // harcanip "AI modeline baglanilamadi" gibi yanlis bir hataya dusulmez (bkz. OcrImageFormatDetector).
+        List<OcrImageInput> images = new ArrayList<>();
+        for (LabResultFileForOcr file : files) {
+            OcrImageFormatDetector.Format format = OcrImageFormatDetector.detect(file.content());
+            if (!OcrImageFormatDetector.isSupportedByVisionApis(format)) {
+                throw new UnsupportedOcrImageFormatException(file.id(), format == OcrImageFormatDetector.Format.HEIC);
+            }
+            // REVIZE (2026-10-31): telefon kamerasiyla cekilen JPEG'lerin EXIF Orientation etiketi
+            // Claude/Ollama'ya hic ULASMAZ (saglayicilar metadata okumaz) -- piksel duzeyinde burada
+            // dik hale getirilir, boylece kullanicidan ekran goruntusu/format degistirme istenmez.
+            byte[] normalized = OcrImageNormalizer.normalize(format, file.content());
+            images.add(new OcrImageInput(OcrImageFormatDetector.mediaTypeFor(format), normalized));
+        }
 
         // Kota ayirma kapinin icinde: AI yogunsa hak dusmez (ayni desen, bkz. GenerateDiagnosisSuggestionUseCase).
         LabResultOcrDraft draft = aiCallGate.run(command.tenantId(), () -> {

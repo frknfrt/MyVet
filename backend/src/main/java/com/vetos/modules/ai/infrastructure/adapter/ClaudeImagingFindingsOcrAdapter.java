@@ -84,7 +84,7 @@ class ClaudeImagingFindingsOcrAdapter implements ImagingFindingsOcrPort {
         try {
             return circuitBreaker.executeCallable(() -> outcomes.recordAiCall("imaging-ocr", "claude", () -> generateViaClaude(input)));
         } catch (Exception e) {
-            log.warn("Claude goruntuleme foto-okuma basarisiz, mock'a duseluyor: {}", e.getMessage());
+            log.warn("Claude goruntuleme foto-okuma basarisiz, mock'a duseluyor: {}", OcrFailureLogging.describe(e), e);
             return fallback();
         }
     }

@@ -95,7 +95,7 @@ class ClaudeLabResultOcrAdapter implements LabResultOcrPort {
         try {
             return circuitBreaker.executeCallable(() -> outcomes.recordAiCall("lab-ocr", "claude", () -> generateViaClaude(input)));
         } catch (Exception e) {
-            log.warn("Claude lab sonucu foto-okuma basarisiz, mock'a duseluyor: {}", e.getMessage());
+            log.warn("Claude lab sonucu foto-okuma basarisiz, mock'a duseluyor: {}", OcrFailureLogging.describe(e), e);
             return fallback();
         }
     }

@@ -7,6 +7,7 @@ import com.vetos.modules.ai.domain.OcrLabItem;
 import com.vetos.modules.ai.domain.exception.AiBusyServiceUnavailableException;
 import com.vetos.modules.ai.domain.exception.NoFileSelectedForOcrException;
 import com.vetos.modules.ai.domain.exception.UnsupportedOcrFileTypeException;
+import com.vetos.modules.ai.domain.exception.UnsupportedOcrImageFormatException;
 import com.vetos.modules.lab.domain.LabResultFileForOcr;
 import com.vetos.modules.lab.domain.LabResultFileLookupPort;
 import com.vetos.modules.lab.domain.LabValueFlag;
@@ -54,8 +55,11 @@ class ReadLabResultFromImageUseCaseTest {
         );
     }
 
+    // REVIZE (2026-10-31): gercek JPEG magic bytes -- artik ReadLabResultFromImageUseCase
+    // declare edilen contentType'a degil, bu baytlara bakarak format dogruluyor (bkz.
+    // OcrImageFormatDetector); rastgele "fake-bytes" artik UNKNOWN sayilip reddedilir.
     private LabResultFileForOcr imageFile(UUID id) {
-        return new LabResultFileForOcr(id, "rapor.jpg", "image/jpeg", "fake-bytes".getBytes());
+        return new LabResultFileForOcr(id, "rapor.jpg", "image/jpeg", new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 0, 0, 0, 0, 0, 0, 0, 0});
     }
 
     @Test
@@ -79,6 +83,44 @@ class ReadLabResultFromImageUseCaseTest {
 
         assertThatThrownBy(() -> useCase.execute(new ReadLabResultFromImageCommand(tenantId, labResultId, List.of(fileId), UUID.randomUUID())))
             .isInstanceOf(UnsupportedOcrFileTypeException.class);
+
+        verifyNoInteractions(labResultOcrPort, recordAiJobUseCase, quota);
+    }
+
+    @Test
+    void imageWithUnsupportedRealFormat_throwsUnsupportedOcrImageFormat_evenIfContentTypeSaysImageJpeg() {
+        // REVIZE (2026-10-31): gercek kullanici bulgusu -- declare edilen contentType "image/jpeg" olsa
+        // da baytlar BMP/TIFF/bozuk ise (ornegin bir tarayici uygulamasinin yanlis etiketlemesi), AI
+        // cagrisina gidilmeden erken ve ACIK bir mesajla reddedilmeli.
+        UUID tenantId = UUID.randomUUID();
+        UUID labResultId = UUID.randomUUID();
+        UUID fileId = UUID.randomUUID();
+        byte[] notAnImage = "fake-bytes-not-a-real-image".getBytes();
+        when(labResultFileLookupPort.findFiles(labResultId, List.of(fileId)))
+            .thenReturn(List.of(new LabResultFileForOcr(fileId, "rapor.jpg", "image/jpeg", notAnImage)));
+
+        assertThatThrownBy(() -> useCase.execute(new ReadLabResultFromImageCommand(tenantId, labResultId, List.of(fileId), UUID.randomUUID())))
+            .isInstanceOf(UnsupportedOcrImageFormatException.class);
+
+        verifyNoInteractions(labResultOcrPort, recordAiJobUseCase, quota);
+    }
+
+    @Test
+    void heicImage_throwsUnsupportedOcrImageFormat_withHeicSpecificGuidance() {
+        // iPhone kamerasinin varsayilan formati HEIC/HEIF -- Claude/Ollama bunu islemez; kullaniciya
+        // genel "desteklenmiyor" mesaji degil, HEIC'e ozel yonlendirme gosterilmeli.
+        UUID tenantId = UUID.randomUUID();
+        UUID labResultId = UUID.randomUUID();
+        UUID fileId = UUID.randomUUID();
+        byte[] heicBytes = new byte[]{
+            0, 0, 0, 0x18, 'f', 't', 'y', 'p', 'h', 'e', 'i', 'c', 0, 0, 0, 0
+        };
+        when(labResultFileLookupPort.findFiles(labResultId, List.of(fileId)))
+            .thenReturn(List.of(new LabResultFileForOcr(fileId, "foto.heic", "image/heic", heicBytes)));
+
+        assertThatThrownBy(() -> useCase.execute(new ReadLabResultFromImageCommand(tenantId, labResultId, List.of(fileId), UUID.randomUUID())))
+            .isInstanceOf(UnsupportedOcrImageFormatException.class)
+            .hasMessageContaining("HEIC");
 
         verifyNoInteractions(labResultOcrPort, recordAiJobUseCase, quota);
     }

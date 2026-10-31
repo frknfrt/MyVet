@@ -82,7 +82,7 @@ class OllamaLabResultOcrAdapter implements LabResultOcrPort {
         try {
             return circuitBreaker.executeCallable(() -> outcomes.recordAiCall("lab-ocr", "ollama", () -> generateViaOllama(input)));
         } catch (Exception e) {
-            log.warn("Ollama lab sonucu foto-okuma basarisiz, mock'a duseluyor: {}", e.getMessage());
+            log.warn("Ollama lab sonucu foto-okuma basarisiz, mock'a duseluyor: {}", OcrFailureLogging.describe(e), e);
             return fallback();
         }
     }

@@ -6,6 +6,7 @@ import com.vetos.modules.ai.domain.ImagingFindingsOcrPort;
 import com.vetos.modules.ai.domain.exception.AiBusyServiceUnavailableException;
 import com.vetos.modules.ai.domain.exception.NoFileSelectedForOcrException;
 import com.vetos.modules.ai.domain.exception.UnsupportedOcrFileTypeException;
+import com.vetos.modules.ai.domain.exception.UnsupportedOcrImageFormatException;
 import com.vetos.modules.imaging.domain.ImagingRecordFileForOcr;
 import com.vetos.modules.imaging.domain.ImagingRecordFileLookupPort;
 import com.vetos.platform.quota.UsageKind;
@@ -48,8 +49,9 @@ class ReadImagingFindingsFromImageUseCaseTest {
         );
     }
 
+    // REVIZE (2026-10-31): gercek JPEG magic bytes -- bkz. ReadLabResultFromImageUseCaseTest'teki ayni not.
     private ImagingRecordFileForOcr imageFile(UUID id) {
-        return new ImagingRecordFileForOcr(id, "rapor.jpg", "image/jpeg", "fake-bytes".getBytes());
+        return new ImagingRecordFileForOcr(id, "rapor.jpg", "image/jpeg", new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 0, 0, 0, 0, 0, 0, 0, 0});
     }
 
     @Test
@@ -73,6 +75,39 @@ class ReadImagingFindingsFromImageUseCaseTest {
 
         assertThatThrownBy(() -> useCase.execute(new ReadImagingFindingsFromImageCommand(tenantId, recordId, List.of(fileId), UUID.randomUUID())))
             .isInstanceOf(UnsupportedOcrFileTypeException.class);
+
+        verifyNoInteractions(imagingFindingsOcrPort, recordAiJobUseCase, quota);
+    }
+
+    @Test
+    void imageWithUnsupportedRealFormat_throwsUnsupportedOcrImageFormat_evenIfContentTypeSaysImageJpeg() {
+        UUID tenantId = UUID.randomUUID();
+        UUID recordId = UUID.randomUUID();
+        UUID fileId = UUID.randomUUID();
+        byte[] notAnImage = "fake-bytes-not-a-real-image".getBytes();
+        when(imagingRecordFileLookupPort.findFiles(recordId, List.of(fileId)))
+            .thenReturn(List.of(new ImagingRecordFileForOcr(fileId, "rapor.jpg", "image/jpeg", notAnImage)));
+
+        assertThatThrownBy(() -> useCase.execute(new ReadImagingFindingsFromImageCommand(tenantId, recordId, List.of(fileId), UUID.randomUUID())))
+            .isInstanceOf(UnsupportedOcrImageFormatException.class);
+
+        verifyNoInteractions(imagingFindingsOcrPort, recordAiJobUseCase, quota);
+    }
+
+    @Test
+    void heicImage_throwsUnsupportedOcrImageFormat_withHeicSpecificGuidance() {
+        UUID tenantId = UUID.randomUUID();
+        UUID recordId = UUID.randomUUID();
+        UUID fileId = UUID.randomUUID();
+        byte[] heicBytes = new byte[]{
+            0, 0, 0, 0x18, 'f', 't', 'y', 'p', 'h', 'e', 'i', 'c', 0, 0, 0, 0
+        };
+        when(imagingRecordFileLookupPort.findFiles(recordId, List.of(fileId)))
+            .thenReturn(List.of(new ImagingRecordFileForOcr(fileId, "foto.heic", "image/heic", heicBytes)));
+
+        assertThatThrownBy(() -> useCase.execute(new ReadImagingFindingsFromImageCommand(tenantId, recordId, List.of(fileId), UUID.randomUUID())))
+            .isInstanceOf(UnsupportedOcrImageFormatException.class)
+            .hasMessageContaining("HEIC");
 
         verifyNoInteractions(imagingFindingsOcrPort, recordAiJobUseCase, quota);
     }

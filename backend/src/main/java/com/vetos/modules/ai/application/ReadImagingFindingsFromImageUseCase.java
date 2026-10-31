@@ -5,8 +5,11 @@ import com.vetos.modules.ai.domain.ImagingFindingsOcrDraft;
 import com.vetos.modules.ai.domain.ImagingFindingsOcrInput;
 import com.vetos.modules.ai.domain.ImagingFindingsOcrPort;
 import com.vetos.modules.ai.domain.OcrImageInput;
+import com.vetos.modules.ai.domain.OcrImageFormatDetector;
+import com.vetos.modules.ai.domain.OcrImageNormalizer;
 import com.vetos.modules.ai.domain.exception.NoFileSelectedForOcrException;
 import com.vetos.modules.ai.domain.exception.UnsupportedOcrFileTypeException;
+import com.vetos.modules.ai.domain.exception.UnsupportedOcrImageFormatException;
 import com.vetos.modules.imaging.domain.ImagingRecordFileForOcr;
 import com.vetos.modules.imaging.domain.ImagingRecordFileLookupPort;
 import com.vetos.platform.quota.UsageKind;
@@ -14,6 +17,7 @@ import com.vetos.platform.quota.UsageQuotaPort;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -61,9 +65,19 @@ public class ReadImagingFindingsFromImageUseCase {
                 throw new UnsupportedOcrFileTypeException(file.id());
             }
         }
-        List<OcrImageInput> images = files.stream()
-            .map(f -> new OcrImageInput(f.contentType(), f.content()))
-            .toList();
+        // REVIZE (2026-10-31): bkz. ReadLabResultFromImageUseCase'deki ayni revizyon notu -- GERCEK bayt
+        // formati kontrol edilir, declare edilen contentType'a guvenilmez.
+        List<OcrImageInput> images = new ArrayList<>();
+        for (ImagingRecordFileForOcr file : files) {
+            OcrImageFormatDetector.Format format = OcrImageFormatDetector.detect(file.content());
+            if (!OcrImageFormatDetector.isSupportedByVisionApis(format)) {
+                throw new UnsupportedOcrImageFormatException(file.id(), format == OcrImageFormatDetector.Format.HEIC);
+            }
+            // REVIZE (2026-10-31): bkz. ReadLabResultFromImageUseCase'deki ayni revizyon notu -- EXIF
+            // Orientation duzeltmesi piksel duzeyinde burada uygulanir.
+            byte[] normalized = OcrImageNormalizer.normalize(format, file.content());
+            images.add(new OcrImageInput(OcrImageFormatDetector.mediaTypeFor(format), normalized));
+        }
 
         ImagingFindingsOcrDraft draft = aiCallGate.run(command.tenantId(), () -> {
             usageQuotaPort.reserve(command.tenantId(), UsageKind.AI, 1);
