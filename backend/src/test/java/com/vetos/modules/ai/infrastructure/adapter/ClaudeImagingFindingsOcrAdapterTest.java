@@ -105,6 +105,19 @@ class ClaudeImagingFindingsOcrAdapterTest {
     }
 
     @Test
+    void generateViaClaude_parsesFindings_whenWrappedInMarkdownCodeFence() {
+        // Canli bulgu (2026-10-31): bkz. ClaudeLabResultOcrAdapterTest'teki ayni senaryo --
+        // Claude yaniti bazen ```json ... ``` kod blogu icine sariyor.
+        stubResponseBody = "{\"content\": [{\"type\": \"text\", \"text\": \"```json\\n{\\\"findings\\\":\\\"Sol akciger alt lobda hafif infiltrasyon.\\\"}\\n```\"}]}";
+        ImagingFindingsOcrPort adapter = adapter("test-api-key");
+
+        ImagingFindingsOcrDraft draft = adapter.generate(anInput("fake-image-bytes".getBytes()));
+
+        assertThat(draft.modelConnected()).isTrue();
+        assertThat(draft.findings()).isEqualTo("Sol akciger alt lobda hafif infiltrasyon.");
+    }
+
+    @Test
     void generateViaClaude_invalidJson_fallsBackGracefully() {
         stubResponseBody = "{\"content\":[{\"type\":\"text\",\"text\":\"bu bir JSON degil\"}]}";
         ImagingFindingsOcrPort adapter = adapter("test-api-key");

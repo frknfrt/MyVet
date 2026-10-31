@@ -108,6 +108,22 @@ class ClaudeLabResultOcrAdapterTest {
     }
 
     @Test
+    void generateViaClaude_parsesItems_whenWrappedInMarkdownCodeFence() {
+        // Canli bulgu (2026-10-31): "sadece JSON don" talimatina ragmen Claude yaniti bazen
+        // ```json ... ``` kod blogu icine sariyor; eskiden bu "`" karakterinde JSON parse hatasi
+        // verip "model baglanamadi" diye yanlis yorumlaniyordu (bkz. ClaudeVisionCompletion).
+        stubResponseBody = "{\"content\": [{\"type\": \"text\", \"text\": \"```json\\n{\\\"items\\\":[{\\\"parameterName\\\":\\\"WBC\\\",\\\"value\\\":\\\"12.3\\\",\\\"unit\\\":\\\"\\\",\\\"referenceRange\\\":\\\"\\\"}]}\\n```\"}]}";
+        LabResultOcrPort adapter = adapter("test-api-key");
+
+        LabResultOcrDraft draft = adapter.generate(anInput("fake-image-bytes".getBytes()));
+
+        assertThat(draft.modelConnected()).isTrue();
+        assertThat(draft.items()).hasSize(1);
+        assertThat(draft.items().get(0).parameterName()).isEqualTo("WBC");
+        assertThat(draft.items().get(0).value()).isEqualTo("12.3");
+    }
+
+    @Test
     void generateViaClaude_invalidJson_fallsBackGracefully() {
         stubResponseBody = "{\"content\":[{\"type\":\"text\",\"text\":\"bu bir JSON degil\"}]}";
         LabResultOcrPort adapter = adapter("test-api-key");

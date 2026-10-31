@@ -25,6 +25,13 @@ import java.util.Map;
  * destekler. Yanit JSON semasi Ollama'daki "format":"json" karsiligi Claude'da yok, bu yuzden
  * sistem talimatinda istenir; donen ilk metin blogu dogrudan JSON olarak ayristirilir (Ollama'daki
  * gibi CIFT JSON parse GEREKMEZ -- Claude govdesi zaten tek seviye: content[].text).
+ *
+ * BULGU (2026-10-31, canli loglarindan): "Sadece JSON don, markdown ekleme" talimatina ragmen
+ * Claude bazen yaniti ```json ... ``` seklinde bir markdown kod blogu icine SARIYOR. Bu durumda
+ * ham metin "`" ile basliyor ve objectMapper.readTree bunu JSON olarak ayristiramayip hata
+ * firlatiyor -- adaptor bunu "model baglanamadi" diye yorumlup kullaniciya yanlis bir mesaj
+ * gosteriyordu (gercek sebep: gecerli JSON var ama kod blogu ile sarilmis). stripMarkdownFence
+ * bu sarmalayiciyi JSON ayristirmadan ONCE temizler.
  */
 final class ClaudeVisionCompletion {
 
@@ -64,7 +71,7 @@ final class ClaudeVisionCompletion {
             .body(String.class);
 
         JsonNode root = objectMapper.readTree(raw);
-        return objectMapper.readTree(extractText(root));
+        return objectMapper.readTree(stripMarkdownFence(extractText(root)));
     }
 
     /** content[0] her zaman metin degil: extended thinking acikken once "thinking" blogu gelir. */
@@ -75,5 +82,25 @@ final class ClaudeVisionCompletion {
             }
         }
         return "";
+    }
+
+    /**
+     * Claude'un yaniti "```json\n{...}\n```" (veya dil etiketsiz "```\n{...}\n```") seklinde bir
+     * markdown kod blogu icine sarmis olabilecegi durumu ele alir -- sarilmamissa metni oldugu gibi
+     * (sadece trim edilmis) doner, bu yuzden normal (sarilmamis) yanitlar icin DAVRANIS DEGISMEZ.
+     */
+    private static String stripMarkdownFence(String text) {
+        String trimmed = text.trim();
+        if (!trimmed.startsWith("```")) {
+            return trimmed;
+        }
+        int firstNewline = trimmed.indexOf('\n');
+        int contentStart = firstNewline >= 0 ? firstNewline + 1 : trimmed.length();
+        int closingFence = trimmed.lastIndexOf("```");
+        if (closingFence > contentStart) {
+            return trimmed.substring(contentStart, closingFence).trim();
+        }
+        // Kapanis ``` bulunamadi (yanit kesilmis olabilir) -- en azindan acilis satirini at.
+        return trimmed.substring(contentStart).trim();
     }
 }
