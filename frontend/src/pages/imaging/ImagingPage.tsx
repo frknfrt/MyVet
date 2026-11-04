@@ -142,9 +142,9 @@ export function ImagingPage() {
           <input type="date" className={styles.filterInput} value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
         </div>
         <div className={styles.filterField}>
-          <label className={styles.filterLabel}>Müşteriye göre</label>
+          <label className={styles.filterLabel}>Hasta sahibine göre</label>
           <select className={styles.filterInput} value={ownerFilter} onChange={(e) => setOwnerFilter(e.target.value)}>
-            <option value="">Tüm müşteriler</option>
+            <option value="">Tüm hasta sahipleri</option>
             {ownerOptions.map(([id, name]) => (
               <option key={id} value={id}>
                 {name}

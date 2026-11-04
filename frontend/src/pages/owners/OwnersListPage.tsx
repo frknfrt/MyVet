@@ -39,11 +39,11 @@ export function OwnersListPage() {
       <div className={styles.topbar}>
         <div>
           <h1 className={styles.title}>Hastalar &amp; Sahipler</h1>
-          <div className={styles.sub}>Kayıtlı müşteriler (sahipler)</div>
+          <div className={styles.sub}>Kayıtlı hasta sahipleri</div>
         </div>
         {canWrite && (
           <Button variant="primary" onClick={() => navigate('/musteriler/yeni')}>
-            Yeni Müşteri
+            Yeni Hasta Sahibi
           </Button>
         )}
       </div>

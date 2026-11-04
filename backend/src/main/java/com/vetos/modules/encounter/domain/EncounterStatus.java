@@ -1,3 +1,4 @@
 package com.vetos.modules.encounter.domain;
 
-public enum EncounterStatus { DRAFT, FINALIZED, AMENDED }
+/** CANCELLED: taslakken iptal edilen muayene. Silinmez, denetim icin saklanir; hasta gecmisinde gosterilmez. */
+public enum EncounterStatus { DRAFT, FINALIZED, AMENDED, CANCELLED }

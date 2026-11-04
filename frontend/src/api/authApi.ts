@@ -30,6 +30,10 @@ export interface ChangePasswordPayload {
 
 export const authApi = {
   login: (payload: LoginPayload) => apiClient.post<AuthSession>('/api/v1/auth/login', payload),
+  /** E-posta kayıtlı olmasa da başarılı döner (kayıtlı adresler dışarıdan öğrenilemesin). */
+  requestPasswordReset: (email: string) => apiClient.post<void>('/api/v1/auth/password-reset/request', { email }),
+  confirmPasswordReset: (token: string, newPassword: string) =>
+    apiClient.post<void>('/api/v1/auth/password-reset/confirm', { token, newPassword }),
   getCurrentBranch: () => apiClient.get<BranchOverview>('/api/v1/branches/current'),
   updateCurrentBranch: (payload: UpdateBranchDetailsPayload) =>
     apiClient.put<void>('/api/v1/branches/current', payload),

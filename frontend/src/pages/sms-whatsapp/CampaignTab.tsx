@@ -23,8 +23,8 @@ import campaignStyles from './CampaignTab.module.css';
 type Source = 'custom' | 'owners' | 'vaccinations' | 'appointments' | 'debtors';
 
 const VARIABLE_CHIPS: { token: string; label: string }[] = [
-  { token: 'musteri_adi', label: 'Müşteri adı' },
-  { token: 'musteri_bakiye', label: 'Müşteri bakiye' },
+  { token: 'musteri_adi', label: 'Hasta sahibi adı' },
+  { token: 'musteri_bakiye', label: 'Hasta sahibi bakiyesi' },
   { token: 'firma_adi', label: 'Firma adı' },
   { token: 'firma_adres', label: 'Firma adresi' },
 ];
@@ -235,10 +235,10 @@ export function CampaignTab() {
               setSendResult(null);
             }}
           >
-            {s === 'owners' && 'Müşteriler'}
+            {s === 'owners' && 'Hasta Sahipleri'}
             {s === 'vaccinations' && 'Aşı Takvimi'}
             {s === 'appointments' && 'Randevular'}
-            {s === 'debtors' && 'Borçlu Müşteriler'}
+            {s === 'debtors' && 'Borçlu Hasta Sahipleri'}
             {s === 'custom' && 'Özel Numaralar'}
           </div>
         ))}
@@ -248,7 +248,7 @@ export function CampaignTab() {
         <div className={campaignStyles.filterPanel}>
           {source === 'owners' && (
             <>
-              <FieldWrap label="Müşteri adı">
+              <FieldWrap label="Hasta sahibi adı">
                 <Input value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="İçinde geçiyorsa" />
               </FieldWrap>
               <FieldWrap label="Kayıt tarihi (başlangıç)">
@@ -279,7 +279,7 @@ export function CampaignTab() {
               </FieldWrap>
             </>
           )}
-          {source === 'debtors' && <div className={styles.muted}>Açık bakiyesi olan tüm müşteriler listelenecek.</div>}
+          {source === 'debtors' && <div className={styles.muted}>Açık bakiyesi olan tüm hasta sahipleri listelenecek.</div>}
           {source === 'custom' && (
             <FieldWrap label="Numaralar (bir satıra bir tane, opsiyonel: İsim,Numara)">
               <Textarea rows={6} value={customNumbers} onChange={(e) => setCustomNumbers(e.target.value)} placeholder={'Ahmet Yılmaz,05551234567\n05559876543'} />

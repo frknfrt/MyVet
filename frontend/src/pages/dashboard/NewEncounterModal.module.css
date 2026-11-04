@@ -1,0 +1,105 @@
+.title {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+.sub {
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+  margin-bottom: 16px;
+}
+.errorBanner {
+  background: var(--color-danger-100);
+  color: var(--color-danger-700);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+.results {
+  margin-top: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.resultRow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-paper);
+  cursor: pointer;
+  font: inherit;
+}
+.resultRow:hover:not(:disabled) {
+  border-color: var(--color-brand-500);
+}
+.resultRow:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.patientName {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--color-text-ink);
+}
+.patientMeta {
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+}
+.hint {
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+  padding: 8px 2px;
+}
+.selectedBox {
+  border: 1.5px solid var(--color-brand-400);
+  border-radius: var(--radius-md);
+  padding: 12px;
+}
+.selectedRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.changeBtn,
+.linkBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-brand-500);
+  cursor: pointer;
+}
+.draftNote {
+  margin-top: 10px;
+  background: var(--color-warning-100);
+  color: var(--color-warning-700);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 12.5px;
+}
+.footer {
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.footerActions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}

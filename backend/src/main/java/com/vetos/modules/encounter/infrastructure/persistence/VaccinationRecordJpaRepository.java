@@ -16,6 +16,7 @@ interface VaccinationRecordJpaRepository extends JpaRepository<VaccinationRecord
         UUID patientId, VaccinationStatus status, LocalDate from, LocalDate to, Pageable page);
     List<VaccinationRecord> findByTenantId(UUID tenantId);
     List<VaccinationRecord> findBySeriesId(UUID seriesId);
+    boolean existsByEncounterId(UUID encounterId);
 
     /** Gunluk asi hatirlatma isi icin -- bkz. VaccinationLookupAdapter. */
     List<VaccinationRecord> findByTenantIdAndNextDueDateAndStatusNot(UUID tenantId, LocalDate nextDueDate, VaccinationStatus excludedStatus);

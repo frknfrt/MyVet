@@ -8,6 +8,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { isoDate } from '../appointments/weekUtils';
 import { QuickSaleModal } from '../finance/QuickSaleModal';
 import { BusinessSummaryView } from './BusinessSummaryView';
+import { NewEncounterModal } from './NewEncounterModal';
 import { QuickAddMenu } from './QuickAddMenu';
 import { WorklistRow } from './WorklistRow';
 import styles from './DashboardPage.module.css';
@@ -38,13 +39,15 @@ export function DashboardPage() {
   const { session } = useAuth();
   const navigate = useNavigate();
   const role = session?.role;
-  const [viewMode, setViewMode] = useState<ViewMode>(role === 'ADMIN' ? 'summary' : 'operational');
+  // Panel herkes icin hasta kuyruguyla acilir; isletme ozeti istege bagli sekmedir.
+  const [viewMode, setViewMode] = useState<ViewMode>('operational');
   const [activeTab, setActiveTab] = useState<Tab>(role === 'TECHNICIAN' ? 'CHECKED_IN' : 'all');
   const [onlyMine, setOnlyMine] = useState(role === 'VET');
   const [query, setQuery] = useState('');
   const [appointments, setAppointments] = useState<AppointmentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [quickSaleOpen, setQuickSaleOpen] = useState(false);
+  const [newEncounterOpen, setNewEncounterOpen] = useState(false);
   const [todaySales, setTodaySales] = useState<TodaySalesSummary | null>(null);
 
   const todayIso = isoDate(new Date());
@@ -123,7 +126,11 @@ export function DashboardPage() {
             <Button variant={onlyMine ? 'primary' : 'secondary'} onClick={() => setOnlyMine((v) => !v)}>
               Bana atanan
             </Button>
-            <QuickAddMenu role={role} onQuickSale={() => setQuickSaleOpen(true)} />
+            <QuickAddMenu
+              role={role}
+              onQuickSale={() => setQuickSaleOpen(true)}
+              onNewEncounter={() => setNewEncounterOpen(true)}
+            />
           </div>
         )}
       </div>
@@ -203,6 +210,7 @@ export function DashboardPage() {
           load();
         }}
       />
+      <NewEncounterModal open={newEncounterOpen} onClose={() => setNewEncounterOpen(false)} />
     </AppShell>
   );
 }

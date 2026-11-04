@@ -2,6 +2,7 @@ package com.vetos.modules.encounter.infrastructure.persistence;
 
 import com.vetos.modules.encounter.domain.Encounter;
 import com.vetos.modules.encounter.domain.EncounterRepository;
+import com.vetos.modules.encounter.domain.EncounterStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -25,5 +26,5 @@ class EncounterRepositoryAdapter implements EncounterRepository {
     public List<Encounter> findByPatientId(UUID patientId) { return jpaRepository.findByPatientId(patientId); }
 
     @Override
-    public Optional<Encounter> findByAppointmentId(UUID appointmentId) { return jpaRepository.findByAppointmentId(appointmentId); }
+    public Optional<Encounter> findByAppointmentId(UUID appointmentId) { return jpaRepository.findFirstByAppointmentIdAndStatusNotOrderByEncounterDateDesc(appointmentId, EncounterStatus.CANCELLED); }
 }

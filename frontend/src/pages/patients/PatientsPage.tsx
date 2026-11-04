@@ -70,7 +70,7 @@ export function PatientsPage() {
         {canWrite && (
           <div className={styles.actions}>
             <Button variant="secondary" onClick={() => navigate('/musteriler/yeni')}>
-              Yeni Müşteri
+              Yeni Hasta Sahibi
             </Button>
             <Button variant="primary" onClick={() => navigate('/hastalar/yeni')}>
               Yeni Hasta
@@ -100,9 +100,9 @@ export function PatientsPage() {
           />
         </div>
         <div className={styles.filterField}>
-          <label className={styles.filterLabel}>Müşteriye göre</label>
+          <label className={styles.filterLabel}>Hasta sahibine göre</label>
           <select className={styles.filterInput} value={ownerFilter} onChange={(e) => setOwnerFilter(e.target.value)}>
-            <option value="">Müşteri Seçiniz</option>
+            <option value="">Hasta Sahibi Seçiniz</option>
             {ownerOptions.map(([id, name]) => (
               <option key={id} value={id}>
                 {name}

@@ -2,6 +2,8 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { RequireAuth } from './auth/RequireAuth';
 import { LoginPage } from './pages/LoginPage';
 import { AcceptInvitePage } from './pages/auth/AcceptInvitePage';
+import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
+import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { PatientsPage } from './pages/patients/PatientsPage';
 import { PatientDetailPage } from './pages/patients/PatientDetailPage';
@@ -29,6 +31,8 @@ export function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/davet/:token" element={<AcceptInvitePage />} />
+      <Route path="/sifremi-unuttum" element={<ForgotPasswordPage />} />
+      <Route path="/sifre-sifirla/:token" element={<ResetPasswordPage />} />
       <Route
         path="/panel"
         element={

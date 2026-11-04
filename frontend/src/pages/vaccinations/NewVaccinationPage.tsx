@@ -231,7 +231,7 @@ export function NewVaccinationPage() {
           {successMsg && <div className={styles.successBanner}>{successMsg}</div>}
 
           <div className={styles.row2}>
-            <FieldWrap label="Müşteri*">
+            <FieldWrap label="Hasta Sahibi*">
               {ownerId ? (
                 <div className={styles.selectedChip}>
                   <span>{ownerLabel}</span>
@@ -251,7 +251,7 @@ export function NewVaccinationPage() {
               ) : (
                 <div className={styles.ownerPicker}>
                   <Input
-                    placeholder="Müşteri seçiniz"
+                    placeholder="Hasta sahibi seçiniz"
                     value={ownerQuery}
                     onFocus={() => setOwnerSearchOpen(true)}
                     onBlur={() => setTimeout(() => setOwnerSearchOpen(false), 150)}
@@ -281,7 +281,7 @@ export function NewVaccinationPage() {
                 disabled={!ownerId || ownerPatients.length === 0}
                 required
               >
-                <option value="">{ownerId ? 'Hasta seçiniz' : 'Önce müşteri seçiniz'}</option>
+                <option value="">{ownerId ? 'Hasta seçiniz' : 'Önce hasta sahibi seçiniz'}</option>
                 {ownerPatients.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}

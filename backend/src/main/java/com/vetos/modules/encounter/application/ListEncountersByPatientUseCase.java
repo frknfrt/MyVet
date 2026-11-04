@@ -2,6 +2,7 @@ package com.vetos.modules.encounter.application;
 
 import com.vetos.modules.encounter.application.dto.EncounterDetail;
 import com.vetos.modules.encounter.domain.EncounterRepository;
+import com.vetos.modules.encounter.domain.EncounterStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,7 @@ public class ListEncountersByPatientUseCase {
     @Transactional(readOnly = true)
     public List<EncounterDetail> execute(UUID patientId) {
         return encounterRepository.findByPatientId(patientId).stream()
+            .filter(e -> e.getStatus() != EncounterStatus.CANCELLED)
             .map(getEncounterUseCase::toDetail)
             .sorted(Comparator.comparing(EncounterDetail::encounterDate).reversed())
             .toList();

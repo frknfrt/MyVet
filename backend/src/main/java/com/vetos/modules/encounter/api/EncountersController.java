@@ -38,6 +38,7 @@ public class EncountersController {
     private final RecordVitalsUseCase recordVitalsUseCase;
     private final UpdatePhysicalExamUseCase updatePhysicalExamUseCase;
     private final FinalizeEncounterUseCase finalizeEncounterUseCase;
+    private final CancelEncounterUseCase cancelEncounterUseCase;
     private final GetEncounterUseCase getEncounterUseCase;
     private final ListEncountersByPatientUseCase listEncountersByPatientUseCase;
     private final FindEncounterByAppointmentUseCase findEncounterByAppointmentUseCase;
@@ -104,6 +105,12 @@ public class EncountersController {
     @PreAuthorize("hasAnyRole('VET', 'ADMIN')")
     public void finalizeEncounter(@PathVariable UUID id) {
         finalizeEncounterUseCase.execute(id);
+    }
+
+    @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasAnyRole('VET', 'ADMIN')")
+    public void cancelEncounter(@PathVariable UUID id) {
+        cancelEncounterUseCase.execute(id);
     }
 
     @PostMapping("/{id}/materials")

@@ -39,6 +39,9 @@ public class QueueEncounterDeductionUseCase {
         if (encounter.status() == EncounterStatus.DRAFT) {
             throw new TarbilNothingToDeductConflictException("Muayene tamamlanmadı");
         }
+        if (encounter.status() == EncounterStatus.CANCELLED) {
+            throw new TarbilNothingToDeductConflictException("Muayene iptal edildi");
+        }
         boolean anyPending = stockDeductionPort.listForReference(StockReferenceType.ENCOUNTER, encounterId).stream()
             .anyMatch(l -> l.status() == PendingDeductionStatus.PENDING);
         if (!anyPending) {

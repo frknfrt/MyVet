@@ -39,9 +39,23 @@ const ICON_SALE = (
   </svg>
 );
 
+const ICON_ENCOUNTER = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 3v6a4 4 0 0 0 8 0V3" />
+    <path d="M10 13v3a5 5 0 0 0 10 0v-2" />
+    <circle cx="20" cy="12" r="2" />
+  </svg>
+);
+
 interface QuickAddMenuProps {
   role: string | undefined;
   onQuickSale: () => void;
+  onNewEncounter: () => void;
+}
+
+/** POST /encounters sadece VET ve ADMIN'e açık (EncountersController.start). */
+function canStartEncounter(role: string | undefined): boolean {
+  return role === 'ADMIN' || role === 'VET';
 }
 
 /**
@@ -58,7 +72,7 @@ function canQuickSale(role: string | undefined): boolean {
  * Tasarım sistemi kuralı korunuyor: sayfada tek bir primary buton.
  * Kolayvet'teki 5-6 ayrı "Hızlı X" butonu yerine, tek buton + açılır menü.
  */
-export function QuickAddMenu({ role, onQuickSale }: QuickAddMenuProps) {
+export function QuickAddMenu({ role, onQuickSale, onNewEncounter }: QuickAddMenuProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -72,8 +86,9 @@ export function QuickAddMenu({ role, onQuickSale }: QuickAddMenuProps) {
   }, []);
 
   const options: QuickAddOption[] = [
+    ...(canStartEncounter(role) ? [{ label: 'Yeni muayene', icon: ICON_ENCOUNTER, onSelect: onNewEncounter }] : []),
     { label: 'Yeni randevu', icon: ICON_APPT, onSelect: () => navigate('/randevu') },
-    { label: 'Yeni hasta', icon: ICON_PATIENT, onSelect: () => navigate('/hastalar') },
+    { label: 'Yeni hasta', icon: ICON_PATIENT, onSelect: () => navigate('/hastalar/yeni') },
     ...(canQuickSale(role) ? [{ label: 'Yeni satış', icon: ICON_SALE, onSelect: onQuickSale }] : []),
   ];
 

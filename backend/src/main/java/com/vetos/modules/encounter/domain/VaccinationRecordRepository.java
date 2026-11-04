@@ -11,4 +11,5 @@ public interface VaccinationRecordRepository {
     List<VaccinationRecord> findByPatientId(UUID patientId);
     List<VaccinationRecord> findByTenantId(UUID tenantId);
     List<VaccinationRecord> findBySeriesId(UUID seriesId);
+    boolean existsByEncounterId(UUID encounterId);
 }

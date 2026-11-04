@@ -138,7 +138,7 @@ export function OwnerEditModal({ open, profile, onClose, onSaved }: OwnerEditMod
   return (
     <Modal open={open} onClose={onClose} width={620} dirty={dirty}>
       <form onSubmit={handleSubmit}>
-        <h2 className={styles.title}>{profile.fullName} — Müşteri bilgilerini düzenle</h2>
+        <h2 className={styles.title}>{profile.fullName} — Hasta sahibi bilgilerini düzenle</h2>
 
         {error && <div className={styles.errorBanner}>{error}</div>}
 
@@ -202,7 +202,7 @@ export function OwnerEditModal({ open, profile, onClose, onSaved }: OwnerEditMod
           <FieldWrap label="Referans kaynağı">
             <Input value={referralSource} onChange={(e) => setReferralSource(e.target.value)} placeholder="Örn. Tavsiye, Instagram" />
           </FieldWrap>
-          <FieldWrap label="Müşteri indirimi (%)">
+          <FieldWrap label="İndirim (%)">
             <Input type="number" min={0} max={100} value={clientDiscount} onChange={(e) => setClientDiscount(e.target.value)} />
           </FieldWrap>
         </div>

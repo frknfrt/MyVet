@@ -2,7 +2,7 @@ import { apiClient, ApiError } from './client';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
 
-export type EncounterStatus = 'DRAFT' | 'FINALIZED' | 'AMENDED';
+export type EncounterStatus = 'DRAFT' | 'FINALIZED' | 'AMENDED' | 'CANCELLED';
 
 export type ExamBodySystem =
   | 'GENERAL_APPEARANCE'
@@ -91,6 +91,8 @@ export const encounterApi = {
   updatePhysicalExam: (id: string, findings: PhysicalExamFinding[]) =>
     apiClient.put<void>(`/api/v1/encounters/${id}/physical-exam`, { findings }),
   finalize: (id: string) => apiClient.post<void>(`/api/v1/encounters/${id}/finalize`),
+  /** Yalnız taslak; kayıt silinmez, "İptal edildi" olarak saklanır. */
+  cancel: (id: string) => apiClient.post<void>(`/api/v1/encounters/${id}/cancel`),
   addMaterial: (id: string, payload: { inventoryItemId: string; quantity: number }) =>
     apiClient.post<void>(`/api/v1/encounters/${id}/materials`, payload),
   listMaterials: (id: string) => apiClient.get<InventoryUsage[]>(`/api/v1/encounters/${id}/materials`),

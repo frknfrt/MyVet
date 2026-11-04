@@ -5,6 +5,7 @@ const CONFIG: Record<EncounterStatus, { label: string; tone: BadgeTone }> = {
   DRAFT: { label: 'Taslak', tone: 'neutral' },
   FINALIZED: { label: 'Tamamlandı', tone: 'success' },
   AMENDED: { label: 'Düzeltildi', tone: 'warning' },
+  CANCELLED: { label: 'İptal edildi', tone: 'danger' },
 };
 
 export function EncounterStatusBadge({ status }: { status: EncounterStatus }) {

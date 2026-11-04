@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { aiApi, DiagnosisSuggestion, TreatmentRecommendation } from '../../api/aiApi';
 import { useFeatures } from '../../auth/FeatureContext';
@@ -12,24 +12,47 @@ import { Button } from '../../components/ui/Button';
 import { FieldWrap, Input, Textarea } from '../../components/ui/Field';
 import { MaterialsUsedCard } from './MaterialsUsedCard';
 import { PatientHeaderBar } from './PatientHeaderBar';
-import { PhysicalExamCard } from './PhysicalExamCard';
+import { FindingsBySystem, PhysicalExamCard, toFindingsBySystem, toFindingsPayload } from './PhysicalExamCard';
 import { PrescriptionCard } from './PrescriptionCard';
 import { TarbilDeductionCard } from './TarbilDeductionCard';
+import { Autosave, useAutosave } from './useAutosave';
 import styles from './EncounterPage.module.css';
 
 type VitalsForm = { weightKg: string; temperatureC: string; heartRate: string; respiratoryRate: string };
 type SoapForm = { subjective: string; objective: string; assessment: string; plan: string };
 
+function toVitalsPayload(v: VitalsForm) {
+  return {
+    weightKg: v.weightKg ? Number(v.weightKg) : null,
+    temperatureC: v.temperatureC ? Number(v.temperatureC) : null,
+    heartRate: v.heartRate ? Number(v.heartRate) : null,
+    respiratoryRate: v.respiratoryRate ? Number(v.respiratoryRate) : null,
+  };
+}
+
+/** Alt çubuktaki kayıt durumu: bölümlerin (SOAP, vital, fizik muayene) birleşik hali. */
+function saveStatusOf(parts: Autosave[]): { text: string; error: boolean } {
+  if (parts.some((p) => p.status === 'error')) return { text: 'Kaydedilemedi — tekrar deneniyor', error: true };
+  if (parts.some((p) => p.status === 'pending' || p.status === 'saving')) return { text: 'Kaydediliyor…', error: false };
+  const times = parts.map((p) => p.lastSavedAt?.getTime() ?? 0);
+  const last = Math.max(...times);
+  if (last > 0) {
+    const hhmm = new Date(last).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+    return { text: `✓ Kaydedildi · ${hhmm}`, error: false };
+  }
+  return { text: 'Yazdıklarınız otomatik kaydedilir', error: false };
+}
+
 // AI SOAP taslağı önizlemesinde gösterilen alanlar (SOAP Notu kartıyla aynı başlıklar).
 const DRAFT_SECTIONS: { key: 'subjective' | 'objective' | 'assessment' | 'plan'; label: string }[] = [
-  { key: 'subjective', label: 'Subjective (S)' },
-  { key: 'objective', label: 'Objective (O)' },
-  { key: 'assessment', label: 'Assessment (A)' },
-  { key: 'plan', label: 'Plan (P)' },
+  { key: 'subjective', label: 'Şikâyet / Anamnez (S)' },
+  { key: 'objective', label: 'Muayene Bulguları (O)' },
+  { key: 'assessment', label: 'Ön Tanı (A)' },
+  { key: 'plan', label: 'Tedavi Planı (P)' },
 ];
 
-const UNSAVED_SOAP_MESSAGE =
-  "SOAP Notu'nda kaydedilmemiş değişiklik var. AI önerisi kayıtlı nota göre hazırlanır — önce \"SOAP Kaydet\"e basın, sonra tekrar deneyin.";
+const SOAP_NOT_SAVED_MESSAGE =
+  'Not henüz kaydedilemedi (bağlantıyı kontrol edin). AI önerisi kayıtlı nota göre hazırlanır; kayıt tamamlanınca tekrar deneyin.';
 
 function errorMessageOf(err: unknown): string {
   return err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Beklenmeyen bir hata oluştu';
@@ -51,10 +74,10 @@ export function EncounterPage() {
   const [profile, setProfile] = useState<PatientProfile | null>(null);
   const [soap, setSoap] = useState<SoapForm>({ subjective: '', objective: '', assessment: '', plan: '' });
   const [vitals, setVitals] = useState<VitalsForm>({ weightKg: '', temperatureC: '', heartRate: '', respiratoryRate: '' });
-  const [savingSoap, setSavingSoap] = useState(false);
-  const [savingVitals, setSavingVitals] = useState(false);
+  const [findings, setFindings] = useState<FindingsBySystem>(() => toFindingsBySystem([]));
   const [finalizing, setFinalizing] = useState(false);
-  const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const [transcript, setTranscript] = useState('');
   const [recording, setRecording] = useState(false);
@@ -74,9 +97,38 @@ export function EncounterPage() {
   const [diagnosis, setDiagnosis] = useState<DiagnosisSuggestion | null>(null);
   const [diagnosisDecided, setDiagnosisDecided] = useState(false);
   const [decidingDiagnosis, setDecidingDiagnosis] = useState(false);
-  // Sunucudaki son kayıtlı SOAP; AI önerileri bunu kullanır, formdaki kaydedilmemiş metni değil.
-  const [savedSoap, setSavedSoap] = useState({ subjective: '', objective: '', assessment: '', plan: '' });
   const recognitionRef = useRef<any>(null);
+
+  const isReadOnly =
+    encounter?.status === 'FINALIZED' ||
+    encounter?.status === 'AMENDED' ||
+    encounter?.status === 'CANCELLED' ||
+    session?.role === 'TECHNICIAN';
+  const canEdit = encounter !== null && !isReadOnly;
+
+  // Otomatik kayıt: SOAP ve vital yazmaya 1,5 sn ara verince, fizik muayene seçimi hemen kaydedilir.
+  const soapPayload = useMemo(() => ({ ...soap, aiGenerated: soapAiGenerated }), [soap, soapAiGenerated]);
+  const vitalsPayload = useMemo(() => toVitalsPayload(vitals), [vitals]);
+  const examPayload = useMemo(() => toFindingsPayload(findings), [findings]);
+  const soapSave = useAutosave(soapPayload, (v) => encounterApi.updateSoap(encounterId!, v), {
+    delayMs: 1500,
+    enabled: canEdit,
+  });
+  const vitalsSave = useAutosave(vitalsPayload, (v) => encounterApi.updateVitals(encounterId!, v), {
+    delayMs: 1500,
+    enabled: canEdit,
+  });
+  const examSave = useAutosave(examPayload, (v) => encounterApi.updatePhysicalExam(encounterId!, v), {
+    delayMs: 400,
+    enabled: canEdit,
+  });
+  const autosaves = [soapSave, vitalsSave, examSave];
+  const anyDirty = autosaves.some((a) => a.dirty);
+  const saveStatus = saveStatusOf(autosaves);
+
+  async function flushAll() {
+    await Promise.all(autosaves.map((a) => a.flush()));
+  }
 
   useEffect(() => {
     if (!encounterId) return;
@@ -88,32 +140,42 @@ export function EncounterPage() {
         assessment: e.assessment ?? '',
         plan: e.plan ?? '',
       };
-      setSoap(loaded);
-      setSavedSoap(loaded);
-      setVitals({
+      const loadedVitals = {
         weightKg: e.weightKg?.toString() ?? '',
         temperatureC: e.temperatureC?.toString() ?? '',
         heartRate: e.heartRate?.toString() ?? '',
         respiratoryRate: e.respiratoryRate?.toString() ?? '',
-      });
+      };
+      const loadedFindings = toFindingsBySystem(e.physicalExamFindings);
+      setSoap(loaded);
+      setVitals(loadedVitals);
+      setFindings(loadedFindings);
       setSoapAiGenerated(e.aiGenerated);
+      // Yüklenen değerler "kayıtlı" sayılır; yalnız sonradan yapılan değişiklikler gönderilir.
+      soapSave.markSaved({ ...loaded, aiGenerated: e.aiGenerated });
+      vitalsSave.markSaved(toVitalsPayload(loadedVitals));
+      examSave.markSaved(toFindingsPayload(loadedFindings));
       patientApi.getProfile(e.patientId).then(setProfile);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [encounterId]);
+
+  // Kaydedilmemiş değişiklik varken sekme kapatılırsa tarayıcı uyarsın.
+  useEffect(() => {
+    if (!anyDirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [anyDirty]);
 
   useEffect(() => {
     return () => {
       recognitionRef.current?.stop?.();
     };
   }, []);
-
-  const isReadOnly =
-    encounter?.status === 'FINALIZED' || encounter?.status === 'AMENDED' || session?.role === 'TECHNICIAN';
-
-  function flashSaved(message: string) {
-    setSavedMessage(message);
-    setTimeout(() => setSavedMessage(null), 2000);
-  }
 
   function toggleRecording() {
     if (recording) {
@@ -171,8 +233,10 @@ export function EncounterPage() {
 
   async function handleGenerateRecommendation() {
     if (generatingRecommendation || !soap.assessment.trim() || !encounterId) return;
-    if (soapHasUnsavedChanges()) {
-      setRecommendationError(UNSAVED_SOAP_MESSAGE);
+    try {
+      await soapSave.flush();
+    } catch {
+      setRecommendationError(SOAP_NOT_SAVED_MESSAGE);
       return;
     }
     setGeneratingRecommendation(true);
@@ -220,8 +284,10 @@ export function EncounterPage() {
   async function handleGenerateDiagnosis() {
     const hasFindings = soap.subjective.trim() || soap.objective.trim();
     if (generatingDiagnosis || !hasFindings || !encounterId) return;
-    if (soapHasUnsavedChanges()) {
-      setDiagnosisError(UNSAVED_SOAP_MESSAGE);
+    try {
+      await flushAll();
+    } catch {
+      setDiagnosisError(SOAP_NOT_SAVED_MESSAGE);
       return;
     }
     setGeneratingDiagnosis(true);
@@ -266,58 +332,46 @@ export function EncounterPage() {
     }
   }
 
-  async function handleSaveSoap() {
-    if (!encounterId) return;
-    setSavingSoap(true);
-    try {
-      await encounterApi.updateSoap(encounterId, { ...soap, aiGenerated: soapAiGenerated });
-      setSavedSoap(soap);
-      setDiagnosisError((e) => (e === UNSAVED_SOAP_MESSAGE ? null : e));
-      setRecommendationError((e) => (e === UNSAVED_SOAP_MESSAGE ? null : e));
-      flashSaved('SOAP kaydedildi');
-    } finally {
-      setSavingSoap(false);
-    }
-  }
-
-  function soapHasUnsavedChanges() {
-    return (
-      soap.subjective !== savedSoap.subjective ||
-      soap.objective !== savedSoap.objective ||
-      soap.assessment !== savedSoap.assessment ||
-      soap.plan !== savedSoap.plan
-    );
-  }
-
-  async function handleSaveVitals() {
-    if (!encounterId) return;
-    setSavingVitals(true);
-    try {
-      await encounterApi.updateVitals(encounterId, {
-        weightKg: vitals.weightKg ? Number(vitals.weightKg) : null,
-        temperatureC: vitals.temperatureC ? Number(vitals.temperatureC) : null,
-        heartRate: vitals.heartRate ? Number(vitals.heartRate) : null,
-        respiratoryRate: vitals.respiratoryRate ? Number(vitals.respiratoryRate) : null,
-      });
-      flashSaved('Vital bulgular kaydedildi');
-    } finally {
-      setSavingVitals(false);
-    }
-  }
-
   async function handleFinalize() {
     if (!encounterId) return;
-    if (!window.confirm('Muayeneyi tamamlamak istediginizden emin misiniz? Tamamlandiktan sonra SOAP notu kilitlenir.')) {
+    if (!window.confirm('Muayeneyi tamamlamak istediğinizden emin misiniz? Tamamlandıktan sonra not kilitlenir.')) {
       return;
     }
     setFinalizing(true);
+    setActionError(null);
     try {
-      await encounterApi.updateSoap(encounterId, { ...soap, aiGenerated: soapAiGenerated });
+      // Önce bekleyen değişiklikler gönderilir; kaydedilemeyen not ile kesinleştirilmez.
+      await flushAll();
       await encounterApi.finalize(encounterId);
       const updated = await encounterApi.get(encounterId);
       setEncounter(updated);
+    } catch (err) {
+      setActionError(errorMessageOf(err));
     } finally {
       setFinalizing(false);
+    }
+  }
+
+  async function handleCancel() {
+    if (!encounterId || !encounter) return;
+    const name = profile?.name ?? 'Bu hasta';
+    if (
+      !window.confirm(
+        `${name} için açılan muayene iptal edilecek. Yazılan notlar hasta geçmişinde görünmeyecek, ` +
+          'iptal işlem geçmişine kaydedilir. Devam edilsin mi?',
+      )
+    ) {
+      return;
+    }
+    setCancelling(true);
+    setActionError(null);
+    try {
+      await flushAll().catch(() => undefined);
+      await encounterApi.cancel(encounterId);
+      navigate(`/hastalar/${encounter.patientId}`);
+    } catch (err) {
+      setActionError(errorMessageOf(err));
+      setCancelling(false);
     }
   }
 
@@ -332,6 +386,12 @@ export function EncounterPage() {
   return (
     <AppShell>
       <PatientHeaderBar profile={profile} encounter={encounter} onBack={() => navigate('/hastalar')} />
+
+      {encounter.status === 'CANCELLED' && (
+        <div className={styles.cancelledBanner}>
+          Bu muayene iptal edildi. Kayıt yalnızca görüntülenebilir; hasta geçmişinde gösterilmez.
+        </div>
+      )}
 
       <div className={styles.layout}>
         <div>
@@ -373,17 +433,9 @@ export function EncounterPage() {
                 />
               </FieldWrap>
             </div>
-            {!isReadOnly && (
-              <div className={styles.saveRow}>
-                {savedMessage && <span className={styles.savedNote}>{savedMessage}</span>}
-                <Button variant="secondary" onClick={handleSaveVitals} disabled={savingVitals}>
-                  {savingVitals ? 'Kaydediliyor...' : 'Vitalleri Kaydet'}
-                </Button>
-              </div>
-            )}
           </div>
 
-          <PhysicalExamCard encounterId={encounter.id} initialFindings={encounter.physicalExamFindings} readOnly={isReadOnly} />
+          <PhysicalExamCard findings={findings} onChange={setFindings} readOnly={isReadOnly} />
 
           <div className={styles.card}>
             <div className={styles.cardTitleRow}>
@@ -391,7 +443,7 @@ export function EncounterPage() {
               {soapAiGenerated && <Badge tone="ai">AI Destekli</Badge>}
             </div>
             <div className={styles.soapGrid}>
-              <FieldWrap label="Subjective (S)">
+              <FieldWrap label="Şikâyet / Anamnez (S)">
                 <Textarea
                   value={soap.subjective}
                   disabled={isReadOnly}
@@ -399,7 +451,7 @@ export function EncounterPage() {
                   placeholder="Sahibin ifadesi, şikayetin öyküsü..."
                 />
               </FieldWrap>
-              <FieldWrap label="Objective (O)">
+              <FieldWrap label="Muayene Bulguları (O)">
                 <Textarea
                   value={soap.objective}
                   disabled={isReadOnly}
@@ -407,7 +459,7 @@ export function EncounterPage() {
                   placeholder="Fizik muayene bulguları..."
                 />
               </FieldWrap>
-              <FieldWrap label="Assessment (A)">
+              <FieldWrap label="Ön Tanı (A)">
                 <Textarea
                   value={soap.assessment}
                   disabled={isReadOnly}
@@ -415,7 +467,7 @@ export function EncounterPage() {
                   placeholder="Değerlendirme / ön tanı..."
                 />
               </FieldWrap>
-              <FieldWrap label="Plan (P)">
+              <FieldWrap label="Tedavi Planı (P)">
                 <Textarea
                   value={soap.plan}
                   disabled={isReadOnly}
@@ -424,30 +476,19 @@ export function EncounterPage() {
                 />
               </FieldWrap>
             </div>
-            {!isReadOnly && (
-              <div className={styles.saveRow}>
-                {savedMessage && <span className={styles.savedNote}>{savedMessage}</span>}
-                <Button variant="secondary" onClick={handleSaveSoap} disabled={savingSoap}>
-                  {savingSoap ? 'Kaydediliyor...' : 'SOAP Kaydet'}
-                </Button>
-                <Button variant="primary" onClick={handleFinalize} disabled={finalizing}>
-                  {finalizing ? 'Tamamlanıyor...' : 'Muayeneyi Tamamla'}
-                </Button>
-              </div>
-            )}
           </div>
 
           {canUseAi && (
             <div className={styles.aiCard}>
               <div className={styles.aiTitle}>✦ AI Tanı Desteği</div>
               <p className={styles.aiCopy}>
-                Subjective ve Objective alanlarına, vital bulgulara ve fiziksel muayeneye dayanarak olası
-                tanı/ayırıcı tanı önerisi üretir. Öneri hekim onayına sunulur, Assessment alanına siz
+                Şikâyet ve Muayene Bulguları alanlarına, vital bulgulara ve fiziksel muayeneye dayanarak olası
+                tanı/ayırıcı tanı önerisi üretir. Öneri hekim onayına sunulur, Ön Tanı alanına siz
                 onaylamadan uygulanmaz — kesin tanı koymaz.
               </p>
 
               {!(soap.subjective.trim() || soap.objective.trim()) && (
-                <p className={styles.aiCopy}>Önce Subjective veya Objective alanını doldurup kaydedin.</p>
+                <p className={styles.aiCopy}>Önce Şikâyet veya Muayene Bulguları alanını doldurun.</p>
               )}
 
               {!isReadOnly && (
@@ -471,13 +512,13 @@ export function EncounterPage() {
               {diagnosis && (
                 <div className={styles.draftBox}>
                   <div className={styles.aiWarning}>
-                    Bu öneri gerçek bir tıbbi referans kaynağına dayanmaz, yalnızca genel AI bilgisine dayanır.
-                    Kesin tanı değildir, bağımsız olarak değerlendirin.
+                    Bu bir yapay zekâ taslağıdır; tıbbi literatürden kaynak göstermez ve kesin tanı yerine geçmez.
+                    Son karar hekimindir.
                   </div>
                   {!diagnosis.modelConnected && (
                     <div className={styles.aiWarning}>
                       Gerçek AI modeli henüz bağlı değil — bu, kullanılamaz bir yer tutucu metindir. Lütfen
-                      Assessment alanını elle girin.
+                      Ön Tanı alanını elle girin.
                     </div>
                   )}
                   <div className={styles.draftLabel}>Öneri önizleme</div>
@@ -496,7 +537,7 @@ export function EncounterPage() {
                   )}
                   {diagnosisDecided && (
                     <p className={styles.aiCopy}>
-                      ✓ Assessment alanına uygulandı — kontrol edip "SOAP Kaydet"e basmayı unutmayın.
+                      ✓ Ön Tanı alanına uygulandı ve otomatik kaydedilecek — kontrol edin.
                     </p>
                   )}
                 </div>
@@ -508,12 +549,12 @@ export function EncounterPage() {
             <div className={styles.aiCard}>
               <div className={styles.aiTitle}>✦ AI Tedavi Önerisi</div>
               <p className={styles.aiCopy}>
-                Assessment alanına ve hastanın son muayenelerine dayanarak bir tedavi planı önerisi üretir.
-                Öneri hekim onayına sunulur, Plan alanına siz onaylamadan uygulanmaz.
+                Ön Tanı alanına ve hastanın son muayenelerine dayanarak bir tedavi planı önerisi üretir.
+                Öneri hekim onayına sunulur, Tedavi Planı alanına siz onaylamadan uygulanmaz.
               </p>
 
               {!soap.assessment.trim() && (
-                <p className={styles.aiCopy}>Önce Assessment alanını doldurup kaydedin.</p>
+                <p className={styles.aiCopy}>Önce Ön Tanı alanını doldurun.</p>
               )}
 
               {!isReadOnly && (
@@ -537,8 +578,8 @@ export function EncounterPage() {
               {recommendation && (
                 <div className={styles.draftBox}>
                   <div className={styles.aiWarning}>
-                    Bu öneri gerçek bir tıbbi referans kaynağına dayanmaz, yalnızca genel AI bilgisine dayanır.
-                    Bağımsız olarak değerlendirin.
+                    Bu bir yapay zekâ taslağıdır; tıbbi literatürden veya ilaç rehberinden kaynak göstermez.
+                    Doz ve ilaç seçimini kontrol edin; son karar hekimindir.
                   </div>
                   {!recommendation.modelConnected && (
                     <div className={styles.aiWarning}>
@@ -562,7 +603,7 @@ export function EncounterPage() {
                   )}
                   {recommendationDecided && (
                     <p className={styles.aiCopy}>
-                      ✓ Plan alanına uygulandı — kontrol edip "SOAP Kaydet"e basmayı unutmayın.
+                      ✓ Tedavi Planı alanına uygulandı ve otomatik kaydedilecek — kontrol edin.
                     </p>
                   )}
                 </div>
@@ -582,9 +623,9 @@ export function EncounterPage() {
         <div>
           {canUseAi && (
             <div className={styles.aiCard}>
-              <div className={styles.aiTitle}>✦ AI Scribe</div>
+              <div className={styles.aiTitle}>✦ Sesli Not</div>
               <p className={styles.aiCopy}>
-                Muayeneyi sesli dikte edin veya not yazın; AI Scribe SOAP alanları için taslak oluşturur.
+                Muayeneyi sesli dikte edin veya not yazın; yapay zekâ bu nottan SOAP alanları için taslak oluşturur.
                 Üretilen her taslak hekim onayına sunulur, alanlara siz onaylamadan uygulanmaz.
               </p>
 
@@ -627,7 +668,7 @@ export function EncounterPage() {
                 <div className={styles.draftBox}>
                   {!draft.modelConnected && (
                     <div className={styles.aiWarning}>
-                      Gerçek AI modeli henüz bağlı değil — bu taslak, yazdığınız metnin Subjective alanına
+                      Gerçek AI modeli henüz bağlı değil — bu taslak, yazdığınız metnin Şikâyet alanına
                       aktarılmasından ibaret. Diğer alanları elle doldurun.
                     </div>
                   )}
@@ -647,7 +688,7 @@ export function EncounterPage() {
                   )}
                   {draftApplied && (
                     <p className={styles.aiCopy}>
-                      ✓ Soldaki "SOAP Notu" kartına uygulandı — kontrol edip "SOAP Kaydet"e basmayı unutmayın.
+                      ✓ Soldaki "SOAP Notu" kartına uygulandı ve otomatik kaydedilecek — kontrol edin.
                     </p>
                   )}
                 </div>
@@ -656,6 +697,21 @@ export function EncounterPage() {
           )}
         </div>
       </div>
+
+      {canEdit && (
+        <div className={styles.stickyFooter}>
+          <span className={saveStatus.error ? styles.saveStatusError : styles.saveStatus}>{saveStatus.text}</span>
+          {actionError && <span className={styles.footerError}>{actionError}</span>}
+          <div className={styles.footerActions}>
+            <Button variant="tertiary" onClick={handleCancel} disabled={cancelling || finalizing}>
+              {cancelling ? 'İptal ediliyor...' : 'Muayeneyi İptal Et'}
+            </Button>
+            <Button variant="primary" onClick={handleFinalize} disabled={finalizing || cancelling}>
+              {finalizing ? 'Tamamlanıyor...' : 'Muayeneyi Tamamla'}
+            </Button>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

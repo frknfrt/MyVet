@@ -32,4 +32,7 @@ class VaccinationRecordRepositoryAdapter implements VaccinationRecordRepository 
 
     @Override
     public List<VaccinationRecord> findBySeriesId(UUID seriesId) { return jpaRepository.findBySeriesId(seriesId); }
+
+    @Override
+    public boolean existsByEncounterId(UUID encounterId) { return jpaRepository.existsByEncounterId(encounterId); }
 }

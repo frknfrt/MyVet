@@ -122,9 +122,9 @@ export function NewPatientPage() {
       <div className={styles.card}>
         <h1 className={styles.title}>Yeni Hasta</h1>
         <p className={styles.lede}>
-          Bir müşteriye bağlı yeni hasta kaydı oluşturun. Müşteri henüz kayıtlı değilse{' '}
+          Bir hasta sahibine bağlı yeni hasta kaydı oluşturun. Hasta sahibi henüz kayıtlı değilse{' '}
           <Link to="/musteriler/yeni" className={styles.inlineLink}>
-            önce müşteri oluşturun
+            önce hasta sahibini kaydedin
           </Link>
           .
         </p>
@@ -132,7 +132,7 @@ export function NewPatientPage() {
         <form onSubmit={handleSubmit}>
           {error && <div className={styles.errorBanner}>{error}</div>}
 
-          <div className={styles.sectionLabel}>Müşteri</div>
+          <div className={styles.sectionLabel}>Hasta Sahibi</div>
           {ownerId ? (
             <div className={styles.selectedOwner}>
               <span>{ownerLabel}</span>
@@ -152,7 +152,7 @@ export function NewPatientPage() {
           ) : (
             <div className={styles.ownerPicker}>
               <Input
-                placeholder="Müşteri adı veya telefonuyla arayın..."
+                placeholder="Hasta sahibinin adı veya telefonuyla arayın..."
                 value={ownerQuery}
                 onFocus={() => setOwnerSearchOpen(true)}
                 onBlur={() => setTimeout(() => setOwnerSearchOpen(false), 150)}

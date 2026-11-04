@@ -143,7 +143,7 @@ export function OwnerDetailPage() {
             <div className={styles.infoValue}>{profile.referralSource ?? '—'}</div>
           </div>
           <div className={styles.infoItem}>
-            <div className={styles.infoLabel}>Müşteri İndirimi</div>
+            <div className={styles.infoLabel}>İndirim</div>
             <div className={styles.infoValue}>{profile.clientDiscount > 0 ? `%${profile.clientDiscount}` : '—'}</div>
           </div>
           <div className={styles.infoItem}>

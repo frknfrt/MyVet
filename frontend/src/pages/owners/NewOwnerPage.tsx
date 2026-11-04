@@ -90,8 +90,8 @@ export function NewOwnerPage() {
       </button>
 
       <div className={styles.card}>
-        <h1 className={styles.title}>Yeni Müşteri</h1>
-        <p className={styles.lede}>Yeni bir müşteri kaydı oluşturun — hastalarını daha sonra bu müşterinin sayfasından ekleyebilirsiniz.</p>
+        <h1 className={styles.title}>Yeni Hasta Sahibi</h1>
+        <p className={styles.lede}>Yeni bir hasta sahibi kaydı oluşturun — hayvanlarını daha sonra bu kişinin sayfasından ekleyebilirsiniz.</p>
 
         <form onSubmit={handleSubmit}>
           {error && <div className={styles.errorBanner}>{error}</div>}
@@ -156,7 +156,7 @@ export function NewOwnerPage() {
             <FieldWrap label="Referans kaynağı">
               <Input value={referralSource} onChange={(e) => setReferralSource(e.target.value)} placeholder="Örn. Tavsiye, Instagram" />
             </FieldWrap>
-            <FieldWrap label="Müşteri indirimi (%)">
+            <FieldWrap label="İndirim (%)">
               <Input type="number" min={0} max={100} value={clientDiscount} onChange={(e) => setClientDiscount(e.target.value)} />
             </FieldWrap>
           </div>
@@ -165,7 +165,7 @@ export function NewOwnerPage() {
               <input type="checkbox" checked={kvkkConsent} onChange={(e) => setKvkkConsent(e.target.checked)} required />
               <span>
                 <strong>KVKK Aydınlatma Metni'ni okudum, açık rızam vardır.</strong> Kişisel verilerin işlenmesine
-                ilişkin bu onay, müşteri kaydı için zorunludur ve tarih/IP ile birlikte kayıt altına alınır.
+                ilişkin bu onay, hasta sahibi kaydı için zorunludur ve tarih/IP ile birlikte kayıt altına alınır.
               </span>
             </label>
           </div>
@@ -204,7 +204,7 @@ export function NewOwnerPage() {
               Vazgeç
             </Button>
             <Button type="submit" variant="primary" disabled={busy || !!nationalIdError}>
-              {busy ? 'Kaydediliyor...' : 'Müşteriyi Kaydet'}
+              {busy ? 'Kaydediliyor...' : 'Hasta Sahibini Kaydet'}
             </Button>
           </div>
         </form>

@@ -1,20 +1,12 @@
-import { useEffect, useState } from 'react';
-import { encounterApi, ExamBodySystem, ExamFindingStatus, PhysicalExamFinding } from '../../api/encounterApi';
-import { Button } from '../../components/ui/Button';
+import { ExamBodySystem, ExamFindingStatus, PhysicalExamFinding } from '../../api/encounterApi';
 import { Textarea } from '../../components/ui/Field';
 import { EXAM_BODY_SYSTEMS, EXAM_BODY_SYSTEM_LABELS } from './examSystem';
 import encounterStyles from './EncounterPage.module.css';
 import styles from './PhysicalExamCard.module.css';
 
-interface PhysicalExamCardProps {
-  encounterId: string;
-  initialFindings: PhysicalExamFinding[];
-  readOnly: boolean;
-}
+export type FindingsBySystem = Record<ExamBodySystem, { status: ExamFindingStatus; note: string }>;
 
-type FindingsBySystem = Record<ExamBodySystem, { status: ExamFindingStatus; note: string }>;
-
-function toFindingsBySystem(findings: PhysicalExamFinding[]): FindingsBySystem {
+export function toFindingsBySystem(findings: PhysicalExamFinding[]): FindingsBySystem {
   const base = Object.fromEntries(
     EXAM_BODY_SYSTEMS.map((system) => [system, { status: 'NOT_EXAMINED' as ExamFindingStatus, note: '' }])
   ) as FindingsBySystem;
@@ -24,38 +16,28 @@ function toFindingsBySystem(findings: PhysicalExamFinding[]): FindingsBySystem {
   return base;
 }
 
-export function PhysicalExamCard({ encounterId, initialFindings, readOnly }: PhysicalExamCardProps) {
-  const [findings, setFindings] = useState<FindingsBySystem>(() => toFindingsBySystem(initialFindings));
-  const [saving, setSaving] = useState(false);
-  const [savedMessage, setSavedMessage] = useState<string | null>(null);
+export function toFindingsPayload(findings: FindingsBySystem): PhysicalExamFinding[] {
+  return EXAM_BODY_SYSTEMS.map((system) => ({
+    system,
+    status: findings[system].status,
+    note: findings[system].note.trim() ? findings[system].note.trim() : null,
+  }));
+}
 
-  useEffect(() => {
-    setFindings(toFindingsBySystem(initialFindings));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [encounterId]);
+interface PhysicalExamCardProps {
+  findings: FindingsBySystem;
+  onChange: (next: FindingsBySystem) => void;
+  readOnly: boolean;
+}
 
+/** Kaydetme sayfanın otomatik kaydıyla yapılır (EncounterPage). */
+export function PhysicalExamCard({ findings, onChange, readOnly }: PhysicalExamCardProps) {
   function setStatus(system: ExamBodySystem, status: ExamFindingStatus) {
-    setFindings((prev) => ({ ...prev, [system]: { ...prev[system], status } }));
+    onChange({ ...findings, [system]: { ...findings[system], status } });
   }
 
   function setNote(system: ExamBodySystem, note: string) {
-    setFindings((prev) => ({ ...prev, [system]: { ...prev[system], note } }));
-  }
-
-  async function handleSave() {
-    setSaving(true);
-    try {
-      const payload: PhysicalExamFinding[] = EXAM_BODY_SYSTEMS.map((system) => ({
-        system,
-        status: findings[system].status,
-        note: findings[system].note.trim() ? findings[system].note.trim() : null,
-      }));
-      await encounterApi.updatePhysicalExam(encounterId, payload);
-      setSavedMessage('Fiziksel muayene kaydedildi');
-      setTimeout(() => setSavedMessage(null), 2000);
-    } finally {
-      setSaving(false);
-    }
+    onChange({ ...findings, [system]: { ...findings[system], note } });
   }
 
   return (
@@ -106,14 +88,6 @@ export function PhysicalExamCard({ encounterId, initialFindings, readOnly }: Phy
           </div>
         );
       })}
-      {!readOnly && (
-        <div className={encounterStyles.saveRow}>
-          {savedMessage && <span className={encounterStyles.savedNote}>{savedMessage}</span>}
-          <Button variant="secondary" onClick={handleSave} disabled={saving}>
-            {saving ? 'Kaydediliyor...' : 'Fiziksel Muayeneyi Kaydet'}
-          </Button>
-        </div>
-      )}
     </div>
   );
 }

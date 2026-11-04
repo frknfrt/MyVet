@@ -49,14 +49,14 @@ export function AiCenterPanel() {
           />
           <CapabilityCard
             title="Tanı Desteği"
-            description="Subjective/Objective, vital bulgular ve fiziksel muayeneye göre olası tanı/ayırıcı tanı önerisi üretir. Kesin tanı koymaz, hekim onayı olmadan Assessment alanına uygulanmaz."
+            description="Şikâyet ve muayene bulguları, vital bulgular ve fiziksel muayeneye göre olası tanı/ayırıcı tanı önerisi üretir. Kesin tanı koymaz, hekim onayı olmadan Ön Tanı alanına uygulanmaz."
             badge={{ label: 'Aktif — Taslak Adaptör', tone: 'ai' }}
             actionLabel="Bir muayenede kullan"
             onAction={() => navigate('/randevu')}
           />
           <CapabilityCard
             title="Tedavi Önerisi"
-            description="Assessment alanına ve hastanın geçmiş muayenelerine göre olası tedavi planı önerisi üretir. Hekim onayı olmadan Plan alanına uygulanmaz."
+            description="Ön Tanı alanına ve hastanın geçmiş muayenelerine göre olası tedavi planı önerisi üretir. Hekim onayı olmadan Tedavi Planı alanına uygulanmaz."
             badge={{ label: 'Aktif — Taslak Adaptör', tone: 'ai' }}
             actionLabel="Bir muayenede kullan"
             onAction={() => navigate('/randevu')}

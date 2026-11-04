@@ -57,6 +57,7 @@ public class IssuePrescriptionUseCase {
             if (!encounter.getPatientId().equals(command.patientId())) {
                 throw new PrescriptionEncounterMismatchException();
             }
+            encounter.rejectIfCancelled();
         }
         Prescription prescription = prescriptionRepository.save(Prescription.issue(
             TenantContext.current(), command.patientId(), command.encounterId(),

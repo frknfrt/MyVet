@@ -1,5 +1,6 @@
 package com.vetos.modules.encounter.domain;
 
+import com.vetos.modules.encounter.domain.exception.EncounterCancelledConflictException;
 import com.vetos.modules.encounter.domain.exception.EncounterInvalidTransitionException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -97,6 +98,7 @@ public class Encounter {
     }
 
     public void updateSoap(String subjective, String objective, String assessment, String plan) {
+        rejectIfCancelled();
         this.subjective = subjective;
         this.objective = objective;
         this.assessment = assessment;
@@ -104,6 +106,7 @@ public class Encounter {
     }
 
     public void recordVitals(BigDecimal weightKg, BigDecimal temperatureC, Integer heartRate, Integer respiratoryRate) {
+        rejectIfCancelled();
         this.weightKg = weightKg;
         this.temperatureC = temperatureC;
         this.heartRate = heartRate;
@@ -111,7 +114,23 @@ public class Encounter {
     }
 
     public void updatePhysicalExam(List<PhysicalExamFinding> findings) {
+        rejectIfCancelled();
         this.physicalExamFindings = findings;
+    }
+
+    /** Yalniz taslak iptal edilir; kayit silinmez (bkz. CancelEncounterUseCase). */
+    public void cancel() {
+        if (status != EncounterStatus.DRAFT) {
+            throw new EncounterInvalidTransitionException(status, EncounterStatus.CANCELLED);
+        }
+        this.status = EncounterStatus.CANCELLED;
+    }
+
+    /** Iptal edilmis muayeneye yazilamaz (SOAP, vital, malzeme, recete). */
+    public void rejectIfCancelled() {
+        if (status == EncounterStatus.CANCELLED) {
+            throw new EncounterCancelledConflictException();
+        }
     }
 
     public void markAiGenerated() {
