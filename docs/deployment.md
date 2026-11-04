@@ -258,7 +258,7 @@ Uygulama bazı sık okunan, az değişen bilgileri kendi belleğinde tutar (Redi
 - [ ] Otomatik günlük veritabanı yedeği + sunucu dışına kopyalama
 - [x] Uptime izleme (UptimeRobot vb.) -- bkz. "İzleme (Faz 3)" bölümü
 - [ ] `META_WHATSAPP_TEMPLATE_NAME` (şablonsuz WhatsApp sadece 24 saatlik pencere içinde gider)
-- [ ] WhatsApp numarasi hala Meta "Test Number"inda -- gercek musteri numaralarina gonderim #131030 ("Recipient phone number not in allowed list") ile reddediliyor. Cozum: WhatsApp Yoneticisi > Telefon numaralari'na WhatsApp'ta aktif OLMAYAN gercek bir numara eklemek (kullanicinin kendi numarasi WhatsApp'ta aktif oldugu icin su an kullanilamiyor, ayri bir SIM gerekiyor), SMS/arama ile dogrulamak, kalici bir System User token'i olusturmak, ve META_WHATSAPP_PHONE_NUMBER_ID / META_WHATSAPP_ACCESS_TOKEN'i guncelleyip servisi yeniden baslatmak.
+- [x] WhatsApp numarasi gercek numarayla degistirildi (2026-11-05) -- Test Number kisitlamasi kalkti, gercek musteri numaralarina gonderim test edildi, sorunsuz calisiyor.
 - [ ] Tanıtım sitesi (`vetly.com.tr`) API adresini `https://myvet-21n4.onrender.com`'dan `https://uygulama.vetly.com.tr`'ye taşımak — ardından Render servisini kapatmak
 - [ ] Bu adımları bir `deploy.ps1` betiğine çevirmek
 
