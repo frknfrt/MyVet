@@ -11,6 +11,8 @@ import com.vetos.modules.tenant.domain.TenantRepository;
 import com.vetos.modules.tenant.domain.exception.EmailAlreadyRegisteredConflictException;
 import com.vetos.modules.tenant.domain.exception.StaffInviteAlreadyPendingConflictException;
 import com.vetos.modules.tenant.domain.exception.TenantNotFoundException;
+import com.vetos.platform.staff.StaffUserLimitExceededException;
+import com.vetos.platform.staff.StaffUserLimitPort;
 import com.vetos.platform.audit.AuditAction;
 import com.vetos.platform.audit.AuditPort;
 import com.vetos.platform.audit.AuditRecord;
@@ -31,6 +33,7 @@ public class InviteStaffMemberUseCase {
     private final TenantRepository tenantRepository;
     private final InviteEmailPort inviteEmailPort;
     private final AuditPort auditPort;
+    private final StaffUserLimitPort staffUserLimitPort;
 
     @Value("${app.frontend-base-url}")
     private String frontendBaseUrl;
@@ -45,6 +48,18 @@ public class InviteStaffMemberUseCase {
         }
         if (staffInviteRepository.existsByEmailAndStatus(command.email(), StaffInviteStatus.PENDING)) {
             throw new StaffInviteAlreadyPendingConflictException(command.email());
+        }
+
+        Integer maxStaffUsers = staffUserLimitPort.maxStaffUsersFor(command.tenantId());
+        if (maxStaffUsers != null) {
+            long activeCount = staffUserRepository.countActiveByTenantId(command.tenantId());
+            long pendingInviteCount = staffInviteRepository.findByTenantId(command.tenantId()).stream()
+                .filter(i -> i.getStatus() == StaffInviteStatus.PENDING)
+                .count();
+            long currentCount = activeCount + pendingInviteCount;
+            if (currentCount >= maxStaffUsers) {
+                throw new StaffUserLimitExceededException((int) currentCount, maxStaffUsers);
+            }
         }
 
         StaffInvite invite = staffInviteRepository.save(StaffInvite.create(

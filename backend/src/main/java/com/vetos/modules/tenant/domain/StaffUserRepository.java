@@ -10,4 +10,6 @@ public interface StaffUserRepository {
     Optional<StaffUser> findByEmail(String email);
     boolean existsByEmail(String email);
     List<StaffUser> findByBranchId(UUID branchId);
+    /** Kiracinin AKTIF personel sayisi -- davet (henuz kabul edilmemis) sayilmaz, bkz. InviteStaffMemberUseCase. */
+    long countActiveByTenantId(UUID tenantId);
 }

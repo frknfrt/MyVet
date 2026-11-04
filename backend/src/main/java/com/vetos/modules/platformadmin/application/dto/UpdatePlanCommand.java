@@ -20,5 +20,6 @@ public record UpdatePlanCommand(
     boolean active,
     Integer monthlyAiQuota,
     Integer monthlyMessageQuota,
-    Integer maxBranches
+    Integer maxBranches,
+    Integer maxStaffUsers
 ) {}

@@ -22,7 +22,8 @@ public record PlanResponse(
     boolean active,
     Integer monthlyAiQuota,
     Integer monthlyMessageQuota,
-    Integer maxBranches
+    Integer maxBranches,
+    Integer maxStaffUsers
 ) {
     public static PlanResponse from(Plan plan) {
         return new PlanResponse(
@@ -39,7 +40,8 @@ public record PlanResponse(
             plan.isActive(),
             plan.getMonthlyAiQuota(),
             plan.getMonthlyMessageQuota(),
-            plan.getMaxBranches()
+            plan.getMaxBranches(),
+            plan.getMaxStaffUsers()
         );
     }
 }

@@ -69,7 +69,8 @@ public class PlanController {
             request.active(),
             request.monthlyAiQuota(),
             request.monthlyMessageQuota(),
-            request.maxBranches()
+            request.maxBranches(),
+            request.maxStaffUsers()
         ), principal.platformAdminId(), principal.email());
     }
 

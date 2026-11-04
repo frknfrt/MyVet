@@ -33,7 +33,7 @@ class PlanUsageQuotaAdapterTest {
     private final MonthlyUsageStore store = mock(MonthlyUsageStore.class);
 
     private QuotaProperties quotaProperties(int ai, int message, int maxBranches) {
-        return new QuotaProperties(new QuotaProperties.Trial(ai, message, maxBranches));
+        return new QuotaProperties(new QuotaProperties.Trial(ai, message, maxBranches, 3));
     }
 
     private PlanUsageQuotaAdapter adapter(boolean enforcement, Clock clock) {
@@ -46,7 +46,7 @@ class PlanUsageQuotaAdapterTest {
 
     private Plan planWithQuotas(Integer ai, Integer message) {
         Plan plan = Plan.create("PRO", "Pro", BigDecimal.TEN);
-        plan.updateQuotas(ai, message, null);
+        plan.updateQuotas(ai, message, null, null);
         return plan;
     }
 
@@ -136,6 +136,7 @@ class PlanUsageQuotaAdapterTest {
     @Test
     void should_useTrialQuotasFromProperties() {
         when(tenantAdminPort.findPlanCode(TENANT)).thenReturn(Optional.of("TRIAL"));
+        when(store.tryIncrement(TENANT, "2026-10", UsageKind.AI, 1, 30)).thenReturn(true);
 
         adapter(true, OCT, quotaProperties(30, 100, 1)).reserve(TENANT, UsageKind.AI, 1);
 

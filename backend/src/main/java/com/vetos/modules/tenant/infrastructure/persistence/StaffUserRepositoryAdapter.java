@@ -29,4 +29,7 @@ class StaffUserRepositoryAdapter implements StaffUserRepository {
 
     @Override
     public List<StaffUser> findByBranchId(UUID branchId) { return jpaRepository.findByBranchId(branchId); }
+
+    @Override
+    public long countActiveByTenantId(UUID tenantId) { return jpaRepository.countByTenantIdAndActiveTrue(tenantId); }
 }

@@ -9,7 +9,7 @@ class FeatureOptionsResponseTest {
 
     @Test
     void should_listAllFeaturesInEnumOrder_withTurkishLabels() {
-        FeatureOptionsResponse response = FeatureOptionsResponse.of(false, new QuotaProperties.Trial(30, 100, 1));
+        FeatureOptionsResponse response = FeatureOptionsResponse.of(false, new QuotaProperties.Trial(30, 100, 1, 3));
 
         assertThat(response.enforcementActive()).isFalse();
         assertThat(response.options()).extracting(FeatureOptionsResponse.Option::code)
@@ -19,10 +19,11 @@ class FeatureOptionsResponseTest {
 
     @Test
     void should_exposeTrialQuotas_fromProperties() {
-        FeatureOptionsResponse response = FeatureOptionsResponse.of(true, new QuotaProperties.Trial(50, 200, 1));
+        FeatureOptionsResponse response = FeatureOptionsResponse.of(true, new QuotaProperties.Trial(50, 200, 1, 3));
 
         assertThat(response.trialQuotas().ai()).isEqualTo(50);
         assertThat(response.trialQuotas().message()).isEqualTo(200);
         assertThat(response.trialQuotas().maxBranches()).isEqualTo(1);
+        assertThat(response.trialQuotas().maxStaffUsers()).isEqualTo(3);
     }
 }

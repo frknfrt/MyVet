@@ -14,7 +14,8 @@ public record PlanSnapshot(
     Set<Feature> enabledFeatures,
     Integer monthlyAiQuota,
     Integer monthlyMessageQuota,
-    Integer maxBranches
+    Integer maxBranches,
+    Integer maxStaffUsers
 ) {
 
     public PlanSnapshot {
@@ -23,7 +24,8 @@ public record PlanSnapshot(
 
     static PlanSnapshot of(Plan plan) {
         return new PlanSnapshot(
-            plan.getCode(), plan.getEnabledFeatures(), plan.getMonthlyAiQuota(), plan.getMonthlyMessageQuota(), plan.getMaxBranches()
+            plan.getCode(), plan.getEnabledFeatures(), plan.getMonthlyAiQuota(), plan.getMonthlyMessageQuota(),
+            plan.getMaxBranches(), plan.getMaxStaffUsers()
         );
     }
 }

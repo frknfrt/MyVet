@@ -24,6 +24,7 @@ interface PlanFormState {
   monthlyAiQuota: string;
   monthlyMessageQuota: string;
   maxBranches: string;
+  maxStaffUsers: string;
   active: boolean;
 }
 
@@ -40,6 +41,7 @@ const EMPTY_FORM: PlanFormState = {
   monthlyAiQuota: '',
   monthlyMessageQuota: '',
   maxBranches: '',
+  maxStaffUsers: '',
   active: true,
 };
 
@@ -94,6 +96,7 @@ export function PlanManagementPage() {
       monthlyAiQuota: plan.monthlyAiQuota === null ? '' : String(plan.monthlyAiQuota),
       monthlyMessageQuota: plan.monthlyMessageQuota === null ? '' : String(plan.monthlyMessageQuota),
       maxBranches: plan.maxBranches === null ? '' : String(plan.maxBranches),
+      maxStaffUsers: plan.maxStaffUsers === null ? '' : String(plan.maxStaffUsers),
       active: plan.active,
     };
     setForm(initial);
@@ -141,6 +144,7 @@ export function PlanManagementPage() {
           monthlyAiQuota: form.monthlyAiQuota === '' ? null : Number(form.monthlyAiQuota),
           monthlyMessageQuota: form.monthlyMessageQuota === '' ? null : Number(form.monthlyMessageQuota),
           maxBranches: form.maxBranches === '' ? null : Number(form.maxBranches),
+          maxStaffUsers: form.maxStaffUsers === '' ? null : Number(form.maxStaffUsers),
           active: form.active,
         });
       } else {
@@ -178,8 +182,8 @@ export function PlanManagementPage() {
       {featureOptions?.trialQuotas && (
         <div className={styles.muted} style={{ marginBottom: 12, fontSize: 13 }}>
           Deneme paketi kotaları: aylık {featureOptions.trialQuotas.ai} AI hakkı, aylık{' '}
-          {featureOptions.trialQuotas.message} mesaj hakkı, maksimum {featureOptions.trialQuotas.maxBranches} şube.
-          (application.yml → vetly.quota.trial)
+          {featureOptions.trialQuotas.message} mesaj hakkı, maksimum {featureOptions.trialQuotas.maxBranches} şube,
+          maksimum {featureOptions.trialQuotas.maxStaffUsers} personel. (application.yml → vetly.quota.trial)
         </div>
       )}
 
@@ -322,6 +326,16 @@ export function PlanManagementPage() {
                   step={1}
                   value={form.maxBranches}
                   onChange={(e) => setForm((f) => ({ ...f, maxBranches: e.target.value }))}
+                  placeholder="Sınırsız"
+                />
+              </FieldWrap>
+              <FieldWrap label="Maksimum Personel Sayısı">
+                <Input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={form.maxStaffUsers}
+                  onChange={(e) => setForm((f) => ({ ...f, maxStaffUsers: e.target.value }))}
                   placeholder="Sınırsız"
                 />
               </FieldWrap>

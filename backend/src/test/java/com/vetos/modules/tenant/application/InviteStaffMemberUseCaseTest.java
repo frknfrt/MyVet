@@ -10,12 +10,15 @@ import com.vetos.modules.tenant.domain.StaffUserRepository;
 import com.vetos.modules.tenant.domain.Tenant;
 import com.vetos.modules.tenant.domain.TenantRepository;
 import com.vetos.modules.tenant.domain.exception.EmailAlreadyRegisteredConflictException;
+import com.vetos.platform.staff.StaffUserLimitExceededException;
+import com.vetos.platform.staff.StaffUserLimitPort;
 import com.vetos.platform.audit.AuditAction;
 import com.vetos.platform.audit.AuditPort;
 import com.vetos.platform.audit.AuditRecord;
 import com.vetos.platform.observability.LogMasking;
 import com.vetos.platform.tenancy.TenantContext;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -52,6 +55,16 @@ class InviteStaffMemberUseCaseTest {
     @Mock private TenantRepository tenantRepository;
     @Mock private InviteEmailPort inviteEmailPort;
     @Mock private AuditPort auditPort;
+    @Mock private StaffUserLimitPort staffUserLimitPort;
+
+    @BeforeEach
+    void defaultToUnlimited() {
+        // Mockito stub'lanmamis Integer donusunde null degil 0 doner -- bunu acikca
+        // "sinirsiz" (null) yapmazsak her test yanlislikla "0/0 doldu" hatasi alir.
+        // lenient: bu stub'i hic kullanmayan (erken firlatan) testler sikayet etmesin.
+        org.mockito.Mockito.lenient().when(staffUserLimitPort.maxStaffUsersFor(org.mockito.ArgumentMatchers.any()))
+            .thenReturn(null);
+    }
 
     @AfterEach
     void clearAmbientContext() {
@@ -59,8 +72,9 @@ class InviteStaffMemberUseCaseTest {
     }
 
     private InviteStaffMemberUseCase useCase() {
-        InviteStaffMemberUseCase useCase =
-            new InviteStaffMemberUseCase(staffInviteRepository, staffUserRepository, tenantRepository, inviteEmailPort, auditPort);
+        InviteStaffMemberUseCase useCase = new InviteStaffMemberUseCase(
+            staffInviteRepository, staffUserRepository, tenantRepository, inviteEmailPort, auditPort, staffUserLimitPort
+        );
         ReflectionTestUtils.setField(useCase, "frontendBaseUrl", "https://app.vetly.test");
         return useCase;
     }
@@ -172,5 +186,61 @@ class InviteStaffMemberUseCaseTest {
         ))).isInstanceOf(EmailAlreadyRegisteredConflictException.class);
 
         org.mockito.Mockito.verifyNoInteractions(auditPort);
+    }
+
+    @Test
+    void should_throwStaffUserLimitExceeded_when_activePlusPendingAtCapacity() {
+        UUID tenantId = UUID.randomUUID();
+        when(staffUserRepository.existsByEmail("yeni@klinik.test")).thenReturn(false);
+        when(staffInviteRepository.existsByEmailAndStatus("yeni@klinik.test", StaffInviteStatus.PENDING)).thenReturn(false);
+        when(staffUserLimitPort.maxStaffUsersFor(tenantId)).thenReturn(3);
+        when(staffUserRepository.countActiveByTenantId(tenantId)).thenReturn(2L);
+        StaffInvite pending = StaffInvite.create(tenantId, UUID.randomUUID(), "baska@klinik.test", "Baska Kisi", StaffRole.VET, UUID.randomUUID());
+        when(staffInviteRepository.findByTenantId(tenantId)).thenReturn(List.of(pending));
+
+        assertThatThrownBy(() -> useCase().execute(new InviteStaffMemberCommand(
+            tenantId, UUID.randomUUID(), "yeni@klinik.test", "Dr. Test", StaffRole.VET, UUID.randomUUID()
+        ))).isInstanceOf(StaffUserLimitExceededException.class);
+
+        org.mockito.Mockito.verify(staffInviteRepository, org.mockito.Mockito.never()).save(any());
+        org.mockito.Mockito.verifyNoInteractions(inviteEmailPort);
+    }
+
+    @Test
+    void should_allowInvite_when_underStaffUserLimit() {
+        UUID tenantId = UUID.randomUUID();
+        when(staffUserRepository.existsByEmail("yeni@klinik.test")).thenReturn(false);
+        when(staffInviteRepository.existsByEmailAndStatus("yeni@klinik.test", StaffInviteStatus.PENDING)).thenReturn(false);
+        when(staffUserLimitPort.maxStaffUsersFor(tenantId)).thenReturn(3);
+        when(staffUserRepository.countActiveByTenantId(tenantId)).thenReturn(1L);
+        when(staffInviteRepository.findByTenantId(tenantId)).thenReturn(List.of());
+        when(staffInviteRepository.save(any(StaffInvite.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        Tenant tenant = Tenant.register("Test Klinik", null);
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
+
+        useCase().execute(new InviteStaffMemberCommand(
+            tenantId, UUID.randomUUID(), "yeni@klinik.test", "Dr. Test", StaffRole.VET, UUID.randomUUID()
+        ));
+
+        verify(staffInviteRepository).save(any(StaffInvite.class));
+        verify(inviteEmailPort).sendInvite(any(), any(), any());
+    }
+
+    @Test
+    void should_skipLimitCheck_when_portReturnsNull() {
+        UUID tenantId = UUID.randomUUID();
+        when(staffUserRepository.existsByEmail("yeni@klinik.test")).thenReturn(false);
+        when(staffInviteRepository.existsByEmailAndStatus("yeni@klinik.test", StaffInviteStatus.PENDING)).thenReturn(false);
+        when(staffUserLimitPort.maxStaffUsersFor(tenantId)).thenReturn(null);
+        when(staffInviteRepository.save(any(StaffInvite.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        Tenant tenant = Tenant.register("Test Klinik", null);
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
+
+        useCase().execute(new InviteStaffMemberCommand(
+            tenantId, UUID.randomUUID(), "yeni@klinik.test", "Dr. Test", StaffRole.VET, UUID.randomUUID()
+        ));
+
+        verify(staffInviteRepository).save(any(StaffInvite.class));
+        org.mockito.Mockito.verify(staffUserRepository, org.mockito.Mockito.never()).countActiveByTenantId(any());
     }
 }

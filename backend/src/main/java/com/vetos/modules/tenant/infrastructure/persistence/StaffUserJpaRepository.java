@@ -18,5 +18,6 @@ interface StaffUserJpaRepository extends JpaRepository<StaffUser, UUID> {
     boolean existsByEmail(@org.springframework.data.repository.query.Param("email") String email);
     List<StaffUser> findByBranchId(UUID branchId);
     long countByBranchIdIn(List<UUID> branchIds);
+    long countByTenantIdAndActiveTrue(UUID tenantId);
     List<StaffUser> findByBranchIdInAndRole(List<UUID> branchIds, StaffRole role);
 }

@@ -50,7 +50,7 @@ export interface CreateTenantPayload {
 export interface FeatureOptions {
   enforcementActive: boolean;
   options: { code: string; label: string }[];
-  trialQuotas: { ai: number; message: number; maxBranches: number };
+  trialQuotas: { ai: number; message: number; maxBranches: number; maxStaffUsers: number };
 }
 
 export interface Plan {
@@ -67,6 +67,7 @@ export interface Plan {
   monthlyAiQuota: number | null;
   monthlyMessageQuota: number | null;
   maxBranches: number | null;
+  maxStaffUsers: number | null;
   active: boolean;
 }
 
@@ -82,6 +83,7 @@ export interface UpdatePlanPayload {
   monthlyAiQuota: number | null;
   monthlyMessageQuota: number | null;
   maxBranches: number | null;
+  maxStaffUsers: number | null;
   active: boolean;
 }
 

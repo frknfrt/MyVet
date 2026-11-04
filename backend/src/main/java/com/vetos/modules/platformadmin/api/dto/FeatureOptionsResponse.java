@@ -12,12 +12,12 @@ public record FeatureOptionsResponse(boolean enforcementActive, List<Option> opt
     public record Option(String code, String label) {}
 
     /** Salt-okunur bilgi: deneme paketinin kotalari sunucu ayarindan (vetly.quota.trial). */
-    public record TrialQuotas(int ai, int message, int maxBranches) {}
+    public record TrialQuotas(int ai, int message, int maxBranches, int maxStaffUsers) {}
 
     public static FeatureOptionsResponse of(boolean enforcementActive, QuotaProperties.Trial trial) {
         List<Option> options = Arrays.stream(Feature.values())
             .map(f -> new Option(f.name(), f.label()))
             .toList();
-        return new FeatureOptionsResponse(enforcementActive, options, new TrialQuotas(trial.ai(), trial.message(), trial.maxBranches()));
+        return new FeatureOptionsResponse(enforcementActive, options, new TrialQuotas(trial.ai(), trial.message(), trial.maxBranches(), trial.maxStaffUsers()));
     }
 }

@@ -22,5 +22,6 @@ public record UpdatePlanRequest(
     boolean active,
     @PositiveOrZero Integer monthlyAiQuota,
     @PositiveOrZero Integer monthlyMessageQuota,
-    @PositiveOrZero Integer maxBranches
+    @PositiveOrZero Integer maxBranches,
+    @PositiveOrZero Integer maxStaffUsers
 ) {}

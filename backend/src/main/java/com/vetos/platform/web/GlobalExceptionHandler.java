@@ -1,6 +1,7 @@
 package com.vetos.platform.web;
 
 import com.vetos.platform.branch.BranchLimitExceededException;
+import com.vetos.platform.staff.StaffUserLimitExceededException;
 import com.vetos.platform.exception.DomainException;
 import com.vetos.platform.quota.MonthlyQuotaExceededException;
 import com.vetos.platform.ratelimit.RateLimitExceededException;
@@ -60,6 +61,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BranchLimitExceededException.class)
     public ResponseEntity<ErrorResponse> handleBranchLimit(BranchLimitExceededException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+            .body(ErrorResponse.of(ex.getErrorCode(), ex.getMessage(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(StaffUserLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleStaffUserLimit(StaffUserLimitExceededException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
             .body(ErrorResponse.of(ex.getErrorCode(), ex.getMessage(), request.getRequestURI()));
     }

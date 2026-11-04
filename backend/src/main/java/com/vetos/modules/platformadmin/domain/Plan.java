@@ -69,6 +69,10 @@ public class Plan {
     @Column(name = "max_branches")
     private Integer maxBranches;
 
+    /** Bu planin acabildigi azami personel (staff_user) sayisi; null = sinirsiz (bkz. StaffUserLimitPort). */
+    @Column(name = "max_staff_users")
+    private Integer maxStaffUsers;
+
     @Column(nullable = false)
     private boolean active;
 
@@ -109,13 +113,14 @@ public class Plan {
         this.active = false;
     }
 
-    public void updateQuotas(Integer monthlyAiQuota, Integer monthlyMessageQuota, Integer maxBranches) {
+    public void updateQuotas(Integer monthlyAiQuota, Integer monthlyMessageQuota, Integer maxBranches, Integer maxStaffUsers) {
         if ((monthlyAiQuota != null && monthlyAiQuota < 0) || (monthlyMessageQuota != null && monthlyMessageQuota < 0)
-            || (maxBranches != null && maxBranches < 0)) {
+            || (maxBranches != null && maxBranches < 0) || (maxStaffUsers != null && maxStaffUsers < 0)) {
             throw new IllegalArgumentException("Kota negatif olamaz");
         }
         this.monthlyAiQuota = monthlyAiQuota;
         this.monthlyMessageQuota = monthlyMessageQuota;
         this.maxBranches = maxBranches;
+        this.maxStaffUsers = maxStaffUsers;
     }
 }
