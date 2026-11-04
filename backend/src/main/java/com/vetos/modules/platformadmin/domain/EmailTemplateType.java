@@ -3,10 +3,10 @@ package com.vetos.modules.platformadmin.domain;
 import java.util.List;
 
 /**
- * Admin panelinden elle gonderilebilen 4 markali e-posta sablonu -- gercek
+ * Admin panelinden elle gonderilebilen 3 markali e-posta sablonu -- gercek
  * gonderim altyapisi (SendGrid/SES/Mailgun) yok, cPanel'deki 3 kutunun kendi
  * SMTP'si kullanilir (bkz. AdminEmailPort). Her tip tek bir kutuya sabit:
- * satis/deneme info@'dan, kurulum destek@'dan, fatura bildirim@'dan gider --
+ * satis info@'dan, kurulum destek@'dan, fatura bildirim@'dan gider --
  * Genel Yapi tablosundaki (Vetly E-posta Taslaklari dokumani) "Kimden"
  * sutunuyla birebir ayni.
  *
@@ -28,18 +28,6 @@ public enum EmailTemplateType {
             new EmailTemplateField("YETKILI_ADI", "Yetkili Adı"),
             new EmailTemplateField("TELEFON", "Telefon"),
             new EmailTemplateField("DEMO_LINK", "Demo/takvim bağlantısı (ör. Calendly veya mailto:)")
-        )
-    ),
-    TRIAL_FOLLOWUP(
-        "Deneme/Demo Sonrası Takip",
-        AdminMailbox.INFO,
-        "email-templates/trial-followup.html",
-        "Vetly denemeniz nasıl gidiyor?",
-        List.of(
-            new EmailTemplateField("YETKILI_ADI", "Yetkili Adı"),
-            new EmailTemplateField("KLINIK_ADI", "Klinik Adı"),
-            new EmailTemplateField("TELEFON", "Telefon"),
-            new EmailTemplateField("BITIS_TARIHI", "Deneme Bitiş Tarihi")
         )
     ),
     WELCOME(

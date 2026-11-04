@@ -42,6 +42,7 @@ export function NewBoardingStayPage() {
   const [patientId, setPatientId] = useState('');
 
   const [rooms, setRooms] = useState<BoardingRoom[]>([]);
+  const [roomsLoaded, setRoomsLoaded] = useState(false);
   const [roomId, setRoomId] = useState(presetRoomId ?? '');
   const [checkInDate, setCheckInDate] = useState(isoDate(new Date()));
   const [expectedCheckOutDate, setExpectedCheckOutDate] = useState('');
@@ -53,7 +54,10 @@ export function NewBoardingStayPage() {
   const [createdInvoiceId, setCreatedInvoiceId] = useState<string | null>(null);
 
   useEffect(() => {
-    boardingApi.listRooms().then(setRooms);
+    boardingApi.listRooms().then((r) => {
+      setRooms(r);
+      setRoomsLoaded(true);
+    });
   }, []);
 
   useEffect(() => {
@@ -129,6 +133,14 @@ export function NewBoardingStayPage() {
       <div className={styles.card}>
         <h1 className={styles.title}>Yeni Konaklama Kaydı</h1>
 
+        {roomsLoaded && rooms.length === 0 ? (
+          <div className={styles.noRoomsBanner}>
+            <div>Henüz hiç oda/kafes tanımlanmamış. Konaklama kaydı oluşturabilmek için önce bir oda/kafes eklemelisiniz.</div>
+            <Button type="button" variant="secondary" onClick={() => navigate('/konaklama')}>
+              Konaklama sayfasına dön ve oda ekle
+            </Button>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit}>
           {error && <div className={styles.errorBanner}>{error}</div>}
 
@@ -239,6 +251,7 @@ export function NewBoardingStayPage() {
             </Button>
           </div>
         </form>
+        )}
       </div>
 
       <InvoiceDetailModal

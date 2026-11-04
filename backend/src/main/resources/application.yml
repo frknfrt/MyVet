@@ -251,12 +251,6 @@ vetly:
     tenant-ai-per-minute: 10
     campaign-recipients-per-hour: 2000
 
-  # Paket kotalari: degerler admin panelinden (Paket Yonetimi). TRIAL'in plans satiri
-  # olmadigi icin deneme kotalari burada. Env: VETLY_QUOTA_TRIAL_AI / VETLY_QUOTA_TRIAL_MESSAGE.
-  quota:
-    trial:
-      ai: 30
-      message: 100
   # Faz 7 (spec 2026-10-18): TARBIL eklentisi icin en dusuk surum. Bundan eski eklenti 426 alir.
   # Yukseltmeden ONCE yeni surum Vetly'den indirilebilir olmali (docs/api-conventions.md Versiyonlama).
   extension:

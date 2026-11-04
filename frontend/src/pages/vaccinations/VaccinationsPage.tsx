@@ -6,7 +6,7 @@ import { ApiError } from '../../api/client';
 import { Button } from '../../components/ui/Button';
 import { vaccinationApi, VaccinationScheduleItem } from '../../api/vaccinationApi';
 import { selectForTarbil, TARBIL_VACCINE_URL } from '../../lib/tarbilExtension';
-import { VaccinationStatusBadge } from './vaccinationStatus';
+import { VaccinationStatusBadge, isVaccinationOverdue } from './vaccinationStatus';
 import styles from './VaccinationsPage.module.css';
 
 type Tab = 'planlanan' | 'yapilan';
@@ -88,7 +88,8 @@ export function VaccinationsPage() {
       const date = new Date(v.administeredDate);
       if (v.status === 'SCHEDULED') {
         planned += 1;
-        if (date.getTime() < now.setHours(0, 0, 0, 0)) overdue += 1;
+        // REVIZE (2026-11-01): KPI karti ile satir etiketi AYNI kurali kullansin (bkz. vaccinationStatus.tsx).
+        if (isVaccinationOverdue(v.status, v.administeredDate)) overdue += 1;
       }
       if (isSameDay(date, new Date())) today += 1;
       if (date >= weekStart) week += 1;
@@ -295,7 +296,7 @@ export function VaccinationsPage() {
               </div>
               <div className={styles.muted}>{new Date(v.administeredDate).toLocaleDateString('tr-TR')}</div>
               <div>
-                <VaccinationStatusBadge status={v.status} />
+                <VaccinationStatusBadge status={v.status} overdue={isVaccinationOverdue(v.status, v.administeredDate)} />
               </div>
               {tab === 'planlanan' && canWrite && (
                 <div className={styles.actionsCell} onClick={(e) => e.stopPropagation()}>

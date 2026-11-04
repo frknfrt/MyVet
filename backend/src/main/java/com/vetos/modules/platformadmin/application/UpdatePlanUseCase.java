@@ -36,7 +36,7 @@ public class UpdatePlanUseCase {
             command.features(),
             command.enabledFeatures()
         );
-        plan.updateQuotas(command.monthlyAiQuota(), command.monthlyMessageQuota());
+        plan.updateQuotas(command.monthlyAiQuota(), command.monthlyMessageQuota(), command.maxBranches());
         if (command.active()) {
             plan.activate();
         } else {

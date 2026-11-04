@@ -65,6 +65,10 @@ public class Plan {
     @Column(name = "monthly_message_quota")
     private Integer monthlyMessageQuota;
 
+    /** Bu planin actigi azami sube sayisi; null = sinirsiz (bkz. BranchLimitPort). */
+    @Column(name = "max_branches")
+    private Integer maxBranches;
+
     @Column(nullable = false)
     private boolean active;
 
@@ -105,11 +109,13 @@ public class Plan {
         this.active = false;
     }
 
-    public void updateQuotas(Integer monthlyAiQuota, Integer monthlyMessageQuota) {
-        if ((monthlyAiQuota != null && monthlyAiQuota < 0) || (monthlyMessageQuota != null && monthlyMessageQuota < 0)) {
+    public void updateQuotas(Integer monthlyAiQuota, Integer monthlyMessageQuota, Integer maxBranches) {
+        if ((monthlyAiQuota != null && monthlyAiQuota < 0) || (monthlyMessageQuota != null && monthlyMessageQuota < 0)
+            || (maxBranches != null && maxBranches < 0)) {
             throw new IllegalArgumentException("Kota negatif olamaz");
         }
         this.monthlyAiQuota = monthlyAiQuota;
         this.monthlyMessageQuota = monthlyMessageQuota;
+        this.maxBranches = maxBranches;
     }
 }

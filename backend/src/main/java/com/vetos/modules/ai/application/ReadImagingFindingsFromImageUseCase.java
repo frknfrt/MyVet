@@ -40,8 +40,14 @@ import java.util.List;
 public class ReadImagingFindingsFromImageUseCase {
 
     private static final String MODEL_NOT_CONNECTED_FINDINGS = "[AI modeli fotografi okuyamadi -- bulgulari elle girin.]";
+    // REVIZE (2026-11-01, canli QA bulgusu): bu metin Turkce karaktersiz (ASCII)
+    // yazilmisti -- goruntuleme modulunun ESKI (Task 4/5) prompt konvansiyonunu
+    // taklit etmistim, ama urunun geri kalani (ornegin PatientHistoryFormatter'in
+    // AI'ya gonderdigi metin) ve lab-OCR'in "Genel Degerlendirme" ciktisi duzgun
+    // Turkce karakter kullaniyor -- derleme/calisma zamaninda hicbir sorun yok
+    // (pom.xml UTF-8), bu yuzden burada da duzgun Turkce karakter kullaniliyor.
     private static final String RAW_IMAGE_DISCLAIMER =
-        "[AI gorsel on-degerlendirme -- bu kesin bir tani DEGILDIR, goruntuyu mutlaka kendiniz degerlendirin] ";
+        "[AI görsel ön-değerlendirme -- bu kesin bir tanı DEĞİLDİR, görüntüyü mutlaka kendiniz değerlendirin] ";
 
     private final ImagingRecordFileLookupPort imagingRecordFileLookupPort;
     private final ImagingFindingsOcrPort imagingFindingsOcrPort;

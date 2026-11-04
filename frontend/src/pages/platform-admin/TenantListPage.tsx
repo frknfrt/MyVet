@@ -183,7 +183,6 @@ export function TenantListPage() {
               required
             />
           </FieldWrap>
-
           <div className={styles.modalActions}>
             <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>
               Vazgeç

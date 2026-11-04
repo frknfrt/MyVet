@@ -1,5 +1,6 @@
 package com.vetos.platform.web;
 
+import com.vetos.platform.branch.BranchLimitExceededException;
 import com.vetos.platform.exception.DomainException;
 import com.vetos.platform.quota.MonthlyQuotaExceededException;
 import com.vetos.platform.ratelimit.RateLimitExceededException;
@@ -54,6 +55,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MonthlyQuotaExceededException.class)
     public ResponseEntity<ErrorResponse> handleMonthlyQuota(MonthlyQuotaExceededException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+            .body(ErrorResponse.of(ex.getErrorCode(), ex.getMessage(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(BranchLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleBranchLimit(BranchLimitExceededException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
             .body(ErrorResponse.of(ex.getErrorCode(), ex.getMessage(), request.getRequestURI()));
     }
 

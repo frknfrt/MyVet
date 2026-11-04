@@ -21,7 +21,8 @@ public record PlanResponse(
     Set<Feature> enabledFeatures,
     boolean active,
     Integer monthlyAiQuota,
-    Integer monthlyMessageQuota
+    Integer monthlyMessageQuota,
+    Integer maxBranches
 ) {
     public static PlanResponse from(Plan plan) {
         return new PlanResponse(
@@ -37,7 +38,8 @@ public record PlanResponse(
             plan.getEnabledFeatures(),
             plan.isActive(),
             plan.getMonthlyAiQuota(),
-            plan.getMonthlyMessageQuota()
+            plan.getMonthlyMessageQuota(),
+            plan.getMaxBranches()
         );
     }
 }

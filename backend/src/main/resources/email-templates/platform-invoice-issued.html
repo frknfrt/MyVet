@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
-<title>Vetly — Deneme Takibi</title>
+<title>Vetly — Yeni Fatura</title>
 <!--[if mso]>
 <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
 <![endif]-->
@@ -21,12 +21,11 @@
 </style>
 </head>
 <body style="margin:0;padding:0;background-color:#fbfaf8;">
-  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Deneme sürenizle ilgili elimizden gelen desteği vermek isteriz.</div>
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">{{KLINIK_ADI}} için yeni bir fatura oluşturuldu.</div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#fbfaf8;">
     <tr>
       <td align="center" style="padding:32px 16px;">
         <table role="presentation" class="vetly-container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background-color:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(24,15,36,0.08);">
-          <!-- Header -->
           <tr>
             <td style="background-color:#180f24;padding:22px 32px;" class="vetly-px">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -44,30 +43,17 @@
                     </table>
                   </td>
                   <td align="right" valign="middle">
-                    <span style="font-family:'Inter','Segoe UI',Arial,sans-serif;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;color:#e0ac5c;">Deneme Takibi</span>
+                    <span style="font-family:'Inter','Segoe UI',Arial,sans-serif;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;color:#e0ac5c;">Yeni Fatura</span>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
-          <!-- Body -->
           <tr>
             <td style="padding:36px 32px 8px 32px;" class="vetly-px">
-<h1 style="margin:0 0 18px 0;font-family:'Plus Jakarta Sans','Segoe UI',Arial,sans-serif;font-size:22px;line-height:28px;color:#1b1229;font-weight:700;">Vetly denemeniz nasıl gidiyor?</h1><p style="margin:0 0 16px 0;font-family:'Inter','Segoe UI',Arial,sans-serif;font-size:15px;line-height:24px;color:#1b1229;font-weight:400;">Merhaba {{YETKILI_ADI}},</p><p style="margin:0 0 16px 0;font-family:'Inter','Segoe UI',Arial,sans-serif;font-size:15px;line-height:24px;color:#1b1229;font-weight:400;">Vetly'yi <b>{{KLINIK_ADI}}</b> için denemeye başlamanızdan bu yana birkaç gün geçti — nasıl gidiyor, merak ettik.</p><p style="margin:0 0 16px 0;font-family:'Inter','Segoe UI',Arial,sans-serif;font-size:15px;line-height:24px;color:#1b1229;font-weight:400;">Takıldığınız ya da anlamak istediğiniz bir nokta varsa (personel ekleme, TARBİL eklentisini bağlama, WhatsApp bildirimleri vb.) bu e-postaya yanıt vererek ya da {{TELEFON}} numarasından bize ulaşabilirsiniz, birlikte bakarız.</p><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f0e7f7;border-radius:10px;margin:0 0 20px 0;"><tr><td style="padding:16px 20px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:6px 0;font-family:'Inter','Segoe UI',Arial,sans-serif;font-size:13px;color:#6e6579;width:150px;">Deneme bitiş tarihi</td><td style="padding:6px 0;font-family:'Inter','Segoe UI',Arial,sans-serif;font-size:14px;color:#1b1229;font-weight:600;">{{BITIS_TARIHI}}</td></tr></table></td></tr></table><p style="margin:0 0 16px 0;font-family:'Inter','Segoe UI',Arial,sans-serif;font-size:15px;line-height:24px;color:#1b1229;font-weight:400;">Devam etmek isterseniz size en uygun paketi birlikte seçelim.</p><p style="margin:24px 0 0 0;font-family:'Inter','Segoe UI',Arial,sans-serif;font-size:15px;line-height:24px;color:#1b1229;font-weight:400;">Saygılarımla,<br><b>Vetly Ekibi</b><br>{{TELEFON}}</p>
+<h1 style="margin:0 0 18px 0;font-family:'Plus Jakarta Sans','Segoe UI',Arial,sans-serif;font-size:22px;line-height:28px;color:#1b1229;font-weight:700;">Yeni faturanız oluşturuldu</h1><p style="margin:0 0 16px 0;font-family:'Inter','Segoe UI',Arial,sans-serif;font-size:15px;line-height:24px;color:#1b1229;font-weight:400;"><b>{{KLINIK_ADI}}</b> için Vetly abonelik faturanız aşağıdadır.</p><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f0e7f7;border-radius:10px;margin:0 0 20px 0;"><tr><td style="padding:16px 20px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:6px 0;font-family:'Inter','Segoe UI',Arial,sans-serif;font-size:13px;color:#6e6579;width:150px;">Tutar</td><td style="padding:6px 0;font-family:'Inter','Segoe UI',Arial,sans-serif;font-size:14px;color:#1b1229;font-weight:600;"><span style="color:#c2872e;">{{TUTAR}} TL</span></td></tr><tr><td style="padding:6px 0;font-family:'Inter','Segoe UI',Arial,sans-serif;font-size:13px;color:#6e6579;width:150px;">Son ödeme tarihi</td><td style="padding:6px 0;font-family:'Inter','Segoe UI',Arial,sans-serif;font-size:14px;color:#1b1229;font-weight:600;">{{SON_ODEME_TARIHI}}</td></tr></table></td></tr></table><p style="margin:0 0 16px 0;font-family:'Inter','Segoe UI',Arial,sans-serif;font-size:15px;line-height:24px;color:#1b1229;font-weight:400;">{{ODEME_TALIMATI}}</p><p style="margin:0 0 16px 0;font-family:'Inter','Segoe UI',Arial,sans-serif;font-size:15px;line-height:24px;color:#1b1229;font-weight:400;">Dilerseniz uygulamaya giriş yapıp Ayarlar &gt; Abonelik ekranında ilgili faturanın yanındaki <b>Öde</b> butonuyla kartla da ödeyebilirsiniz.</p><p style="margin:0 0 16px 0;font-family:'Inter','Segoe UI',Arial,sans-serif;font-size:15px;line-height:24px;color:#1b1229;font-weight:400;">Sorularınız için <a href="mailto:bildirim@vetly.com.tr">bildirim@vetly.com.tr</a> adresinden bize ulaşabilirsiniz.</p><p style="margin:24px 0 0 0;font-family:'Inter','Segoe UI',Arial,sans-serif;font-size:15px;line-height:24px;color:#1b1229;font-weight:400;">Saygılarımızla,<br><b>Vetly Ekibi</b></p>
             </td>
           </tr>
-
-              <tr>
-                <td align="center" style="padding:8px 0 4px 0;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                    <tr>
-                      <td align="center" bgcolor="#c2872e" style="border-radius:8px;">
-                        <a href="https://vetly.com.tr/fiyatlandirma" style="display:inline-block;padding:13px 32px;font-family:'Plus Jakarta Sans','Segoe UI',Arial,sans-serif;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:8px;">Fiyatlandırmayı incele</a>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
           <tr>
             <td style="padding:28px 32px 32px 32px;" class="vetly-px">
               <hr style="border:none;border-top:1px solid #e9e5ef;margin:0 0 20px 0;">

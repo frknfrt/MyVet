@@ -53,7 +53,7 @@ class PlanLookupCacheTest {
 
     private Plan planWithAiQuota(String code, int aiQuota) {
         Plan plan = Plan.create(code, code, BigDecimal.TEN);
-        plan.updateQuotas(aiQuota, null);
+        plan.updateQuotas(aiQuota, null, null);
         return plan;
     }
 
@@ -142,7 +142,7 @@ class PlanLookupCacheTest {
     void should_snapshotBeImmutable_and_keepNullQuota() {
         String code = "P-" + UUID.randomUUID();
         Plan plan = Plan.create(code, code, BigDecimal.TEN);
-        plan.updateQuotas(null, 500);
+        plan.updateQuotas(null, 500, null);
         when(planRepository.findByCode(code)).thenReturn(Optional.of(plan));
 
         PlanSnapshot snapshot = planLookup.planByCode(code).orElseThrow();

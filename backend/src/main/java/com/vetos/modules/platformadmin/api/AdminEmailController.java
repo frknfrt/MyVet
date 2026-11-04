@@ -24,9 +24,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * Platform admin "E-posta Gonder" paneli -- markali 4 sablonu (Satis, Deneme
- * Takip, Hos Geldin, Fatura Hatirlatma) cPanel'deki gercek kutulardan elle
- * tetikler. Bkz. SendAdminEmailUseCase / AdminEmailPort.
+ * Platform admin "E-posta Gonder" paneli -- markali 3 sablonu (Satis, Hos
+ * Geldin, Fatura Hatirlatma) cPanel'deki gercek kutulardan elle tetikler.
+ * Bkz. SendAdminEmailUseCase / AdminEmailPort.
  */
 @RestController
 @RequestMapping("/api/v1/platform-admin/emails")

@@ -49,14 +49,6 @@ class PlanFeatureAccessAdapterTest {
     }
 
     @Test
-    void should_enableEverything_when_trialPlan() {
-        when(tenantAdminPort.findPlanCode(TENANT)).thenReturn(Optional.of("TRIAL"));
-
-        assertThat(adapter(true).enabledFeatures(TENANT)).isEqualTo(EnumSet.allOf(Feature.class));
-        verifyNoInteractions(planRepository);
-    }
-
-    @Test
     void should_returnPlanFlags_when_planExists() {
         when(tenantAdminPort.findPlanCode(TENANT)).thenReturn(Optional.of("PRO"));
         when(planRepository.findByCode("PRO")).thenReturn(Optional.of(planWith(Set.of(Feature.LAB_INTEGRATION, Feature.IMAGING))));
@@ -81,6 +73,14 @@ class PlanFeatureAccessAdapterTest {
         when(tenantAdminPort.findPlanCode(TENANT)).thenReturn(Optional.empty());
 
         assertThat(adapter(true).enabledFeatures(TENANT)).isEmpty();
+        verifyNoInteractions(planRepository);
+    }
+
+    @Test
+    void should_enableEverything_when_trialPlan() {
+        when(tenantAdminPort.findPlanCode(TENANT)).thenReturn(Optional.of("TRIAL"));
+
+        assertThat(adapter(true).enabledFeatures(TENANT)).isEqualTo(EnumSet.allOf(Feature.class));
         verifyNoInteractions(planRepository);
     }
 }

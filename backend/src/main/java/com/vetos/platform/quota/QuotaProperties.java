@@ -7,5 +7,5 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 @ConfigurationProperties("vetly.quota")
 public record QuotaProperties(@DefaultValue Trial trial) {
 
-    public record Trial(@DefaultValue("30") int ai, @DefaultValue("100") int message) {}
+    public record Trial(@DefaultValue("30") int ai, @DefaultValue("100") int message, @DefaultValue("1") int maxBranches) {}
 }

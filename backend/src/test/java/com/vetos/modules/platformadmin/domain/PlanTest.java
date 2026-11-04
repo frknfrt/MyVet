@@ -68,7 +68,7 @@ class PlanTest {
     @Test
     void should_updateQuotas_allowingNullAsUnlimited() {
         Plan plan = Plan.create("PRO", "Pro", BigDecimal.TEN);
-        plan.updateQuotas(100, null);
+        plan.updateQuotas(100, null, null);
         assertThat(plan.getMonthlyAiQuota()).isEqualTo(100);
         assertThat(plan.getMonthlyMessageQuota()).isNull();
     }
@@ -76,7 +76,7 @@ class PlanTest {
     @Test
     void should_rejectNegativeQuota() {
         Plan plan = Plan.create("PRO", "Pro", BigDecimal.TEN);
-        assertThatThrownBy(() -> plan.updateQuotas(-1, null)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> plan.updateQuotas(null, -5)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> plan.updateQuotas(-1, null, null)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> plan.updateQuotas(null, -5, null)).isInstanceOf(IllegalArgumentException.class);
     }
 }

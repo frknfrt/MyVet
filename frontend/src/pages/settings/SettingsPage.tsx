@@ -7,7 +7,6 @@ import { ActivityHistoryPanel } from './ActivityHistoryPanel';
 import { AiCenterPanel } from './AiCenterPanel';
 import { BranchManagementPanel } from './BranchManagementPanel';
 import { DrugCatalogPanel } from './DrugCatalogPanel';
-import { EfaturaPanel } from './EfaturaPanel';
 import { IntegrationsPanel } from './IntegrationsPanel';
 import { RolePermissionsPanel } from './RolePermissionsPanel';
 import { ServiceTypesPanel } from './ServiceTypesPanel';
@@ -54,8 +53,9 @@ const SETTINGS_TABS: SettingsTabConfig[] = [
   { path: 'ilac-katalogu', label: 'İlaç Kataloğu', roles: ['ADMIN'] },
   { path: 'ai-merkezi', label: 'AI Merkezi', feature: 'AI_ASSISTANT' },
   { path: 'sms-whatsapp', label: 'SMS / WhatsApp', roles: ['ADMIN', 'RECEPTIONIST'] },
-  // EInvoiceController tamamı ADMIN-only.
-  { path: 'e-fatura', label: 'e-Fatura', roles: ['ADMIN'], feature: 'E_FATURA' },
+  // e-Fatura sekmesi V2'ye kadar arayüzden kaldırıldı (2026-11-04) -- backend
+  // (EInvoiceController, Feature.E_FATURA) ve EfaturaPanel.tsx bilerek dokunulmadan
+  // kalıyor, V2'de bu listeye satırı geri eklemek yeterli olacak.
 ];
 
 export function SettingsPage() {
@@ -102,7 +102,6 @@ export function SettingsPage() {
         <Route path="ilac-katalogu" element={isAdmin ? <DrugCatalogPanel /> : forbidden} />
         <Route path="ai-merkezi" element={hasFeature('AI_ASSISTANT') ? <AiCenterPanel /> : notInPlan} />
         <Route path="sms-whatsapp" element={canViewSmsWhatsapp ? <SmsWhatsappPanel /> : forbidden} />
-        <Route path="e-fatura" element={!isAdmin ? forbidden : hasFeature('E_FATURA') ? <EfaturaPanel /> : notInPlan} />
       </Routes>
     </AppShell>
   );

@@ -21,5 +21,6 @@ public record UpdatePlanRequest(
     Set<Feature> enabledFeatures,
     boolean active,
     @PositiveOrZero Integer monthlyAiQuota,
-    @PositiveOrZero Integer monthlyMessageQuota
+    @PositiveOrZero Integer monthlyMessageQuota,
+    @PositiveOrZero Integer maxBranches
 ) {}

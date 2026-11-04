@@ -38,7 +38,7 @@ class UpdatePlanUseCaseTest {
         UpdatePlanUseCase useCase = new UpdatePlanUseCase(planRepository, recordAuditLogUseCase);
 
         useCase.execute(new UpdatePlanCommand(
-            planId, "Pro Plan Yeni", new BigDecimal("2500.00"), null, null, null, null, List.of(), Set.of(), true, 100, null
+            planId, "Pro Plan Yeni", new BigDecimal("2500.00"), null, null, null, null, List.of(), Set.of(), true, 100, null, null
         ), adminId, "admin@vetly.com.tr");
 
         verify(planRepository).save(plan);
@@ -54,7 +54,7 @@ class UpdatePlanUseCaseTest {
         UpdatePlanUseCase useCase = new UpdatePlanUseCase(planRepository, recordAuditLogUseCase);
 
         assertThatThrownBy(() -> useCase.execute(new UpdatePlanCommand(
-            planId, "X", BigDecimal.ONE, null, null, null, null, List.of(), Set.of(), true, null, null
+            planId, "X", BigDecimal.ONE, null, null, null, null, List.of(), Set.of(), true, null, null, null
         ), UUID.randomUUID(), "admin@vetly.com.tr")).isInstanceOf(PlanNotFoundException.class);
         verifyNoInteractions(recordAuditLogUseCase);
     }

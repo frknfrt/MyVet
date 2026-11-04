@@ -25,7 +25,8 @@ button {
 }
 
 input,
-select,
+select,cd backendcd backend
+.\mvnw.cmd -DskipTests package
 textarea {
   font-family: inherit;
 }

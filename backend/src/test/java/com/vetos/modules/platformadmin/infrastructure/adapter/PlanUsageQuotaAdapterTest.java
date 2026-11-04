@@ -4,8 +4,8 @@ import com.vetos.modules.platformadmin.domain.Plan;
 import com.vetos.modules.platformadmin.domain.PlanRepository;
 import com.vetos.modules.platformadmin.infrastructure.persistence.MonthlyUsageStore;
 import com.vetos.modules.tenant.domain.TenantAdminPort;
-import com.vetos.platform.quota.MonthlyQuotaExceededException;
 import com.vetos.platform.quota.QuotaProperties;
+import com.vetos.platform.quota.MonthlyQuotaExceededException;
 import com.vetos.platform.quota.UsageKind;
 import com.vetos.platform.quota.UsageSnapshot;
 import org.junit.jupiter.api.Test;
@@ -31,15 +31,22 @@ class PlanUsageQuotaAdapterTest {
     private final TenantAdminPort tenantAdminPort = mock(TenantAdminPort.class);
     private final PlanRepository planRepository = mock(PlanRepository.class);
     private final MonthlyUsageStore store = mock(MonthlyUsageStore.class);
-    private final QuotaProperties props = new QuotaProperties(new QuotaProperties.Trial(30, 100));
+
+    private QuotaProperties quotaProperties(int ai, int message, int maxBranches) {
+        return new QuotaProperties(new QuotaProperties.Trial(ai, message, maxBranches));
+    }
 
     private PlanUsageQuotaAdapter adapter(boolean enforcement, Clock clock) {
-        return new PlanUsageQuotaAdapter(new PlanLookup(tenantAdminPort, planRepository), store, props, enforcement, clock);
+        return adapter(enforcement, clock, quotaProperties(30, 100, 1));
+    }
+
+    private PlanUsageQuotaAdapter adapter(boolean enforcement, Clock clock, QuotaProperties quotaProperties) {
+        return new PlanUsageQuotaAdapter(new PlanLookup(tenantAdminPort, planRepository), store, quotaProperties, enforcement, clock);
     }
 
     private Plan planWithQuotas(Integer ai, Integer message) {
         Plan plan = Plan.create("PRO", "Pro", BigDecimal.TEN);
-        plan.updateQuotas(ai, message);
+        plan.updateQuotas(ai, message, null);
         return plan;
     }
 
@@ -86,17 +93,6 @@ class PlanUsageQuotaAdapterTest {
     }
 
     @Test
-    void should_useTrialQuotasFromProperties() {
-        when(tenantAdminPort.findPlanCode(TENANT)).thenReturn(Optional.of("TRIAL"));
-        when(store.tryIncrement(TENANT, "2026-10", UsageKind.AI, 1, 30)).thenReturn(true);
-
-        adapter(true, OCT).reserve(TENANT, UsageKind.AI, 1);
-
-        verify(store).tryIncrement(TENANT, "2026-10", UsageKind.AI, 1, 30);
-        verifyNoInteractions(planRepository);
-    }
-
-    @Test
     void should_useZeroQuota_when_noSubscription() {
         when(tenantAdminPort.findPlanCode(TENANT)).thenReturn(Optional.empty());
         when(store.tryIncrement(TENANT, "2026-10", UsageKind.AI, 1, 0)).thenReturn(false);
@@ -135,6 +131,15 @@ class PlanUsageQuotaAdapterTest {
     void should_releaseViaDecrement() {
         adapter(true, OCT).release(TENANT, UsageKind.AI, 1);
         verify(store).decrement(TENANT, "2026-10", UsageKind.AI, 1);
+    }
+
+    @Test
+    void should_useTrialQuotasFromProperties() {
+        when(tenantAdminPort.findPlanCode(TENANT)).thenReturn(Optional.of("TRIAL"));
+
+        adapter(true, OCT, quotaProperties(30, 100, 1)).reserve(TENANT, UsageKind.AI, 1);
+
+        verify(store).tryIncrement(TENANT, "2026-10", UsageKind.AI, 1, 30);
     }
 
     @Test

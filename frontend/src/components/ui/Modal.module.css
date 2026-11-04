@@ -10,14 +10,48 @@
 }
 
 .card {
+  position: relative;
   background: var(--color-paper);
   border-radius: 16px;
-  padding: 1.8rem;
   max-width: 92vw;
-  max-height: 88vh;
-  overflow-y: auto;
   box-shadow: 0 30px 60px -20px rgba(24, 15, 36, 0.35);
   animation: popIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.content {
+  padding: 1.8rem;
+  max-height: 88vh;
+  overflow-y: auto;
+}
+
+.closeBtn {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border, rgba(24, 15, 36, 0.12));
+  border-radius: 999px;
+  box-shadow: 0 6px 16px -4px rgba(24, 15, 36, 0.25);
+  color: var(--color-text-muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 1;
+}
+.closeBtn:hover {
+  color: var(--color-danger-700, #b42318);
+  border-color: var(--color-danger-700, #b42318);
+}
+@media (max-width: 480px) {
+  .closeBtn {
+    top: -10px;
+    right: -10px;
+  }
 }
 
 @keyframes fadeIn {

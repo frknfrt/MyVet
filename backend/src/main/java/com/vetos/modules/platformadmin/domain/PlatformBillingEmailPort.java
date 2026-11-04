@@ -1,10 +1,10 @@
 package com.vetos.modules.platformadmin.domain;
 
 /**
- * Platform faturalama e-posta bildirimlerini soyutlayan port -- TARBIL/davet
- * e-postasi ile ayni desen (@docs/architecture.md Bolum 3). Gercek bir
- * e-posta saglayicisi (SendGrid/SMTP) hesabi bu ortamda yok;
- * MockPlatformBillingEmailAdapter bu portu simule eder.
+ * Platform faturalama e-posta bildirimlerini soyutlayan port -- davet
+ * e-postasi ile ayni desen (@docs/architecture.md Bolum 3). admin-email.*
+ * (cPanel bildirim@ kutusu) tanimliysa SmtpPlatformBillingEmailAdapter
+ * gercekten gonderir, tanimli degilse sadece loglar.
  */
 public interface PlatformBillingEmailPort {
     void sendInvoiceIssued(PlatformInvoice invoice, String tenantName, String recipientEmail);

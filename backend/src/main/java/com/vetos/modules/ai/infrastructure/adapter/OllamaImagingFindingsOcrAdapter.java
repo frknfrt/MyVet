@@ -40,32 +40,42 @@ import java.util.Map;
 @Slf4j
 class OllamaImagingFindingsOcrAdapter implements ImagingFindingsOcrPort {
 
+    // REVIZE (2026-11-01, canli QA bulgusu): bu prompt onceki (Task 4/5)
+    // konvansiyonu taklit ederek Turkce karaktersiz (ASCII) yazilmisti; bu da
+    // modelin kendi ciktisinin da karaktersiz gelmesine yol aciyordu (ornegin
+    // "goruntuyu" yerine "görüntüyü"), ürünün geri kalaniyla tutarsiz
+    // duruyordu. pom.xml UTF-8 kullandigi ve PatientHistoryFormatter gibi
+    // diger AI prompt'lari zaten duzgun Turkce karakter kullandigi icin
+    // burada da duzeltildi; modelden de duzgun Turkce karakter kullanmasi
+    // ACIKCA istendi.
     private static final String PROMPT = """
-        Sana bir veteriner goruntuleme kaydina ait bir fotograf verilecek. Bu \
-        fotograf IKI TURDEN biri olabilir: (1) dis bir merkezden gelen YAZILI \
-        bir radyoloji/goruntuleme raporu, veya (2) rontgen/USG/tomografi gibi \
-        HAM bir tibbi goruntu (yazili rapor degil, dogrudan cihaz ciktisi/ekran \
-        goruntusu). Asagidaki KESIN JSON semasinda, BASKA HICBIR METIN \
-        EKLEMEDEN don:
+        Sana bir veteriner görüntüleme kaydına ait bir fotoğraf verilecek. Bu \
+        fotoğraf İKİ TÜRDEN biri olabilir: (1) dış bir merkezden gelen YAZILI \
+        bir radyoloji/görüntüleme raporu, veya (2) röntgen/USG/tomografi gibi \
+        HAM bir tıbbi görüntü (yazılı rapor değil, doğrudan cihaz çıktısı/ekran \
+        görüntüsü). Aşağıdaki KESİN JSON şemasında, BAŞKA HİÇBİR METİN \
+        EKLEMEDEN dön:
         {"source":"report"|"raw_image","findings":"..."}
         Kurallar:
-        - Fotografta YAZILI bir rapor metni varsa: source="report" don, \
-        findings alanina raporda yazili bulgular/sonuc metnini, mumkun \
-        oldugunca orijinaline sadik kalarak, duzgun Turkce paragraf(lar) \
+        - findings alanını her zaman düzgün Türkçe karakterlerle (ğ, ü, ş, ı, \
+        ö, ç dahil) yaz -- Türkçe karaktersiz (ASCII) yazma.
+        - Fotoğrafta YAZILI bir rapor metni varsa: source="report" dön, \
+        findings alanına raporda yazılı bulgular/sonuç metnini, mümkün \
+        olduğunca orijinaline sadık kalarak, düzgün Türkçe paragraf(lar) \
         halinde aktar.
-        - Fotograf HAM bir rontgen/USG/tomografi goruntusu ise (yazili rapor \
-        degilse): source="raw_image" don, findings alanina goruntude gozle \
-        gorulen seyleri DIKKATLI ve HEDGE'li (kesin olmayan) bir dille yaz -- \
-        ornek ifadeler: "...izlenimi vermektedir", "...gibi gorunmektedir", \
-        "ileri degerlendirme onerilir". KESIN tani ifadeleri ("kirik var", \
-        "tumor var", "normaldir" gibi kesin sonuc cumleleri) KULLANMA -- bu \
-        sadece gorsel bir on-izlenimdir, nihai teshis her zaman veteriner \
-        hekime aittir. UYDURMA -- goruntude gercekten gordugunu yaz, \
-        gormedigini yazma.
-        - Fotograf okunamiyorsa, cok bulanik/karanliksa veya hic \
-        degerlendirilemiyorsa: source alanini en iyi tahminine gore doldur, \
-        findings alanini bos string "" birak.
-        - Sadece JSON don, aciklama/markdown ekleme.""";
+        - Fotoğraf HAM bir röntgen/USG/tomografi görüntüsü ise (yazılı rapor \
+        değilse): source="raw_image" dön, findings alanına görüntüde gözle \
+        görülen şeyleri DİKKATLİ ve HEDGE'li (kesin olmayan) bir dille yaz -- \
+        örnek ifadeler: "...izlenimi vermektedir", "...gibi görünmektedir", \
+        "ileri değerlendirme önerilir". KESİN tanı ifadeleri ("kırık var", \
+        "tümör var", "normaldir" gibi kesin sonuç cümleleri) KULLANMA -- bu \
+        sadece görsel bir ön-izlenimdir, nihai teşhis her zaman veteriner \
+        hekime aittir. UYDURMA -- görüntüde gerçekten gördüğünü yaz, \
+        görmediğini yazma.
+        - Fotoğraf okunamıyorsa, çok bulanık/karanlıksa veya hiç \
+        değerlendirilemiyorsa: source alanını en iyi tahminine göre doldur, \
+        findings alanını boş string "" bırak.
+        - Sadece JSON dön, açıklama/markdown ekleme.""";
 
     private final String baseUrl;
     private final String visionModel;

@@ -11,7 +11,7 @@ class SubscriptionTest {
 
     @Test
     void should_updateRenewsAt_when_advanceRenewalCalled() {
-        Subscription subscription = Subscription.startTrial(UUID.randomUUID());
+        Subscription subscription = Subscription.startPaid(UUID.randomUUID(), "PRO", LocalDate.of(2026, 9, 1));
         LocalDate nextPeriod = LocalDate.of(2026, 9, 28);
 
         subscription.advanceRenewal(nextPeriod);
@@ -21,7 +21,7 @@ class SubscriptionTest {
 
     @Test
     void should_updateBillingStatusOnly_when_updateBillingStatusCalled() {
-        Subscription subscription = Subscription.startTrial(UUID.randomUUID());
+        Subscription subscription = Subscription.startPaid(UUID.randomUUID(), "PRO", LocalDate.of(2026, 9, 1));
         String originalPlanCode = subscription.getPlanCode();
 
         subscription.updateBillingStatus(BillingStatus.PAST_DUE);
@@ -41,5 +41,17 @@ class SubscriptionTest {
         assertThat(subscription.getPlanCode()).isEqualTo("PRO");
         assertThat(subscription.getRenewsAt()).isEqualTo(renewsAt);
         assertThat(subscription.getBillingStatus()).isEqualTo(BillingStatus.ACTIVE);
+    }
+
+    @Test
+    void should_startTrialWithFourteenDayPeriod_when_startTrialCalled() {
+        UUID tenantId = UUID.randomUUID();
+
+        Subscription subscription = Subscription.startTrial(tenantId);
+
+        assertThat(subscription.getTenantId()).isEqualTo(tenantId);
+        assertThat(subscription.getPlanCode()).isEqualTo("TRIAL");
+        assertThat(subscription.getBillingStatus()).isEqualTo(BillingStatus.TRIAL);
+        assertThat(subscription.getRenewsAt()).isEqualTo(subscription.getStartedAt().plusDays(14));
     }
 }

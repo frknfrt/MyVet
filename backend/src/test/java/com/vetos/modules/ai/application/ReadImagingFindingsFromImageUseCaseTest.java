@@ -184,7 +184,7 @@ class ReadImagingFindingsFromImageUseCaseTest {
         );
 
         assertThat(result.findings())
-            .startsWith("[AI gorsel on-degerlendirme")
+            .startsWith("[AI görsel ön-değerlendirme")
             .contains("Sol bobrekte hafif buyume izlenimi vermektedir.");
 
         ArgumentCaptor<RecordAiJobCommand> captor = ArgumentCaptor.forClass(RecordAiJobCommand.class);

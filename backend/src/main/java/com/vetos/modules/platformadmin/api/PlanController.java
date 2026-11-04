@@ -68,7 +68,8 @@ public class PlanController {
             request.enabledFeatures() == null ? java.util.Set.of() : request.enabledFeatures(),
             request.active(),
             request.monthlyAiQuota(),
-            request.monthlyMessageQuota()
+            request.monthlyMessageQuota(),
+            request.maxBranches()
         ), principal.platformAdminId(), principal.email());
     }
 

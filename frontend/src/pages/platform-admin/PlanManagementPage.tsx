@@ -23,6 +23,7 @@ interface PlanFormState {
   enabledFeatures: string[];
   monthlyAiQuota: string;
   monthlyMessageQuota: string;
+  maxBranches: string;
   active: boolean;
 }
 
@@ -38,6 +39,7 @@ const EMPTY_FORM: PlanFormState = {
   enabledFeatures: [],
   monthlyAiQuota: '',
   monthlyMessageQuota: '',
+  maxBranches: '',
   active: true,
 };
 
@@ -91,6 +93,7 @@ export function PlanManagementPage() {
       enabledFeatures: plan.enabledFeatures,
       monthlyAiQuota: plan.monthlyAiQuota === null ? '' : String(plan.monthlyAiQuota),
       monthlyMessageQuota: plan.monthlyMessageQuota === null ? '' : String(plan.monthlyMessageQuota),
+      maxBranches: plan.maxBranches === null ? '' : String(plan.maxBranches),
       active: plan.active,
     };
     setForm(initial);
@@ -137,6 +140,7 @@ export function PlanManagementPage() {
           enabledFeatures: form.enabledFeatures,
           monthlyAiQuota: form.monthlyAiQuota === '' ? null : Number(form.monthlyAiQuota),
           monthlyMessageQuota: form.monthlyMessageQuota === '' ? null : Number(form.monthlyMessageQuota),
+          maxBranches: form.maxBranches === '' ? null : Number(form.maxBranches),
           active: form.active,
         });
       } else {
@@ -168,6 +172,14 @@ export function PlanManagementPage() {
       {featureOptions && !featureOptions.enforcementActive && (
         <div className={styles.errorBanner}>
           Modül kısıtlaması henüz aktif değil — "Modül Erişimi" işaretleri şu an kliniklere uygulanmıyor.
+        </div>
+      )}
+
+      {featureOptions?.trialQuotas && (
+        <div className={styles.muted} style={{ marginBottom: 12, fontSize: 13 }}>
+          Deneme paketi kotaları: aylık {featureOptions.trialQuotas.ai} AI hakkı, aylık{' '}
+          {featureOptions.trialQuotas.message} mesaj hakkı, maksimum {featureOptions.trialQuotas.maxBranches} şube.
+          (application.yml → vetly.quota.trial)
         </div>
       )}
 
@@ -214,12 +226,6 @@ export function PlanManagementPage() {
           ))
         )}
       </div>
-
-      {featureOptions && (
-        <div style={{ fontSize: 13, marginTop: 16, color: 'var(--color-text-muted)' }}>
-          Deneme paketi kotaları: {featureOptions.trialQuotas.ai} AI / {featureOptions.trialQuotas.message} mesaj (sunucu ayarı)
-        </div>
-      )}
 
       <Modal
         open={modalOpen}
@@ -309,8 +315,20 @@ export function PlanManagementPage() {
                   placeholder="Sınırsız"
                 />
               </FieldWrap>
+              <FieldWrap label="Maksimum Şube Sayısı">
+                <Input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={form.maxBranches}
+                  onChange={(e) => setForm((f) => ({ ...f, maxBranches: e.target.value }))}
+                  placeholder="Sınırsız"
+                />
+              </FieldWrap>
               <FieldWrap label="Modül Erişimi (bu plan hangi modülleri açar)">
-                {(featureOptions?.options ?? []).map((option) => (
+                {/* E_FATURA V2'ye kadar arayüzden kaldırıldı (2026-11-04) -- backend Feature enum'unda
+                    kalıyor, burada sadece seçilebilir listeden gizleniyor. V2'de bu filtreyi kaldırmak yeterli. */}
+                {(featureOptions?.options ?? []).filter((option) => option.code !== 'E_FATURA').map((option) => (
                   <label key={option.code} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, marginBottom: 6 }}>
                     <input
                       type="checkbox"

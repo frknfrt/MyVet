@@ -50,7 +50,7 @@ export interface CreateTenantPayload {
 export interface FeatureOptions {
   enforcementActive: boolean;
   options: { code: string; label: string }[];
-  trialQuotas: { ai: number; message: number };
+  trialQuotas: { ai: number; message: number; maxBranches: number };
 }
 
 export interface Plan {
@@ -66,6 +66,7 @@ export interface Plan {
   enabledFeatures: string[];
   monthlyAiQuota: number | null;
   monthlyMessageQuota: number | null;
+  maxBranches: number | null;
   active: boolean;
 }
 
@@ -80,6 +81,7 @@ export interface UpdatePlanPayload {
   enabledFeatures: string[];
   monthlyAiQuota: number | null;
   monthlyMessageQuota: number | null;
+  maxBranches: number | null;
   active: boolean;
 }
 
@@ -275,7 +277,7 @@ export interface AiUsageByTenant {
 
 
 
-export type EmailTemplateCode = 'SALES' | 'TRIAL_FOLLOWUP' | 'WELCOME' | 'INVOICE_REMINDER';
+export type EmailTemplateCode = 'SALES' | 'WELCOME' | 'INVOICE_REMINDER';
 
 export interface EmailTemplateFieldOption {
   key: string;

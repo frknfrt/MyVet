@@ -19,5 +19,6 @@ public record UpdatePlanCommand(
     Set<Feature> enabledFeatures,
     boolean active,
     Integer monthlyAiQuota,
-    Integer monthlyMessageQuota
+    Integer monthlyMessageQuota,
+    Integer maxBranches
 ) {}
