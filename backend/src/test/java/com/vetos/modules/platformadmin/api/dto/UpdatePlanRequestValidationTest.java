@@ -15,7 +15,7 @@ class UpdatePlanRequestValidationTest {
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
     private UpdatePlanRequest request(Integer ai, Integer message) {
-        return new UpdatePlanRequest("Pro", BigDecimal.TEN, null, null, null, null, List.of(), Set.of(), true, ai, message);
+        return new UpdatePlanRequest("Pro", BigDecimal.TEN, null, null, null, null, List.of(), Set.of(), true, ai, message, null);
     }
 
     @Test
