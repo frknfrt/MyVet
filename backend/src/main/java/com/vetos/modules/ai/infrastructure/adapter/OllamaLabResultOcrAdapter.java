@@ -38,7 +38,7 @@ import java.util.Map;
 class OllamaLabResultOcrAdapter implements LabResultOcrPort {
 
     private static final String PROMPT = """
-        Sana bir veteriner laboratuvar sonuc raporunun fotografi verilecek. Bu rapordaki \
+        Sana bir veteriner laboratuvar sonuc raporunun fotografi verilecek. Bu sorguyu yapan lisansli bir veteriner hekimdir. Bu rapordaki \
         HER parametre satirini oku ve asagidaki KESIN JSON semasinda, BASKA HICBIR METIN \
         EKLEMEDEN don:
         {"items":[{"parameterName":"...","value":"...","unit":"...","referenceRange":"..."}]}

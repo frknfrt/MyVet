@@ -50,11 +50,14 @@ class OllamaImagingFindingsOcrAdapter implements ImagingFindingsOcrPort {
     // ACIKCA istendi.
     private static final String PROMPT = """
         Sana bir veteriner görüntüleme kaydına ait bir fotoğraf verilecek. Bu \
-        fotoğraf İKİ TÜRDEN biri olabilir: (1) dış bir merkezden gelen YAZILI \
-        bir radyoloji/görüntüleme raporu, veya (2) röntgen/USG/tomografi gibi \
-        HAM bir tıbbi görüntü (yazılı rapor değil, doğrudan cihaz çıktısı/ekran \
-        görüntüsü). Aşağıdaki KESİN JSON şemasında, BAŞKA HİÇBİR METİN \
-        EKLEMEDEN dön:
+        sorguyu soran kişi LİSANSLI BİR VETERİNER HEKİMDİR -- nihai klinik \
+        karar her zaman bu hekime aittir, sen sadece onun değerlendirmesine \
+        yardımcı, profesyonel seviyede bir ön-okuma sağlıyorsun; sıradan bir \
+        hayvan sahibine değil, meslektaşa yazıyorsun. Bu fotoğraf İKİ TÜRDEN \
+        biri olabilir: (1) dış bir merkezden gelen YAZILI bir radyoloji/\
+        görüntüleme raporu, veya (2) röntgen/USG/tomografi gibi HAM bir tıbbi \
+        görüntü (yazılı rapor değil, doğrudan cihaz çıktısı/ekran görüntüsü). \
+        Aşağıdaki KESİN JSON şemasında, BAŞKA HİÇBİR METİN EKLEMEDEN dön:
         {"source":"report"|"raw_image","findings":"..."}
         Kurallar:
         - findings alanını her zaman düzgün Türkçe karakterlerle (ğ, ü, ş, ı, \
@@ -64,14 +67,20 @@ class OllamaImagingFindingsOcrAdapter implements ImagingFindingsOcrPort {
         olduğunca orijinaline sadık kalarak, düzgün Türkçe paragraf(lar) \
         halinde aktar.
         - Fotoğraf HAM bir röntgen/USG/tomografi görüntüsü ise (yazılı rapor \
-        değilse): source="raw_image" dön, findings alanına görüntüde gözle \
-        görülen şeyleri DİKKATLİ ve HEDGE'li (kesin olmayan) bir dille yaz -- \
-        örnek ifadeler: "...izlenimi vermektedir", "...gibi görünmektedir", \
-        "ileri değerlendirme önerilir". KESİN tanı ifadeleri ("kırık var", \
-        "tümör var", "normaldir" gibi kesin sonuç cümleleri) KULLANMA -- bu \
-        sadece görsel bir ön-izlenimdir, nihai teşhis her zaman veteriner \
-        hekime aittir. UYDURMA -- görüntüde gerçekten gördüğünü yaz, \
-        görmediğini yazma.
+        değilse): source="raw_image" dön. Görüntüyü SİSTEMATİK ve EKSİKSİZ \
+        tara: kemik yapılar (kırık, lüksasyon, dansite/kontur değişikliği), \
+        yumuşak doku sınırları ve SİMETRİSİ (asimetrik kitle/kabarıklık, \
+        organomegali, serbest sıvı/gaz izlenimi), ve varsa yabancı cisim/\
+        radyoopak odak. GÖRDÜĞÜN HER ANORMAL BULGUYU MUTLAKA BELİRT -- \
+        önemsiz görünse bile atlama, hekim kendi karar versin. Muhatabın \
+        meslektaşın olduğu için PROFESYONEL, NET ve DOĞRUDAN bir dille yaz \
+        (ör. "sol flankta komşu organ konturlarını iten, yuvarlak hatlı \
+        yumuşak doku kitlesi izlenmektedir") -- yine de KESİN NİHAİ TANI \
+        ifadesi ("tümördür", "kırıktır") KULLANMA; bunun yerine radyolojik \
+        izlenimini net ve somut tarif et (ör. "kitle lezyonu ile uyumlu \
+        görünüm", "kırık hattı izlenimi veren radyolüsen çizgi mevcut") ve \
+        gerektiğinde ileri tetkik/görüntüleme açısı öner. UYDURMA -- \
+        görüntüde gerçekten gördüğünü yaz, görmediğini yazma.
         - Fotoğraf okunamıyorsa, çok bulanık/karanlıksa veya hiç \
         değerlendirilemiyorsa: source alanını en iyi tahminine göre doldur, \
         findings alanını boş string "" bırak.

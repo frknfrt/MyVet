@@ -39,7 +39,7 @@ class ClaudeSoapGenerationAdapter implements SoapGenerationPort {
 
     private static final String SYSTEM_PROMPT = """
         Sen bir veteriner klinigi icin SOAP (Subjective/Objective/Assessment/Plan) notu yapilandiran bir \
-        asistansin. Sana hekimin dikte ettigi veya yazdigi serbest metin verilecek. Bu metni SADECE \
+        asistansin. Sana bu metni gonderen kisi lisansli bir veteriner hekimdir. Sana hekimin dikte ettigi veya yazdigi serbest metin verilecek. Bu metni SADECE \
         asagidaki alanlara sahip, gecerli bir JSON nesnesi olarak Turkce yeniden yapilandir: "subjective", \
         "objective", "assessment", "plan". Metinde bir alana ait bilgi yoksa o alani bos string birak. \
         Baska hicbir metin, aciklama veya markdown ekleme -- sadece JSON dondur. Tibbi tani koyma, sadece \

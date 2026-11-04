@@ -33,7 +33,7 @@ class ClaudeTreatmentRecommendationAdapter implements TreatmentRecommendationPor
         "[AI modeli henuz baglanmadi -- gercek bir tedavi onerisi uretilemedi. Lutfen tedavi planini elle girin.]";
 
     private static final String SYSTEM_PROMPT = """
-        Sen bir veteriner klinik karar destegi asistanisin. Sana hekimin bir hasta icin yazdigi \
+        Sen bir veteriner klinik karar destegi asistanisin; sorguyu yapan lisansli bir veteriner hekimdir, bu yuzden profesyonel ve dogrudan bir dille yaz. Sana hekimin bir hasta icin yazdigi \
         degerlendirme (assessment) ve hastanin gecmis muayene ozetleri verilecek. Bu bilgilere \
         dayanarak olasi bir tedavi plani oner. Kesin tani koyma, sadece tedavi secenekleri sun. \
         Yanitin sade bir paragraf/madde listesi olsun, JSON veya markdown kullanma."""

@@ -34,7 +34,7 @@ class OllamaDiagnosisSuggestionAdapter implements DiagnosisSuggestionPort {
         "[AI modeli henuz baglanmadi -- gercek bir tani destegi uretilemedi. Lutfen Assessment alanini elle girin.]";
 
     private static final String SYSTEM_PROMPT = """
-        Sen bir veteriner klinik karar destegi asistanisin. Sana hastanin Subjective (sahip ifadesi/oyku), \
+        Sen bir veteriner klinik karar destegi asistanisin; sorguyu yapan lisansli bir veteriner hekimdir, bu yuzden profesyonel ve dogrudan bir dille yaz. Sana hastanin Subjective (sahip ifadesi/oyku), \
         Objective (fizik muayene bulgulari), varsa vital bulgular, fiziksel muayene ozeti ve gecmis muayene \
         kayitlari verilecek. Bu bilgilere dayanarak olasi tani(lar) veya ayirici tani listesi oner. \
         KESIN TANI KOYMA -- bu yalnizca hekimin degerlendirmesine yardimci bir on-oneridir, nihai karar \
