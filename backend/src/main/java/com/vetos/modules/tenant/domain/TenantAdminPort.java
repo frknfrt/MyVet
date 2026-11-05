@@ -23,6 +23,13 @@ public interface TenantAdminPort {
 
     /** planCode != TRIAL ve renewsAt <= date olan tum abonelikler -- platform faturalama scheduler'i icin. */
     List<BillableSubscription> listSubscriptionsDueOnOrBefore(LocalDate date);
+
+    /**
+     * billingStatus = CANCELED ve renewsAt <= date olan, henuz askiya
+     * alinmamis abonelikler -- odenmis donem sonu kontrolu icin platform
+     * faturalama scheduler'i (SuspendExpiredCancellationsUseCase).
+     */
+    List<BillableSubscription> listCanceledSubscriptionsDueOnOrBefore(LocalDate date);
     void advanceRenewal(UUID tenantId, LocalDate newRenewsAt);
     void updateBillingStatus(UUID tenantId, BillingStatus billingStatus);
     Optional<String> findBillingContactEmail(UUID tenantId);

@@ -94,6 +94,22 @@ class TenantAdminPortAdapter implements TenantAdminPort {
     }
 
     @Override
+    public List<BillableSubscription> listCanceledSubscriptionsDueOnOrBefore(LocalDate date) {
+        // Tenant.status != SUSPENDED filtresi: ayni kiraciyi her gun yeniden
+        // askiya alip tekrar bildirim gondermeyi engeller (idempotentlik,
+        // FlagOverdueAndSuspendUseCase'in fatura-durumu ile yaptigi dedup'in
+        // burdaki karsiligi -- orada CANCELED icin ayri bir "islendi" alani yok).
+        return subscriptionJpaRepository.findAll().stream()
+            .filter(s -> s.getBillingStatus() == BillingStatus.CANCELED)
+            .filter(s -> s.getRenewsAt() != null && !s.getRenewsAt().isAfter(date))
+            .filter(s -> tenantJpaRepository.findById(s.getTenantId())
+                .map(t -> t.getStatus() != com.vetos.modules.tenant.domain.TenantStatus.SUSPENDED)
+                .orElse(false))
+            .map(s -> new BillableSubscription(s.getTenantId(), s.getPlanCode(), s.getRenewsAt()))
+            .toList();
+    }
+
+    @Override
     public void advanceRenewal(UUID tenantId, LocalDate newRenewsAt) {
         Subscription subscription = subscriptionJpaRepository.findByTenantId(tenantId)
             .orElseThrow(() -> new SubscriptionNotFoundException(tenantId));

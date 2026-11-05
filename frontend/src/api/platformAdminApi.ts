@@ -11,7 +11,7 @@ export interface PlatformAdminLoginPayload {
 export type TenantStatus = 'ACTIVE' | 'SUSPENDED' | 'TRIAL';
 export type BillingStatus = 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED';
 
-export type TenantSuspensionReason = 'BILLING_OVERDUE' | 'PRICE' | 'COMPETITOR' | 'NOT_USING' | 'DISSATISFIED' | 'CLOSED_BUSINESS' | 'OTHER';
+export type TenantSuspensionReason = 'BILLING_OVERDUE' | 'SELF_CANCELLED' | 'PRICE' | 'COMPETITOR' | 'NOT_USING' | 'DISSATISFIED' | 'CLOSED_BUSINESS' | 'OTHER';
 
 export interface TenantAdminOverview {
   tenantId: string;

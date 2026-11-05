@@ -6,6 +6,7 @@ import {
 import { Badge, BadgeTone } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
+import { Modal } from '../../components/ui/Modal';
 import { UsageSummary } from '../../components/usage/UsageSummary';
 import settingsStyles from './SettingsPage.module.css';
 import styles from './SubscriptionPanel.module.css';
@@ -68,6 +69,12 @@ export function SubscriptionPanel() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [paymentResult, setPaymentResult] = useState<'basarili' | 'hata' | null>(null);
 
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [canceling, setCanceling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [reactivating, setReactivating] = useState(false);
+  const [reactivateError, setReactivateError] = useState<string | null>(null);
+
   function loadInvoices() {
     setInvoicesLoading(true);
     subscriptionApi
@@ -116,6 +123,33 @@ export function SubscriptionPanel() {
     }
   }
 
+  async function handleConfirmCancel() {
+    setCanceling(true);
+    setCancelError(null);
+    try {
+      const updated = await subscriptionApi.cancel();
+      setSubscription(updated);
+      setCancelModalOpen(false);
+    } catch (err) {
+      setCancelError(errorMessageOf(err));
+    } finally {
+      setCanceling(false);
+    }
+  }
+
+  async function handleReactivate() {
+    setReactivating(true);
+    setReactivateError(null);
+    try {
+      const updated = await subscriptionApi.reactivate();
+      setSubscription(updated);
+    } catch (err) {
+      setReactivateError(errorMessageOf(err));
+    } finally {
+      setReactivating(false);
+    }
+  }
+
   if (loading) {
     return <div className={settingsStyles.empty}>Yükleniyor...</div>;
   }
@@ -126,6 +160,7 @@ export function SubscriptionPanel() {
 
   const hasUnpaidInvoice = invoices.some((inv) => isPayable(inv.status));
   const currentPlan = plans.find((p) => p.code === subscription.planCode) ?? null;
+  const isWithinGracePeriod = subscription.renewsAt !== null && new Date(subscription.renewsAt) >= new Date(new Date().toDateString());
 
   return (
     <>
@@ -163,15 +198,57 @@ export function SubscriptionPanel() {
           <span>{formatDate(subscription.renewsAt)}</span>
         </div>
 
-        <div className={styles.ctaRow}>
-          <div className={styles.ctaHint}>
-            Planınızı değiştirmek veya faturalama bilgilerinizi güncellemek için bizimle iletişime geçin.
+        {subscription.billingStatus === 'CANCELED' ? (
+          <div className={styles.cancelNotice}>
+            {isWithinGracePeriod ? (
+              <>
+                <p>
+                  Üyeliğiniz iptal edildi. <strong>{formatDate(subscription.renewsAt)}</strong> tarihine kadar
+                  kullanmaya devam edebilirsiniz, sonrasında hesabınız askıya alınır.
+                </p>
+                {reactivateError && <div className={settingsStyles.errorBanner}>{reactivateError}</div>}
+                <Button variant="primary" onClick={handleReactivate} disabled={reactivating}>
+                  {reactivating ? 'Geri Alınıyor...' : 'İptali Geri Al'}
+                </Button>
+              </>
+            ) : (
+              <p>Üyeliğiniz iptal edildi.</p>
+            )}
           </div>
-          <Button variant="secondary" onClick={() => window.open('mailto:destek@myvet.app')}>
-            Bizimle İletişime Geçin
+        ) : (
+          <div className={styles.ctaRow}>
+            <div className={styles.ctaHint}>
+              Planınızı değiştirmek veya faturalama bilgilerinizi güncellemek için bizimle iletişime geçin.
+            </div>
+            <Button variant="secondary" onClick={() => window.open('mailto:destek@myvet.app')}>
+              Bizimle İletişime Geçin
+            </Button>
+            {subscription.billingStatus === 'ACTIVE' && (
+              <Button variant="tertiary" className={styles.cancelLink} onClick={() => setCancelModalOpen(true)}>
+                Üyeliği İptal Et
+              </Button>
+            )}
+          </div>
+        )}
+      </Card>
+
+      <Modal open={cancelModalOpen} onClose={() => setCancelModalOpen(false)} width={440}>
+        <div className={styles.modalTitle}>Üyeliği İptal Et</div>
+        <p>
+          Üyeliğinizi iptal ederseniz <strong>{formatDate(subscription.renewsAt)}</strong> tarihine kadar (ödediğiniz
+          dönem sonuna kadar) kullanmaya devam edebilirsiniz. Bu tarihten sonra hesabınız askıya alınır. İptal
+          döneminiz bitmeden istediğiniz zaman iptali geri alabilirsiniz.
+        </p>
+        {cancelError && <div className={settingsStyles.errorBanner}>{cancelError}</div>}
+        <div className={styles.modalActions}>
+          <Button type="button" variant="secondary" onClick={() => setCancelModalOpen(false)}>
+            Vazgeç
+          </Button>
+          <Button type="button" variant="danger" onClick={handleConfirmCancel} disabled={canceling}>
+            {canceling ? 'İptal Ediliyor...' : 'Üyeliği İptal Et'}
           </Button>
         </div>
-      </Card>
+      </Modal>
 
       {usage && (
         <Card className={styles.card}>

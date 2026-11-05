@@ -48,6 +48,7 @@ export function formatDate(value: string | null): string {
 
 export const TENANT_SUSPENSION_REASON_LABELS: Record<TenantSuspensionReason, string> = {
   BILLING_OVERDUE: 'Ödeme Gecikmesi (Otomatik)',
+  SELF_CANCELLED: 'Üyelik İptali (Otomatik)',
   PRICE: 'Fiyat',
   COMPETITOR: 'Rakibe Geçti',
   NOT_USING: 'Kullanmıyor',

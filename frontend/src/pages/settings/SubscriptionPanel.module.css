@@ -128,3 +128,41 @@
   font-size: 13px;
   font-weight: 600;
 }
+
+.cancelLink {
+  margin-top: 10px;
+  display: block;
+  color: var(--color-text-muted);
+}
+.cancelLink:hover {
+  color: var(--color-danger-700);
+}
+
+.cancelNotice {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-warning-100);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.cancelNotice p {
+  margin: 0 0 10px;
+}
+
+.modalTitle {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 17px;
+  margin-bottom: 16px;
+}
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}

@@ -71,4 +71,18 @@ public class Subscription {
     public void updateBillingStatus(BillingStatus billingStatus) {
         this.billingStatus = billingStatus;
     }
+
+    /**
+     * Klinigin kendi istegiyle iptal etmesi (self-servis). renewsAt'e KASITLI
+     * olarak dokunulmaz: zaten odenmis donem sonuna kadar erisim surer,
+     * SuspendExpiredCancellationsUseCase o tarih gecince kiraciyi askiya alir.
+     */
+    public void cancel() {
+        this.billingStatus = BillingStatus.CANCELED;
+    }
+
+    /** Iptali geri alma -- sadece odenmis donem (renewsAt) bitmeden cagirilmasi beklenir. */
+    public void reactivateCancellation() {
+        this.billingStatus = BillingStatus.ACTIVE;
+    }
 }

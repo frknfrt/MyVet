@@ -25,7 +25,9 @@ public enum AuditAction {
     TARBIL_SUBMISSION_RESTORED("TARBİL gönderimi geri alındı"),
     TARBIL_EXTENSION_PAIRED("TARBİL eklentisi eşleştirildi"),
     TARBIL_EXTENSION_REVOKED("TARBİL eklenti anahtarı iptal edildi"),
-    SUPPORT_IMPERSONATION_STARTED("Vetly destek ekibi hesaba girdi");
+    SUPPORT_IMPERSONATION_STARTED("Vetly destek ekibi hesaba girdi"),
+    SUBSCRIPTION_CANCELLED("Abonelik iptal edildi"),
+    SUBSCRIPTION_CANCELLATION_REVERTED("Abonelik iptali geri alındı");
 
     private final String label;
 

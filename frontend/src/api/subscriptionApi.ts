@@ -70,4 +70,6 @@ export const subscriptionApi = {
   getPlans: () => apiClient.get<CatalogPlan[]>('/api/v1/subscriptions/plans'),
   initiateCheckout: (invoiceId: string) =>
     apiClient.post<CheckoutSession>(`/api/v1/subscriptions/invoices/${invoiceId}/checkout`),
+  cancel: () => apiClient.post<SubscriptionOverview>('/api/v1/subscriptions/cancel'),
+  reactivate: () => apiClient.post<SubscriptionOverview>('/api/v1/subscriptions/reactivate'),
 };

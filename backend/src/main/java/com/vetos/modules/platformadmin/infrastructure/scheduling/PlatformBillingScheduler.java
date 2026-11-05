@@ -3,6 +3,7 @@ package com.vetos.modules.platformadmin.infrastructure.scheduling;
 import com.vetos.modules.platformadmin.application.FlagOverdueAndSuspendUseCase;
 import com.vetos.modules.platformadmin.application.GenerateDueInvoicesUseCase;
 import com.vetos.modules.platformadmin.application.RemindDueSoonInvoicesUseCase;
+import com.vetos.modules.platformadmin.application.SuspendExpiredCancellationsUseCase;
 import com.vetos.platform.concurrency.AdvisoryLock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,11 +16,12 @@ import java.time.ZoneId;
 
 /**
  * Gunde bir kez calisir -- AppointmentReminderScheduler ile ayni desen.
- * Uc adim sirayla: fatura uret, son-gun hatirlat, gecikeni askiya al. Her
- * adim kendi try/catch'inde -- biri patlarsa digerleri yine de calisir.
- * Advisory lock, coklu instance'ta ayni gunun faturasinin iki kez
- * uretilmesini engeller (bkz. AppointmentReminderScheduler.REMINDER_LOCK_KEY
- * ile ayni desen, farkli bir sabit anahtarla).
+ * Dort adim sirayla: fatura uret, son-gun hatirlat, gecikeni askiya al,
+ * suresi dolmus iptalleri askiya al. Her adim kendi try/catch'inde -- biri
+ * patlarsa digerleri yine de calisir. Advisory lock, coklu instance'ta ayni
+ * gunun faturasinin iki kez uretilmesini engeller (bkz.
+ * AppointmentReminderScheduler.REMINDER_LOCK_KEY ile ayni desen, farkli bir
+ * sabit anahtarla).
  */
 @Component
 @Slf4j
@@ -32,6 +34,7 @@ class PlatformBillingScheduler {
     private final GenerateDueInvoicesUseCase generateDueInvoicesUseCase;
     private final RemindDueSoonInvoicesUseCase remindDueSoonInvoicesUseCase;
     private final FlagOverdueAndSuspendUseCase flagOverdueAndSuspendUseCase;
+    private final SuspendExpiredCancellationsUseCase suspendExpiredCancellationsUseCase;
     private final AdvisoryLock advisoryLock;
 
     @Scheduled(cron = "0 0 6 * * *", zone = "Europe/Istanbul")
@@ -58,6 +61,11 @@ class PlatformBillingScheduler {
             flagOverdueAndSuspendUseCase.execute(today);
         } catch (Exception e) {
             log.error("Gecikme/askiya alma basarisiz: today={}", today, e);
+        }
+        try {
+            suspendExpiredCancellationsUseCase.execute(today);
+        } catch (Exception e) {
+            log.error("Iptal edilmis abonelik askiya alma basarisiz: today={}", today, e);
         }
     }
 }

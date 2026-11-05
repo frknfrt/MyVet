@@ -54,4 +54,25 @@ class SubscriptionTest {
         assertThat(subscription.getBillingStatus()).isEqualTo(BillingStatus.TRIAL);
         assertThat(subscription.getRenewsAt()).isEqualTo(subscription.getStartedAt().plusDays(14));
     }
+
+    @Test
+    void should_setBillingStatusCanceled_butKeepRenewsAt_when_cancelCalled() {
+        LocalDate renewsAt = LocalDate.of(2026, 9, 30);
+        Subscription subscription = Subscription.startPaid(UUID.randomUUID(), "PRO", renewsAt);
+
+        subscription.cancel();
+
+        assertThat(subscription.getBillingStatus()).isEqualTo(BillingStatus.CANCELED);
+        assertThat(subscription.getRenewsAt()).isEqualTo(renewsAt);
+    }
+
+    @Test
+    void should_setBillingStatusActive_when_reactivateCancellationCalled() {
+        Subscription subscription = Subscription.startPaid(UUID.randomUUID(), "PRO", LocalDate.of(2026, 9, 30));
+        subscription.cancel();
+
+        subscription.reactivateCancellation();
+
+        assertThat(subscription.getBillingStatus()).isEqualTo(BillingStatus.ACTIVE);
+    }
 }
