@@ -4,6 +4,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { AppShell } from '../../components/layout/AppShell';
 import { Button } from '../../components/ui/Button';
 import { patientApi, PatientSearchResult, SpeciesItem } from '../../api/patientApi';
+import { PatientAvatar } from '../../components/patient/PatientAvatar';
 import { PatientStatusBadge } from './statusBadge';
 import styles from './PatientsPage.module.css';
 
@@ -141,7 +142,10 @@ export function PatientsPage() {
         ) : (
           results.map((r) => (
             <div key={r.patientId} className={styles.row} onClick={() => navigate(`/hastalar/${r.patientId}`)}>
-              <div className={styles.patientName}>{r.patientName}</div>
+              <div className={styles.patientCell}>
+                <PatientAvatar patientId={r.patientId} name={r.patientName} photoVersion={r.photoVersion} size={36} />
+                <span className={styles.patientName}>{r.patientName}</span>
+              </div>
               <div className={styles.muted}>
                 {r.speciesName}
                 {r.breedName ? ` · ${r.breedName}` : ''}

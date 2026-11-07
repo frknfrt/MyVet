@@ -138,6 +138,12 @@ select.filterInput {
 .row:hover {
   background: var(--color-neutral-100, #f5f3ee);
 }
+.patientCell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
 .patientName {
   font-weight: 600;
 }
@@ -165,5 +171,28 @@ select.filterInput {
   .tableHead,
   .row {
     min-width: 480px;
+  }
+}
+
+@media (max-width: 880px) {
+  .actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .search {
+    width: 100%;
+    flex: 1 1 100%;
+    height: 44px;
+    font-size: 16px;
+  }
+  .filterField {
+    flex: 1 1 100%;
+  }
+  .filterInput {
+    height: 44px;
+    font-size: 16px;
+  }
+  .tab {
+    padding: 13px 16px;
   }
 }

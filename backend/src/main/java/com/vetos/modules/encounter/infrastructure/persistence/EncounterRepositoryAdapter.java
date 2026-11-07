@@ -26,5 +26,8 @@ class EncounterRepositoryAdapter implements EncounterRepository {
     public List<Encounter> findByPatientId(UUID patientId) { return jpaRepository.findByPatientId(patientId); }
 
     @Override
+    public List<Encounter> findByStatus(EncounterStatus status) { return jpaRepository.findByStatus(status); }
+
+    @Override
     public Optional<Encounter> findByAppointmentId(UUID appointmentId) { return jpaRepository.findFirstByAppointmentIdAndStatusNotOrderByEncounterDateDesc(appointmentId, EncounterStatus.CANCELLED); }
 }

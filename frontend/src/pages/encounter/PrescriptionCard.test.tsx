@@ -10,6 +10,7 @@ vi.mock('../../api/clinicalApi', () => ({
     listPrescriptionsByPatient: vi.fn().mockResolvedValue([]),
     checkDrugInteractions: vi.fn().mockResolvedValue([]),
     issuePrescription: vi.fn().mockResolvedValue('p1'),
+    checkAllergies: vi.fn().mockResolvedValue({ criticalAlert: null, matches: [] }),
   },
 }));
 vi.mock('../../api/inventoryApi', () => ({ inventoryApi: { list: vi.fn() } }));

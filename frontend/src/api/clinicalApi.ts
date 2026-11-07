@@ -65,7 +65,18 @@ export interface PrescriptionItemPayload {
   stockQuantity?: number | null;
 }
 
-export interface IssuePrescriptionPayload {
+/** Alerji onayı: hastanın kritik uyarısı varsa sunucu zorunlu tutar (bkz. DrugAllergyGuard). */
+export interface AllergyAck {
+  allergyAcknowledged?: boolean;
+  allergyOverrideReason?: string | null;
+}
+
+export interface AllergyCheck {
+  criticalAlert: string | null;
+  matches: { drugName: string; reason: string }[];
+}
+
+export interface IssuePrescriptionPayload extends AllergyAck {
   patientId: string;
   encounterId: string | null;
   controlledSubstance: boolean;
@@ -82,6 +93,8 @@ export const clinicalApi = {
   listDrugs: () => apiClient.get<DrugSummary[]>('/api/v1/drugs'),
   createDrug: (payload: CreateDrugPayload) => apiClient.postForId('/api/v1/drugs', payload),
   updateDrug: (id: string, payload: UpdateDrugPayload) => apiClient.put<void>(`/api/v1/drugs/${id}`, payload),
+  checkAllergies: (payload: { patientId: string; drugIds: string[]; inventoryItemIds: string[] }) =>
+    apiClient.post<AllergyCheck>('/api/v1/drugs/check-allergies', payload),
   checkDrugInteractions: (drugIds: string[]) =>
     apiClient
       .post<{ warnings: DrugInteractionWarning[] }>('/api/v1/drugs/check-interactions', { drugIds })

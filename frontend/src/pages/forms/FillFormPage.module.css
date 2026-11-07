@@ -1,0 +1,226 @@
+.page {
+  scrollbar-gutter: stable;
+  min-height: 100vh;
+  background: var(--color-cream);
+  color: var(--color-text-ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+}
+.topBar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-paper);
+  border-bottom: 1.5px solid var(--color-border);
+}
+.topText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.clinic {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 16px;
+}
+.formTitle {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.body {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4) var(--space-12);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.body input[type='text'],
+.body input[type='tel'],
+.body input[type='date'],
+.body textarea {
+  font-size: 16px;
+  min-height: 44px;
+}
+.centerBox {
+  max-width: 480px;
+  margin: 20vh auto 0;
+  padding: var(--space-4);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  align-items: center;
+}
+.errorText {
+  color: var(--color-danger-700);
+  margin: 0;
+}
+.primary,
+.secondary {
+  min-height: 52px;
+  padding: 0 var(--space-6);
+  font-size: 16px;
+  font-weight: 600;
+  font-family: inherit;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.primary {
+  color: var(--color-paper);
+  background: var(--color-brand-700);
+  border: 1.5px solid var(--color-brand-700);
+}
+.secondary {
+  color: var(--color-brand-700);
+  background: var(--color-paper);
+  border: 1.5px solid var(--color-border-strong);
+}
+.primary:disabled,
+.secondary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.actions .primary {
+  flex: 1;
+}
+.signBox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--color-paper);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+.signer {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.signLegend {
+  font-weight: 700;
+  margin-bottom: var(--space-2);
+  padding: 0;
+}
+.signerOpt,
+.toggleOpt {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 44px;
+  cursor: pointer;
+}
+.signerOpt input,
+.toggleOpt input {
+  width: 22px;
+  height: 22px;
+}
+.otherFields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.label {
+  font-weight: 600;
+  font-size: 16px;
+}
+.req {
+  color: var(--color-danger-700);
+}
+.input {
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  font-size: 16px;
+  font-family: inherit;
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-paper);
+  color: var(--color-text-ink);
+}
+.fieldError {
+  color: var(--color-danger-700);
+  font-size: 14px;
+}
+.error {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  list-style: none;
+  color: var(--color-danger-700);
+  background: var(--color-danger-100);
+  border-radius: var(--radius-md);
+}
+.warning {
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-warning-700);
+  background: var(--color-warning-100);
+  border-radius: var(--radius-md);
+}
+.confirmTitle,
+.doneTitle {
+  font-family: var(--font-heading);
+  margin: 0;
+}
+.hint {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+.rowList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-paper);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+.rowText {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.rowReason {
+  color: var(--color-warning-700);
+  font-size: 14px;
+  margin-top: 4px;
+}
+.toggle {
+  display: flex;
+  gap: var(--space-4);
+}
+.doneBox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-top: var(--space-8);
+}

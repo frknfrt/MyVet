@@ -50,6 +50,7 @@ public class PlatformAdminTenantsController {
     private final SuspendTenantUseCase suspendTenantUseCase;
     private final ActivateTenantUseCase activateTenantUseCase;
     private final StartImpersonationUseCase startImpersonationUseCase;
+    private final com.vetos.platform.security.SessionCookies sessionCookies;
     private final GetTenantIntegrationHealthUseCase getTenantIntegrationHealthUseCase;
     private final UsageQuotaPort usageQuotaPort;
     private final AuditEventQuery auditEventQuery;
@@ -128,10 +129,14 @@ public class PlatformAdminTenantsController {
      * dolduruyor (bkz. StartImpersonationUseCase).
      */
     @PostMapping("/{id}/impersonate")
-    public ImpersonationSessionResponse impersonate(@PathVariable UUID id, @AuthenticationPrincipal AuthenticatedPlatformAdmin principal) {
-        return ImpersonationSessionResponse.from(
+    public org.springframework.http.ResponseEntity<ImpersonationSessionResponse> impersonate(@PathVariable UUID id, @AuthenticationPrincipal AuthenticatedPlatformAdmin principal) {
+        ImpersonationSessionResponse session = ImpersonationSessionResponse.from(
             startImpersonationUseCase.execute(id, principal.platformAdminId(), principal.email())
         );
+        // Yeni sekmede acilan klinik paneli oturumu HttpOnly cerezden kullanir (SessionCookies).
+        return org.springframework.http.ResponseEntity.ok()
+            .header(org.springframework.http.HttpHeaders.SET_COOKIE, sessionCookies.create(session.token()))
+            .body(session);
     }
 
     /**

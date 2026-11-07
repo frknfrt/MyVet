@@ -2,7 +2,7 @@ import { apiClient } from './client';
 
 export type NotificationChannel = 'SMS' | 'WHATSAPP';
 export type NotificationType = 'APPOINTMENT_CONFIRMATION' | 'APPOINTMENT_REMINDER' | 'CAMPAIGN_MESSAGE' | 'VACCINATION_REMINDER';
-export type NotificationLogStatus = 'PENDING' | 'SENT' | 'FAILED';
+export type NotificationLogStatus = 'PENDING' | 'DISPATCHING' | 'SENT' | 'FAILED';
 
 export interface NotificationStatus {
   pendingCount: number;

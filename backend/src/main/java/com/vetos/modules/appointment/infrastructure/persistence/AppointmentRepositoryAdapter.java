@@ -18,7 +18,18 @@ class AppointmentRepositoryAdapter implements AppointmentRepository {
     private final AppointmentJpaRepository jpaRepository;
 
     @Override
-    public Appointment save(Appointment appointment) { return jpaRepository.save(appointment); }
+    public Appointment save(Appointment appointment) {
+        try {
+            return jpaRepository.saveAndFlush(appointment);
+        } catch (org.springframework.dao.DataIntegrityViolationException ex) {
+            for (Throwable cause = ex; cause != null; cause = cause.getCause()) {
+                if (cause instanceof java.sql.SQLException sql && "23P01".equals(sql.getSQLState())) {
+                    throw new com.vetos.modules.appointment.domain.exception.AppointmentSlotConflictException(appointment.getAssignedStaffId());
+                }
+            }
+            throw ex;
+        }
+    }
 
     @Override
     public Optional<Appointment> findById(UUID id) { return jpaRepository.findById(id); }

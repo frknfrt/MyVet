@@ -82,6 +82,11 @@ public class NotificationLog {
         return log;
     }
 
+    public void beginDispatch() {
+        this.status = NotificationStatus.DISPATCHING;
+        this.attemptedAt = Instant.now();
+    }
+
     public void markSent() {
         this.status = NotificationStatus.SENT;
         this.attemptedAt = Instant.now();

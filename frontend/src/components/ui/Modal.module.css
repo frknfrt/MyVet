@@ -73,3 +73,33 @@
     transform: scale(1) translateY(0);
   }
 }
+
+/* Telefon/tablet: pencere tam ekran (inline width prop'u !important ile ezilir) */
+@media (max-width: 880px) {
+  .overlay {
+    align-items: stretch;
+    justify-content: stretch;
+  }
+  .card {
+    width: 100% !important;
+    max-width: 100vw;
+    height: 100%;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .content {
+    height: 100%;
+    max-height: none;
+    box-sizing: border-box;
+    padding: 1.4rem 1.2rem calc(1.4rem + env(safe-area-inset-bottom, 0px));
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .closeBtn {
+    top: 8px;
+    right: 8px;
+    width: 44px;
+    height: 44px;
+  }
+}

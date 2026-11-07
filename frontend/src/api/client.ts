@@ -16,10 +16,15 @@ export class ApiError extends Error {
   }
 }
 
-let authToken: string | null = null;
+/**
+ * Oturum anahtari HttpOnly cerezde (vetly_session) durur; JavaScript ona erisemez (2026-11-06). Istekler cerezi
+ * otomatik tasir (credentials: 'include'); veri degistiren cerezli isteklerde sunucu bu basligi ister (CSRF).
+ * Herkese acik uclara cerez gonderilmez: o uclar vitrin sitesine de acik ve cerezsiz CORS kullanir.
+ */
+const CLIENT_HEADER = { 'X-Vetly-Client': 'web' };
 
-export function setAuthToken(token: string | null) {
-  authToken = token;
+function credentialsFor(path: string): RequestCredentials {
+  return path.startsWith('/api/v1/public/') ? 'omit' : 'include';
 }
 
 let onUnauthorized: (() => void) | null = null;
@@ -32,13 +37,11 @@ export function setUnauthorizedHandler(handler: (() => void) | null) {
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    ...CLIENT_HEADER,
     ...(options.headers as Record<string, string> | undefined),
   };
-  if (authToken) {
-    headers.Authorization = `Bearer ${authToken}`;
-  }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+  const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers, credentials: credentialsFor(path) });
 
   if (response.status === 204) {
     return undefined as T;
@@ -62,13 +65,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 async function requestForLocationId(path: string, data?: unknown): Promise<string> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (authToken) {
-    headers.Authorization = `Bearer ${authToken}`;
-  }
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', ...CLIENT_HEADER };
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: 'POST',
     headers,
+    credentials: credentialsFor(path),
     body: data !== undefined ? JSON.stringify(data) : undefined,
   });
 
@@ -85,6 +86,11 @@ async function requestForLocationId(path: string, data?: unknown): Promise<strin
     );
   }
 
+  return locationIdOf(response, path);
+}
+
+/** 201 yanitinin Location header'indaki son parca (olusturulan kaynagin id'si). */
+function locationIdOf(response: Response, path: string): string {
   const location = response.headers.get('Location') ?? '';
   const id = location.split('/').pop();
   if (!id) {
@@ -93,21 +99,17 @@ async function requestForLocationId(path: string, data?: unknown): Promise<strin
   return id;
 }
 
-async function requestMultipart<T>(path: string, form: FormData): Promise<T> {
-  const headers: Record<string, string> = {};
-  if (authToken) {
-    headers.Authorization = `Bearer ${authToken}`;
-  }
-
-  const response = await fetch(`${API_BASE_URL}${path}`, { method: 'POST', headers, body: form });
-
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  const body = await response.json().catch(() => null);
+/** multipart govdeyi gonderir; basarisiz yanitta ApiError firlatir, basarili yaniti oldugu gibi doner. */
+async function sendMultipart(path: string, form: FormData, method: 'POST' | 'PUT'): Promise<Response> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method,
+    headers: { ...CLIENT_HEADER },
+    body: form,
+    credentials: credentialsFor(path),
+  });
 
   if (!response.ok) {
+    const body = await response.json().catch(() => null);
     if (response.status === 401) {
       onUnauthorized?.();
     }
@@ -119,7 +121,15 @@ async function requestMultipart<T>(path: string, form: FormData): Promise<T> {
     );
   }
 
-  return body as T;
+  return response;
+}
+
+async function requestMultipart<T>(path: string, form: FormData, method: 'POST' | 'PUT' = 'POST'): Promise<T> {
+  const response = await sendMultipart(path, form, method);
+  if (response.status === 204) {
+    return undefined as T;
+  }
+  return (await response.json().catch(() => null)) as T;
 }
 
 export const apiClient = {
@@ -133,5 +143,15 @@ export const apiClient = {
   postForId: (path: string, data?: unknown) => requestForLocationId(path, data),
   /** multipart/form-data govde gonderir (dosya yukleme uc noktalari icin). */
   postMultipart: <T>(path: string, form: FormData) => requestMultipart<T>(path, form),
-  authHeader: (): Record<string, string> => (authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+  /** multipart, 201 + Location donen uclar icin -- olusturulan kaynagin (ornegin dosyanin) id'sini doner. */
+  postMultipartForId: async (path: string, form: FormData): Promise<string> =>
+    locationIdOf(await sendMultipart(path, form, 'POST'), path),
+  /** Ayni, ama PUT ile (ornegin hasta fotografi). */
+  putMultipart: <T>(path: string, form: FormData) => requestMultipart<T>(path, form, 'PUT'),
+  /** Dosya/PDF indirme: tam adresle, oturum cereziyle GET. 401'de oturum kapatilir. */
+  fetchFile: async (url: string): Promise<Response> => {
+    const res = await fetch(url, { headers: { ...CLIENT_HEADER }, credentials: 'include' });
+    if (res.status === 401) onUnauthorized?.();
+    return res;
+  },
 };

@@ -14,6 +14,7 @@ import { AuditEventTable } from '../../components/audit/AuditEventTable';
 import type { AuditQuery } from '../../api/auditApi';
 import { UsageSummary } from '../../components/usage/UsageSummary';
 import type { UsageSnapshot } from '../../api/subscriptionApi';
+import { TenantImportSection } from './TenantImportSection';
 import styles from './PlatformAdminPages.module.css';
 import {
   BILLING_STATUS_LABELS, BILLING_STATUS_TONES, formatDate, PLATFORM_INVOICE_STATUS_LABELS,
@@ -143,8 +144,8 @@ export function TenantDetailPage() {
     setImpersonating(true);
     try {
       const session = await platformAdminApi.impersonateTenant(tenantId);
+      // Klinik oturum anahtarini sunucu HttpOnly cereze yazdi; burada yalniz gorunen kimlik saklanir.
       storeSession({
-        token: session.token,
         staffUserId: session.staffUserId,
         tenantId: session.tenantId,
         branchId: session.branchId,
@@ -356,6 +357,8 @@ export function TenantDetailPage() {
               ))
             )}
           </div>
+
+          <TenantImportSection tenantId={tenantId} />
 
           <Modal
             open={paymentInvoiceId !== null}

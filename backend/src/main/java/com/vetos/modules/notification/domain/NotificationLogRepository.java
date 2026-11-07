@@ -7,6 +7,7 @@ import java.util.UUID;
 
 public interface NotificationLogRepository {
     NotificationLog save(NotificationLog log);
+    Optional<NotificationLog> findForUpdate(UUID id);
     Optional<NotificationLog> findById(UUID id);
     List<NotificationLog> findByTenantId(UUID tenantId);
     boolean existsByRelatedEntityIdAndNotificationType(UUID relatedEntityId, NotificationType notificationType);

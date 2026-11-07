@@ -14,8 +14,13 @@ public record AuthenticatedStaffUser(
     UUID tenantId,
     List<UUID> branchIds,
     String role,
-    String impersonatedBy
+    String impersonatedBy,
+    long issuedMillis
 ) {
+    public AuthenticatedStaffUser(UUID staffUserId, UUID tenantId, List<UUID> branchIds, String role, String impersonatedBy) {
+        this(staffUserId, tenantId, branchIds, role, impersonatedBy, 0L);
+    }
+
     public AuthenticatedStaffUser(UUID staffUserId, UUID tenantId, List<UUID> branchIds, String role) {
         this(staffUserId, tenantId, branchIds, role, null);
     }

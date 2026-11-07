@@ -22,6 +22,9 @@ class NotificationLogRepositoryAdapter implements NotificationLogRepository {
     public NotificationLog save(NotificationLog log) { return jpaRepository.save(log); }
 
     @Override
+    public Optional<NotificationLog> findForUpdate(UUID id) { return jpaRepository.findForUpdate(id); }
+
+    @Override
     public Optional<NotificationLog> findById(UUID id) { return jpaRepository.findById(id); }
 
     @Override

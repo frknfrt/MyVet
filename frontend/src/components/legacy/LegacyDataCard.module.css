@@ -1,0 +1,45 @@
+.card {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  margin-bottom: var(--space-4);
+  overflow: hidden;
+}
+.toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: none;
+  border: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--color-text-ink);
+  cursor: pointer;
+  text-align: left;
+}
+.body {
+  padding: 0 var(--space-4) var(--space-4);
+}
+.list {
+  margin: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+.row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 3fr;
+  gap: var(--space-3);
+}
+.key {
+  color: var(--color-text-muted);
+}
+.value {
+  margin: 0;
+  color: var(--color-text-ink);
+  overflow-wrap: anywhere;
+}
+.muted {
+  color: var(--color-text-muted);
+}

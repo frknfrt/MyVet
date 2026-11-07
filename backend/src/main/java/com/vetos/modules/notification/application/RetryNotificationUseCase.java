@@ -26,9 +26,12 @@ public class RetryNotificationUseCase {
      */
     @Transactional
     public void execute(UUID tenantId, UUID logId) {
-        NotificationLog log = notificationLogRepository.findById(logId)
+        NotificationLog log = notificationLogRepository.findForUpdate(logId)
             .filter(l -> l.getTenantId().equals(tenantId))
             .orElseThrow(() -> new NotificationLogNotFoundException(logId));
+        if (log.getStatus() != com.vetos.modules.notification.domain.NotificationStatus.FAILED) {
+            throw new com.vetos.modules.notification.domain.exception.NotificationLogNotRetryableException(logId, log.getStatus());
+        }
         log.markRetrying();
         notificationLogRepository.save(log);
 

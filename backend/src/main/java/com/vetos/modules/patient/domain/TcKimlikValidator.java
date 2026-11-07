@@ -5,12 +5,12 @@ package com.vetos.modules.patient.domain;
  * algoritmasi. 11 haneli, ilk hane sifir olamaz; 10. ve 11. haneler
  * onceki hanelerden turetilen kontrol basamaklaridir.
  */
-final class TcKimlikValidator {
+public final class TcKimlikValidator {
 
     private TcKimlikValidator() {
     }
 
-    static boolean isValid(String candidate) {
+    public static boolean isValid(String candidate) {
         if (candidate == null || !candidate.matches("\\d{11}") || candidate.charAt(0) == '0') {
             return false;
         }

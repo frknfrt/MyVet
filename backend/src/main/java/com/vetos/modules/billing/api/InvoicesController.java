@@ -66,8 +66,12 @@ public class InvoicesController {
     private final CompleteQuickSaleUseCase completeQuickSaleUseCase;
 
     @GetMapping
-    public List<InvoiceSummaryResponse> list() {
-        return listInvoicesUseCase.execute(TenantContext.current()).stream().map(InvoiceSummaryResponse::from).toList();
+    public List<InvoiceSummaryResponse> list(
+        @RequestParam(defaultValue = "0") @jakarta.validation.constraints.Min(0) int page,
+        @RequestParam(defaultValue = "50") @jakarta.validation.constraints.Min(1) @jakarta.validation.constraints.Max(200) int size,
+        @RequestParam(required = false) UUID ownerId
+    ) {
+        return listInvoicesUseCase.execute(TenantContext.current(), ownerId, page, size).stream().map(InvoiceSummaryResponse::from).toList();
     }
 
     @GetMapping("/{id}")
@@ -290,6 +294,6 @@ public class InvoicesController {
 
     @PostMapping("/{id}/payments")
     public void recordPayment(@PathVariable UUID id, @RequestBody @Valid RecordPaymentRequest request) {
-        recordPaymentUseCase.execute(new RecordPaymentCommand(id, request.method(), request.amount(), request.pspRef()));
+        recordPaymentUseCase.execute(new RecordPaymentCommand(id, request.method(), request.amount(), request.pspRef(), request.requestId()));
     }
 }

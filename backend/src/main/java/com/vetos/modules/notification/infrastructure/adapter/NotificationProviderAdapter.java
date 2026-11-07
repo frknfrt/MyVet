@@ -42,6 +42,9 @@ class NotificationProviderAdapter implements NotificationSendPort {
 
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
     private static final Duration READ_TIMEOUT = Duration.ofSeconds(15);
+    @org.springframework.beans.factory.annotation.Value("#{environment.matchesProfiles('!prod & (dev | test)')}")
+    private boolean simulationAllowed;
+
     private static final double SIMULATED_FAILURE_RATE = 0.1;
 
     private final String metaAccessToken;
@@ -131,6 +134,7 @@ class NotificationProviderAdapter implements NotificationSendPort {
         if (request.channel() == NotificationChannel.SMS && iletiMerkeziConfigured()) {
             return sendSmsViaIletiMerkezi(request);
         }
+        if (!simulationAllowed) return NotificationSendOutcome.failure("Bildirim sağlayıcısı yapılandırılmamış");
         return sendSimulated(request);
     }
 
@@ -174,7 +178,7 @@ class NotificationProviderAdapter implements NotificationSendPort {
         } catch (Exception e) {
             outcomes.record(IntegrationOutcomes.WHATSAPP, false);
             log.warn("Meta WhatsApp gonderimi basarisiz: alici={}, hata={}", LogMasking.phone(request.recipientContact()), e.getMessage());
-            return NotificationSendOutcome.failure("Saglayiciya ulasilamadi: " + e.getMessage());
+            return NotificationSendOutcome.unknown();
         }
     }
 
@@ -205,7 +209,7 @@ class NotificationProviderAdapter implements NotificationSendPort {
             // -1: bos/beklenmeyen yanit -> servis bozuk sayilir
             outcomes.record(IntegrationOutcomes.SMS, code > 0 && !IntegrationOutcomes.isOutageStatus(code));
             log.warn("Ileti Merkezi SMS gonderimi basarisiz: alici={}, kod={}, mesaj={}", LogMasking.phone(request.recipientContact()), code, statusMessage);
-            return NotificationSendOutcome.failure("Ileti Merkezi hatasi (" + code + "): " + statusMessage);
+            return code == -1 ? NotificationSendOutcome.unknown() : NotificationSendOutcome.failure("İleti Merkezi hatası: " + code);
         } catch (RestClientResponseException e) {
             outcomes.record(IntegrationOutcomes.SMS, !IntegrationOutcomes.isOutageStatus(e.getStatusCode().value()));
             log.warn(
@@ -216,15 +220,12 @@ class NotificationProviderAdapter implements NotificationSendPort {
         } catch (Exception e) {
             outcomes.record(IntegrationOutcomes.SMS, false);
             log.warn("Ileti Merkezi SMS gonderimi basarisiz: alici={}, hata={}", LogMasking.phone(request.recipientContact()), e.getMessage());
-            return NotificationSendOutcome.failure("Saglayiciya ulasilamadi: " + e.getMessage());
+            return NotificationSendOutcome.unknown();
         }
     }
 
     private NotificationSendOutcome sendSimulated(NotificationSendRequest request) {
-        log.info(
-            "Bildirim gonderimi (mock): kanal={}, alici={}, mesaj=\"{}\"",
-            request.channel(), LogMasking.phone(request.recipientContact()), request.message()
-        );
+        log.info("Bildirim simülasyonu: kanal={}", request.channel());
         if (Math.random() < SIMULATED_FAILURE_RATE) {
             return NotificationSendOutcome.failure("Saglayici gecici olarak yanit vermedi (simule edilmis hata)");
         }

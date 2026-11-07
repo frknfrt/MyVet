@@ -160,4 +160,25 @@ public class Owner {
         }
         this.nationalId = (nationalId == null || nationalId.isBlank()) ? null : nationalId;
     }
+
+    // Formdan geri yazma: tek alan guncellemeleri (updateContactInfo digerlerini ezerdi).
+    public void updatePhone(String phone) {
+        this.phone = phone;
+    }
+
+    public void updateSecondaryPhone(String secondaryPhone) {
+        this.secondaryPhone = secondaryPhone;
+    }
+
+    public void updateEmail(String email) {
+        this.email = email;
+    }
+
+    public void updateAddress(String address) {
+        this.address = address;
+    }
+
+    public void updateBirthDate(LocalDate birthDate) {
+        this.birthDate = birthDate;
+    }
 }

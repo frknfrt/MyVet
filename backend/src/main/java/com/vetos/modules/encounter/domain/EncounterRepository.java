@@ -8,5 +8,7 @@ public interface EncounterRepository {
     Encounter save(Encounter encounter);
     Optional<Encounter> findById(UUID id);
     List<Encounter> findByPatientId(UUID patientId);
+    /** Aktif kiracinin verilen durumdaki muayeneleri (Muayeneler sayfasi: acik taslaklar). */
+    List<Encounter> findByStatus(EncounterStatus status);
     Optional<Encounter> findByAppointmentId(UUID appointmentId);
 }

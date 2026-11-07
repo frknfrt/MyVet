@@ -5,6 +5,7 @@ import { ApiError } from '../../api/client';
 import { BreedItem, OwnerSearchResult, patientApi, Sex, SpeciesItem } from '../../api/patientApi';
 import { Button } from '../../components/ui/Button';
 import { FieldWrap, Input, Select, Textarea, AI_FIELD_HINT } from '../../components/ui/Field';
+import { NewPatientPhotoPicker } from './NewPatientPhotoPicker';
 import styles from './NewPatientPage.module.css';
 
 function errorMessageOf(err: unknown): string {
@@ -39,6 +40,7 @@ export function NewPatientPage() {
   const [rabiesTag, setRabiesTag] = useState('');
   const [criticalAlert, setCriticalAlert] = useState('');
   const [notes, setNotes] = useState('');
+  const [photo, setPhoto] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -105,7 +107,17 @@ export function NewPatientPage() {
         protocolNumber: protocolNumber || undefined,
         rabiesTag: rabiesTag || undefined,
       });
-      navigate(`/hastalar/${patient.id}`);
+      // Fotograf hasta olustuktan sonra yuklenir; yukleme basarisiz olsa da hasta kaydi kalir,
+      // kart acilir ve uyari gosterilir (fotograf kartta 📷 ile tekrar eklenebilir).
+      let photoUploadFailed = false;
+      if (photo) {
+        try {
+          await patientApi.uploadPhoto(patient.id, photo);
+        } catch {
+          photoUploadFailed = true;
+        }
+      }
+      navigate(`/hastalar/${patient.id}`, photoUploadFailed ? { state: { photoUploadFailed: true } } : undefined);
     } catch (err) {
       setError(errorMessageOf(err));
     } finally {
@@ -175,6 +187,7 @@ export function NewPatientPage() {
           )}
 
           <div className={styles.sectionLabel}>Hasta Bilgileri</div>
+          <NewPatientPhotoPicker value={photo} onChange={setPhoto} disabled={busy} />
           <div className={styles.row4}>
             <FieldWrap label="Adı">
               <Input value={name} onChange={(e) => setName(e.target.value)} required />

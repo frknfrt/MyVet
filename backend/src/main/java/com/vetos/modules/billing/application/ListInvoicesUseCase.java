@@ -15,17 +15,10 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ListInvoicesUseCase {
 
-    private final InvoiceRepository invoiceRepository;
-    private final OwnerLookupPort ownerLookupPort;
+    private final InvoiceListQuery query;
 
     @Transactional(readOnly = true)
-    public List<InvoiceSummary> execute(UUID tenantId) {
-        return invoiceRepository.findByTenantId(tenantId).stream()
-            .map(invoice -> new InvoiceSummary(
-                invoice.getId(), invoice.getOwnerId(), ownerLookupPort.findSummaryById(invoice.getOwnerId()).fullName(),
-                invoice.getTotalAmount(), invoice.getStatus(), invoice.getIssuedAt()
-            ))
-            .sorted(Comparator.comparing(InvoiceSummary::issuedAt, Comparator.nullsFirst(Comparator.naturalOrder())).reversed())
-            .toList();
+    public List<InvoiceSummary> execute(UUID tenantId, UUID ownerId, int page, int size) {
+        return query.page(tenantId, ownerId, (long) page * size, size);
     }
 }

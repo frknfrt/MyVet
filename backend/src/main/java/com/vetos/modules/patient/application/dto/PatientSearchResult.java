@@ -12,5 +12,6 @@ public record PatientSearchResult(
     PatientStatus status,
     UUID ownerId,
     String ownerFullName,
-    String ownerPhone
+    String ownerPhone,
+    String photoVersion
 ) {}

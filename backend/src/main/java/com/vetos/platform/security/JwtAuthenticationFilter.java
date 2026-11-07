@@ -22,6 +22,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String AUTH_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
 
+    private final StaffSessionRevocations revocations;
     private final JwtTokenProvider jwtTokenProvider;
 
     /**
@@ -47,10 +48,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         try {
             String header = request.getHeader(AUTH_HEADER);
-            if (header != null && header.startsWith(BEARER_PREFIX)) {
-                String token = header.substring(BEARER_PREFIX.length());
+            boolean fromHeader = header != null && header.startsWith(BEARER_PREFIX);
+            String token = fromHeader ? header.substring(BEARER_PREFIX.length()) : SessionCookies.read(request, SessionCookies.NAME);
+            if (token != null && !fromHeader && SessionCookies.failsCsrfCheck(request)) {
+                // Cerezle kimlik dogrulamasi + veri degistiren istek + uygulamanin basligi yok: baska bir sayfadan
+                // (or. ayni site sayilan bir alt alan adindan) gonderilmis olabilir. Islem yapmadan reddet.
+                SessionCookies.rejectCsrf(response);
+                return;
+            }
+            if (token != null) {
                 try {
                     AuthenticatedStaffUser principal = jwtTokenProvider.parse(token);
+                    if (revocations.revoked(principal.staffUserId(), principal.issuedMillis())) {
+                        throw new io.jsonwebtoken.JwtException("Session revoked");
+                    }
                     var authentication = new UsernamePasswordAuthenticationToken(
                         principal, null, List.of(new SimpleGrantedAuthority("ROLE_" + principal.role()))
                     );

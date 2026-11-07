@@ -96,7 +96,19 @@ export interface TodaySalesSummary {
 }
 
 export const billingApi = {
-  listInvoices: () => apiClient.get<InvoiceSummary[]>('/api/v1/invoices'),
+  listInvoices: (page = 0, ownerId?: string) =>
+    apiClient.get<InvoiceSummary[]>('/api/v1/invoices?' + new URLSearchParams({
+      page: String(page), size: '50', ...(ownerId ? { ownerId } : {}),
+    })),
+
+  async listOwnerInvoices(ownerId: string) {
+    const invoices: InvoiceSummary[] = [];
+    for (let page = 0; ; page++) {
+      const rows = await this.listInvoices(page, ownerId);
+      invoices.push(...rows);
+      if (rows.length < 50) return invoices;
+    }
+  },
   getInvoice: (id: string) => apiClient.get<InvoiceDetail>(`/api/v1/invoices/${id}`),
   createInvoice: (ownerId: string) => apiClient.postForId('/api/v1/invoices', { ownerId }),
   addLine: (
@@ -112,7 +124,7 @@ export const billingApi = {
   ) => apiClient.post<void>(`/api/v1/invoices/${id}/lines`, payload),
   issueInvoice: (id: string) => apiClient.post<void>(`/api/v1/invoices/${id}/issue`),
   voidInvoice: (id: string) => apiClient.post<void>(`/api/v1/invoices/${id}/void`),
-  recordPayment: (id: string, payload: { method: PaymentMethod; amount: number; pspRef?: string }) =>
+  recordPayment: (id: string, payload: { method: PaymentMethod; amount: number; pspRef?: string; requestId?: string }) =>
     apiClient.post<void>(`/api/v1/invoices/${id}/payments`, payload),
   revenueSummary: () => apiClient.get<RevenueSummary>('/api/v1/invoices/revenue-summary'),
   listOwnerBalances: () => apiClient.get<OwnerBalance[]>('/api/v1/owner-balances'),

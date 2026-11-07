@@ -1,0 +1,121 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  color: var(--color-text-ink);
+}
+.title {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.sectionTitle {
+  font-size: 14px;
+  font-weight: 700;
+  margin: var(--space-2) 0 0;
+  padding-bottom: var(--space-1);
+  border-bottom: 1.5px solid var(--color-border);
+}
+.paragraph {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+.blank {
+  display: inline-block;
+  min-width: 6em;
+  border-bottom: 1.5px solid var(--color-text-ink);
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.label {
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 0;
+}
+.required {
+  color: var(--color-danger-700);
+}
+.input,
+.textarea {
+  width: 100%;
+  min-height: 44px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--color-border);
+  background: var(--color-paper);
+  padding: 0 12px;
+  font-size: 14px;
+  font-family: var(--font-body);
+  color: var(--color-text-ink);
+  box-sizing: border-box;
+}
+.textarea {
+  padding: 10px 12px;
+  resize: vertical;
+}
+.input:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--color-brand-500);
+}
+.input:disabled,
+.textarea:disabled {
+  background: var(--color-cream);
+}
+.numberWrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.unit {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+.choiceGroup {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.choice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  font-size: 14px;
+}
+.choice input {
+  width: 20px;
+  height: 20px;
+}
+.readValue {
+  font-size: 14px;
+  padding-bottom: var(--space-1);
+  border-bottom: 1px dashed var(--color-border);
+  white-space: pre-line;
+}
+.signature {
+  margin-top: var(--space-2);
+}
+.signatureBox {
+  border: 1.5px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}

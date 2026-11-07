@@ -59,8 +59,9 @@ export const imagingApi = {
   uploadFile: (id: string, file: File) => {
     const form = new FormData();
     form.append('file', file);
-    return apiClient.postMultipart<void>(`/api/v1/imaging-records/${id}/files`, form);
+    // Yuklenen dosyanin id'sini doner (otomatik AI okuma icin).
+    return apiClient.postMultipartForId(`/api/v1/imaging-records/${id}/files`, form);
   },
   fileUrl: (fileId: string) => `${API_BASE_URL}/api/v1/imaging-records/files/${fileId}`,
-  authHeader: () => apiClient.authHeader(),
+  fetchFile: (url: string) => apiClient.fetchFile(url),
 };

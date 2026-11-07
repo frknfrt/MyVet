@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../api/patientApi', () => ({ patientApi: { search: vi.fn() } }));
-vi.mock('../../api/encounterApi', () => ({ encounterApi: { listByPatient: vi.fn(), start: vi.fn() } }));
+vi.mock('../../api/encounterApi', () => ({ encounterApi: { listByPatient: vi.fn(), start: vi.fn(), cancel: vi.fn() } }));
 
 import { patientApi, PatientSearchResult } from '../../api/patientApi';
 import { encounterApi, EncounterDetail } from '../../api/encounterApi';
@@ -15,7 +15,7 @@ import { NewEncounterModal } from './NewEncounterModal';
 
 const patient = (over: Partial<PatientSearchResult>): PatientSearchResult => ({
   patientId: 'p1', patientName: 'Pamuk', speciesName: 'Kedi', breedName: null, status: 'ACTIVE',
-  ownerId: 'o1', ownerFullName: 'Şeyda FIRAT', ownerPhone: '05058979576', ...over,
+  ownerId: 'o1', ownerFullName: 'Şeyda FIRAT', ownerPhone: '05058979576', photoVersion: null, ...over,
 });
 
 let container: HTMLDivElement;
@@ -83,10 +83,33 @@ describe('NewEncounterModal', () => {
     await clickText('Pamuk');
     await act(async () => {});
     expect(container.textContent).toContain('açık bir taslak muayenesi var');
-    await clickText('Taslağa Devam Et');
+    await clickText('taslağına dön');
     await act(async () => {});
 
     expect(encounterApi.start).not.toHaveBeenCalled();
+    expect(container.textContent).toContain('MUAYENE SAYFASI');
+  });
+
+  it('cancels the old draft and starts a new encounter after confirmation', async () => {
+    vi.mocked(patientApi.search).mockResolvedValue([patient({})]);
+    vi.mocked(encounterApi.listByPatient).mockResolvedValue([
+      { id: 'enc-draft', status: 'DRAFT', encounterDate: '2026-10-07T22:19:42' } as EncounterDetail,
+    ]);
+    vi.mocked(encounterApi.cancel).mockResolvedValue(undefined);
+    vi.mocked(encounterApi.start).mockResolvedValue('enc-new');
+    await renderModal();
+
+    await typeSearch('Pam');
+    await clickText('Pamuk');
+    await act(async () => {});
+    expect(container.textContent).toContain('gün önce');
+    await clickText('Eski taslağı iptal et');
+    expect(encounterApi.cancel).not.toHaveBeenCalled();
+    await clickText('Emin misiniz?');
+    await act(async () => {});
+
+    expect(encounterApi.cancel).toHaveBeenCalledWith('enc-draft');
+    expect(encounterApi.start).toHaveBeenCalledWith({ patientId: 'p1' });
     expect(container.textContent).toContain('MUAYENE SAYFASI');
   });
 

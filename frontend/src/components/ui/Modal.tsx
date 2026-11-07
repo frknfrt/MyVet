@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useId, useRef } from 'react';
 import styles from './Modal.module.css';
 
 interface ModalProps {
@@ -13,24 +13,47 @@ interface ModalProps {
 const CONFIRM_CLOSE_MESSAGE = 'Kaydedilmemiş değişiklikleriniz var. Çıkmak istediğinize emin misiniz?';
 
 export function Modal({ open, onClose, children, width = 480, dirty = false }: ModalProps) {
+  const card = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  const close = useRef<() => void>(() => {});
   function handleBackdropClick() {
     if (dirty && !window.confirm(CONFIRM_CLOSE_MESSAGE)) return;
     onClose();
   }
 
-  // REVIZE (2026-11-01, canli QA bulgusu): modal'in kapatma (X) butonu YOKTU ve
-  // Escape tusu da calismiyordu -- tek cikis yolu kenardaki birkac pikselllik
-  // backdrop seridine tiklamakti, bu da kesfedilemiyordu. Escape dinleyicisi
-  // ve gorunur bir X butonu eklendi; ikisi de ayni dirty-onay kuralina uyar.
+  close.current = handleBackdropClick;
   useEffect(() => {
-    if (!open) return;
+    const dialog = card.current;
+    if (!open || !dialog) return;
+    const previous = document.activeElement;
+    const heading = dialog.querySelector('h1,h2,h3');
+    if (heading) {
+      if (!heading.id) heading.id = titleId;
+      dialog.setAttribute('aria-labelledby', heading.id);
+    }
+    dialog.focus();
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') handleBackdropClick();
+      if (!dialog || !dialog.contains(document.activeElement)) return;
+      if (document.activeElement?.closest('[aria-modal="true"]') !== dialog) return;
+      if (e.key === 'Escape') { e.preventDefault(); close.current(); return; }
+      if (e.key !== 'Tab') return;
+      const items = Array.from(dialog.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]'
+      )).filter(el => el.getClientRects().length > 0);
+      const first = items[0], last = items[items.length - 1];
+      if (!first) { e.preventDefault(); dialog.focus(); }
+      else if (e.shiftKey && (document.activeElement === first || document.activeElement === dialog)) {
+        e.preventDefault(); last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault(); first.focus();
+      }
     }
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, dirty]);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
+    };
+  }, [open, titleId]);
 
   if (!open) return null;
 
@@ -41,7 +64,7 @@ export function Modal({ open, onClose, children, width = 480, dirty = false }: M
         if (e.target === e.currentTarget) handleBackdropClick();
       }}
     >
-      <div className={styles.card} style={{ width }}>
+      <div ref={card} role="dialog" aria-modal="true" aria-label="İşlem penceresi" tabIndex={-1} className={styles.card} style={{ width }}>
         <button type="button" className={styles.closeBtn} onClick={handleBackdropClick} aria-label="Kapat" title="Kapat">
           ×
         </button>

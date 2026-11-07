@@ -47,6 +47,7 @@ class IssuePrescriptionUseCaseTest {
     @Mock private EncounterRepository encounters;
     @Mock private DomainEventPublisher publisher;
     @Mock private AuditPort auditPort;
+    @Mock private DrugAllergyGuard allergyGuard;
 
     private final UUID patient = UUID.randomUUID();
     private final UUID staff = UUID.randomUUID();
@@ -64,7 +65,7 @@ class IssuePrescriptionUseCaseTest {
     }
 
     private IssuePrescriptionUseCase useCase() {
-        return new IssuePrescriptionUseCase(prescriptions, items, encounters, publisher, auditPort);
+        return new IssuePrescriptionUseCase(prescriptions, items, encounters, publisher, auditPort, allergyGuard);
     }
 
     private PrescriptionItemInput stockItem(UUID inventoryItemId, Integer qty) {

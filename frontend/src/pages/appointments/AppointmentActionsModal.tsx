@@ -137,7 +137,7 @@ export function AppointmentActionsModal({ appointment, onClose, onChanged }: App
           )}
           {status === 'CONFIRMED' && (
             <Button variant="primary" disabled={busy} onClick={() => run(appointmentApi.checkIn)}>
-              Check-in yap
+              Geldi olarak işaretle
             </Button>
           )}
           {status === 'CHECKED_IN' && canStartEncounter && (

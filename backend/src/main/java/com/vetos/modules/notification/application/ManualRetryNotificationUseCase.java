@@ -28,7 +28,7 @@ public class ManualRetryNotificationUseCase {
 
     @Transactional
     public void execute(UUID notificationLogId) {
-        NotificationLog notificationLog = notificationLogRepository.findById(notificationLogId)
+        NotificationLog notificationLog = notificationLogRepository.findForUpdate(notificationLogId)
             .orElseThrow(() -> new NotificationLogNotFoundException(notificationLogId));
 
         if (notificationLog.getStatus() != NotificationStatus.FAILED) {

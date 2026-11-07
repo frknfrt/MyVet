@@ -324,6 +324,8 @@ export const platformAdminApi = {
     platformAdminClient.get<AuditEventPage>(`/api/v1/platform-admin/tenants/${tenantId}/audit-events?${toQueryString(q)}`),
   login: (payload: PlatformAdminLoginPayload) =>
     platformAdminClient.post<PlatformAdminSession>('/api/v1/platform-admin/auth/login', payload),
+  /** Platform admin oturum cerezini sunucuda siler. */
+  logout: () => platformAdminClient.post<void>('/api/v1/platform-admin/auth/logout'),
   listTenants: () => platformAdminClient.get<TenantAdminOverview[]>('/api/v1/platform-admin/tenants'),
   getTenant: (id: string) => platformAdminClient.get<TenantAdminOverview>(`/api/v1/platform-admin/tenants/${id}`),
   createTenant: (payload: CreateTenantPayload) =>

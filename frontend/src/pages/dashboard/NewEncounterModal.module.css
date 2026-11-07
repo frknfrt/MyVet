@@ -90,6 +90,24 @@
   padding: 8px 10px;
   font-size: 12.5px;
 }
+.replaceBtn {
+  display: block;
+  margin-top: 6px;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-warning-700);
+  text-decoration: underline;
+  text-align: left;
+  cursor: pointer;
+}
+.replaceBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
 .footer {
   margin-top: 18px;
   display: flex;

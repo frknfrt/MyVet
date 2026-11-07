@@ -68,6 +68,9 @@ public class Appointment {
         UUID tenantId, UUID branchId, UUID patientId, UUID ownerId, UUID assignedStaffId, UUID serviceTypeId,
         Instant scheduledStart, Instant scheduledEnd, AppointmentSource source, String notes
     ) {
+        if (scheduledStart == null || scheduledEnd == null || !scheduledEnd.isAfter(scheduledStart)) {
+            throw new com.vetos.modules.appointment.domain.exception.InvalidAppointmentIntervalException();
+        }
         Appointment appointment = new Appointment();
         appointment.tenantId = tenantId;
         appointment.branchId = branchId;

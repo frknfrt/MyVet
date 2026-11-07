@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppShell } from '../../components/layout/AppShell';
 import { Button } from '../../components/ui/Button';
@@ -45,6 +45,8 @@ export function DashboardPage() {
   const [onlyMine, setOnlyMine] = useState(role === 'VET');
   const [query, setQuery] = useState('');
   const [appointments, setAppointments] = useState<AppointmentItem[]>([]);
+  const generation = useRef(0);
+  const [loadError, setLoadError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [quickSaleOpen, setQuickSaleOpen] = useState(false);
   const [newEncounterOpen, setNewEncounterOpen] = useState(false);
@@ -53,16 +55,21 @@ export function DashboardPage() {
   const todayIso = isoDate(new Date());
 
   function load() {
+    const request = ++generation.current;
     setLoading(true);
-    appointmentApi
-      .weeklyCalendar(todayIso)
-      .then((list) => setAppointments(list.filter((a) => isoDate(a.scheduledStart) === todayIso)))
-      .finally(() => setLoading(false));
-    billingApi.todaySalesSummary().then(setTodaySales).catch(() => setTodaySales(null));
+    setLoadError(false);
+    appointmentApi.dailyCalendar(todayIso)
+      .then(list => { if (request === generation.current) setAppointments(list); })
+      .catch(() => { if (request === generation.current) setLoadError(true); })
+      .finally(() => { if (request === generation.current) setLoading(false); });
+    if (canSeeBusinessSummary(role)) {
+      billingApi.todaySalesSummary().then(setTodaySales).catch(() => setTodaySales(null));
+    }
   }
 
   useEffect(() => {
     load();
+    return () => { generation.current++; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -153,7 +160,7 @@ export function DashboardPage() {
               <div className={styles.kpiValue}>{checkedInCount}</div>
             </div>
             <div className={styles.kpiCard}>
-              <div className={styles.kpiLabel}>No-show riski yüksek</div>
+              <div className={styles.kpiLabel}>Gelmeme riski yüksek</div>
               <div className={`${styles.kpiValue} ${styles.warn}`}>{highRiskCount}</div>
             </div>
             <div className={styles.kpiCard}>
@@ -191,6 +198,8 @@ export function DashboardPage() {
             </div>
             {loading ? (
               <div className={styles.empty}>Yükleniyor...</div>
+            ) : loadError ? (
+              <div role="alert">Randevular yüklenemedi. <button onClick={load}>Tekrar dene</button></div>
             ) : rows.length === 0 ? (
               <div className={styles.empty}>Bu durumda randevu bulunmuyor</div>
             ) : (

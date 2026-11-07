@@ -70,6 +70,7 @@ class IyzicoPaymentGatewayAdapterTest {
 
     @BeforeEach
     void startStubServer() throws IOException {
+        org.springframework.test.util.ReflectionTestUtils.setField(adapter, "simulationAllowed", true);
         stubServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         stubServer.createContext(INITIALIZE_PATH, this::handle);
         stubServer.createContext(RETRIEVE_PATH, this::handle);
@@ -79,6 +80,14 @@ class IyzicoPaymentGatewayAdapterTest {
             "test-api-key", "test-secret-key",
             "http://127.0.0.1:" + stubServer.getAddress().getPort(), "http://localhost:8080", outcomes,
             CircuitBreakerRegistry.ofDefaults(), RetryRegistry.ofDefaults());
+    }
+
+    @Test
+    void disabledGatewayCannotInitializeOrConfirmPayment() {
+        org.springframework.test.util.ReflectionTestUtils.setField(adapter, "simulationAllowed", false);
+        assertThatThrownBy(() -> adapter.initializeCheckout("invoice", BigDecimal.TEN, "Test", "test@example.org"))
+            .isInstanceOf(com.vetos.modules.platformadmin.domain.exception.PaymentProviderServiceUnavailableException.class);
+        assertThat(adapter.retrieveCheckoutResult("unused").success()).isFalse();
     }
 
     @AfterEach

@@ -183,3 +183,16 @@
 .fileInput {
   display: none;
 }
+
+@media (max-width: 880px) {
+  .header {
+    padding-right: 48px;
+  }
+  .metaGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .actionsSplit {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+}

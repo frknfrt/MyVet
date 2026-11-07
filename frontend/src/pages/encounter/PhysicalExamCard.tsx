@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { ExamBodySystem, ExamFindingStatus, PhysicalExamFinding } from '../../api/encounterApi';
 import { Textarea } from '../../components/ui/Field';
 import { EXAM_BODY_SYSTEMS, EXAM_BODY_SYSTEM_LABELS } from './examSystem';
@@ -31,7 +32,33 @@ interface PhysicalExamCardProps {
 }
 
 /** Kaydetme sayfanın otomatik kaydıyla yapılır (EncounterPage). */
+export function summarizeFindings(findings: FindingsBySystem) {
+  const statuses = EXAM_BODY_SYSTEMS.map((system) => findings[system].status);
+  return {
+    abnormal: statuses.filter((s) => s === 'ABNORMAL').length,
+    normal: statuses.filter((s) => s === 'NORMAL').length,
+    notExamined: statuses.filter((s) => s === 'NOT_EXAMINED').length,
+  };
+}
+
+/** Muayene edilmemiş sistemleri normal yapar; anormal işaretlenenlere ve notlara dokunmaz. */
+export function markRemainingNormal(findings: FindingsBySystem): FindingsBySystem {
+  return Object.fromEntries(
+    EXAM_BODY_SYSTEMS.map((system) => [
+      system,
+      findings[system].status === 'NOT_EXAMINED' ? { ...findings[system], status: 'NORMAL' as ExamFindingStatus } : findings[system],
+    ]),
+  ) as FindingsBySystem;
+}
+
 export function PhysicalExamCard({ findings, onChange, readOnly }: PhysicalExamCardProps) {
+  const summary = summarizeFindings(findings);
+  // Anormal bulgu varsa açık başlar; kayıt sonradan yüklenirse de açılır (kendiliğinden kapanmaz).
+  const [expanded, setExpanded] = useState(summary.abnormal > 0);
+  useEffect(() => {
+    if (summary.abnormal > 0) setExpanded(true);
+  }, [summary.abnormal]);
+
   function setStatus(system: ExamBodySystem, status: ExamFindingStatus) {
     onChange({ ...findings, [system]: { ...findings[system], status } });
   }
@@ -42,7 +69,33 @@ export function PhysicalExamCard({ findings, onChange, readOnly }: PhysicalExamC
 
   return (
     <div className={encounterStyles.card}>
-      <div className={encounterStyles.cardTitle}>Fiziksel Muayene</div>
+      <div className={styles.header}>
+        <div>
+          <div className={encounterStyles.cardTitle}>Fiziksel Muayene</div>
+          <div className={styles.summary}>
+            {summary.abnormal > 0 && <span className={styles.summaryAbnormal}>{summary.abnormal} anormal</span>}
+            <span>{summary.normal} normal</span>
+            <span>{summary.notExamined} muayene edilmedi</span>
+          </div>
+        </div>
+        <div className={styles.headerActions}>
+          {!readOnly && summary.notExamined > 0 && (
+            <button type="button" className={styles.headerBtn} onClick={() => onChange(markRemainingNormal(findings))}>
+              Kalanları normal işaretle
+            </button>
+          )}
+          <button
+            type="button"
+            className={styles.headerBtn}
+            aria-expanded={expanded}
+            aria-controls="physical-exam-rows"
+            onClick={() => setExpanded((v) => !v)}
+          >
+            {expanded ? 'Gizle' : 'Sistemleri göster'}
+          </button>
+        </div>
+      </div>
+      <div id="physical-exam-rows" className={styles.rows} hidden={!expanded}>
       {EXAM_BODY_SYSTEMS.map((system) => {
         const { status, note } = findings[system];
         return (
@@ -88,6 +141,7 @@ export function PhysicalExamCard({ findings, onChange, readOnly }: PhysicalExamC
           </div>
         );
       })}
+      </div>
     </div>
   );
 }

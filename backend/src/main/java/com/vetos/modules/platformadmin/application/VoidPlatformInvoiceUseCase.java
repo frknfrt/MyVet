@@ -21,7 +21,13 @@ public class VoidPlatformInvoiceUseCase {
 
     @Transactional
     public void execute(UUID invoiceId, UUID platformAdminId, String platformAdminEmail) {
+        execute(invoiceId, platformAdminId, platformAdminEmail, null);
+    }
+
+    @Transactional
+    public void execute(UUID invoiceId, UUID platformAdminId, String platformAdminEmail, UUID expectedTenantId) {
         PlatformInvoice invoice = platformInvoiceRepository.findById(invoiceId)
+            .filter(i -> expectedTenantId == null || expectedTenantId.equals(i.getTenantId()))
             .orElseThrow(() -> new PlatformInvoiceNotFoundException(invoiceId));
 
         boolean wasOverdue = invoice.getStatus() == PlatformInvoiceStatus.OVERDUE;

@@ -1,5 +1,49 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: -6px;
+}
+.summaryAbnormal {
+  color: var(--color-danger-700);
+  font-weight: 600;
+}
+.headerActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.headerBtn {
+  border: 1px solid var(--color-border);
+  background: #fff;
+  color: var(--color-text-ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.headerBtn:hover {
+  border-color: var(--color-brand-500);
+}
+
+.rows {
+  margin-top: 8px;
+}
+
 .row {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   gap: 12px;
   padding: 10px 0;
@@ -19,8 +63,8 @@
 
 .toggleGroup {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
-  flex-shrink: 0;
 }
 
 .toggleBtn {
@@ -57,4 +101,11 @@
 .noteWrap {
   flex-basis: 100%;
   margin-top: 8px;
+}
+
+@media (max-width: 640px) {
+  .systemLabel {
+    flex-basis: 100%;
+    padding-top: 0;
+  }
 }

@@ -19,6 +19,7 @@ public record PatientProfile(
     String passportNumber,
     BigDecimal weightKg,
     String photoUrl,
+    String photoVersion,
     String color,
     String temperament,
     String distinguishingMarks,

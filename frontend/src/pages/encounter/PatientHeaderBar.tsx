@@ -3,6 +3,7 @@ import { encounterApi, EncounterDetail } from '../../api/encounterApi';
 import { PatientProfile } from '../../api/patientApi';
 import { Button } from '../../components/ui/Button';
 import { colorFor, initialsOf } from '../dashboard/avatarColor';
+import { FillFormButton } from '../forms/FillFormButton';
 import { PatientStatusBadge } from '../patients/statusBadge';
 import { ageLabelFrom, formatDate } from './ageUtils';
 import { EncounterStatusBadge } from './encounterStatus';
@@ -30,7 +31,7 @@ export function PatientHeaderBar({ profile, encounter, onBack }: PatientHeaderBa
     if (downloadingReport) return;
     setDownloadingReport(true);
     try {
-      const res = await fetch(encounterApi.reportUrl(encounter.id), { headers: encounterApi.authHeader() });
+      const res = await encounterApi.fetchFile(encounterApi.reportUrl(encounter.id));
       if (!res.ok) throw new Error('Rapor indirilemedi');
       const blob = await res.blob();
       const objectUrl = URL.createObjectURL(blob);
@@ -73,6 +74,7 @@ export function PatientHeaderBar({ profile, encounter, onBack }: PatientHeaderBa
 
         <div className={styles.rightActions}>
           <EncounterStatusBadge status={encounter.status} />
+          <FillFormButton patientId={profile.id} encounterId={encounter.id} />
           <Button variant="secondary" onClick={handleDownloadReport} disabled={downloadingReport}>
             {downloadingReport ? 'Hazırlanıyor...' : 'Rapor İndir (PDF)'}
           </Button>

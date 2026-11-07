@@ -5,6 +5,7 @@ import { OwnerSearchResult, patientApi } from '../../api/patientApi';
 import { Button } from '../../components/ui/Button';
 import { FieldWrap, Input, Select } from '../../components/ui/Field';
 import { Modal } from '../../components/ui/Modal';
+import { prepareImage } from '../../lib/prepareImage';
 import styles from './NewLabResultModal.module.css';
 
 const COMMON_TEST_NAMES = [
@@ -31,10 +32,28 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+// Kamerayla cekilen fotograf + kucuk onizleme (2026-11-07).
+function CameraThumb({ file }: { file: File }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    const u = URL.createObjectURL(file);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [file]);
+  return url ? <img className={styles.fileThumb} src={url} alt="" /> : null;
+}
+
+interface PendingFile {
+  file: File;
+  /** Kamerayla cekildi: kayit acilinca otomatik AI okumaya girer. */
+  fromCamera: boolean;
+}
+
 interface NewLabResultModalProps {
   open: boolean;
   onClose: () => void;
-  onCreated: (id: string) => void;
+  /** autoOcrFileIds: yalnizca kamerayla cekilen dosyalarin yuklenen id'leri. */
+  onCreated: (id: string, opts: { autoOcrFileIds: string[] }) => void;
 }
 
 interface OwnerPatientOption {
@@ -51,13 +70,18 @@ export function NewLabResultModal({ open, onClose, onCreated }: NewLabResultModa
   const [ownerSearchOpen, setOwnerSearchOpen] = useState(false);
   const [ownerPatients, setOwnerPatients] = useState<OwnerPatientOption[]>([]);
   const [patientId, setPatientId] = useState('');
-  const [files, setFiles] = useState<File[]>([]);
+  const [files, setFiles] = useState<PendingFile[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [preparing, setPreparing] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  // Modal kapanip acilinca artar: kapanmadan once baslayan foto hazirlama sonucu yeni forma sizmasin.
+  const generationRef = useRef(0);
 
   useEffect(() => {
+    generationRef.current += 1;
     if (!open) {
       setTestName('');
       setOwnerId(null);
@@ -97,9 +121,24 @@ export function NewLabResultModal({ open, onClose, onCreated }: NewLabResultModa
     setOwnerQuery('');
   }
 
-  function addFiles(list: FileList | null) {
+  // Gorseller yuklenmeden once kucultulup JPEG'e cevrilir; PDF vb. aynen kalir.
+  async function addFiles(list: FileList | null, fromCamera = false) {
     if (!list) return;
-    setFiles((prev) => [...prev, ...Array.from(list)]);
+    const picked = Array.from(list);
+    const generation = generationRef.current;
+    setPreparing((n) => n + 1);
+    setError(null);
+    try {
+      for (const original of picked) {
+        const file = original.type.startsWith('image/') ? await prepareImage(original, 'document') : original;
+        if (generation !== generationRef.current) return;
+        setFiles((prev) => [...prev, { file, fromCamera }]);
+      }
+    } catch (err) {
+      if (generation === generationRef.current) setError(errorMessageOf(err));
+    } finally {
+      setPreparing((n) => n - 1);
+    }
   }
 
   function removeFile(index: number) {
@@ -109,7 +148,7 @@ export function NewLabResultModal({ open, onClose, onCreated }: NewLabResultModa
   function handleDrop(e: DragEvent<HTMLDivElement>) {
     e.preventDefault();
     setDragOver(false);
-    addFiles(e.dataTransfer.files);
+    void addFiles(e.dataTransfer.files);
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -119,10 +158,12 @@ export function NewLabResultModal({ open, onClose, onCreated }: NewLabResultModa
     setError(null);
     try {
       const id = await labApi.request({ patientId, testName });
-      for (const file of files) {
-        await labApi.uploadFile(id, file);
+      const autoOcrFileIds: string[] = [];
+      for (const { file, fromCamera } of files) {
+        const fileId = await labApi.uploadFile(id, file);
+        if (fromCamera) autoOcrFileIds.push(fileId);
       }
-      onCreated(id);
+      onCreated(id, { autoOcrFileIds });
     } catch (err) {
       setError(errorMessageOf(err));
     } finally {
@@ -130,6 +171,7 @@ export function NewLabResultModal({ open, onClose, onCreated }: NewLabResultModa
     }
   }
 
+  const hasCameraFile = files.some((f) => f.fromCamera);
   const dirty = testName !== '' || ownerId !== null || patientId !== '' || files.length > 0;
 
   return (
@@ -221,7 +263,7 @@ export function NewLabResultModal({ open, onClose, onCreated }: NewLabResultModa
               </FieldWrap>
             </div>
 
-            <Button type="submit" variant="primary" className={styles.submitBtn} disabled={busy || !patientId}>
+            <Button type="submit" variant="primary" className={styles.submitBtn} disabled={busy || preparing > 0 || !patientId}>
               {busy ? 'Yükleniyor...' : 'Sonucu Oluştur'}
             </Button>
           </div>
@@ -244,17 +286,38 @@ export function NewLabResultModal({ open, onClose, onCreated }: NewLabResultModa
               type="file"
               multiple
               className={styles.fileInput}
-              onChange={(e) => addFiles(e.target.files)}
+              onChange={(e) => void addFiles(e.target.files)}
             />
             <button type="button" className={styles.uploadTrigger} onClick={() => fileInputRef.current?.click()}>
               Dosyaları Seçin
             </button>
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className={styles.fileInput}
+              onChange={(e) => {
+                void addFiles(e.target.files, true);
+                e.target.value = '';
+              }}
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              className={styles.cameraBtn}
+              onClick={() => cameraInputRef.current?.click()}
+              disabled={preparing > 0}
+            >
+              {preparing > 0 ? 'Hazırlanıyor...' : hasCameraFile ? '📷 Sayfa Ekle' : '📷 Fotoğraf Çek'}
+            </Button>
             <p className={styles.hint}>ⓘ Aynı sonuca aynı anda birden fazla dosya ekleyebilirsiniz</p>
 
             {files.length > 0 && (
               <div className={styles.fileList}>
-                {files.map((f, i) => (
+                {files.map(({ file: f, fromCamera }, i) => (
                   <div key={i} className={styles.fileChip}>
+                    {fromCamera && <CameraThumb file={f} />}
                     <span className={styles.fileChipName}>{f.name}</span>
                     <span className={styles.fileChipSize}>{formatBytes(f.size)}</span>
                     <button type="button" className={styles.fileChipRemove} onClick={() => removeFile(i)}>

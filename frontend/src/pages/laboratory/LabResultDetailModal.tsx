@@ -5,6 +5,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { FieldWrap, Input, Select, Textarea, AI_FIELD_HINT } from '../../components/ui/Field';
 import { Modal } from '../../components/ui/Modal';
+import { prepareImage } from '../../lib/prepareImage';
 import { LabResultStatusBadge } from './labResultStatus';
 import styles from './LabResultDetailModal.module.css';
 
@@ -28,11 +29,13 @@ const FLAG_LABELS: Record<LabValueFlag, string> = { NORMAL: 'Normal', LOW: 'Dü�
 
 interface LabResultDetailModalProps {
   resultId: string | null;
+  /** Yeni kayitta kamerayla cekilen dosyalar: kayit acilinca bir kez otomatik okunur (2026-11-07). */
+  autoOcrFileIds?: string[];
   onClose: () => void;
   onChanged: () => void;
 }
 
-export function LabResultDetailModal({ resultId, onClose, onChanged }: LabResultDetailModalProps) {
+export function LabResultDetailModal({ resultId, autoOcrFileIds, onClose, onChanged }: LabResultDetailModalProps) {
   const [detail, setDetail] = useState<LabResultDetail | null>(null);
   const [resultSummary, setResultSummary] = useState('');
   const [items, setItems] = useState<LabResultItemInput[]>([]);
@@ -45,10 +48,17 @@ export function LabResultDetailModal({ resultId, onClose, onChanged }: LabResult
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const initialFormRef = useRef({ resultSummary: '', items: [] as LabResultItemInput[] });
+  // Otomatik okuma ayni kayit icin bir kez calisir; load() yukleme/kaydetme sonrasi tekrar calisir, AI kotasi harcanmasin.
+  const autoOcrDoneForRef = useRef<string | null>(null);
+  // Guncel kayit id'si: yavas OCR/yukleme baska kayit acilinca eski sonucu forma yazmasin.
+  const currentIdRef = useRef<string | null>(resultId);
+  currentIdRef.current = resultId;
 
   function load() {
     if (!resultId) return;
+    const idAtStart = resultId;
     labApi.get(resultId).then((d) => {
+      if (currentIdRef.current !== idAtStart) return;
       setDetail(d);
       setAiEvaluated(false);
       setSelectedFileIds([]);
@@ -60,6 +70,11 @@ export function LabResultDetailModal({ resultId, onClose, onChanged }: LabResult
       setResultSummary(summary);
       setItems(loadedItems);
       initialFormRef.current = { resultSummary: summary, items: loadedItems };
+      if (autoOcrFileIds?.length && d.status === 'PENDING' && autoOcrDoneForRef.current !== d.id) {
+        autoOcrDoneForRef.current = d.id;
+        setSelectedFileIds(autoOcrFileIds);
+        void handleOcr(autoOcrFileIds);
+      }
     });
   }
 
@@ -126,12 +141,14 @@ export function LabResultDetailModal({ resultId, onClose, onChanged }: LabResult
     setSelectedFileIds((prev) => (prev.includes(fileId) ? prev.filter((id) => id !== fileId) : [...prev, fileId]));
   }
 
-  async function handleOcr() {
-    if (evaluating || !resultId || selectedFileIds.length === 0) return;
+  async function handleOcr(fileIds: string[] = selectedFileIds) {
+    if (evaluating || !resultId || fileIds.length === 0) return;
+    const idAtStart = resultId;
     setEvaluating(true);
     setError(null);
     try {
-      const result = await labApi.ocrFromImages(resultId, selectedFileIds);
+      const result = await labApi.ocrFromImages(resultId, fileIds);
+      if (currentIdRef.current !== idAtStart) return;
       setItems(result.items);
       setResultSummary(result.draftSummary);
       setAiEvaluated(true);
@@ -139,7 +156,7 @@ export function LabResultDetailModal({ resultId, onClose, onChanged }: LabResult
         setError('AI modeline bağlanılamadı, değerleri elle girin.');
       }
     } catch (err) {
-      setError(errorMessageOf(err));
+      if (currentIdRef.current === idAtStart) setError(errorMessageOf(err));
     } finally {
       setEvaluating(false);
     }
@@ -174,7 +191,7 @@ export function LabResultDetailModal({ resultId, onClose, onChanged }: LabResult
     setUploading(true);
     setError(null);
     try {
-      await labApi.uploadFile(resultId, file);
+      await labApi.uploadFile(resultId, await prepareImage(file, 'document'));
       load();
     } catch (err) {
       setError(errorMessageOf(err));
@@ -186,7 +203,7 @@ export function LabResultDetailModal({ resultId, onClose, onChanged }: LabResult
 
   async function handleDownload(fileId: string, fileName: string) {
     try {
-      const res = await fetch(labApi.fileUrl(fileId), { headers: labApi.authHeader() });
+      const res = await labApi.fetchFile(labApi.fileUrl(fileId));
       if (!res.ok) throw new Error('Dosya indirilemedi');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);

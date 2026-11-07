@@ -8,6 +8,9 @@ import { defineConfig, devices } from '@playwright/test';
  * olması gerekir. Frontend dev sunucusu ise webServer ile otomatik
  * başlatılır/yeniden kullanılır.
  */
+const port = Number(process.env.E2E_FRONTEND_PORT ?? 5173);
+const baseURL = 'http://localhost:' + port;
+
 export default defineConfig({
   testDir: './e2e',
   timeout: 120_000,
@@ -15,7 +18,7 @@ export default defineConfig({
   retries: 0,
   reporter: [['html', { open: 'never' }]],
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
@@ -23,9 +26,9 @@ export default defineConfig({
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
   ],
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
-    reuseExistingServer: true,
+    command: 'npm run dev -- --strictPort --port ' + port,
+    url: baseURL,
+    reuseExistingServer: !process.env.CI && !process.env.E2E_FRONTEND_PORT,
     timeout: 30_000,
   },
 });

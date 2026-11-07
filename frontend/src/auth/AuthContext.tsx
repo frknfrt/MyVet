@@ -1,5 +1,5 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
-import { setAuthToken, setUnauthorizedHandler } from '../api/client';
+import { setUnauthorizedHandler } from '../api/client';
 import { authApi, LoginPayload } from '../api/authApi';
 import { AuthSession, clearStoredSession, loadStoredSession, storeSession } from './session';
 
@@ -12,33 +12,30 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<AuthSession | null>(() => {
-    const initial = loadStoredSession();
-    setAuthToken(initial?.token ?? null);
-    return initial;
-  });
+  const [session, setSession] = useState<AuthSession | null>(() => loadStoredSession());
 
   useEffect(() => {
     setUnauthorizedHandler(() => {
       clearStoredSession();
-      setAuthToken(null);
       setSession(null);
     });
     return () => setUnauthorizedHandler(null);
   }, []);
 
   async function login(payload: LoginPayload) {
+    // Sunucu anahtari HttpOnly cereze yazar; yanittaki token alani saklanmaz.
     const result = await authApi.login(payload);
     storeSession(result);
-    setAuthToken(result.token);
-    setSession(result);
-    return result;
+    const stored = loadStoredSession()!;
+    setSession(stored);
+    return stored;
   }
 
   function logout() {
     clearStoredSession();
-    setAuthToken(null);
     setSession(null);
+    // Cerezi sunucu siler; ag hatasinda da yerel oturum kapanmis olur, cerez en gec 8 saatte gecersizlesir.
+    authApi.logout().catch(() => undefined);
   }
 
   return (

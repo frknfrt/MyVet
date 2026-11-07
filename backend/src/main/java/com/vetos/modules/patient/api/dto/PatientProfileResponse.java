@@ -20,6 +20,7 @@ public record PatientProfileResponse(
     String passportNumber,
     BigDecimal weightKg,
     String photoUrl,
+    String photoVersion,
     String color,
     String temperament,
     String distinguishingMarks,
@@ -39,7 +40,7 @@ public record PatientProfileResponse(
         return new PatientProfileResponse(
             profile.id(), profile.name(), profile.speciesName(), profile.breedName(), profile.sex(),
             profile.neutered(), profile.birthDate(), profile.microchipNumber(), profile.passportNumber(),
-            profile.weightKg(), profile.photoUrl(), profile.color(), profile.temperament(),
+            profile.weightKg(), profile.photoUrl(), profile.photoVersion(), profile.color(), profile.temperament(),
             profile.distinguishingMarks(), profile.aggressive(), profile.bloodType(), profile.foodBrand(),
             profile.criticalAlert(), profile.notes(), profile.protocolNumber(), profile.rabiesTag(),
             profile.status(), profile.ownerId(), profile.ownerFullName(), profile.ownerPhone()

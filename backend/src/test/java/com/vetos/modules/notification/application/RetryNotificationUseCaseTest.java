@@ -48,7 +48,7 @@ class RetryNotificationUseCaseTest {
         UUID callerTenantId = UUID.randomUUID();
         UUID foreignTenantId = UUID.randomUUID();
         UUID logId = UUID.randomUUID();
-        when(notificationLogRepository.findById(logId)).thenReturn(Optional.of(aLog(foreignTenantId, logId)));
+        when(notificationLogRepository.findForUpdate(logId)).thenReturn(Optional.of(aLog(foreignTenantId, logId)));
 
         assertThatThrownBy(() -> useCase.execute(callerTenantId, logId))
             .isInstanceOf(NotificationLogNotFoundException.class);
@@ -64,7 +64,8 @@ class RetryNotificationUseCaseTest {
         UUID tenantId = UUID.randomUUID();
         UUID logId = UUID.randomUUID();
         NotificationLog log = aLog(tenantId, logId);
-        when(notificationLogRepository.findById(logId)).thenReturn(Optional.of(log));
+        log.markFailed("test", null);
+        when(notificationLogRepository.findForUpdate(logId)).thenReturn(Optional.of(log));
 
         useCase.execute(tenantId, logId);
 

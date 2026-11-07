@@ -110,7 +110,7 @@ Düzenleme: `sudo nano /etc/vetly/backend.env`, ardından `sudo systemctl restar
 - Zorunlular (`prod` profilinde eksikse uygulama açılmaz): `SPRING_PROFILES_ACTIVE=prod`, `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET`, `PLATFORM_ADMIN_EMAIL`, `PLATFORM_ADMIN_PASSWORD`, `FRONTEND_BASE_URL`, `VETLY_SITE_ORIGIN`.
 - Nginx arkasında gerekli: `SERVER_ADDRESS=127.0.0.1`, `SERVER_FORWARD_HEADERS_STRATEGY=native` (aksi halde `RateLimitFilter` ve KVKK onay kaydı tüm istekleri `127.0.0.1`'den gelmiş görür).
 - Dış servis geri dönüşleri: `IYZICO_CALLBACK_BASE_URL`, `EFATURA_FATURAENTEGRATOR_CALLBACK_BASE_URL` = `https://uygulama.vetly.com.tr`.
-- İsteğe bağlı entegrasyonlar (`AI_*`, `ANTHROPIC_*`, `ILETI_MERKEZI_*`, `META_WHATSAPP_*`, `IYZICO_*`, `EFATURA_*`): boşsa ilgili adaptör simüle moda düşer. Tam liste ve açıklamalar: `backend/src/main/resources/application.yml`.
+- İsteğe bağlı entegrasyonlar (`AI_*`, `ANTHROPIC_*`, `ILETI_MERKEZI_*`, `META_WHATSAPP_*`, `IYZICO_*`, `EFATURA_*`): boşsa davranış sağlayıcıya ve profile bağlıdır; iyzico, bildirim ve e-Fatura üretimde simüle başarı üretmez. Tam liste ve açıklamalar: `backend/src/main/resources/application.yml`.
 - **E-posta gönderimi (`ADMIN_EMAIL_*`, 2026-11-04 eklendi):** `ADMIN_EMAIL_SMTP_HOST`, `ADMIN_EMAIL_SMTP_PORT` (varsayılan `465`), ve cPanel'deki üç kutunun kendi kullanıcı adı/şifresi (`ADMIN_EMAIL_INFO_USERNAME`/`ADMIN_EMAIL_INFO_PASSWORD`, `ADMIN_EMAIL_DESTEK_USERNAME`/`ADMIN_EMAIL_DESTEK_PASSWORD`, `ADMIN_EMAIL_BILDIRIM_USERNAME`/`ADMIN_EMAIL_BILDIRIM_PASSWORD`) — host + port + HER ÜÇ kutunun kimlik bilgisi birlikte tanımlanmadıkça gönderim tamamen simüle edilir (loglanır, müşteriye gerçekten gitmez). Bu env değişkenleri hem davet e-postasını (yeni ödeme yapan klinik/personel daveti) hem admin panelinden elle gönderilen 3 şablonu (satış, hoş geldin, fatura hatırlatma) hem de otomatik platform fatura/duyuru e-postalarını (günlük 06:00 `PlatformBillingScheduler`: fatura kesildi / son gün yaklaşıyor / hesap askıya alındı, ve `SendAnnouncementUseCase`) etkiler — tek bir yapılandırma hepsini aynı anda açar/kapatır.
 - Lab/görüntüleme sonuç fotoğrafından AI ile otomatik doldurma (2026-10-29): `OLLAMA_VISION_MODEL` (varsayılan `llava` — görsel model metin modelinden (`OLLAMA_MODEL`) FARKLI olabilir, tam model adı ve CPU performansı yerel olarak test edilip buraya yazılmalı) ve `OLLAMA_VISION_TIMEOUT_SECONDS` (varsayılan `120` — vision çağrıları CPU'da metin çağrılarından çok daha yavaş olabilir). Yerelde kurmak için: `ollama pull <model-adi>`, ardından backend'i `OLLAMA_VISION_MODEL=<model-adi>` ile yeniden başlat.
 - **ÖNEMLİ:** `AI_PROVIDER=claude` olan ortamlarda (canlı dahil) bu özellik için `OLLAMA_VISION_MODEL` hiç kullanılmaz — `ClaudeLabResultOcrAdapter`/`ClaudeImagingFindingsOcrAdapter` devreye girer ve mevcut `ANTHROPIC_API_KEY`/`ANTHROPIC_MODEL` ile çalışır, ekstra env değişkeni gerekmez. Ama Claude vision çağrıları da normal AI kotasını/rate limitini kullanır ve ücretlidir (bkz. "Dış servis koruması" bölümü — aynı devre kesici/bulkhead/kota `ai` adı altında paylaşılır).
@@ -120,7 +120,8 @@ Düzenleme: `sudo nano /etc/vetly/backend.env`, ardından `sudo systemctl restar
 
 ## Güvenlik notları
 
-- **iyzico:** `IYZICO_API_KEY`/`IYZICO_SECRET_KEY` boşken `/api/v1/public/payments/iyzico/callback?token=SIMULATED-<id>` herhangi bir faturayı ödenmiş işaretleyebiliyor. Bu yüzden Nginx bu yolu `403` ile kapatıyor. Anahtarlar tanımlanınca (`IYZICO_BASE_URL=https://api.iyzipay.com` ile birlikte) Nginx'teki `location /api/v1/public/payments/iyzico/` bloğu kaldırılmalı.
+- **Ödeme dağıtım kontrolü:** V96 için PostgreSQL sunucusunda btree_gist uzantısı kullanılabilir olmalı. Aktif hekim randevuları aynı zaman aralığını paylaşıyorsa migration durur. Önce kliniğin doğru randevuyu belirlemesini sağlayın. V97 oturum iptal kaydını oluşturur. Üretimde sağlayıcı kimliği eksikse gerçek işlem kesinleştirilmez. Yerel simülasyon için açık dev veya test profili gerekir. Sandbox ödemeleri için ayrı test kliniği ve finans verisi kullanın. Gönderimi doğrulanıyor durumunda kalan bildirimleri tekrar göndermeden önce sağlayıcı kayıtlarıyla karşılaştırın.
+- **iyzico:** Ödeme kapalıysa Nginx’te ödeme callback yolunun 403 kuralını koruyun. Yetkili sandbox veya canlı entegrasyon için yönlendirmeyi yalnızca o ortamın sağlayıcı bilgileriyle birlikte etkinleştirin.
 - Nginx `X-Forwarded-For`'u `$remote_addr` ile **üzerine yazar** — istemcinin gönderdiği sahte header backend'e ulaşmaz.
 
 ## TARBİL eklentisi
@@ -143,6 +144,27 @@ Ardından **Frontend güncellemesi** adımlarıyla web uygulamasını yayınlay�
   - **En düşük eklenti sürümü 0.3.0** (koddaki varsayılan, `application.yml`). Eski eklenti (0.2.x) ml'li satırları dolduramaz ve onaydan düşürür; bu yüzden backend açılır açılmaz eski eklenti 426 alır ve yan panelde "güncelleyin" uyarısı gösterir.
   - Sıra: önce web (0.3.0 zip'i `downloads` içinde, indirilebilir olmalı), sonra backend. Klinikleri önceden haberdar edin: güncellemeyene kadar TARBİL aktarımı durur.
   - `/etc/vetly/backend.env` içinde `VETLY_EXTENSION_MIN_VERSION` daha düşük bir değerle tanımlıysa satırı silin ya da 0.3.0 yapın.
+
+## Güvenlik başlıkları (CSP, 2026-11-06)
+
+Arayüzün derlenmiş `index.html`'i bir Content-Security-Policy meta etiketi taşır (`frontend/vite.config.ts` → `buildCsp`). Yalnız kendi dosyalarımızdan script çalışır, veri yalnız kendi API'mize gönderilir. Yeni bir dış kaynak (CDN, analiz aracı, ödeme iframe'i) eklenirse `buildCsp`'e eklenmezse tarayıcı engeller.
+
+Meta etiketle verilemeyen başlıklar için `/etc/nginx/sites-available/vetly` dosyasında `listen 443` server bloğuna (bir kez) ekleyin:
+```nginx
+server_tokens off;                                   # nginx sürümünü gizler
+add_header X-Frame-Options "DENY" always;            # sayfanın başka sitede iframe'e alınmasını engeller
+add_header Content-Security-Policy "frame-ancestors 'none'" always;
+add_header X-Content-Type-Options "nosniff" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+add_header Permissions-Policy "microphone=(self), camera=(), geolocation=()" always;   # mikrofon: sesle dikte
+```
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+curl -sI https://uygulama.vetly.com.tr/ | grep -iE "x-frame|content-security|server:"
+```
+**Oturum çerezi (2026-11-06):** Klinik oturum anahtarı artık tarayıcının yerel deposunda değil, `vetly_session` adlı HttpOnly + Secure + SameSite=Strict çerezde (`Path=/api`, 8 saat) durur. Platform admin oturumu ayrı bir çerezde: `vetly_admin_session` (`Path=/api/v1/platform-admin`), aynı özelliklerle. Çerezle gelen veri değiştiren isteklerde `X-Vetly-Client` başlığı zorunludur (CSRF; arayüz otomatik ekler). Bu sürüm yayına çıkınca açık oturumlar bir kez kapanır, kullanıcılar yeniden giriş yapar. Backend ve arayüz birlikte yayınlanmalıdır. Arayüz ile API aynı alan adında olmalıdır (`uygulama.vetly.com.tr` + `/api`); farklı alan adına taşınırsa çerez gönderilmez. Yerelde `http://localhost` Secure çerezi kabul eder; başka bir HTTP adresinde denemek gerekirse `APP_SESSION_COOKIE_SECURE=false`.
+
+Not: Spring zaten `/api` yanıtlarına X-Frame-Options ve nosniff ekliyor; aynı başlık iki kez görünürse sorun değil. `location` blokları içinde `add_header` varsa nginx üst bloktakileri devralmaz; o bloklara da eklenmelidir.
 
 ## İzleme (Faz 3)
 
@@ -213,6 +235,7 @@ Klinik içindeki hassas işlemler (giriş ve başarısız giriş denemesi, perso
 Claude (AI), iyzico ve FaturaEntegratör çağrıları devre kesiciyle korunur: son 10 çağrının yarısı kesinti (bağlantı hatası, zaman aşımı, 5xx, 401/402/403/429) ya da çok yavaşsa devre **açılır** ve 30 saniye boyunca o servis hiç çağrılmaz.
 
 - **AI:** devre açıkken hekim hemen "[AI modeli henuz baglanmadi -- bu, dikte edilen/yazilan metnin oldugu gibi Subjective alanina aktarilmasidir. ...]" notlu taslağı görür (kota hakkı iade edilir). Aynı anda en fazla 4 AI çağrısı yapılır; 5.'si en fazla 10 sn bekler, yer açılmazsa "AI şu an yoğun" mesajı (503) döner. Cevap bekleme sınırı 60 sn.
+- **Ödeme dağıtım kontrolü:** V96 için PostgreSQL sunucusunda btree_gist uzantısı kullanılabilir olmalı. Aktif hekim randevuları aynı zaman aralığını paylaşıyorsa migration durur. Önce kliniğin doğru randevuyu belirlemesini sağlayın. V97 oturum iptal kaydını oluşturur. Üretimde sağlayıcı kimliği eksikse gerçek işlem kesinleştirilmez. Yerel simülasyon için açık dev veya test profili gerekir. Sandbox ödemeleri için ayrı test kliniği ve finans verisi kullanın. Gönderimi doğrulanıyor durumunda kalan bildirimleri tekrar göndermeden önce sağlayıcı kayıtlarıyla karşılaştırın.
 - **iyzico:** devre açıkken ödeme başlatma hemen "Ödeme sistemine şu an ulaşılamıyor" (503) döner. Ödeme sonucu sorgusu (kullanıcı iyzico'dan dönerken) devre kesicisiz, kesintide 3 kez denenir.
 - **FaturaEntegratör:** devre açıkken gönderim yapılmaz, kuyruk normal takvimle (2 dk / 10 dk / 1 sa / 6 sa) tekrar dener. Durum sorgusu kesintide 3 kez denenir; sağlayıcı kesintisinde (devre açıkken de, 3 deneme tükenince de) fatura "işleniyor" durumunda kalır, "başarısız" işaretlenmez (aksi halde "Tekrar Dene" çift fatura kesebilirdi).
 - Fatura kesme ve ödeme başlatma gibi **yazma** çağrıları anında/eşzamanlı olarak asla tekrar denenmez (çift kayıt riski); e-fatura kuyruğu ise başarısız gönderimi normal takvimiyle (2 dk / 10 dk / 1 sa / 6 sa) sonradan yeniden gönderir, bu bir çelişki değildir.

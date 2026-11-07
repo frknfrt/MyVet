@@ -72,6 +72,7 @@ export const appointmentApi = {
   createServiceType: (payload: CreateServiceTypePayload) =>
     apiClient.post<ServiceTypeItem>('/api/v1/service-types', payload),
   listStaff: () => apiClient.get<StaffItem[]>('/api/v1/staff-users/directory'),
+  dailyCalendar: (date: string) => apiClient.get<AppointmentItem[]>(`/api/v1/appointments?weekStart=${date}&daily=true`),
   weeklyCalendar: (weekStart: string) =>
     apiClient.get<AppointmentItem[]>(`/api/v1/appointments?weekStart=${weekStart}`),
   activitySummary: () => apiClient.get<AppointmentActivitySummary>('/api/v1/appointments/activity-summary'),

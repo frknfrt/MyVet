@@ -57,6 +57,9 @@ public class Patient {
     @Column(name = "photo_url")
     private String photoUrl;
 
+    @Column(name = "photo_storage_ref")
+    private String photoStorageRef;
+
     private String color;
 
     private String temperament;
@@ -133,6 +136,10 @@ public class Patient {
         this.rabiesTag = rabiesTag;
     }
 
+    public void updateColor(String color) {
+        this.color = color;
+    }
+
     public void updateMicrochip(String microchipNumber) {
         this.microchipNumber = microchipNumber;
     }
@@ -147,6 +154,14 @@ public class Patient {
 
     public void updatePhoto(String photoUrl) {
         this.photoUrl = photoUrl;
+    }
+
+    public void replacePhoto(String storageRef) {
+        this.photoStorageRef = storageRef;
+    }
+
+    public void clearPhoto() {
+        this.photoStorageRef = null;
     }
 
     public void markDeceased() {

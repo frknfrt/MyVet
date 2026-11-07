@@ -8,14 +8,17 @@ import { OwnerProfile, patientApi } from '../../api/patientApi';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { colorFor, initialsOf } from '../dashboard/avatarColor';
+import { LegacyDataCard } from '../../components/legacy/LegacyDataCard';
 import { InvoiceDetailModal } from '../finance/InvoiceDetailModal';
 import { InvoiceStatusBadge } from '../finance/invoiceStatus';
 import { PatientStatusBadge } from '../patients/statusBadge';
 import { ConsentTab } from './ConsentTab';
+import { SignedFormsList } from '../forms/SignedFormsList';
+import { FORM_ROLES } from '../forms/formRoles';
 import { OwnerEditModal } from './OwnerEditModal';
 import styles from './OwnerDetailPage.module.css';
 
-type Tab = 'hastalar' | 'finans' | 'kvkk';
+type Tab = 'hastalar' | 'finans' | 'kvkk' | 'formlar';
 
 function ConsentBadge({ label, granted }: { label: string; granted: boolean }) {
   return <Badge tone={granted ? 'success' : 'neutral'}>{label}</Badge>;
@@ -39,8 +42,8 @@ export function OwnerDetailPage() {
     if (!ownerId) return;
     patientApi.getOwnerProfile(ownerId).then(setProfile);
     billingApi
-      .listInvoices()
-      .then((all) => setInvoices(all.filter((inv) => inv.ownerId === ownerId)))
+      .listOwnerInvoices(ownerId)
+      .then(setInvoices)
       .catch((err) => {
         if (err instanceof ApiError && err.status === 403) setInvoicesForbidden(true);
       });
@@ -160,6 +163,8 @@ export function OwnerDetailPage() {
         )}
       </div>
 
+      {ownerId && <LegacyDataCard entityType="OWNER" id={ownerId} />}
+
       <div className={styles.tabs}>
         <div className={`${styles.tab} ${tab === 'hastalar' ? styles.tabActive : ''}`} onClick={() => setTab('hastalar')}>
           Hastaları ({profile.patients.length})
@@ -170,6 +175,11 @@ export function OwnerDetailPage() {
         <div className={`${styles.tab} ${tab === 'kvkk' ? styles.tabActive : ''}`} onClick={() => setTab('kvkk')}>
           KVKK
         </div>
+        {session && FORM_ROLES.includes(session.role) && (
+          <div className={`${styles.tab} ${tab === 'formlar' ? styles.tabActive : ''}`} onClick={() => setTab('formlar')}>
+            Formlar
+          </div>
+        )}
       </div>
 
       {tab === 'hastalar' && (
@@ -234,6 +244,7 @@ export function OwnerDetailPage() {
       )}
 
       {tab === 'kvkk' && <ConsentTab ownerId={ownerId} />}
+      {tab === 'formlar' && ownerId && <SignedFormsList ownerId={ownerId} />}
 
       <InvoiceDetailModal invoiceId={selectedInvoiceId} onClose={() => setSelectedInvoiceId(null)} onChanged={load} />
       <OwnerEditModal

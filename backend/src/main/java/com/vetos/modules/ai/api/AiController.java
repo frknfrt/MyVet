@@ -33,6 +33,7 @@ public class AiController {
     // o moduller ai modulune bagimli olamaz (bkz. plan Architecture notu).
     private final ReadLabResultFromImageUseCase readLabResultFromImageUseCase;
     private final ReadImagingFindingsFromImageUseCase readImagingFindingsFromImageUseCase;
+    private final ExtractFormTemplateFromImageUseCase extractFormTemplateFromImageUseCase;
 
     @PostMapping("/soap-drafts")
     public SoapDraftResponse generateSoapDraft(
@@ -103,6 +104,18 @@ public class AiController {
     ) {
         return ImagingFindingsOcrResponse.from(readImagingFindingsFromImageUseCase.execute(
             new ReadImagingFindingsFromImageCommand(principal.tenantId(), request.imagingRecordId(), request.fileIds(), principal.staffUserId())
+        ));
+    }
+
+    /** Dijital onay formlari (2026-11-07): kagit form fotografindan sablon taslagi -- yalniz ADMIN. */
+    @PostMapping("/form-template-drafts")
+    @PreAuthorize("hasRole('ADMIN')")
+    public FormTemplateDraftResponse extractFormTemplateDraft(
+        @RequestBody @Valid FormTemplateDraftRequest request,
+        @AuthenticationPrincipal AuthenticatedStaffUser principal
+    ) {
+        return FormTemplateDraftResponse.from(extractFormTemplateFromImageUseCase.execute(
+            new ExtractFormTemplateFromImageCommand(principal.tenantId(), request.sourceImageId(), principal.staffUserId())
         ));
     }
 }

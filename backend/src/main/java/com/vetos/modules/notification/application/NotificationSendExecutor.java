@@ -28,6 +28,7 @@ class NotificationSendExecutor {
     private final NotificationLogRepository notificationLogRepository;
     private final NotificationSendPort notificationSendPort;
     private final TenantLookupPort tenantLookupPort;
+    private final org.springframework.transaction.support.TransactionTemplate transactions;
 
     // attemptCount 1..4 -> otomatik retry planlanir; 5. denemede (attemptCount==5) nextRetryAt=null,
     // yani en fazla 4 otomatik retry (toplam 5 deneme), sonrasinda sadece manuel "Tekrar Dene".
@@ -37,20 +38,17 @@ class NotificationSendExecutor {
     }
 
     @Async
-    @Transactional
     public void attemptSend(UUID logId) {
-        NotificationLog notificationLog = notificationLogRepository.findById(logId).orElse(null);
-        if (notificationLog == null) {
-            return;
-        }
-        // Sweep ve elle "Tekrar Dene" ayni kaydi yarissa (claim commit henuz
-        // gorunmeden ikinci okuma eski durumu gorebilir), status PENDING
-        // degilse bu dispatch artik gecerli degil -- mukerrer gonderimi
-        // onler.
-        if (notificationLog.getStatus() != NotificationStatus.PENDING) {
-            return;
-        }
+        NotificationSendRequest request = transactions.execute(tx -> prepare(logId));
+        if (request == null) return;
+        NotificationSendOutcome outcome = notificationSendPort.send(request);
+        transactions.executeWithoutResult(tx -> finish(logId, outcome));
+    }
 
+    private NotificationSendRequest prepare(UUID logId) {
+        var notificationLog = notificationLogRepository.findForUpdate(logId).orElse(null);
+        if (notificationLog == null || notificationLog.getStatus() != NotificationStatus.PENDING) return null;
+        notificationLog.beginDispatch();
         String outboundMessage = notificationLog.getMessage();
         if (notificationLog.getChannel() == NotificationChannel.WHATSAPP) {
             // WhatsApp'ta gercek gonderim onayli bir Message Template uzerinden yapilir
@@ -63,10 +61,16 @@ class NotificationSendExecutor {
             outboundMessage = tenantName + ": " + outboundMessage;
         }
 
-        NotificationSendOutcome outcome = notificationSendPort.send(
-            new NotificationSendRequest(notificationLog.getChannel(), notificationLog.getRecipientContact(), outboundMessage)
-        );
+        return new NotificationSendRequest(notificationLog.getChannel(), notificationLog.getRecipientContact(), outboundMessage);
+    }
 
+    private void finish(UUID logId, NotificationSendOutcome outcome) {
+        var notificationLog = notificationLogRepository.findForUpdate(logId).orElseThrow();
+        if (notificationLog.getStatus() != NotificationStatus.DISPATCHING) return;
+        if (outcome.uncertain()) {
+            log.warn("Bildirim sonucu doğrulanmalı: logId={}", logId);
+            return;
+        }
         if (outcome.success()) {
             notificationLog.markSent();
         } else {

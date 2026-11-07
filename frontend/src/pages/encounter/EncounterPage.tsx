@@ -11,6 +11,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { FieldWrap, Input, Textarea } from '../../components/ui/Field';
 import { MaterialsUsedCard } from './MaterialsUsedCard';
+import { CriticalAlertBanner } from './AllergyConfirm';
 import { PatientHeaderBar } from './PatientHeaderBar';
 import { FindingsBySystem, PhysicalExamCard, toFindingsBySystem, toFindingsPayload } from './PhysicalExamCard';
 import { PrescriptionCard } from './PrescriptionCard';
@@ -43,7 +44,7 @@ function saveStatusOf(parts: Autosave[]): { text: string; error: boolean } {
   return { text: 'Yazdıklarınız otomatik kaydedilir', error: false };
 }
 
-// AI SOAP taslağı önizlemesinde gösterilen alanlar (SOAP Notu kartıyla aynı başlıklar).
+// AI SOAP taslağı önizlemesinde gösterilen alanlar (Muayene Notu kartıyla aynı başlıklar).
 const DRAFT_SECTIONS: { key: 'subjective' | 'objective' | 'assessment' | 'plan'; label: string }[] = [
   { key: 'subjective', label: 'Şikâyet / Anamnez (S)' },
   { key: 'objective', label: 'Muayene Bulguları (O)' },
@@ -386,6 +387,7 @@ export function EncounterPage() {
   return (
     <AppShell>
       <PatientHeaderBar profile={profile} encounter={encounter} onBack={() => navigate('/hastalar')} />
+      <CriticalAlertBanner text={profile.criticalAlert} />
 
       {encounter.status === 'CANCELLED' && (
         <div className={styles.cancelledBanner}>
@@ -395,6 +397,47 @@ export function EncounterPage() {
 
       <div className={styles.layout}>
         <div>
+          <div className={styles.card}>
+            <div className={styles.cardTitleRow}>
+              <div className={styles.cardTitle}>Muayene Notu (SOAP)</div>
+              {soapAiGenerated && <Badge tone="ai">AI Destekli</Badge>}
+            </div>
+            <div className={styles.soapGrid}>
+              <FieldWrap label="Şikâyet / Anamnez (S)">
+                <Textarea
+                  value={soap.subjective}
+                  disabled={isReadOnly}
+                  onChange={(e) => setSoap((s) => ({ ...s, subjective: e.target.value }))}
+                  placeholder="Sahibin ifadesi, şikayetin öyküsü..."
+                />
+              </FieldWrap>
+              <FieldWrap label="Muayene Bulguları (O)">
+                <Textarea
+                  value={soap.objective}
+                  disabled={isReadOnly}
+                  onChange={(e) => setSoap((s) => ({ ...s, objective: e.target.value }))}
+                  placeholder="Fizik muayene bulguları..."
+                />
+              </FieldWrap>
+              <FieldWrap label="Ön Tanı (A)">
+                <Textarea
+                  value={soap.assessment}
+                  disabled={isReadOnly}
+                  onChange={(e) => setSoap((s) => ({ ...s, assessment: e.target.value }))}
+                  placeholder="Değerlendirme / ön tanı..."
+                />
+              </FieldWrap>
+              <FieldWrap label="Tedavi Planı (P)">
+                <Textarea
+                  value={soap.plan}
+                  disabled={isReadOnly}
+                  onChange={(e) => setSoap((s) => ({ ...s, plan: e.target.value }))}
+                  placeholder="Tedavi planı, reçete, kontrol tarihi..."
+                />
+              </FieldWrap>
+            </div>
+          </div>
+
           <div className={styles.card}>
             <div className={styles.cardTitle}>Vital Bulgular</div>
             <div className={styles.vitalsGrid}>
@@ -436,47 +479,6 @@ export function EncounterPage() {
           </div>
 
           <PhysicalExamCard findings={findings} onChange={setFindings} readOnly={isReadOnly} />
-
-          <div className={styles.card}>
-            <div className={styles.cardTitleRow}>
-              <div className={styles.cardTitle}>SOAP Notu</div>
-              {soapAiGenerated && <Badge tone="ai">AI Destekli</Badge>}
-            </div>
-            <div className={styles.soapGrid}>
-              <FieldWrap label="Şikâyet / Anamnez (S)">
-                <Textarea
-                  value={soap.subjective}
-                  disabled={isReadOnly}
-                  onChange={(e) => setSoap((s) => ({ ...s, subjective: e.target.value }))}
-                  placeholder="Sahibin ifadesi, şikayetin öyküsü..."
-                />
-              </FieldWrap>
-              <FieldWrap label="Muayene Bulguları (O)">
-                <Textarea
-                  value={soap.objective}
-                  disabled={isReadOnly}
-                  onChange={(e) => setSoap((s) => ({ ...s, objective: e.target.value }))}
-                  placeholder="Fizik muayene bulguları..."
-                />
-              </FieldWrap>
-              <FieldWrap label="Ön Tanı (A)">
-                <Textarea
-                  value={soap.assessment}
-                  disabled={isReadOnly}
-                  onChange={(e) => setSoap((s) => ({ ...s, assessment: e.target.value }))}
-                  placeholder="Değerlendirme / ön tanı..."
-                />
-              </FieldWrap>
-              <FieldWrap label="Tedavi Planı (P)">
-                <Textarea
-                  value={soap.plan}
-                  disabled={isReadOnly}
-                  onChange={(e) => setSoap((s) => ({ ...s, plan: e.target.value }))}
-                  placeholder="Tedavi planı, reçete, kontrol tarihi..."
-                />
-              </FieldWrap>
-            </div>
-          </div>
 
           {canUseAi && (
             <div className={styles.aiCard}>
@@ -611,7 +613,7 @@ export function EncounterPage() {
             </div>
           )}
 
-          {canUseStock && <MaterialsUsedCard encounterId={encounter.id} readOnly={isReadOnly} />}
+          {canUseStock && <MaterialsUsedCard encounterId={encounter.id} patientId={encounter.patientId} readOnly={isReadOnly} />}
 
           {canUseStock && (encounter.status === 'FINALIZED' || encounter.status === 'AMENDED') && (
             <TarbilDeductionCard encounterId={encounter.id} canAct={session?.role === 'VET' || session?.role === 'ADMIN'} />
@@ -635,7 +637,7 @@ export function EncounterPage() {
                 </div>
               )}
 
-              <FieldWrap label="Transkript / Not">
+              <FieldWrap label="Not">
                 <Textarea
                   rows={5}
                   value={transcript}
@@ -688,7 +690,7 @@ export function EncounterPage() {
                   )}
                   {draftApplied && (
                     <p className={styles.aiCopy}>
-                      ✓ Soldaki "SOAP Notu" kartına uygulandı ve otomatik kaydedilecek — kontrol edin.
+                      ✓ "Muayene Notu" kartına uygulandı ve otomatik kaydedilecek — kontrol edin.
                     </p>
                   )}
                 </div>

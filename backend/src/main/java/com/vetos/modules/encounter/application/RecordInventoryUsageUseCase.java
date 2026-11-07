@@ -17,12 +17,20 @@ public class RecordInventoryUsageUseCase {
 
     private final EncounterInventoryUsageRepository encounterInventoryUsageRepository;
     private final EncounterRepository encounterRepository;
+    private final DrugAllergyGuard drugAllergyGuard;
 
     @Transactional
     public UUID execute(UUID encounterId, UUID inventoryItemId, java.math.BigDecimal quantity) {
-        encounterRepository.findById(encounterId)
-            .orElseThrow(() -> new EncounterNotFoundException(encounterId))
-            .rejectIfCancelled();
+        return execute(encounterId, inventoryItemId, quantity, null);
+    }
+
+    @Transactional
+    public UUID execute(UUID encounterId, UUID inventoryItemId, java.math.BigDecimal quantity,
+                        com.vetos.modules.encounter.application.dto.AllergyAcknowledgement allergy) {
+        var encounter = encounterRepository.findById(encounterId)
+            .orElseThrow(() -> new EncounterNotFoundException(encounterId));
+        encounter.rejectIfCancelled();
+        drugAllergyGuard.enforce(encounter.getPatientId(), drugAllergyGuard.labels(java.util.List.of(), java.util.List.of(inventoryItemId)), allergy);
         return encounterInventoryUsageRepository.save(
             EncounterInventoryUsage.record(TenantContext.current(), encounterId, inventoryItemId, quantity)
         ).getId();

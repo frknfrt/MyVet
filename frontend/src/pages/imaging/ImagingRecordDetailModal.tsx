@@ -4,6 +4,7 @@ import { imagingApi, ImagingRecordDetail } from '../../api/imagingApi';
 import { Button } from '../../components/ui/Button';
 import { FieldWrap, Textarea, AI_FIELD_HINT } from '../../components/ui/Field';
 import { Modal } from '../../components/ui/Modal';
+import { prepareImage } from '../../lib/prepareImage';
 import { ImagingStatusBadge, MODALITY_LABELS } from './imagingStatus';
 import styles from './ImagingRecordDetailModal.module.css';
 
@@ -23,11 +24,13 @@ function isImage(contentType: string | null): boolean {
 
 interface ImagingRecordDetailModalProps {
   recordId: string | null;
+  /** Yeni kayitta kamerayla cekilen dosyalar: kayit acilinca bir kez otomatik okunur (2026-11-07). */
+  autoOcrFileIds?: string[];
   onClose: () => void;
   onChanged: () => void;
 }
 
-export function ImagingRecordDetailModal({ recordId, onClose, onChanged }: ImagingRecordDetailModalProps) {
+export function ImagingRecordDetailModal({ recordId, autoOcrFileIds, onClose, onChanged }: ImagingRecordDetailModalProps) {
   const [detail, setDetail] = useState<ImagingRecordDetail | null>(null);
   const [findings, setFindings] = useState('');
   const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
@@ -38,13 +41,25 @@ export function ImagingRecordDetailModal({ recordId, onClose, onChanged }: Imagi
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
   const [ocrRunning, setOcrRunning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Otomatik okuma ayni kayit icin bir kez calisir; load() yukleme/kaydetme sonrasi tekrar calisir, AI kotasi harcanmasin.
+  const autoOcrDoneForRef = useRef<string | null>(null);
+  // Guncel kayit id'si: yavas OCR baska kayit acilinca eski sonucu forma yazmasin.
+  const currentIdRef = useRef<string | null>(recordId);
+  currentIdRef.current = recordId;
 
   function load() {
     if (!recordId) return;
+    const idAtStart = recordId;
     imagingApi.get(recordId).then((d) => {
+      if (currentIdRef.current !== idAtStart) return;
       setDetail(d);
       setFindings(d.findings ?? '');
       setSelectedFileIds([]);
+      if (autoOcrFileIds?.length && d.status === 'PENDING' && autoOcrDoneForRef.current !== d.id) {
+        autoOcrDoneForRef.current = d.id;
+        setSelectedFileIds(autoOcrFileIds);
+        void handleOcr(autoOcrFileIds);
+      }
     });
   }
 
@@ -62,7 +77,7 @@ export function ImagingRecordDetailModal({ recordId, onClose, onChanged }: Imagi
 
     Promise.all(
       imageFiles.map(async (f) => {
-        const res = await fetch(imagingApi.fileUrl(f.id), { headers: imagingApi.authHeader() });
+        const res = await imagingApi.fetchFile(imagingApi.fileUrl(f.id));
         if (!res.ok) return;
         const blob = await res.blob();
         urls[f.id] = URL.createObjectURL(blob);
@@ -117,18 +132,20 @@ export function ImagingRecordDetailModal({ recordId, onClose, onChanged }: Imagi
     setSelectedFileIds((prev) => (prev.includes(fileId) ? prev.filter((id) => id !== fileId) : [...prev, fileId]));
   }
 
-  async function handleOcr() {
-    if (ocrRunning || !recordId || selectedFileIds.length === 0) return;
+  async function handleOcr(fileIds: string[] = selectedFileIds) {
+    if (ocrRunning || !recordId || fileIds.length === 0) return;
+    const idAtStart = recordId;
     setOcrRunning(true);
     setError(null);
     try {
-      const result = await imagingApi.ocrFromImages(recordId, selectedFileIds);
+      const result = await imagingApi.ocrFromImages(recordId, fileIds);
+      if (currentIdRef.current !== idAtStart) return;
       setFindings(result.findings);
       if (!result.modelConnected) {
         setError('AI modeline bağlanılamadı, bulguları elle girin.');
       }
     } catch (err) {
-      setError(errorMessageOf(err));
+      if (currentIdRef.current === idAtStart) setError(errorMessageOf(err));
     } finally {
       setOcrRunning(false);
     }
@@ -140,7 +157,7 @@ export function ImagingRecordDetailModal({ recordId, onClose, onChanged }: Imagi
     setUploading(true);
     setError(null);
     try {
-      await imagingApi.uploadFile(recordId, file);
+      await imagingApi.uploadFile(recordId, await prepareImage(file, 'document'));
       load();
     } catch (err) {
       setError(errorMessageOf(err));
@@ -152,7 +169,7 @@ export function ImagingRecordDetailModal({ recordId, onClose, onChanged }: Imagi
 
   async function handleDownload(fileId: string, fileName: string) {
     try {
-      const res = await fetch(imagingApi.fileUrl(fileId), { headers: imagingApi.authHeader() });
+      const res = await imagingApi.fetchFile(imagingApi.fileUrl(fileId));
       if (!res.ok) throw new Error('Dosya indirilemedi');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -258,7 +275,7 @@ export function ImagingRecordDetailModal({ recordId, onClose, onChanged }: Imagi
         <form onSubmit={handleComplete}>
           <div className={styles.sectionLabel}>Sonucu Tamamla</div>
           <div className={styles.itemsFooter}>
-            <Button type="button" variant="ai" onClick={handleOcr} disabled={ocrRunning || selectedFileIds.length === 0}>
+            <Button type="button" variant="ai" onClick={() => handleOcr()} disabled={ocrRunning || selectedFileIds.length === 0}>
               {ocrRunning ? 'Okunuyor...' : '📷 Fotoğraftan Oku'}
             </Button>
           </div>

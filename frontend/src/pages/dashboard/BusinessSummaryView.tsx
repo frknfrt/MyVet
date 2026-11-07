@@ -45,7 +45,7 @@ function deltaClass(tone: 'up' | 'down' | 'neutral'): string {
   return styles.kpiDeltaNeutral;
 }
 
-/** No-show orani gibi "dusmesi iyi" metrikler icin up/down anlamini ters cevirir. */
+/** Gelmeme orani gibi "dusmesi iyi" metrikler icin up/down anlamini ters cevirir. */
 function invertTone(tone: 'up' | 'down' | 'neutral'): 'up' | 'down' | 'neutral' {
   if (tone === 'up') return 'down';
   if (tone === 'down') return 'up';
@@ -60,10 +60,10 @@ function buildInsight(
   const noShowPct = activity.currentMonthNoShowRate * 100;
   const prevNoShowPct = activity.previousMonthNoShowRate * 100;
   if (noShowPct >= 15) {
-    return `Bu ay no-show oranı %${noShowPct.toFixed(0)} — hatırlatma sıklığını artırmayı değerlendirin.`;
+    return `Bu ay gelmeme oranı %${noShowPct.toFixed(0)} — hatırlatma sıklığını artırmayı değerlendirin.`;
   }
   if (prevNoShowPct > 0 && noShowPct > prevNoShowPct * 1.5) {
-    return `No-show oranı geçen aya göre belirgin arttı (%${prevNoShowPct.toFixed(0)} → %${noShowPct.toFixed(0)}).`;
+    return `Gelmeme oranı geçen aya göre belirgin arttı (%${prevNoShowPct.toFixed(0)} → %${noShowPct.toFixed(0)}).`;
   }
   if (revenue && revenue.previousMonthRevenue > 0) {
     const pct = ((revenue.currentMonthRevenue - revenue.previousMonthRevenue) / revenue.previousMonthRevenue) * 100;
@@ -125,7 +125,7 @@ export function BusinessSummaryView() {
           {patientDelta && <div className={deltaClass(patientDelta.tone)}>{patientDelta.text}</div>}
         </Card>
         <Card>
-          <div className={styles.kpiLabel}>No-show oranı</div>
+          <div className={styles.kpiLabel}>Gelmeme oranı</div>
           <div className={styles.kpiValue}>{activity ? `%${(activity.currentMonthNoShowRate * 100).toFixed(1)}` : '—'}</div>
           {noShowDelta && <div className={deltaClass(invertTone(noShowDelta.tone))}>{noShowDelta.text}</div>}
         </Card>

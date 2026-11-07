@@ -16,7 +16,7 @@ function errorMessageOf(err: unknown): string {
 }
 
 const CHANNEL_OPTIONS: NotificationChannel[] = ['SMS', 'WHATSAPP'];
-const STATUS_OPTIONS: NotificationLogStatus[] = ['PENDING', 'SENT', 'FAILED'];
+const STATUS_OPTIONS: NotificationLogStatus[] = ['PENDING', 'DISPATCHING', 'SENT', 'FAILED'];
 const TYPE_OPTIONS: NotificationType[] = ['APPOINTMENT_CONFIRMATION', 'APPOINTMENT_REMINDER', 'CAMPAIGN_MESSAGE', 'VACCINATION_REMINDER'];
 
 export function HistoryTab() {
@@ -82,7 +82,7 @@ export function HistoryTab() {
             <option value="">Tümü</option>
             {STATUS_OPTIONS.map((s) => (
               <option key={s} value={s}>
-                {s === 'PENDING' ? 'Bekliyor' : s === 'SENT' ? 'Gönderildi' : 'Başarısız'}
+                {{ PENDING: 'Bekliyor', DISPATCHING: 'Gönderim doğrulanıyor', SENT: 'Gönderildi', FAILED: 'Başarısız' }[s]}
               </option>
             ))}
           </select>

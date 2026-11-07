@@ -160,3 +160,17 @@
   color: var(--color-text-muted);
   font-size: 13px;
 }
+
+/* Telefonda arama + "Bana atanan" + "Hizli ekle" tek satira sigmiyor (arama sabit 220px) ve
+   satir alta gecmedigi icin "Hizli ekle" ekrandan tasiyordu: arama tam satir, butonlar alt satirda. */
+@media (max-width: 880px) {
+  .actions {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .search {
+    flex: 1 1 100%;
+    width: auto;
+    min-width: 0;
+  }
+}

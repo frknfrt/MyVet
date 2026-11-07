@@ -22,6 +22,7 @@ export interface PatientSearchResult {
   ownerId: string;
   ownerFullName: string;
   ownerPhone: string;
+  photoVersion: string | null;
 }
 
 export interface PatientProfile {
@@ -50,6 +51,7 @@ export interface PatientProfile {
   ownerId: string;
   ownerFullName: string;
   ownerPhone: string;
+  photoVersion: string | null;
 }
 
 export interface RegisterPatientPayload {
@@ -181,6 +183,8 @@ export interface ConsentRecordItem {
   revokedAt: string | null;
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
+
 export const patientApi = {
   listSpecies: () => apiClient.get<SpeciesItem[]>('/api/v1/species'),
   growthSummary: () => apiClient.get<PatientGrowthSummary>('/api/v1/patients/growth-summary'),
@@ -191,6 +195,15 @@ export const patientApi = {
   search: (query: string) =>
     apiClient.get<PatientSearchResult[]>(`/api/v1/patients?query=${encodeURIComponent(query)}`),
   getProfile: (patientId: string) => apiClient.get<PatientProfile>(`/api/v1/patients/${patientId}`),
+  uploadPhoto: (patientId: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return apiClient.putMultipart<{ photoVersion: string }>(`/api/v1/patients/${patientId}/photo`, form);
+  },
+  removePhoto: (patientId: string) => apiClient.delete<void>(`/api/v1/patients/${patientId}/photo`),
+  photoUrl: (patientId: string, version: string) =>
+    `${API_BASE_URL}/api/v1/patients/${patientId}/photo?v=${encodeURIComponent(version)}`,
+  fetchFile: (url: string) => apiClient.fetchFile(url),
   register: (payload: RegisterPatientPayload) => apiClient.post<{ id: string }>('/api/v1/patients', payload),
   update: (patientId: string, payload: UpdatePatientPayload) =>
     apiClient.put<void>(`/api/v1/patients/${patientId}`, payload),

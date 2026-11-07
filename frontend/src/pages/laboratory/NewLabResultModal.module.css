@@ -156,6 +156,17 @@
 .uploadTrigger:hover {
   filter: brightness(1.05);
 }
+.cameraBtn {
+  margin-top: 8px;
+  justify-content: center;
+}
+.fileThumb {
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
 .hint {
   font-size: 11px;
   color: var(--color-text-muted);
@@ -200,4 +211,40 @@
 }
 .fileChipRemove:hover {
   color: var(--color-danger-700);
+}
+
+@media (max-width: 880px) {
+  .banner {
+    margin: -1.4rem -1.2rem 1.2rem -1.2rem;
+    padding: 14px 64px 14px 1.2rem;
+    border-radius: 0;
+  }
+  .columns {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .row2 {
+    grid-template-columns: 1fr;
+  }
+  .selectedChip,
+  .uploadTrigger {
+    height: 44px;
+  }
+  .ownerOption {
+    min-height: 44px;
+    align-items: center;
+  }
+  .changeBtn,
+  .clearBtn,
+  .fileChipRemove {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .clearBtn {
+    right: 0;
+  }
+  .fileThumb {
+    width: 44px;
+    height: 44px;
+  }
 }

@@ -218,3 +218,16 @@
   font-size: 12.5px;
   margin-bottom: 10px;
 }
+
+@media (max-width: 880px) {
+  .filterField {
+    flex: 1 1 100%;
+  }
+  .filterInput {
+    height: 44px;
+    font-size: 16px;
+  }
+  .tab {
+    padding: 13px 16px;
+  }
+}

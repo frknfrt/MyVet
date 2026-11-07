@@ -17,10 +17,10 @@ cd backend && ./mvnw test -Dtest=ApplicationModulesTest   # tek sınıf çalış
 # Frontend
 cd frontend && npm install
 cd frontend && npm run dev      # http://localhost:5173 (Vite)
-cd frontend && npm run build    # tsc -b && vite build — tip kontrolü build'e dahil, ayrı bir lint/test script'i yok
+cd frontend && npm run build    # tsc -b && vite build — tip kontrolü build'e dahil, birim testleri npm test ile çalışır
 ```
 
-**Test kapsamı gerçeği:** Backend'de şu an tek otomatik test var: `ApplicationModulesTest` (Spring Modulith `ApplicationModules.verify()` — modül sınırı ihlali olursa build kırılır). Use-case/repository seviyesinde birim/entegrasyon testi yok. Yeni bir özellik bittiğinde doğrulama şekli: backend için çalışan bir instance'a karşı curl ile uçtan uca (platform-admin girişi → klinik oluşturma → login → ilgili endpoint), frontend için `npm run build` (tip hatası yakalar) + mümkünse tarayıcıda gerçek kullanım. Bu, geçmiş commit'lerin de izlediği yöntem — yeni kod eklerken de aynı şekilde doğrula, "testler geçti" varsayımına güvenme.
+Backend testleri PostgreSQL ile ./mvnw test, frontend ve eklenti birim testleri kendi dizinlerinde npm test ile çalışır. Playwright senaryoları için izole bir backend/veritabanı başlatıp frontend dizininde npm run test:e2e çalıştır. CI adımları .github/workflows/ci.yml dosyasındadır.
 
 ## Mimari (ZORUNLU KURAL)
 Modüler monolit + hexagonal mimari (ports & adapters). Disk üzerindeki gerçek backend modülleri (`backend/src/main/java/com/vetos/modules/`): `tenant`, `patient`, `appointment`, `encounter`, `billing`, `inventory`, `lab`, `imaging`, `boarding`, `ai`, `notification`, `integration/tarbil`, `integration/efatura`, `platformadmin`. Her modül kendi `domain/`, `application/`, `infrastructure/`, `api/` paketine sahip.

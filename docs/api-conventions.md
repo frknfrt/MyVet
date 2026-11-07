@@ -97,6 +97,11 @@ Her istekte JWT'den çözülen `tenantId`, `TenantContext` (ThreadLocal) üzerin
 | `/message-templates/**`, `/notifications/**` (SMS/WhatsApp) | ❌ | ❌ | ✅ | ✅ |
 | `**/campaign-candidates` (SMS/WhatsApp kampanya adayı listeleri) | ✅ | ❌ | ✅ | ✅ |
 | `GET /invoices/today-summary` (istisna, aşağıya bak) | ✅ | ✅ | ✅ | ✅ |
+| `/form-templates/**` (okuma: liste, detay) | ✅ | ✅ | ✅ | ✅ |
+| `/form-templates/**` (yazma, arşiv, kaynak görsel) | ❌ | ❌ | ❌ | ✅ |
+| `/signed-forms/**` (oluştur, liste, detay, imza) | ✅ | ✅ | ✅ | ✅ |
+| `POST /form-write-backs` (imzalı formdan sahip/hasta kaydına geri yazma) | ✅ | ✅ | ✅ | ✅ |
+| `POST /signed-forms/{id}/void` | ✅ | ❌ | ❌ | ✅ |
 
 **TARBİL uçları (P0 çekirdek, 2026-10-04):**
 - `GET /api/v1/tarbil-extension/pending?type=VACCINATION|PRESCRIPTION|STOCK_RECEIPT` — `type` isteğe bağlı; yoksa tüm türler. Yanıtın her öğesinde `documentType` var (eski alanlar, `vaccinationRecordId` dahil, değişmedi).
@@ -115,6 +120,22 @@ Her istekte JWT'den çözülen `tenantId`, `TenantContext` (ThreadLocal) üzerin
 - Stok kalemi yanıtı (`GET /api/v1/inventory-items`) `tarbilProductName` içerir; doluysa kalem TARBİL düşümünü bekler.
 - `GET /api/v1/tarbil/stock-sync?system=` (ADMIN, VET) — son TARBİL stok görüntüsü, Vetly stoğuyla karşılaştırmalı (`NEW`, `QUANTITY_DIFFERS`, `MATCHED`, `APPLIED`); görüntü yoksa `snapshotId: null`.
 - `POST /api/v1/tarbil/stock-sync/{snapshotId}/apply` (ADMIN, VET) — `{lineIds}` → `{applied}`; kullanıcının ilk şubesine işlenir.
+- `PUT /api/v1/patients/{id}/photo` (VET, RECEPTIONIST, ADMIN) — multipart `file`; JPEG/PNG/WEBP, ≤2 MB → `{photoVersion}`; 422 UNSUPPORTED_PATIENT_PHOTO.
+- `DELETE /api/v1/patients/{id}/photo` (VET, RECEPTIONIST, ADMIN) → 204.
+- `GET /api/v1/patients/{id}/photo` (tüm roller) — görsel baytları, `Cache-Control: private, max-age=31536000, immutable` (URL `?v={photoVersion}` ile sürümlenir); fotoğraf yoksa 404 PATIENT_PHOTO_NOT_FOUND. Hasta profili/arama yanıtlarında `photoVersion` (null olabilir).
+- `POST /api/v1/form-templates/source-images` (ADMIN) — multipart `file`; JPEG/PNG/WEBP (magic byte), ≤10 MB → 201 `{id}`; 422 UNSUPPORTED_FORM_SOURCE_IMAGE.
+- `GET /api/v1/form-templates/source-images/{id}` (ADMIN) — görsel baytları; yoksa/başka kiracınınsa 404 FORM_SOURCE_IMAGE_NOT_FOUND.
+- `POST /api/v1/form-templates` (ADMIN) — `{content, sourceImageId?}` → 201 `{id}`; başlık `content.title`dan türetilir (ayrı `title` alanı yok sayılır); içerik doğrulaması (tam bir SIGNATURE, benzersiz kodlar, bilinen `binding` anahtarları vb.) ihlalinde 422 INVALID_FORM_TEMPLATE.
+- `PUT /api/v1/form-templates/{id}` (ADMIN) — `{content}` → 204; ARCHIVED şablonda 422 FORM_TEMPLATE_ARCHIVED. İmzalı formlar kendi kopyasını taşır, etkilenmez.
+- `POST /api/v1/form-templates/{id}/archive` (ADMIN) → 204; yalnız durum değişir.
+- `GET /api/v1/form-templates?status=ACTIVE|ALL` (VET/TECHNICIAN/RECEPTIONIST/ADMIN; varsayılan ACTIVE) → `[{id, title, status, updatedAt, signedCount, hasSourceImage}]`.
+- `GET /api/v1/form-templates/{id}` (VET/TECHNICIAN/RECEPTIONIST/ADMIN) → `{id, title, status, content, sourceImageId, clinicName}`; başka kiracının şablonu 404 FORM_TEMPLATE_NOT_FOUND.
+- `POST /api/v1/form-write-backs` (VET/TECHNICIAN/RECEPTIONIST/ADMIN) — `{ownerId, patientId, signedFormId, items:[{binding, value}]}` → 200 `{applied:[binding…], skipped:[{binding, reason}]}`. Yalnız 9 binding yazılır (`owner.phone/secondaryPhone/nationalId/birthDate/address/email`, `patient.color/weightKg/microchipNumber`); geçersiz/boş/yazılamaz değerler `skipped`. Hasta sahibe ait değilse 422 PATIENT_OWNER_MISMATCH; sahip/hasta yoksa 404. `signedFormId` yalnız log içindir.
+- `POST /api/v1/signed-forms` (VET/TECHNICIAN/RECEPTIONIST/ADMIN) — `{templateId, patientId, encounterId|null, values:{kod: string|string[]}, signer:{type:'OWNER'|'OTHER', name|null, nationalId|null, phone|null}, signaturePngBase64}` → 201 `{id}`. `ownerId` hastadan alınır (istemciden alınmaz); OWNER imzalayanın adı sahip kaydından gelir, OTHER'da `name` zorunlu ve `nationalId` verilirse 11 hane rakam. Şablon ACTIVE olmalı (aksi 422 FORM_TEMPLATE_ARCHIVED); değer/imzalayan hataları (zorunlu alan boş, bilinmeyen kod, geçersiz seçenek/tarih/sayı) 422 INVALID_SIGNED_FORM_VALUES; imza base64 çözülemez/PNG değil/200 KB üstü 422 INVALID_SIGNATURE; `encounterId` verilirse muayene bu hastaya ait olmalı (yok/başka kiracı/başka hasta hep 422 INVALID_ENCOUNTER). Özet; şablon kopyası, değerler, imzalayan, imza PNG ve kayıt üstverisini (şablon/hasta/sahip/muayene kimlikleri, signedAt ms, signedBy, IP, UA) kapsar. Şablon metni (`template_snapshot`), değerler (şablon sırasıyla), imza PNG ve SHA-256 özeti, IP ve User-Agent (≤500) ile saklanır; kayıt değiştirilemez.
+- `GET /api/v1/signed-forms?patientId=…|ownerId=…` (VET/TECHNICIAN/RECEPTIONIST/ADMIN) → `[{id, templateTitle, signedAt, signerName, signerType, status}]` (signed_at azalan); ikisi de yoksa 422.
+- `GET /api/v1/signed-forms/{id}` (aynı roller) → `{id, templateTitle, content (imza anındaki kopyadan), values, signer:{type,name,nationalId,phone}, signedAt, signedByName, patientId, ownerId, encounterId, status, voidReason, voidedAt, integrityOk}`; `content`/`values` kayıt bozulmuşsa null olabilir (integrityOk=false, 500 değil); `integrityOk` özetin kayıtlı sütunlar + imza PNG'sinden yeniden hesaplanmasıyla bulunur; başka kiracının formu 404 SIGNED_FORM_NOT_FOUND.
+- `GET /api/v1/signed-forms/{id}/signature` (aynı roller) — imza PNG baytları.
+- `POST /api/v1/signed-forms/{id}/void` (VET/ADMIN) — `{reason}` (boş olamaz, 400) → 204; zaten VOIDED ise 422 SIGNED_FORM_ALREADY_VOIDED. PUT/PATCH/DELETE yoktur (405).
 
 **İstisna (Hızlı Satış turu):** `GET /invoices/today-summary`, `/invoices/**` satırını metot seviyesinde bir `@PreAuthorize` ile kasıtlı olarak geçersiz kılar ve dört role de açıktır — anasayfadaki "Bugünkü satış" KPI kartı için salt-okunur tek bir toplam döner, fatura/müşteri detayı sızdırmaz. `/invoices/**` altındaki diğer tüm uçlar RECEPTIONIST + ADMIN olarak kalır.
 

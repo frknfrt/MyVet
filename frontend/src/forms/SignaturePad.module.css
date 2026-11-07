@@ -1,0 +1,51 @@
+.pad {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.surface {
+  position: relative;
+  width: 100%;
+  background: var(--color-paper);
+  border: 2px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.canvas {
+  display: block;
+  width: 100%;
+  touch-action: none;
+  cursor: crosshair;
+  background: transparent;
+}
+.placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  font-size: 18px;
+  pointer-events: none;
+  user-select: none;
+}
+.baseline {
+  position: absolute;
+  left: var(--space-4);
+  right: var(--space-4);
+  bottom: 40px;
+  border-bottom: 1.5px solid var(--color-border-strong);
+  pointer-events: none;
+}
+.clear {
+  align-self: flex-end;
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  font-size: 16px;
+  font-family: inherit;
+  color: var(--color-brand-700);
+  background: var(--color-paper);
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}

@@ -42,6 +42,17 @@ final class ClaudeVisionCompletion {
 
     static JsonNode completeJson(RestClient restClient, ObjectMapper objectMapper, String apiUrl, String apiKey,
                                   String model, String system, List<OcrImageInput> images, String instruction) throws Exception {
+        return objectMapper.readTree(
+            completeText(restClient, objectMapper, apiUrl, apiKey, model, system, images, instruction, MAX_TOKENS));
+    }
+
+    /**
+     * Dijital onay formlari (2026-11-07): ayristirmayi cagirana birakan varyant -- markdown kod blogu
+     * temizlenmis ham metni doner. Uzun formlar icin maxTokens cagiran tarafindan secilir.
+     */
+    static String completeText(RestClient restClient, ObjectMapper objectMapper, String apiUrl, String apiKey,
+                               String model, String system, List<OcrImageInput> images, String instruction,
+                               int maxTokens) throws Exception {
         List<Map<String, Object>> content = new ArrayList<>();
         for (OcrImageInput image : images) {
             content.add(Map.of(
@@ -57,7 +68,7 @@ final class ClaudeVisionCompletion {
 
         Map<String, Object> body = Map.of(
             "model", model,
-            "max_tokens", MAX_TOKENS,
+            "max_tokens", maxTokens,
             "system", system,
             "messages", List.of(Map.of("role", "user", "content", content))
         );
@@ -71,7 +82,7 @@ final class ClaudeVisionCompletion {
             .body(String.class);
 
         JsonNode root = objectMapper.readTree(raw);
-        return objectMapper.readTree(stripMarkdownFence(extractText(root)));
+        return stripMarkdownFence(extractText(root));
     }
 
     /** content[0] her zaman metin degil: extended thinking acikken once "thinking" blogu gelir. */
@@ -89,7 +100,7 @@ final class ClaudeVisionCompletion {
      * markdown kod blogu icine sarmis olabilecegi durumu ele alir -- sarilmamissa metni oldugu gibi
      * (sadece trim edilmis) doner, bu yuzden normal (sarilmamis) yanitlar icin DAVRANIS DEGISMEZ.
      */
-    private static String stripMarkdownFence(String text) {
+    static String stripMarkdownFence(String text) {
         String trimmed = text.trim();
         if (!trimmed.startsWith("```")) {
             return trimmed;

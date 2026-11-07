@@ -43,7 +43,7 @@ public class SecurityConfig {
     private boolean apiDocsEnabled;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, Environment env, TenantRateLimiter tenantRateLimiter) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, Environment env, TenantRateLimiter tenantRateLimiter, StaffSessionRevocations revocations) throws Exception {
         http
             // CSRF korumasi kasitli olarak kapali: CSRF saldirilari, tarayicinin
             // cross-site istege otomatik ekledigi cookie/oturum kimlik bilgisine
@@ -78,7 +78,7 @@ public class SecurityConfig {
             // "does not have a registered order" hatasiyla patlar -- calisma zamanindaki
             // filtre SIRASI (RateLimitFilter -> JwtAuthenticationFilter -> ...) bu swap'tan
             // etkilenmez, sadece KAYIT cagri sirasi degisti.
-            .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(new JwtAuthenticationFilter(revocations, jwtTokenProvider), UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(new RateLimitFilter(), JwtAuthenticationFilter.class)
             .addFilterBefore(new RequestIdFilter(), RateLimitFilter.class)
             .addFilterAfter(new TenantRateLimitFilter(tenantRateLimiter), JwtAuthenticationFilter.class);
@@ -92,12 +92,24 @@ public class SecurityConfig {
     }
 
     CorsConfigurationSource corsConfigurationSource(Environment env) {
-        List<String> origins = new ArrayList<>(List.of(vetlySiteOrigin, frontendBaseUrl));
+        // Oturum cerezi (credentials) yalniz klinik uygulamasina acik. Vitrin sitesi (vetly.com.tr) yalniz herkese acik
+        // kayit uclarini cagirir; ona tum API'de cerezli erisim verilmez (2026-11-06).
+        List<String> appOrigins = new ArrayList<>(List.of(frontendBaseUrl));
         if (!List.of(env.getActiveProfiles()).contains("prod")) {
-            origins.add("http://localhost:*");
+            appOrigins.add("http://localhost:*");
         }
+        List<String> publicOrigins = new ArrayList<>(appOrigins);
+        publicOrigins.add(vetlySiteOrigin);
+
+        CorsConfiguration publicApi = new CorsConfiguration();
+        publicApi.setAllowedOriginPatterns(publicOrigins);
+        publicApi.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
+        publicApi.setAllowedHeaders(List.of("*"));
+        publicApi.setExposedHeaders(List.of("Location", "X-Request-Id"));
+        publicApi.setAllowCredentials(false);
+
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(origins);
+        configuration.setAllowedOriginPatterns(appOrigins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         // 201 Created yanitlarinda olusturulan kaynagin id'sini tasiyan Location
@@ -124,6 +136,7 @@ public class SecurityConfig {
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/v1/public/payments/iyzico/callback", iyzicoCallback);
+        source.registerCorsConfiguration("/api/v1/public/**", publicApi);
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }

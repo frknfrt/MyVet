@@ -19,6 +19,7 @@ public enum AuditAction {
     PRESCRIPTION_CANCELLED("Reçete iptal edildi"),
     ENCOUNTER_FINALIZED("Muayene kesinleştirildi"),
     ENCOUNTER_CANCELLED("Muayene iptal edildi"),
+    ALLERGY_WARNING_OVERRIDDEN("Alerji uyarısına rağmen ilaç eklendi"),
     CONSENT_REVOKED("KVKK onayı geri çekildi"),
     TARBIL_MARKED_SUBMITTED("TARBİL'e gönderildi işaretlendi"),
     TARBIL_SUBMISSION_DISMISSED("TARBİL gönderimi yok sayıldı"),

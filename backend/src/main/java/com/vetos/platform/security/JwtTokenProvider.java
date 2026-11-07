@@ -40,6 +40,7 @@ public class JwtTokenProvider {
         Instant now = Instant.now();
         var builder = Jwts.builder()
             .subject(staffUserId.toString())
+            .claim("issuedMillis", now.toEpochMilli())
             .claim("tenantId", tenantId.toString())
             .claim("branchIds", branchIds.stream().map(UUID::toString).collect(Collectors.toList()))
             .claim("role", role);
@@ -68,7 +69,8 @@ public class JwtTokenProvider {
             UUID.fromString(claims.get("tenantId", String.class)),
             branchIdStrings.stream().map(UUID::fromString).toList(),
             claims.get("role", String.class),
-            claims.get("imp", String.class)
+            claims.get("imp", String.class),
+            claims.containsKey("issuedMillis") ? claims.get("issuedMillis", Long.class) : claims.getIssuedAt().getTime()
         );
     }
 }

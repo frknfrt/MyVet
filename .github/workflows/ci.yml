@@ -38,6 +38,26 @@ jobs:
           DB_NAME: myvet
           DB_USER: myvet
           DB_PASSWORD: myvet
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - working-directory: frontend
+        run: npm ci && npx playwright install --with-deps chromium
+      - name: Klinik uçtan uca senaryolar
+        env:
+          DB_PORT: 5433
+          VITE_API_BASE_URL: http://localhost:8080
+        run: |
+          (cd backend && ./mvnw -B spring-boot:run) > "$RUNNER_TEMP/vetly-e2e.log" 2>&1 &
+          backend_pid=$!
+          trap 'kill "$backend_pid" 2>/dev/null || true' EXIT
+          for i in {1..90}; do
+            if curl -fsS http://localhost:8080/v3/api-docs > /dev/null; then break; fi
+            sleep 2
+          done
+          cd frontend && npm run test:e2e
       - name: Docker imajini dogrula
         working-directory: backend
         run: docker build -t myvet-backend:ci .
@@ -56,3 +76,21 @@ jobs:
       - name: Typecheck + build
         working-directory: frontend
         run: npm run build
+      - working-directory: frontend
+        run: npm test
+
+  extension:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: extension
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build

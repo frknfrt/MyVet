@@ -94,12 +94,6 @@ public class ImagingRecordsController {
     @GetMapping("/files/{fileId}")
     public ResponseEntity<ByteArrayResource> downloadFile(@PathVariable UUID fileId) {
         var file = downloadImagingRecordFileUseCase.execute(fileId);
-        MediaType mediaType = file.contentType() != null
-            ? MediaType.parseMediaType(file.contentType())
-            : MediaType.APPLICATION_OCTET_STREAM;
-        return ResponseEntity.ok()
-            .contentType(mediaType)
-            .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.inline().filename(file.fileName()).build().toString())
-            .body(new ByteArrayResource(file.content()));
+        return com.vetos.platform.storage.ClinicalAttachment.download(file.fileName(), file.content());
     }
 }

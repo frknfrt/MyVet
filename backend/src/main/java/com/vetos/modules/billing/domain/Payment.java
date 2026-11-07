@@ -36,11 +36,19 @@ public class Payment {
     @Column(name = "psp_ref")
     private String pspRef;
 
+    @Column(name = "request_id", updatable = false)
+    private UUID requestId;
+
     @Column(name = "paid_at", nullable = false)
     private Instant paidAt;
 
     public static Payment record(UUID tenantId, UUID invoiceId, PaymentMethod method, BigDecimal amount, String pspRef) {
+        return record(tenantId, invoiceId, method, amount, pspRef, null);
+    }
+
+    public static Payment record(UUID tenantId, UUID invoiceId, PaymentMethod method, BigDecimal amount, String pspRef, UUID requestId) {
         Payment payment = new Payment();
+        payment.requestId = requestId;
         payment.tenantId = tenantId;
         payment.invoiceId = invoiceId;
         payment.method = method;

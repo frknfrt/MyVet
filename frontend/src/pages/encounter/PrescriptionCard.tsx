@@ -18,6 +18,7 @@ import styles from './PrescriptionCard.module.css';
 import { StockGivePicker } from './StockGivePicker';
 import { formatAmount, inputModeFor } from '../inventory/stockFormat';
 import { TarbilDiseaseSelect } from './TarbilDiseaseSelect';
+import { useAllergyConfirm } from './AllergyConfirm';
 
 interface PrescriptionCardProps {
   /** null: hasta sayfasından muayenesiz reçete (spec 2026-10-09 S5.6). */
@@ -72,6 +73,7 @@ export function PrescriptionCard({ encounterId, patientId, readOnly, onChanged }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [interactionWarnings, setInteractionWarnings] = useState<DrugInteractionWarning[]>([]);
+  const allergy = useAllergyConfirm(patientId);
 
   function reload() {
     clinicalApi
@@ -180,7 +182,13 @@ export function PrescriptionCard({ encounterId, patientId, readOnly, onChanged }
           ? { ...it, drugId: null, stockQuantity: it.stockQuantity == null ? null : stockMode(it.inventoryItemId).toBase(it.stockQuantity) }
           : { ...it, drugName: null, inventoryItemId: null, stockQuantity: null },
       );
+      const ack = await allergy.confirm(
+        payloadItems.map((it) => it.drugId).filter((id): id is string => !!id),
+        payloadItems.map((it) => it.inventoryItemId).filter((id): id is string => !!id),
+      );
+      if (ack === null) return;
       await clinicalApi.issuePrescription({
+        ...ack,
         patientId,
         encounterId,
         controlledSubstance,
@@ -203,6 +211,7 @@ export function PrescriptionCard({ encounterId, patientId, readOnly, onChanged }
       <div className={encounterStyles.cardTitle}>{encounterId ? 'Reçeteler' : 'Muayenesiz reçeteler'}</div>
 
       {error && <div className={encounterStyles.aiError}>{error}</div>}
+      {allergy.modal}
 
       {prescriptions.length === 0 ? (
         <div className={styles.emptyNote}>

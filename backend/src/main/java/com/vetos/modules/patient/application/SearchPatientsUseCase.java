@@ -40,7 +40,8 @@ public class SearchPatientsUseCase {
             patient.getId(), patient.getName(), speciesName, breedName, patient.getStatus(),
             owner != null ? owner.getId() : null,
             owner != null ? owner.getFullName() : null,
-            owner != null ? owner.getPhone() : null
+            owner != null ? owner.getPhone() : null,
+            patient.getPhotoStorageRef()
         );
     }
 }

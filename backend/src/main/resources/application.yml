@@ -202,13 +202,7 @@ platform-billing:
 
 payment-gateway:
   iyzico:
-    # UYARI: bos birakilirsa checkout tamamen simule edilir ve
-    # /api/v1/public/payments/iyzico/callback GET ile "?token=SIMULATED-<herhangi-bir-fatura-id>"
-    # cagrilarak HERHANGI BIR FATURA BEDAVA ODENMIS ISARETLENEBILIR (bkz.
-    # IyzicoPaymentGatewayAdapter.isConfigured()) -- gelistirme/CI icin
-    # bilincli bir tasarim, ama prod'da IYZICO_API_KEY/IYZICO_SECRET_KEY
-    # mutlaka set edilmeli (JWT_SECRET/PLATFORM_ADMIN_PASSWORD ile ayni
-    # operasyonel gereklilik).
+    # Simülasyon yalnız açık dev/test profilinde ve prod profili kapalıyken kullanılabilir.
     api-key: ${IYZICO_API_KEY:}
     secret-key: ${IYZICO_SECRET_KEY:}
     base-url: ${IYZICO_BASE_URL:https://sandbox-api.iyzipay.com}

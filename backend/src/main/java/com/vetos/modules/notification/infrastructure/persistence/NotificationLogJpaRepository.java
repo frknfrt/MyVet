@@ -11,6 +11,10 @@ import java.util.List;
 import java.util.UUID;
 
 interface NotificationLogJpaRepository extends JpaRepository<NotificationLog, UUID> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select n from NotificationLog n where n.id = :id")
+    java.util.Optional<NotificationLog> findForUpdate(@Param("id") UUID id);
+
     List<NotificationLog> findByTenantId(UUID tenantId);
     boolean existsByRelatedEntityIdAndNotificationType(UUID relatedEntityId, NotificationType notificationType);
     List<NotificationLog> findTop200ByStatusOrderByAttemptedAtDesc(com.vetos.modules.notification.domain.NotificationStatus status);

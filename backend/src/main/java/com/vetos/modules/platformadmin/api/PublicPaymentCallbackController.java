@@ -84,7 +84,7 @@ public class PublicPaymentCallbackController {
         try {
             result = paymentGatewayPort.retrieveCheckoutResult(token);
         } catch (Exception e) {
-            log.error("iyzico callback islenemedi (checkout sonucu alinamadi): token={}", token, e);
+            log.error("iyzico callback islenemedi (checkout sonucu alinamadi): hata={}", e.getClass().getSimpleName());
             return redirectToApp(false);
         }
 
@@ -102,7 +102,7 @@ public class PublicPaymentCallbackController {
                 boolean success = handleSignupPaymentCallbackUseCase.execute(token, today);
                 return redirectToSignup(success);
             } catch (Exception e) {
-                log.error("iyzico kayit callback'i islenemedi: token={}", token, e);
+                log.error("iyzico kayit callback'i islenemedi: hata={}", e.getClass().getSimpleName());
                 return redirectToSignup(false);
             }
         }
@@ -111,7 +111,7 @@ public class PublicPaymentCallbackController {
             boolean success = handlePaymentCallbackUseCase.execute(token, today);
             return redirectToApp(success);
         } catch (Exception e) {
-            log.error("iyzico callback islenemedi: token={}", token, e);
+            log.error("iyzico callback islenemedi: hata={}", e.getClass().getSimpleName());
             return redirectToApp(false);
         }
     }

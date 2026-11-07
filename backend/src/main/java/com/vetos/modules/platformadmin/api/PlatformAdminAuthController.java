@@ -18,10 +18,22 @@ import org.springframework.web.bind.annotation.RestController;
 public class PlatformAdminAuthController {
 
     private final PlatformAdminLoginUseCase platformAdminLoginUseCase;
+    private final com.vetos.platform.security.SessionCookies sessionCookies;
 
     @PostMapping("/login")
     public ResponseEntity<PlatformAdminAuthSessionResponse> login(@RequestBody @Valid PlatformAdminLoginRequest request) {
         var session = platformAdminLoginUseCase.execute(new PlatformAdminLoginCommand(request.email(), request.password()));
-        return ResponseEntity.ok(PlatformAdminAuthSessionResponse.from(session));
+        // Tarayici anahtari HttpOnly cerezden kullanir (SessionCookies); govdedeki token yalniz API istemcileri icindir.
+        return ResponseEntity.ok()
+            .header(org.springframework.http.HttpHeaders.SET_COOKIE, sessionCookies.createAdmin(session.token()))
+            .body(PlatformAdminAuthSessionResponse.from(session));
+    }
+
+    /** Platform admin oturum cerezini siler; suresi dolmus oturum da temizlenebilsin diye kimlik istemez. */
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout() {
+        return ResponseEntity.noContent()
+            .header(org.springframework.http.HttpHeaders.SET_COOKIE, sessionCookies.clearAdmin())
+            .build();
     }
 }

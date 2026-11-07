@@ -51,13 +51,24 @@ class SecurityConfigCorsTest {
     }
 
     @Test
-    void should_alwaysIncludeConfiguredOrigins_regardlessOfProfile() {
+    void should_allowOnlyTheAppOrigin_withCredentials_onPrivateApi() {
         when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
 
-        CorsConfigurationSource source = aSecurityConfig().corsConfigurationSource(environment);
+        CorsConfiguration app = resolveConfig(aSecurityConfig().corsConfigurationSource(environment));
 
-        assertThat(resolveConfig(source).getAllowedOriginPatterns())
-            .contains("https://vetly.example.com", "https://app.vetly.example.com");
+        assertThat(app.getAllowedOriginPatterns()).containsExactly("https://app.vetly.example.com");
+        assertThat(app.getAllowCredentials()).isTrue();
+    }
+
+    @Test
+    void should_allowVitrinOnlyOnPublicApi_withoutCredentials() {
+        when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
+
+        CorsConfiguration publicApi = ((UrlBasedCorsConfigurationSource) aSecurityConfig().corsConfigurationSource(environment))
+            .getCorsConfigurations().get("/api/v1/public/**");
+
+        assertThat(publicApi.getAllowedOriginPatterns()).contains("https://vetly.example.com", "https://app.vetly.example.com");
+        assertThat(publicApi.getAllowCredentials()).isFalse();
     }
 
     @Test

@@ -30,6 +30,8 @@ export interface ChangePasswordPayload {
 
 export const authApi = {
   login: (payload: LoginPayload) => apiClient.post<AuthSession>('/api/v1/auth/login', payload),
+  /** Oturum cerezini sunucuda siler. */
+  logout: () => apiClient.post<void>('/api/v1/auth/logout'),
   /** E-posta kayıtlı olmasa da başarılı döner (kayıtlı adresler dışarıdan öğrenilemesin). */
   requestPasswordReset: (email: string) => apiClient.post<void>('/api/v1/auth/password-reset/request', { email }),
   confirmPasswordReset: (token: string, newPassword: string) =>

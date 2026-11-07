@@ -99,6 +99,14 @@ public class GlobalExceptionHandler {
      * bu istemci hatasi, api-conventions.md'deki "400 = validation hatasi"
      * sozlesmesine gore 400 olmali.
      */
+    @ExceptionHandler(org.springframework.web.method.annotation.HandlerMethodValidationException.class)
+    public ResponseEntity<ErrorResponse> handleMethodValidation(
+        org.springframework.web.method.annotation.HandlerMethodValidationException ex, HttpServletRequest request
+    ) {
+        return ResponseEntity.status(ex.getStatusCode())
+            .body(ErrorResponse.of("VALIDATION_ERROR", "İstek parametreleri geçersiz", request.getRequestURI()));
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleNotReadable(HttpMessageNotReadableException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)

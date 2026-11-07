@@ -1,0 +1,73 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.note {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.heading {
+  margin: 0;
+  font-size: 16px;
+}
+.metaLine {
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+}
+.form {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 12px;
+}
+.signature {
+  max-width: 260px;
+  max-height: 120px;
+  display: block;
+}
+.warning {
+  background: var(--color-warning-100);
+  color: var(--color-warning-700);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.voided {
+  background: var(--color-danger-100);
+  color: var(--color-danger-700);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+}
+.error {
+  color: var(--color-danger-700);
+  font-size: 12.5px;
+}
+.voidBox {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+}
+.voidBox textarea {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 8px;
+  font: inherit;
+}
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

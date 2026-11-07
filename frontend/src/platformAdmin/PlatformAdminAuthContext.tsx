@@ -1,6 +1,6 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { platformAdminApi, PlatformAdminLoginPayload } from '../api/platformAdminApi';
-import { setPlatformAdminAuthToken, setPlatformAdminUnauthorizedHandler } from './platformAdminClient';
+import { setPlatformAdminUnauthorizedHandler } from './platformAdminClient';
 import {
   clearStoredPlatformAdminSession,
   loadStoredPlatformAdminSession,
@@ -17,33 +17,30 @@ interface PlatformAdminAuthContextValue {
 const PlatformAdminAuthContext = createContext<PlatformAdminAuthContextValue | undefined>(undefined);
 
 export function PlatformAdminAuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<PlatformAdminSession | null>(() => {
-    const initial = loadStoredPlatformAdminSession();
-    setPlatformAdminAuthToken(initial?.token ?? null);
-    return initial;
-  });
+  const [session, setSession] = useState<PlatformAdminSession | null>(() => loadStoredPlatformAdminSession());
 
   useEffect(() => {
     setPlatformAdminUnauthorizedHandler(() => {
       clearStoredPlatformAdminSession();
-      setPlatformAdminAuthToken(null);
       setSession(null);
     });
     return () => setPlatformAdminUnauthorizedHandler(null);
   }, []);
 
   async function login(payload: PlatformAdminLoginPayload) {
+    // Sunucu anahtari HttpOnly cereze yazar; yanittaki token alani saklanmaz.
     const result = await platformAdminApi.login(payload);
     storePlatformAdminSession(result);
-    setPlatformAdminAuthToken(result.token);
-    setSession(result);
-    return result;
+    const stored = loadStoredPlatformAdminSession()!;
+    setSession(stored);
+    return stored;
   }
 
   function logout() {
     clearStoredPlatformAdminSession();
-    setPlatformAdminAuthToken(null);
     setSession(null);
+    // Cerezi sunucu siler; ag hatasinda da yerel oturum kapanmis olur, cerez en gec 8 saatte gecersizlesir.
+    platformAdminApi.logout().catch(() => undefined);
   }
 
   return (

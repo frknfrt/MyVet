@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Field';
 import { Modal } from '../../components/ui/Modal';
 import { formatDate } from '../encounter/ageUtils';
+import { ageLabel, daysOpen } from '../encounter/encounterAge';
 import styles from './NewEncounterModal.module.css';
 
 interface NewEncounterModalProps {
@@ -31,7 +32,8 @@ export function NewEncounterModal({ open, onClose }: NewEncounterModalProps) {
   const [results, setResults] = useState<PatientSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<PatientSearchResult | null>(null);
-  const [draft, setDraft] = useState<{ id: string; date: string } | null>(null);
+  const [draft, setDraft] = useState<{ id: string; date: string; days: number } | null>(null);
+  const [confirmReplace, setConfirmReplace] = useState(false);
   const [checkingDraft, setCheckingDraft] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +45,7 @@ export function NewEncounterModal({ open, onClose }: NewEncounterModalProps) {
       setResults([]);
       setSelected(null);
       setDraft(null);
+      setConfirmReplace(false);
       setError(null);
     }
   }, [open]);
@@ -71,16 +74,43 @@ export function NewEncounterModal({ open, onClose }: NewEncounterModalProps) {
   async function selectPatient(p: PatientSearchResult) {
     setSelected(p);
     setDraft(null);
+    setConfirmReplace(false);
     setError(null);
     setCheckingDraft(true);
     try {
       const encounters = await encounterApi.listByPatient(p.patientId);
       const openDraft = encounters.find((e) => e.status === 'DRAFT');
-      setDraft(openDraft ? { id: openDraft.id, date: formatDate(openDraft.encounterDate) ?? '' } : null);
+      setDraft(
+        openDraft
+          ? { id: openDraft.id, date: formatDate(openDraft.encounterDate) ?? '', days: daysOpen(openDraft.encounterDate) }
+          : null,
+      );
     } catch (err) {
       setError(errorMessageOf(err));
     } finally {
       setCheckingDraft(false);
+    }
+  }
+
+  /** Eski taslağı "İptal edildi" yapıp (silinmez) yeni muayene açar; ilk tıklama onay ister. */
+  async function handleReplaceDraft() {
+    if (!selected || !draft) return;
+    if (!confirmReplace) {
+      setConfirmReplace(true);
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await encounterApi.cancel(draft.id);
+      const encounterId = await encounterApi.start({ patientId: selected.patientId });
+      onClose();
+      navigate(`/muayene/${encounterId}`);
+    } catch (err) {
+      setError(errorMessageOf(err));
+      setConfirmReplace(false);
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -124,8 +154,13 @@ export function NewEncounterModal({ open, onClose }: NewEncounterModalProps) {
           </div>
           {draft && (
             <div className={styles.draftNote}>
-              Bu hastanın {draft.date} tarihli açık bir taslak muayenesi var. Yeni muayene açılmaz, taslaktan devam
-              edilir.
+              Bu hastanın {draft.date} tarihli ({ageLabel(draft.days).toLocaleLowerCase('tr-TR')}) açık bir taslak
+              muayenesi var. Devam edebilir ya da eski taslağı iptal edip yeni muayene başlatabilirsiniz.
+              <button type="button" className={styles.replaceBtn} onClick={handleReplaceDraft} disabled={busy}>
+                {confirmReplace
+                  ? 'Emin misiniz? Eski taslak "İptal edildi" olarak saklanır — onaylamak için tekrar tıklayın'
+                  : 'Eski taslağı iptal et, yeni muayene başlat'}
+              </button>
             </div>
           )}
         </div>
@@ -181,7 +216,7 @@ export function NewEncounterModal({ open, onClose }: NewEncounterModalProps) {
             Vazgeç
           </Button>
           <Button variant="primary" onClick={handleStart} disabled={!selected || checkingDraft || busy}>
-            {busy ? 'Açılıyor...' : draft ? 'Taslağa Devam Et' : 'Muayeneyi Başlat'}
+            {busy ? 'Açılıyor...' : draft ? `${draft.date} taslağına dön` : 'Muayeneyi Başlat'}
           </Button>
         </div>
       </div>

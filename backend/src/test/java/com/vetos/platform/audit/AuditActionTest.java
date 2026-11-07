@@ -7,8 +7,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AuditActionTest {
 
     @Test
-    void should_haveTwentySixActions_withTurkishLabels() {
-        assertThat(AuditAction.values()).hasSize(26);
+    void should_haveTurkishLabelsForAllActions() {
+        assertThat(AuditAction.values()).allSatisfy(action -> assertThat(action.label()).isNotBlank());
         assertThat(AuditAction.INVOICE_VOIDED.label()).isEqualTo("Fatura iptal edildi");
         assertThat(AuditAction.SUPPORT_IMPERSONATION_STARTED.label()).isEqualTo("Vetly destek ekibi hesaba girdi");
     }

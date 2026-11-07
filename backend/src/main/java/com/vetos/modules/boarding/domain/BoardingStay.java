@@ -71,6 +71,7 @@ public class BoardingStay {
         stay.patientId = patientId;
         stay.ownerId = ownerId;
         stay.createdByStaffId = createdByStaffId;
+        validateDates(checkInDate, expectedCheckOutDate);
         stay.checkInDate = checkInDate;
         stay.expectedCheckOutDate = expectedCheckOutDate;
         stay.notes = notes;
@@ -83,8 +84,16 @@ public class BoardingStay {
         if (status != BoardingStayStatus.CHECKED_IN) {
             throw new BoardingStayInvalidStateException(id, "Sadece konaklamada olan kayit cikis yapabilir, mevcut durum: " + status);
         }
+        LocalDate departure = actualDate != null ? actualDate : LocalDate.now();
+        validateDates(checkInDate, departure);
         this.status = BoardingStayStatus.CHECKED_OUT;
-        this.actualCheckOutDate = actualDate != null ? actualDate : LocalDate.now();
+        this.actualCheckOutDate = departure;
+    }
+
+    private static void validateDates(LocalDate arrival, LocalDate departure) {
+        if (departure != null && departure.isBefore(arrival)) {
+            throw new BoardingStayInvalidStateException(null, "Çıkış tarihi giriş tarihinden önce olamaz");
+        }
     }
 
     public void cancel() {

@@ -31,6 +31,8 @@ export function LaboratoryPage() {
   const [patientFilter, setPatientFilter] = useState('');
   const [newResultOpen, setNewResultOpen] = useState(false);
   const [selectedResultId, setSelectedResultId] = useState<string | null>(null);
+  // Yeni kayitta kamerayla cekilen dosyalar: detay acilinca otomatik okunur (2026-11-07).
+  const [autoOcrFileIds, setAutoOcrFileIds] = useState<string[]>([]);
 
   function load() {
     setLoading(true);
@@ -215,13 +217,22 @@ export function LaboratoryPage() {
       <NewLabResultModal
         open={newResultOpen}
         onClose={() => setNewResultOpen(false)}
-        onCreated={(id) => {
+        onCreated={(id, opts) => {
           setNewResultOpen(false);
           load();
+          setAutoOcrFileIds(opts.autoOcrFileIds);
           setSelectedResultId(id);
         }}
       />
-      <LabResultDetailModal resultId={selectedResultId} onClose={() => setSelectedResultId(null)} onChanged={load} />
+      <LabResultDetailModal
+        resultId={selectedResultId}
+        autoOcrFileIds={autoOcrFileIds}
+        onClose={() => {
+          setSelectedResultId(null);
+          setAutoOcrFileIds([]);
+        }}
+        onChanged={load}
+      />
     </AppShell>
   );
 }

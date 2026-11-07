@@ -25,6 +25,7 @@ public class UploadLabResultFileUseCase {
         LabResult result = labResultRepository.findById(labResultId)
             .orElseThrow(() -> new LabResultNotFoundException(labResultId));
 
+        contentType = com.vetos.platform.storage.ClinicalAttachment.validate(contentType, content);
         String storageRef = fileStoragePort.store(content, contentType);
         LabResultFile file = LabResultFile.create(
             result.getTenantId(), labResultId, fileName, contentType, content.length, storageRef

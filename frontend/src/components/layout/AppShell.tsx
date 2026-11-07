@@ -1,5 +1,5 @@
 import { ReactNode, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { Sidebar } from './Sidebar';
 import styles from './AppShell.module.css';
@@ -44,7 +44,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             <path d="M4 7h16M4 12h16M4 17h16" />
           </svg>
         </button>
-        <span className={styles.mobileTopbarWord}>Vetly</span>
+        {/* Masaustu yan menudeki logo gibi ana sayfaya goturur (Sidebar.tsx brandMark). */}
+        <Link to="/panel" className={styles.mobileTopbarWord} aria-label="Ana sayfa">
+          Vetly
+        </Link>
       </div>
       <Sidebar
         userName={session?.fullName ?? ''}

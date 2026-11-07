@@ -13,4 +13,7 @@ public interface FileStoragePort {
 
     /** storageRef bulunamazsa StoredFileNotFoundException firlatir. */
     byte[] retrieve(String storageRef);
+
+    /** Icerigi siler; storageRef yoksa sessizce gecer. */
+    void delete(String storageRef);
 }

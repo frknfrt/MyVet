@@ -213,7 +213,8 @@ export function QuickSaleModal({ open, onClose, onCompleted }: QuickSaleModalPro
         <FieldWrap label="Ürün">
           <Select value={selectedItemId} onChange={(e) => handleItemSelect(e.target.value)}>
             <option value="">Seçiniz</option>
-            {items.map((i) => (
+            {/* Hızlı satış kapalı paket satar: kapalı stoğu 0 olan ürün listelenmez. */}
+            {items.filter((i) => i.quantityOnHand > 0).map((i) => (
               <option key={i.id} value={i.id}>
                 {i.name} ({i.quantityOnHand} adet stokta)
               </option>

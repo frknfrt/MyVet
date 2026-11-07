@@ -18,7 +18,7 @@ const FeatureContext = createContext<FeatureContextValue>({ hasFeature: () => tr
 export function FeatureProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth();
   const [enabled, setEnabled] = useState<Set<string> | null>(null);
-  const token = session?.token ?? null;
+  const token = session?.staffUserId ?? null;
 
   useEffect(() => {
     setEnabled(null);

@@ -27,6 +27,13 @@ public class PlatformAdminAuthenticationFilter extends OncePerRequestFilter {
 
     private final PlatformAdminJwtTokenProvider platformAdminJwtTokenProvider;
 
+    /** Giris/cikis kimlik dogrulamasi istemez; eski bir cerez girisi CSRF kontrolune takmasin. */
+    @Override
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        return uri != null && uri.startsWith(request.getContextPath() + "/api/v1/platform-admin/auth/");
+    }
+
     @Override
     protected void doFilterInternal(
         @NonNull HttpServletRequest request,
@@ -35,8 +42,13 @@ public class PlatformAdminAuthenticationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         try {
             String header = request.getHeader(AUTH_HEADER);
-            if (header != null && header.startsWith(BEARER_PREFIX)) {
-                String token = header.substring(BEARER_PREFIX.length());
+            boolean fromHeader = header != null && header.startsWith(BEARER_PREFIX);
+            String token = fromHeader ? header.substring(BEARER_PREFIX.length()) : SessionCookies.read(request, SessionCookies.ADMIN_NAME);
+            if (token != null && !fromHeader && SessionCookies.failsCsrfCheck(request)) {
+                SessionCookies.rejectCsrf(response);
+                return;
+            }
+            if (token != null) {
                 try {
                     AuthenticatedPlatformAdmin principal = platformAdminJwtTokenProvider.parse(token);
                     var authentication = new UsernamePasswordAuthenticationToken(

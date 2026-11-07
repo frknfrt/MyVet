@@ -3,6 +3,7 @@ import { NotificationChannel, NotificationLogStatus, NotificationType } from '..
 
 const STATUS_CONFIG: Record<NotificationLogStatus, { label: string; tone: BadgeTone }> = {
   PENDING: { label: 'Bekliyor', tone: 'neutral' },
+  DISPATCHING: { label: 'Gönderim doğrulanıyor', tone: 'neutral' },
   SENT: { label: 'Gönderildi', tone: 'success' },
   FAILED: { label: 'Başarısız', tone: 'danger' },
 };

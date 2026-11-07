@@ -61,6 +61,9 @@ class IyzicoPaymentGatewayAdapter implements PaymentGatewayPort {
     private static final String SIMULATED_TOKEN_PREFIX = "SIMULATED-";
     private static final String CALLBACK_PATH = "/api/v1/public/payments/iyzico/callback";
 
+    @org.springframework.beans.factory.annotation.Value("#{environment.matchesProfiles('!prod & (dev | test)')}")
+    private boolean simulationAllowed;
+
     private final String apiKey;
     private final String secretKey;
     private final String baseUrl;
@@ -98,6 +101,7 @@ class IyzicoPaymentGatewayAdapter implements PaymentGatewayPort {
     @Override
     public CheckoutSession initializeCheckout(String conversationId, BigDecimal amount, String buyerName, String buyerEmail) {
         if (!isConfigured()) {
+            if (!simulationAllowed) throw new PaymentProviderServiceUnavailableException();
             String simulatedToken = SIMULATED_TOKEN_PREFIX + conversationId;
             String checkoutFormUrl = callbackBaseUrl + CALLBACK_PATH + "?token=" + simulatedToken;
             log.info("iyzico checkout (simule): conversationId={}, tutar={}", conversationId, amount);
@@ -145,6 +149,7 @@ class IyzicoPaymentGatewayAdapter implements PaymentGatewayPort {
         // Simulasyon kisayolu SADECE kimlik bilgisi tanimli degilken gecerlidir --
         // aksi halde public callback ucuna "SIMULATED-<fatura-id>" gonderen herkes
         // ilgili faturayi bedava odenmis isaretletebilirdi.
+        if (!isConfigured() && !simulationAllowed) return new CheckoutResult(false, null, null);
         if (!isConfigured() && token.startsWith(SIMULATED_TOKEN_PREFIX)) {
             String conversationId = token.substring(SIMULATED_TOKEN_PREFIX.length());
             log.info("iyzico odeme sonucu (simule): conversationId={}", conversationId);

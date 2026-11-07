@@ -87,8 +87,9 @@ export const labApi = {
   uploadFile: (id: string, file: File) => {
     const form = new FormData();
     form.append('file', file);
-    return apiClient.postMultipart<void>(`/api/v1/lab-results/${id}/files`, form);
+    // Yuklenen dosyanin id'sini doner (otomatik AI okuma icin).
+    return apiClient.postMultipartForId(`/api/v1/lab-results/${id}/files`, form);
   },
   fileUrl: (fileId: string) => `${API_BASE_URL}/api/v1/lab-results/files/${fileId}`,
-  authHeader: () => apiClient.authHeader(),
+  fetchFile: (url: string) => apiClient.fetchFile(url),
 };

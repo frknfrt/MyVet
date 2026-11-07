@@ -77,6 +77,8 @@ export interface InventoryUsage {
 export const encounterApi = {
   start: (payload: StartEncounterPayload) => apiClient.postForId('/api/v1/encounters', payload),
   get: (id: string) => apiClient.get<EncounterDetail>(`/api/v1/encounters/${id}`),
+  /** Klinikteki açık (taslak) muayeneler, en eskisi önce. */
+  listOpen: () => apiClient.get<EncounterDetail[]>('/api/v1/encounters/open'),
   listByPatient: (patientId: string) => apiClient.get<EncounterDetail[]>(`/api/v1/encounters?patientId=${patientId}`),
   findByAppointment: async (appointmentId: string): Promise<EncounterDetail | null> => {
     try {
@@ -93,9 +95,12 @@ export const encounterApi = {
   finalize: (id: string) => apiClient.post<void>(`/api/v1/encounters/${id}/finalize`),
   /** Yalnız taslak; kayıt silinmez, "İptal edildi" olarak saklanır. */
   cancel: (id: string) => apiClient.post<void>(`/api/v1/encounters/${id}/cancel`),
-  addMaterial: (id: string, payload: { inventoryItemId: string; quantity: number }) =>
+  addMaterial: (
+    id: string,
+    payload: { inventoryItemId: string; quantity: number; allergyAcknowledged?: boolean; allergyOverrideReason?: string | null },
+  ) =>
     apiClient.post<void>(`/api/v1/encounters/${id}/materials`, payload),
   listMaterials: (id: string) => apiClient.get<InventoryUsage[]>(`/api/v1/encounters/${id}/materials`),
   reportUrl: (id: string) => `${API_BASE_URL}/api/v1/encounters/${id}/report`,
-  authHeader: () => apiClient.authHeader(),
+  fetchFile: (url: string) => apiClient.fetchFile(url),
 };

@@ -25,6 +25,7 @@ public class UploadImagingRecordFileUseCase {
         ImagingRecord record = imagingRecordRepository.findById(imagingRecordId)
             .orElseThrow(() -> new ImagingRecordNotFoundException(imagingRecordId));
 
+        contentType = com.vetos.platform.storage.ClinicalAttachment.validate(contentType, content);
         String storageRef = fileStoragePort.store(content, contentType);
         ImagingRecordFile file = ImagingRecordFile.create(
             record.getTenantId(), imagingRecordId, fileName, contentType, content.length, storageRef

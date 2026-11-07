@@ -40,7 +40,7 @@ class ManualRetryNotificationUseCaseTest {
         NotificationLog log = aLog();
         log.markFailed("onceki hata", null);
         UUID logId = UUID.randomUUID();
-        when(notificationLogRepository.findById(logId)).thenReturn(Optional.of(log));
+        when(notificationLogRepository.findForUpdate(logId)).thenReturn(Optional.of(log));
 
         useCase.execute(logId);
 
@@ -55,7 +55,7 @@ class ManualRetryNotificationUseCaseTest {
         ManualRetryNotificationUseCase useCase =
             new ManualRetryNotificationUseCase(notificationLogRepository, notificationSendExecutor);
         UUID logId = UUID.randomUUID();
-        when(notificationLogRepository.findById(logId)).thenReturn(Optional.empty());
+        when(notificationLogRepository.findForUpdate(logId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> useCase.execute(logId)).isInstanceOf(NotificationLogNotFoundException.class);
 
@@ -70,7 +70,7 @@ class ManualRetryNotificationUseCaseTest {
         NotificationLog log = aLog();
         log.markSent();
         UUID logId = UUID.randomUUID();
-        when(notificationLogRepository.findById(logId)).thenReturn(Optional.of(log));
+        when(notificationLogRepository.findForUpdate(logId)).thenReturn(Optional.of(log));
 
         assertThatThrownBy(() -> useCase.execute(logId)).isInstanceOf(NotificationLogNotRetryableException.class);
 

@@ -15,7 +15,9 @@ public record IssuePrescriptionRequest(
     UUID encounterId,
     boolean controlledSubstance,
     UUID tarbilDiseaseId,
-    @NotEmpty @Valid List<Item> items
+    @NotEmpty @Valid List<Item> items,
+    Boolean allergyAcknowledged,
+    @jakarta.validation.constraints.Size(max = 500) String allergyOverrideReason
 ) {
     public record Item(UUID drugId, String drugName, String dosage, String frequency, int durationDays, DrugRoute route,
                        UUID inventoryItemId, @com.vetos.platform.validation.StockAmount java.math.BigDecimal stockQuantity) {}

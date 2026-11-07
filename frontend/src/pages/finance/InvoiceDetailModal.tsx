@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { billingApi, InvoiceDetail, PaymentMethod } from '../../api/billingApi';
 import { appointmentApi, ServiceTypeItem } from '../../api/appointmentApi';
 import { Button } from '../../components/ui/Button';
@@ -31,6 +31,8 @@ export function InvoiceDetailModal({ invoiceId, onClose, onChanged }: InvoiceDet
   const [lineDiscount, setLineDiscount] = useState('0');
   const [lineVatRate, setLineVatRate] = useState('20');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH');
+  const pendingPayment = useRef<{ signature: string; id: string } | null>(null);
+  const [paymentError, setPaymentError] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
 
   function reload() {
@@ -44,6 +46,7 @@ export function InvoiceDetailModal({ invoiceId, onClose, onChanged }: InvoiceDet
 
   useEffect(() => {
     setInvoice(null);
+    setPaymentError(false);
     reload();
     setLineServiceTypeId('');
     setLineDesc('');
@@ -120,10 +123,20 @@ export function InvoiceDetailModal({ invoiceId, onClose, onChanged }: InvoiceDet
     if (!invoiceId || busy) return;
     setBusy(true);
     try {
-      await billingApi.recordPayment(invoiceId, { method: paymentMethod, amount: Number(paymentAmount) });
+      setPaymentError(false);
+      const signature = JSON.stringify([invoiceId, paymentMethod, Number(paymentAmount)]);
+      if (pendingPayment.current?.signature !== signature) {
+        pendingPayment.current = { signature, id: crypto.randomUUID() };
+      }
+      await billingApi.recordPayment(invoiceId, {
+        method: paymentMethod, amount: Number(paymentAmount), requestId: pendingPayment.current.id,
+      });
+      pendingPayment.current = null;
       setPaymentAmount('');
       reload();
       onChanged();
+    } catch {
+      setPaymentError(true);
     } finally {
       setBusy(false);
     }
@@ -139,6 +152,7 @@ export function InvoiceDetailModal({ invoiceId, onClose, onChanged }: InvoiceDet
 
   return (
     <Modal open={invoiceId !== null} onClose={onClose} width={700} dirty={dirty}>
+      {paymentError && <p role="alert">Tahsilat doğrulanamadı. Tekrar deneyebilirsiniz.</p>}
       {!invoice ? (
         <div>Yükleniyor...</div>
       ) : (

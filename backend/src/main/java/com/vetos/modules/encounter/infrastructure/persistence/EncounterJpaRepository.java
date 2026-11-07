@@ -10,6 +10,7 @@ import java.util.UUID;
 
 interface EncounterJpaRepository extends JpaRepository<Encounter, UUID> {
     List<Encounter> findByPatientId(UUID patientId);
+    List<Encounter> findByStatus(EncounterStatus status);
     /** Randevunun iptal edilmemis en son muayenesi; iptal edilen yerine yenisi acilabilir. */
     Optional<Encounter> findFirstByAppointmentIdAndStatusNotOrderByEncounterDateDesc(UUID appointmentId, EncounterStatus excluded);
 }

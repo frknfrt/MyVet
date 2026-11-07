@@ -1,0 +1,9 @@
+.notice {
+  background: var(--color-warning-100);
+  color: var(--color-warning-700);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 14px;
+}

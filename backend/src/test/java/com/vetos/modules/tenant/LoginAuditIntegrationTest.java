@@ -32,6 +32,7 @@ import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -99,7 +100,12 @@ class LoginAuditIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"" + email + "\",\"password\":\"" + PASSWORD + "\"}")
                 .with(request -> { request.setRemoteAddr("10.9.0.1"); return request; }))
-            .andExpect(status().isOk());
+            .andExpect(status().isOk())
+            // Tarayici oturumu HttpOnly cerezde tasir (SessionCookies, 2026-11-06).
+            .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.allOf(
+                org.hamcrest.Matchers.startsWith("vetly_session="),
+                org.hamcrest.Matchers.containsString("HttpOnly"),
+                org.hamcrest.Matchers.containsString("SameSite=Strict"))));
 
         assertThat(events()).anySatisfy(e -> {
             assertThat(e.action()).isEqualTo(AuditAction.STAFF_LOGIN_SUCCEEDED.name());

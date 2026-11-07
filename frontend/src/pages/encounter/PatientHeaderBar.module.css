@@ -86,3 +86,32 @@
   color: var(--color-text-muted);
   margin-top: 6px;
 }
+
+/* Telefon/dar ekran: başlık alt satırlara iner ve yapışık kalmaz (sabit kalınca içeriğin yarısını kapatıyordu). */
+@media (max-width: 760px) {
+  .wrap {
+    position: static;
+    padding: 0;
+  }
+  .bar {
+    flex-wrap: wrap;
+    border-radius: var(--radius-lg);
+    padding: 12px;
+  }
+  .metaStrip {
+    flex-basis: 100%;
+    padding-left: 0;
+    border-left: none;
+  }
+  .spacer {
+    display: none;
+  }
+  .rightActions {
+    flex-basis: 100%;
+    flex-wrap: wrap;
+    flex-shrink: 1;
+  }
+  .subline {
+    padding: 0 4px;
+  }
+}

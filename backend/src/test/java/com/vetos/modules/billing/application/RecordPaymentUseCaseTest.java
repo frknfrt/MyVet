@@ -45,7 +45,7 @@ class RecordPaymentUseCaseTest {
         ReflectionTestUtils.setField(invoice, "id", id);
         invoice.recalculateTotal(new BigDecimal("1000"));
         invoice.issue();
-        when(invoiceRepository.findById(id)).thenReturn(Optional.of(invoice));
+        when(invoiceRepository.findByIdForUpdate(id)).thenReturn(Optional.of(invoice));
         when(paymentRepository.save(any())).thenAnswer(a -> a.getArgument(0));
         when(paymentRepository.findByInvoiceId(id)).thenReturn(List.of());
 
@@ -62,6 +62,22 @@ class RecordPaymentUseCaseTest {
     }
 
     @Test
+    void sameRequestIsReturnedWithoutAnotherPaymentOrAudit() {
+        UUID invoiceId = UUID.randomUUID(), requestId = UUID.randomUUID(), paymentId = UUID.randomUUID();
+        Invoice invoice = Invoice.createDraft(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), null, null);
+        ReflectionTestUtils.setField(invoice, "id", invoiceId);
+        var previous = com.vetos.modules.billing.domain.Payment.record(invoice.getTenantId(), invoiceId,
+            PaymentMethod.CASH, BigDecimal.TEN, null, requestId);
+        ReflectionTestUtils.setField(previous, "id", paymentId);
+        when(invoiceRepository.findByIdForUpdate(invoiceId)).thenReturn(Optional.of(invoice));
+        when(paymentRepository.findByInvoiceId(invoiceId)).thenReturn(List.of(previous));
+        assertThat(useCase().execute(new RecordPaymentCommand(invoiceId, PaymentMethod.CASH,
+            BigDecimal.TEN, null, requestId))).isEqualTo(paymentId);
+        verify(paymentRepository, org.mockito.Mockito.never()).save(any());
+        verifyNoInteractions(auditPort);
+    }
+
+    @Test
     void should_recordAuditEvent_onSuccess() {
         assertThat(pay(PaymentMethod.CASH, "450.5").summary()).isEqualTo("450,50 ₺ — Nakit");
     }
@@ -74,7 +90,7 @@ class RecordPaymentUseCaseTest {
     @Test
     void should_notRecord_whenInvoiceNotFound() {
         UUID id = UUID.randomUUID();
-        when(invoiceRepository.findById(id)).thenReturn(Optional.empty());
+        when(invoiceRepository.findByIdForUpdate(id)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> useCase().execute(new RecordPaymentCommand(id, PaymentMethod.CASH, BigDecimal.TEN, null)))
             .isInstanceOf(InvoiceNotFoundException.class);

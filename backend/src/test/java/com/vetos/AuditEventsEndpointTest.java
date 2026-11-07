@@ -99,7 +99,7 @@ class AuditEventsEndpointTest {
     void should_listActionLabels() throws Exception {
         mockMvc.perform(get("/api/v1/audit-events/actions").header("Authorization", bearer(UUID.randomUUID(), "ADMIN")))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$", hasSize(26)))
+            .andExpect(jsonPath("$", hasSize(AuditAction.values().length)))
             .andExpect(jsonPath("$[0].code").exists())
             .andExpect(jsonPath("$[0].label").exists());
     }

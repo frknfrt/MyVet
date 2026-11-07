@@ -7,6 +7,7 @@ import { ActivityHistoryPanel } from './ActivityHistoryPanel';
 import { AiCenterPanel } from './AiCenterPanel';
 import { BranchManagementPanel } from './BranchManagementPanel';
 import { DrugCatalogPanel } from './DrugCatalogPanel';
+import { FormsSettings } from './forms/FormsSettings';
 import { IntegrationsPanel } from './IntegrationsPanel';
 import { RolePermissionsPanel } from './RolePermissionsPanel';
 import { ServiceTypesPanel } from './ServiceTypesPanel';
@@ -51,6 +52,8 @@ const SETTINGS_TABS: SettingsTabConfig[] = [
   { path: 'hizmetler', label: 'Hizmetler', roles: ['ADMIN'] },
   // DrugsController: POST/PUT (ilaç ekleme/düzenleme) ADMIN-only.
   { path: 'ilac-katalogu', label: 'İlaç Kataloğu', roles: ['ADMIN'] },
+  // Dijital onay formları: şablon yazma/arşiv ADMIN-only. İç rotalar (yeni, :id) FormsSettings'te; Route path'i 'formlar/*'.
+  { path: 'formlar', label: 'Formlar', roles: ['ADMIN'] },
   { path: 'ai-merkezi', label: 'AI Merkezi', feature: 'AI_ASSISTANT' },
   { path: 'sms-whatsapp', label: 'SMS / WhatsApp', roles: ['ADMIN', 'RECEPTIONIST'] },
   // e-Fatura sekmesi V2'ye kadar arayüzden kaldırıldı (2026-11-04) -- backend
@@ -80,7 +83,9 @@ export function SettingsPage() {
         {visibleTabs.map((t) => (
           <NavLink
             key={t.path}
-            to={t.path}
+            // Tam yol: React Router 7'de '/ayarlar/*' icindeki goreli link acik sekmenin altina cozuluyor
+            // ('/ayarlar/kullanicilar/subeler') ve hicbir sekme acilmiyordu.
+            to={`/ayarlar/${t.path}`}
             className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ''}`}
           >
             {t.label}
@@ -100,6 +105,7 @@ export function SettingsPage() {
         <Route path="tur-irk" element={isAdmin ? <SpeciesBreedsPanel /> : forbidden} />
         <Route path="hizmetler" element={isAdmin ? <ServiceTypesPanel /> : forbidden} />
         <Route path="ilac-katalogu" element={isAdmin ? <DrugCatalogPanel /> : forbidden} />
+        <Route path="formlar/*" element={isAdmin ? <FormsSettings /> : forbidden} />
         <Route path="ai-merkezi" element={hasFeature('AI_ASSISTANT') ? <AiCenterPanel /> : notInPlan} />
         <Route path="sms-whatsapp" element={canViewSmsWhatsapp ? <SmsWhatsappPanel /> : forbidden} />
       </Routes>

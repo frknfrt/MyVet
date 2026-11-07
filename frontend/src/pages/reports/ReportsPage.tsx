@@ -101,7 +101,7 @@ export function ReportsPage() {
           : tab === 'staff'
           ? reportingApi.staffPerformanceExportUrl(filters)
           : reportingApi.branchComparisonExportUrl(filters);
-      const res = await fetch(url, { headers: reportingApi.authHeader() });
+      const res = await reportingApi.fetchFile(url);
       if (!res.ok) throw new Error('Rapor indirilemedi');
       const blob = await res.blob();
       const objectUrl = URL.createObjectURL(blob);

@@ -7,6 +7,9 @@ vi.mock('../../api/encounterApi', () => ({
   encounterApi: { listMaterials: vi.fn().mockResolvedValue([]), addMaterial: vi.fn().mockResolvedValue('u1') },
 }));
 vi.mock('../../api/inventoryApi', () => ({ inventoryApi: { list: vi.fn() } }));
+vi.mock('../../api/clinicalApi', () => ({
+  clinicalApi: { checkAllergies: vi.fn().mockResolvedValue({ criticalAlert: null, matches: [] }) },
+}));
 
 import { encounterApi } from '../../api/encounterApi';
 import { inventoryApi, InventoryItem } from '../../api/inventoryApi';
@@ -40,7 +43,7 @@ describe('MaterialsUsedCard — ml ile kullanılan ilaç (spec 2026-10-24)', () 
     container = document.createElement('div');
     document.body.appendChild(container);
     await act(async () => {
-      createRoot(container).render(<MaterialsUsedCard encounterId="e1" readOnly={false} />);
+      createRoot(container).render(<MaterialsUsedCard encounterId="e1" patientId="p1" readOnly={false} />);
     });
     await act(async () => {});
 
@@ -54,5 +57,24 @@ describe('MaterialsUsedCard — ml ile kullanılan ilaç (spec 2026-10-24)', () 
     await act(async () => container.querySelector<HTMLFormElement>('form')!.requestSubmit());
 
     expect(encounterApi.addMaterial).toHaveBeenCalledWith('e1', { inventoryItemId: 'c', quantity: 1.5 });
+  });
+
+  it('hides out-of-stock items from the picker but still names already-used ones', async () => {
+    vi.mocked(inventoryApi.list).mockResolvedValue([
+      item({ id: 'z', name: 'Biocan DHPPI', quantityOnHand: 0 }),
+      item({ id: 'a', name: 'Bandaj' }),
+    ]);
+    vi.mocked(encounterApi.listMaterials).mockResolvedValueOnce([{ id: 'u1', inventoryItemId: 'z', quantity: 1 }]);
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      createRoot(container).render(<MaterialsUsedCard encounterId="e1" patientId="p1" readOnly={false} />);
+    });
+    await act(async () => {});
+
+    const options = Array.from(container.querySelectorAll('option')).map((o) => o.textContent);
+    expect(options).toEqual(['Bandaj (1 adet mevcut)']);
+    expect(container.querySelector('select')!.value).toBe('a');
+    expect(container.textContent).toContain('Biocan DHPPI');
   });
 });

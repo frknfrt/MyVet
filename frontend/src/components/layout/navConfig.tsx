@@ -50,6 +50,18 @@ export const NAV_ITEMS: NavItemConfig[] = [
     ),
   },
   {
+    key: 'muayeneler',
+    label: 'Muayeneler',
+    path: '/muayeneler',
+    roles: ['VET', 'TECHNICIAN', 'ADMIN'],
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 3h6a1 1 0 0 1 1 1v1h1a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h1V4a1 1 0 0 1 1-1z" />
+        <path d="M9 12h6M9 16h4" />
+      </svg>
+    ),
+  },
+  {
     key: 'hastalar',
     label: 'Hastalar & Sahipler',
     path: '/hastalar',

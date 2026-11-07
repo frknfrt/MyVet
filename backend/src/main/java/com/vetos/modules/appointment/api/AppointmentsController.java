@@ -57,13 +57,13 @@ public class AppointmentsController {
     @GetMapping
     public List<AppointmentResponse> weeklyCalendar(
         @AuthenticationPrincipal AuthenticatedStaffUser principal,
-        @RequestParam LocalDate weekStart
+        @RequestParam LocalDate weekStart, @RequestParam(defaultValue = "false") boolean daily
     ) {
         // Haftalik takvim araligi gercek Europe/Istanbul gun sinirlarina gore hesaplanir
         // (UTC gece yarisi kullanilirsa 00:00-03:00 İstanbul saatindeki randevular yanlis haftaya dusebilir).
         var istanbul = ZoneId.of("Europe/Istanbul");
         var rangeStart = weekStart.atStartOfDay(istanbul).toInstant();
-        var rangeEnd = weekStart.plusDays(7).atStartOfDay(istanbul).toInstant();
+        var rangeEnd = weekStart.plusDays(daily ? 1 : 7).atStartOfDay(istanbul).toInstant();
         return getWeeklyCalendarUseCase.execute(principal.branchIds().get(0), rangeStart, rangeEnd).stream()
             .map(AppointmentResponse::from)
             .toList();

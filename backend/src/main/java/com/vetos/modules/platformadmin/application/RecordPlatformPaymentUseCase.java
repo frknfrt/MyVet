@@ -22,7 +22,13 @@ public class RecordPlatformPaymentUseCase {
 
     @Transactional
     public void execute(RecordPlatformPaymentCommand command) {
+        execute(command, null);
+    }
+
+    @Transactional
+    public void execute(RecordPlatformPaymentCommand command, java.util.UUID expectedTenantId) {
         PlatformInvoice invoice = platformInvoiceRepository.findById(command.invoiceId())
+            .filter(i -> expectedTenantId == null || expectedTenantId.equals(i.getTenantId()))
             .orElseThrow(() -> new PlatformInvoiceNotFoundException(command.invoiceId()));
 
         invoice.markPaid();

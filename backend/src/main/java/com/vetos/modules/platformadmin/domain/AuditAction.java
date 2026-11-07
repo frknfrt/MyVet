@@ -18,6 +18,9 @@ public final class AuditAction {
     public static final String PAYMENT_RECORDED = "PAYMENT_RECORDED";
     public static final String ANNOUNCEMENT_SENT = "ANNOUNCEMENT_SENT";
     public static final String ADMIN_EMAIL_SENT = "ADMIN_EMAIL_SENT";
+    public static final String DATA_IMPORT_COMMITTED = "DATA_IMPORT_COMMITTED";
+    public static final String DATA_IMPORT_ROLLED_BACK = "DATA_IMPORT_ROLLED_BACK";
+    public static final String DATA_IMPORT_FAILED = "DATA_IMPORT_FAILED";
 
     private AuditAction() {
     }

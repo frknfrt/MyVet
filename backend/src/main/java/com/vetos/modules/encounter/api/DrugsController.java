@@ -28,6 +28,7 @@ public class DrugsController {
     private final CreateDrugCatalogUseCase createDrugCatalogUseCase;
     private final UpdateDrugCatalogUseCase updateDrugCatalogUseCase;
     private final CheckDrugInteractionsUseCase checkDrugInteractionsUseCase;
+    private final com.vetos.modules.encounter.application.DrugAllergyGuard drugAllergyGuard;
 
     @GetMapping
     public List<DrugResponse> list() {
@@ -54,5 +55,12 @@ public class DrugsController {
     @PreAuthorize("hasAnyRole('VET', 'ADMIN')")
     public CheckDrugInteractionsResponse checkInteractions(@RequestBody @Valid CheckDrugInteractionsRequest request) {
         return CheckDrugInteractionsResponse.from(checkDrugInteractionsUseCase.execute(request.drugIds()));
+    }
+
+    /** Recete/malzeme eklemeden once: hastanin kritik uyarisi ve secilen ilaclarla alerji eslesmesi (bkz. DrugAllergyGuard). */
+    @PostMapping("/check-allergies")
+    @PreAuthorize("hasAnyRole('VET', 'ADMIN')")
+    public com.vetos.modules.encounter.api.dto.CheckAllergiesResponse checkAllergies(@RequestBody @Valid com.vetos.modules.encounter.api.dto.CheckAllergiesRequest request) {
+        return com.vetos.modules.encounter.api.dto.CheckAllergiesResponse.from(drugAllergyGuard.check(request.patientId(), request.drugIds(), request.inventoryItemIds()));
     }
 }

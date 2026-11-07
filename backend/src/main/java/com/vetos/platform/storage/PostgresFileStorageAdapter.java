@@ -23,4 +23,12 @@ class PostgresFileStorageAdapter implements FileStoragePort {
             .map(StoredFile::getContent)
             .orElseThrow(() -> new StoredFileNotFoundException(storageRef));
     }
+
+    @Override
+    public void delete(String storageRef) {
+        UUID id = UUID.fromString(storageRef);
+        if (repository.existsById(id)) {
+            repository.deleteById(id);
+        }
+    }
 }

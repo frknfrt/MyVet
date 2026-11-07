@@ -1,0 +1,42 @@
+.title {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 18px;
+  margin: 0 0 12px;
+}
+
+.alert,
+.banner {
+  background: var(--color-danger-100);
+  color: var(--color-danger-700);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.banner {
+  margin-bottom: 16px;
+  font-weight: 500;
+}
+
+.matches {
+  margin: 12px 0;
+  padding-left: 18px;
+  font-size: 13.5px;
+  color: var(--color-danger-700);
+}
+
+.note {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin: 12px 0;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}

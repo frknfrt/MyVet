@@ -24,6 +24,9 @@ class InvoiceRepositoryAdapter implements InvoiceRepository {
     public Invoice save(Invoice invoice) { return jpaRepository.save(invoice); }
 
     @Override
+    public Optional<Invoice> findByIdForUpdate(UUID id) { return jpaRepository.findByIdForUpdate(id); }
+
+    @Override
     public Optional<Invoice> findById(UUID id) { return jpaRepository.findById(id); }
 
     @Override

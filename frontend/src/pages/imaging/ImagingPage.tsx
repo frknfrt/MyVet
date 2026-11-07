@@ -32,6 +32,8 @@ export function ImagingPage() {
   const [modalityFilter, setModalityFilter] = useState('');
   const [newRecordOpen, setNewRecordOpen] = useState(false);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
+  // Yeni kayitta kamerayla cekilen dosyalar: detay acilinca otomatik okunur (2026-11-07).
+  const [autoOcrFileIds, setAutoOcrFileIds] = useState<string[]>([]);
 
   function load() {
     setLoading(true);
@@ -231,13 +233,22 @@ export function ImagingPage() {
       <NewImagingRecordModal
         open={newRecordOpen}
         onClose={() => setNewRecordOpen(false)}
-        onCreated={(id) => {
+        onCreated={(id, opts) => {
           setNewRecordOpen(false);
           load();
+          setAutoOcrFileIds(opts.autoOcrFileIds);
           setSelectedRecordId(id);
         }}
       />
-      <ImagingRecordDetailModal recordId={selectedRecordId} onClose={() => setSelectedRecordId(null)} onChanged={load} />
+      <ImagingRecordDetailModal
+        recordId={selectedRecordId}
+        autoOcrFileIds={autoOcrFileIds}
+        onClose={() => {
+          setSelectedRecordId(null);
+          setAutoOcrFileIds([]);
+        }}
+        onChanged={load}
+      />
     </AppShell>
   );
 }

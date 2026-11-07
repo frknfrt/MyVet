@@ -85,3 +85,13 @@
   transform: scale(0);
   animation: rippleAnim 0.6s ease-out;
 }
+
+@media (max-width: 880px) {
+  .btn {
+    min-height: 44px;
+  }
+  .tertiary {
+    min-height: 44px;
+    padding: 0 8px;
+  }
+}

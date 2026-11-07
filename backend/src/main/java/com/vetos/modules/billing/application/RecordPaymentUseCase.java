@@ -24,17 +24,28 @@ public class RecordPaymentUseCase {
 
     @Transactional
     public UUID execute(RecordPaymentCommand command) {
-        Invoice invoice = invoiceRepository.findById(command.invoiceId())
+        Invoice invoice = invoiceRepository.findByIdForUpdate(command.invoiceId())
             .orElseThrow(() -> new InvoiceNotFoundException(command.invoiceId()));
 
-        Payment payment = paymentRepository.save(Payment.record(
-            invoice.getTenantId(), invoice.getId(), command.method(), command.amount(), command.pspRef()
-        ));
-
-        BigDecimal totalPaid = paymentRepository.findByInvoiceId(invoice.getId()).stream()
-            .map(Payment::getAmount)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        var existing = paymentRepository.findByInvoiceId(invoice.getId());
+        if (command.requestId() != null) {
+            for (Payment previous : existing) {
+                if (command.requestId().equals(previous.getRequestId())) {
+                    if (previous.getAmount().compareTo(command.amount()) != 0 || previous.getMethod() != command.method()
+                        || !java.util.Objects.equals(previous.getPspRef(), command.pspRef())) {
+                        throw new com.vetos.modules.billing.domain.exception.InvoiceInvalidStateException(invoice.getId(), "İşlem anahtarı farklı tahsilatta kullanılmış");
+                    }
+                    return previous.getId();
+                }
+            }
+        }
+        BigDecimal totalPaid = existing.stream().map(Payment::getAmount).reduce(command.amount(), BigDecimal::add);
+        if (command.amount().signum() <= 0 || totalPaid.compareTo(invoice.getTotalAmount()) > 0) {
+            throw new com.vetos.modules.billing.domain.exception.InvoiceInvalidStateException(invoice.getId(), "Tahsilat tutarı kalan bakiye ile uyumsuz");
+        }
         invoice.applyPaymentStatus(totalPaid);
+        Payment payment = paymentRepository.save(Payment.record(invoice.getTenantId(), invoice.getId(),
+            command.method(), command.amount(), command.pspRef(), command.requestId()));
         invoiceRepository.save(invoice);
 
         auditPort.record(AuditRecord.of(AuditAction.INVOICE_PAYMENT_RECORDED, "INVOICE", invoice.getId(),

@@ -179,3 +179,21 @@
   font-weight: 600;
   margin-bottom: 12px;
 }
+
+/* Telefon/dar ekran: tek sutun. Sesli Not (sag sutun) ustte: sahada eldivenle dikte en hizli giris yolu. */
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .layout > :nth-child(2) {
+    order: -1;
+  }
+}
+@media (max-width: 640px) {
+  .soapGrid {
+    grid-template-columns: 1fr;
+  }
+  .vitalsGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

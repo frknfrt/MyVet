@@ -4,7 +4,7 @@ import { AppointmentStatus } from '../../api/appointmentApi';
 const CONFIG: Record<AppointmentStatus, { label: string; tone: BadgeTone }> = {
   REQUESTED: { label: 'Talep Edildi', tone: 'neutral' },
   CONFIRMED: { label: 'Onaylandı', tone: 'ai' },
-  CHECKED_IN: { label: 'Check-in', tone: 'warning' },
+  CHECKED_IN: { label: 'Geldi', tone: 'warning' },
   IN_PROGRESS: { label: 'Muayenede', tone: 'warning' },
   COMPLETED: { label: 'Tamamlandı', tone: 'success' },
   NO_SHOW: { label: 'Gelmedi', tone: 'danger' },

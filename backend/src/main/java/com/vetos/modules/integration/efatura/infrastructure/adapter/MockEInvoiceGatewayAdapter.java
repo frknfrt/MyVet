@@ -21,10 +21,14 @@ import java.util.UUID;
 @Slf4j
 class MockEInvoiceGatewayAdapter implements EInvoiceGatewayPort {
 
+    @org.springframework.beans.factory.annotation.Value("#{environment.matchesProfiles('!prod & (dev | test)')}")
+    private boolean simulationAllowed;
+
     private static final double SIMULATED_FAILURE_RATE = 0.1;
 
     @Override
     public EInvoiceSubmissionOutcome submit(EInvoiceSubmissionRequest request) {
+        if (!simulationAllowed) return EInvoiceSubmissionOutcome.failure("e-Fatura sağlayıcısı yapılandırılmamış");
         log.info(
             "e-Fatura gonderimi (mock): tur={}, alici={}, tutar={}, KDV={}",
             request.documentType(), request.buyerName(), request.totalAmount(), request.taxAmount()

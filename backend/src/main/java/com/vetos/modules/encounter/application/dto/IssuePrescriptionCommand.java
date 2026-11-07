@@ -10,5 +10,11 @@ public record IssuePrescriptionCommand(
     UUID prescribingStaffId,
     boolean controlledSubstance,
     UUID tarbilDiseaseId,
-    List<PrescriptionItemInput> items
-) {}
+    List<PrescriptionItemInput> items,
+    AllergyAcknowledgement allergy
+) {
+    public IssuePrescriptionCommand(UUID patientId, UUID encounterId, UUID prescribingStaffId, boolean controlledSubstance,
+                                    UUID tarbilDiseaseId, List<PrescriptionItemInput> items) {
+        this(patientId, encounterId, prescribingStaffId, controlledSubstance, tarbilDiseaseId, items, null);
+    }
+}

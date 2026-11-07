@@ -1,0 +1,264 @@
+package com.vetos.modules.consentform.application;
+
+import com.vetos.modules.consentform.application.dto.CreateSignedFormCommand;
+import com.vetos.modules.consentform.application.dto.SignerInput;
+import com.vetos.modules.consentform.domain.*;
+import com.vetos.modules.consentform.domain.exception.*;
+import com.vetos.modules.patient.domain.OwnerLookupPort;
+import com.vetos.modules.patient.domain.OwnerSummary;
+import com.vetos.modules.patient.domain.PatientLookupPort;
+import com.vetos.modules.patient.domain.PatientSummary;
+import com.vetos.platform.storage.FileStoragePort;
+import com.vetos.platform.tenancy.TenantContext;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+
+import java.util.Base64;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
+class SignedFormUseCasesTest {
+
+    private static final byte[] PNG = {(byte) 0x89, 0x50, 0x4E, 0x47, 13, 10, 26, 10, 1, 2, 3};
+
+    private final UUID tenantId = UUID.randomUUID();
+    private final UUID staffId = UUID.randomUUID();
+    private final UUID patientId = UUID.randomUUID();
+    private final UUID ownerId = UUID.randomUUID();
+
+    @Mock FormTemplateRepository templateRepository;
+    @Mock SignedFormRepository signedFormRepository;
+    @Mock PatientLookupPort patientLookupPort;
+    @Mock OwnerLookupPort ownerLookupPort;
+    @Mock FileStoragePort fileStoragePort;
+    @Mock com.vetos.modules.encounter.domain.EncounterLookupPort encounterLookupPort;
+
+    private FormTemplate template;
+    private CreateSignedFormUseCase useCase;
+
+    @BeforeEach
+    void setUp() {
+        TenantContext.set(tenantId);
+        FormTemplateContent content = new FormTemplateContent("Anestezi Onamı", List.of(new FormSection("Bölüm", List.of(
+            new FormItem(FormItemType.SHORT_TEXT, "ad", "Ad", null, true, null, null, null, false),
+            new FormItem(FormItemType.CHOICE, "tur", "Tür", null, true, null, null, List.of("Evet", "Hayır"), false),
+            new FormItem(FormItemType.SIGNATURE, "imza", "İmza", null, true, null, null, null, false)
+        ))));
+        template = FormTemplate.create(tenantId, "Anestezi Onamı", FormTemplateContentCodec.toJson(content), null, staffId);
+        when(templateRepository.findById(any())).thenReturn(Optional.of(template));
+        when(patientLookupPort.findSummaryById(patientId)).thenReturn(new PatientSummary(patientId, "Pamuk", ownerId, "Kedi"));
+        when(ownerLookupPort.findSummaryById(ownerId))
+            .thenReturn(new OwnerSummary(ownerId, "Ayşe Yılmaz", null, null, null, null, null, false, false));
+        when(fileStoragePort.store(any(), any())).thenReturn("ref-1");
+        when(signedFormRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        useCase = new CreateSignedFormUseCase(templateRepository, signedFormRepository, patientLookupPort,
+            ownerLookupPort, fileStoragePort, encounterLookupPort);
+    }
+
+    @AfterEach
+    void clearTenant() { TenantContext.clear(); }
+
+    private CreateSignedFormCommand command(Map<String, Object> values, SignerInput signer, String sigBase64) {
+        return new CreateSignedFormCommand(UUID.randomUUID(), patientId, null, values, signer, sigBase64, "10.0.0.5", "UA/1.0");
+    }
+
+    private static String b64(byte[] b) { return Base64.getEncoder().encodeToString(b); }
+
+    private static final Map<String, Object> OK_VALUES = Map.of("ad", "Pamuk", "tur", List.of("Evet"));
+    private static final SignerInput OWNER_SIGNER = new SignerInput(SignerType.OWNER, "Istemci Adi", null, null);
+
+    private SignedForm savedForm() {
+        ArgumentCaptor<SignedForm> captor = ArgumentCaptor.forClass(SignedForm.class);
+        verify(signedFormRepository).save(captor.capture());
+        return captor.getValue();
+    }
+
+    @Test
+    void should_storeSnapshotValuesSignatureAndDigest() {
+        useCase.execute(staffId, command(OK_VALUES, OWNER_SIGNER, b64(PNG)));
+
+        SignedForm f = savedForm();
+        assertThat(f.getTemplateSnapshot()).isEqualTo(template.getContent());
+        assertThat(f.getValuesJson()).isEqualTo("{\"ad\":\"Pamuk\",\"tur\":[\"Evet\"]}");
+        assertThat(f.getSignatureStorageRef()).isEqualTo("ref-1");
+        verify(fileStoragePort).store(eq(PNG), eq("image/png"));
+        String signerJson = SignedFormValues.signerJson(SignerType.OWNER, "Ayşe Yılmaz", null, null);
+        String metadataJson = SignedFormValues.metadataJson(f.getTemplateId(), f.getPatientId(), f.getOwnerId(),
+            f.getEncounterId(), f.getSignedAt(), f.getSignedBy(), f.getClientIp(), f.getUserAgent());
+        assertThat(f.getContentDigest()).isEqualTo(
+            SignedFormDigest.compute(template.getContent(), f.getValuesJson(), signerJson, metadataJson, PNG))
+            .matches("[0-9a-f]{64}");
+        assertThat(f.getSignedAt()).isEqualTo(f.getSignedAt().truncatedTo(java.time.temporal.ChronoUnit.MILLIS));
+        assertThat(f.getClientIp()).isEqualTo("10.0.0.5");
+        assertThat(f.getUserAgent()).isEqualTo("UA/1.0");
+        assertThat(f.getSignedBy()).isEqualTo(staffId);
+        assertThat(f.getTenantId()).isEqualTo(tenantId);
+    }
+
+    @Test
+    void should_takeOwnerFromPatient_notFromClient() {
+        useCase.execute(staffId, command(OK_VALUES, OWNER_SIGNER, b64(PNG)));
+
+        SignedForm f = savedForm();
+        assertThat(f.getOwnerId()).isEqualTo(ownerId);
+        assertThat(f.getSignerName()).isEqualTo("Ayşe Yılmaz");
+    }
+
+    @Test
+    void should_writeValuesInTemplateOrder_notClientOrder() {
+        Map<String, Object> reversed = new java.util.LinkedHashMap<>();
+        reversed.put("tur", "Hayır");
+        reversed.put("ad", "Pamuk");
+
+        useCase.execute(staffId, command(reversed, OWNER_SIGNER, b64(PNG)));
+
+        assertThat(savedForm().getValuesJson()).isEqualTo("{\"ad\":\"Pamuk\",\"tur\":[\"Hayır\"]}");
+    }
+
+    @Test
+    void should_truncateUserAgentTo500() {
+        CreateSignedFormCommand c = new CreateSignedFormCommand(UUID.randomUUID(), patientId, null, OK_VALUES,
+            OWNER_SIGNER, b64(PNG), "1.1.1.1", "x".repeat(900));
+
+        useCase.execute(staffId, c);
+
+        assertThat(savedForm().getUserAgent()).hasSize(500);
+    }
+
+    @Test
+    void should_reject_missingRequiredField() {
+        assertThatThrownBy(() -> useCase.execute(staffId, command(Map.of("tur", List.of("Evet")), OWNER_SIGNER, b64(PNG))))
+            .isInstanceOf(InvalidSignedFormValuesException.class).hasMessageContaining("Ad");
+        assertThatThrownBy(() -> useCase.execute(staffId, command(Map.of("ad", "Pamuk"), OWNER_SIGNER, b64(PNG))))
+            .isInstanceOf(InvalidSignedFormValuesException.class).hasMessageContaining("Tür");
+        verify(signedFormRepository, never()).save(any());
+    }
+
+    @Test
+    void should_reject_unknownCodeAndBadChoice() {
+        assertThatThrownBy(() -> useCase.execute(staffId,
+            command(Map.of("ad", "Pamuk", "tur", List.of("Evet"), "yok", "x"), OWNER_SIGNER, b64(PNG))))
+            .isInstanceOf(InvalidSignedFormValuesException.class);
+        assertThatThrownBy(() -> useCase.execute(staffId,
+            command(Map.of("ad", "Pamuk", "tur", List.of("Belki")), OWNER_SIGNER, b64(PNG))))
+            .isInstanceOf(InvalidSignedFormValuesException.class);
+        assertThatThrownBy(() -> useCase.execute(staffId,
+            command(Map.of("ad", "Pamuk", "tur", List.of("Evet", "Hayır")), OWNER_SIGNER, b64(PNG))))
+            .isInstanceOf(InvalidSignedFormValuesException.class);
+    }
+
+    @Test
+    void should_reject_nonPngSignature() {
+        byte[] jpeg = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, 1, 2, 3};
+        assertThatThrownBy(() -> useCase.execute(staffId, command(OK_VALUES, OWNER_SIGNER, b64(jpeg))))
+            .isInstanceOf(InvalidSignatureException.class);
+        assertThatThrownBy(() -> useCase.execute(staffId, command(OK_VALUES, OWNER_SIGNER, "%%%not-base64%%%")))
+            .isInstanceOf(InvalidSignatureException.class);
+        byte[] big = new byte[200 * 1024 + 1];
+        System.arraycopy(PNG, 0, big, 0, PNG.length);
+        assertThatThrownBy(() -> useCase.execute(staffId, command(OK_VALUES, OWNER_SIGNER, b64(big))))
+            .isInstanceOf(InvalidSignatureException.class);
+        verify(fileStoragePort, never()).store(any(), any());
+        verify(signedFormRepository, never()).save(any());
+    }
+
+    @Test
+    void should_reject_archivedTemplate() {
+        template.archive(staffId);
+
+        assertThatThrownBy(() -> useCase.execute(staffId, command(OK_VALUES, OWNER_SIGNER, b64(PNG))))
+            .isInstanceOf(FormTemplateArchivedException.class);
+        verify(signedFormRepository, never()).save(any());
+    }
+
+    @Test
+    void should_require_name_for_otherSigner() {
+        assertThatThrownBy(() -> useCase.execute(staffId,
+            command(OK_VALUES, new SignerInput(SignerType.OTHER, "  ", null, null), b64(PNG))))
+            .isInstanceOf(InvalidSignedFormValuesException.class);
+        assertThatThrownBy(() -> useCase.execute(staffId,
+            command(OK_VALUES, new SignerInput(SignerType.OTHER, "Veli", "123", null), b64(PNG))))
+            .isInstanceOf(InvalidSignedFormValuesException.class);
+
+        useCase.execute(staffId, command(OK_VALUES, new SignerInput(SignerType.OTHER, "Veli Kaya", "12345678901", "555"), b64(PNG)));
+        SignedForm f = savedForm();
+        assertThat(f.getSignerName()).isEqualTo("Veli Kaya");
+        assertThat(f.getSignerType()).isEqualTo(SignerType.OTHER);
+        assertThat(f.getSignerNationalId()).isEqualTo("12345678901");
+        verify(ownerLookupPort, never()).findSummaryById(any());
+    }
+
+    @Test
+    void void_should_requireReason_and_rejectTwice() {
+        SignedForm f = SignedForm.create(tenantId, UUID.randomUUID(), "T", "{}", "{}", "r", patientId, ownerId, null,
+            SignerType.OWNER, "A", null, null, staffId, java.time.Instant.now(), null, null, "d");
+        UUID id = UUID.randomUUID();
+        when(signedFormRepository.findById(id)).thenReturn(Optional.of(f));
+        VoidSignedFormUseCase voidUseCase = new VoidSignedFormUseCase(signedFormRepository);
+
+        assertThatThrownBy(() -> voidUseCase.execute(staffId, id, " ")).isInstanceOf(InvalidSignedFormValuesException.class);
+        assertThat(f.getStatus()).isEqualTo(SignedFormStatus.VALID);
+
+        voidUseCase.execute(staffId, id, "Yanlış hasta");
+        assertThat(f.getStatus()).isEqualTo(SignedFormStatus.VOIDED);
+        assertThat(f.getVoidReason()).isEqualTo("Yanlış hasta");
+        assertThat(f.getVoidedBy()).isEqualTo(staffId);
+
+        assertThatThrownBy(() -> voidUseCase.execute(staffId, id, "Tekrar"))
+            .isInstanceOf(SignedFormAlreadyVoidedException.class);
+    }
+
+    @Test
+    void should_reject_encounterOfOtherPatient_orMissing() {
+        UUID enc = UUID.randomUUID();
+        when(encounterLookupPort.findSummaryById(enc)).thenReturn(new com.vetos.modules.encounter.domain.EncounterSummary(
+            enc, UUID.randomUUID(), staffId, null));
+        CreateSignedFormCommand other = new CreateSignedFormCommand(UUID.randomUUID(), patientId, enc, OK_VALUES,
+            OWNER_SIGNER, b64(PNG), null, null);
+        assertThatThrownBy(() -> useCase.execute(staffId, other)).isInstanceOf(InvalidEncounterException.class);
+
+        UUID missing = UUID.randomUUID();
+        when(encounterLookupPort.findSummaryById(missing))
+            .thenThrow(new com.vetos.modules.encounter.domain.exception.EncounterNotFoundException(missing));
+        CreateSignedFormCommand gone = new CreateSignedFormCommand(UUID.randomUUID(), patientId, missing, OK_VALUES,
+            OWNER_SIGNER, b64(PNG), null, null);
+        assertThatThrownBy(() -> useCase.execute(staffId, gone)).isInstanceOf(InvalidEncounterException.class)
+            .extracting("errorCode").isEqualTo("INVALID_ENCOUNTER");
+        verify(signedFormRepository, never()).save(any());
+    }
+
+    @Test
+    void should_accept_encounterOfSamePatient() {
+        UUID enc = UUID.randomUUID();
+        when(encounterLookupPort.findSummaryById(enc)).thenReturn(new com.vetos.modules.encounter.domain.EncounterSummary(
+            enc, patientId, staffId, null));
+
+        useCase.execute(staffId, new CreateSignedFormCommand(UUID.randomUUID(), patientId, enc, OK_VALUES,
+            OWNER_SIGNER, b64(PNG), null, null));
+
+        assertThat(savedForm().getEncounterId()).isEqualTo(enc);
+    }
+
+    @Test
+    void list_should_requireFilter() {
+        assertThatThrownBy(() -> new ListSignedFormsUseCase(signedFormRepository).execute(null, null))
+            .isInstanceOf(InvalidSignedFormValuesException.class);
+    }
+}

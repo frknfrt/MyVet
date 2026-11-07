@@ -41,6 +41,7 @@ public class EncountersController {
     private final CancelEncounterUseCase cancelEncounterUseCase;
     private final GetEncounterUseCase getEncounterUseCase;
     private final ListEncountersByPatientUseCase listEncountersByPatientUseCase;
+    private final ListOpenEncountersUseCase listOpenEncountersUseCase;
     private final FindEncounterByAppointmentUseCase findEncounterByAppointmentUseCase;
     private final RecordInventoryUsageUseCase recordInventoryUsageUseCase;
     private final ListInventoryUsageUseCase listInventoryUsageUseCase;
@@ -69,6 +70,13 @@ public class EncountersController {
     @PreAuthorize("hasAnyRole('VET', 'TECHNICIAN', 'ADMIN')")
     public List<EncounterResponse> listByPatient(@RequestParam UUID patientId) {
         return listEncountersByPatientUseCase.execute(patientId).stream().map(EncounterResponse::from).toList();
+    }
+
+    /** Klinikteki acik (taslak) muayeneler, en eskisi once -- Muayeneler sayfasi. */
+    @GetMapping("/open")
+    @PreAuthorize("hasAnyRole('VET', 'TECHNICIAN', 'ADMIN')")
+    public List<EncounterResponse> listOpen() {
+        return listOpenEncountersUseCase.execute().stream().map(EncounterResponse::from).toList();
     }
 
     @GetMapping("/by-appointment/{appointmentId}")
@@ -116,7 +124,8 @@ public class EncountersController {
     @PostMapping("/{id}/materials")
     @PreAuthorize("hasAnyRole('VET', 'ADMIN')")
     public ResponseEntity<Void> recordMaterial(@PathVariable UUID id, @RequestBody @Valid RecordInventoryUsageRequest request) {
-        UUID usageId = recordInventoryUsageUseCase.execute(id, request.inventoryItemId(), request.quantity());
+        UUID usageId = recordInventoryUsageUseCase.execute(id, request.inventoryItemId(), request.quantity(),
+            com.vetos.modules.encounter.application.dto.AllergyAcknowledgement.of(request.allergyAcknowledged(), request.allergyOverrideReason()));
         return ResponseEntity.created(java.net.URI.create("/api/v1/encounters/" + id + "/materials/" + usageId)).build();
     }
 

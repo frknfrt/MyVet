@@ -22,7 +22,7 @@ const PROFILE: PatientProfile = {
   microchipNumber: null, passportNumber: null, weightKg: null, photoUrl: null, color: null, temperament: null,
   distinguishingMarks: null, aggressive: false, bloodType: null, foodBrand: null, criticalAlert: null, notes: null,
   protocolNumber: null, rabiesTag: null, status: 'ACTIVE', ownerId: 'o1',
-  ownerFullName: 'Ayşe Yılmaz', ownerPhone: '5550000000',
+  ownerFullName: 'Ayşe Yılmaz', ownerPhone: '5550000000', photoVersion: null,
 };
 
 let container: HTMLDivElement;

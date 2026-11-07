@@ -36,6 +36,7 @@ public class IssuePrescriptionUseCase {
     private final EncounterRepository encounterRepository;
     private final DomainEventPublisher eventPublisher;
     private final AuditPort auditPort;
+    private final DrugAllergyGuard drugAllergyGuard;
 
     @Transactional
     public UUID execute(IssuePrescriptionCommand command) {
@@ -59,6 +60,7 @@ public class IssuePrescriptionUseCase {
             }
             encounter.rejectIfCancelled();
         }
+        drugAllergyGuard.enforce(command.patientId(), drugLabels(command.items()), command.allergy());
         Prescription prescription = prescriptionRepository.save(Prescription.issue(
             TenantContext.current(), command.patientId(), command.encounterId(),
             command.prescribingStaffId(), command.controlledSubstance(), command.tarbilDiseaseId()
@@ -71,6 +73,16 @@ public class IssuePrescriptionUseCase {
         auditPort.record(AuditRecord.of(AuditAction.PRESCRIPTION_ISSUED, "PRESCRIPTION", prescription.getId(),
             AuditLabels.shortId(prescription.getId()), command.items().size() + " kalem"));
         return prescription.getId();
+    }
+
+    /** Katalog ilaclari etken maddesiyle, stok kalemleri hem stoktaki hem recetedeki adiyla. */
+    private java.util.List<String> drugLabels(java.util.List<PrescriptionItemInput> items) {
+        java.util.List<UUID> drugIds = items.stream().map(PrescriptionItemInput::drugId).filter(java.util.Objects::nonNull).toList();
+        java.util.List<UUID> stockIds = items.stream().map(PrescriptionItemInput::inventoryItemId).filter(java.util.Objects::nonNull).toList();
+        return java.util.stream.Stream.concat(
+            drugAllergyGuard.labels(drugIds, stockIds).stream(),
+            items.stream().map(PrescriptionItemInput::drugName).filter(n -> n != null && !n.isBlank()).map(String::trim)
+        ).distinct().toList();
     }
 
     /**

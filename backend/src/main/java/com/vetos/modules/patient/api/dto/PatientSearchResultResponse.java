@@ -13,12 +13,13 @@ public record PatientSearchResultResponse(
     PatientStatus status,
     UUID ownerId,
     String ownerFullName,
-    String ownerPhone
+    String ownerPhone,
+    String photoVersion
 ) {
     public static PatientSearchResultResponse from(PatientSearchResult result) {
         return new PatientSearchResultResponse(
             result.patientId(), result.patientName(), result.speciesName(), result.breedName(), result.status(),
-            result.ownerId(), result.ownerFullName(), result.ownerPhone()
+            result.ownerId(), result.ownerFullName(), result.ownerPhone(), result.photoVersion()
         );
     }
 }

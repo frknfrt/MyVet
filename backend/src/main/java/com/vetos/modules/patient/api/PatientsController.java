@@ -8,10 +8,15 @@ import com.vetos.modules.patient.application.dto.UpdatePatientIdentificationComm
 import com.vetos.platform.tenancy.TenantContext;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,6 +32,9 @@ public class PatientsController {
     private final MarkPatientDeceasedUseCase markPatientDeceasedUseCase;
     private final UpdatePatientIdentificationUseCase updatePatientIdentificationUseCase;
     private final GetPatientGrowthSummaryUseCase getPatientGrowthSummaryUseCase;
+    private final UploadPatientPhotoUseCase uploadPatientPhotoUseCase;
+    private final RemovePatientPhotoUseCase removePatientPhotoUseCase;
+    private final GetPatientPhotoUseCase getPatientPhotoUseCase;
 
     @PostMapping
     @PreAuthorize("hasAnyRole('VET', 'RECEPTIONIST', 'ADMIN')")
@@ -80,5 +88,32 @@ public class PatientsController {
         updatePatientIdentificationUseCase.execute(new UpdatePatientIdentificationCommand(
             id, request.microchipNumber(), request.passportNumber()
         ));
+    }
+
+    @PutMapping("/{id}/photo")
+    @PreAuthorize("hasAnyRole('VET', 'RECEPTIONIST', 'ADMIN')")
+    public PatientPhotoResponse uploadPhoto(@PathVariable UUID id, @RequestParam("file") MultipartFile file) {
+        try {
+            return new PatientPhotoResponse(uploadPatientPhotoUseCase.execute(id, file.getBytes()));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    @DeleteMapping("/{id}/photo")
+    @PreAuthorize("hasAnyRole('VET', 'RECEPTIONIST', 'ADMIN')")
+    public ResponseEntity<Void> removePhoto(@PathVariable UUID id) {
+        removePatientPhotoUseCase.execute(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // URL ?v=<photoVersion> ile surumlenir; bu yuzden degismez onbellek verilir.
+    @GetMapping("/{id}/photo")
+    public ResponseEntity<ByteArrayResource> getPhoto(@PathVariable UUID id) {
+        var photo = getPatientPhotoUseCase.execute(id);
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType(photo.contentType()))
+            .header("Cache-Control", "private, max-age=31536000, immutable")
+            .body(new ByteArrayResource(photo.content()));
     }
 }

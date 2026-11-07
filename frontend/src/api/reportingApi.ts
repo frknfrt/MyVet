@@ -66,5 +66,5 @@ export const reportingApi = {
     apiClient.get<BranchComparisonLine[]>(`/api/v1/invoices/reports/branch-comparison${buildQuery(filters)}`),
   branchComparisonExportUrl: (filters: ReportFilters) =>
     `${API_BASE_URL}/api/v1/invoices/reports/branch-comparison/export${buildQuery(filters)}`,
-  authHeader: () => apiClient.authHeader(),
+  fetchFile: (url: string) => apiClient.fetchFile(url),
 };

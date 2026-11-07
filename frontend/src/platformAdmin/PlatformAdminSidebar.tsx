@@ -174,7 +174,8 @@ export function PlatformAdminSidebar({ userName, userInitials, onLogout, isOpen,
         {NAV_ITEMS.map((item) => (
           <NavLink
             key={item.path}
-            to={item.path}
+            // Tam yol: React Router 7'de '/platform-admin/*' icindeki goreli link acik sayfanin altina cozuluyor.
+            to={`/platform-admin/${item.path}`}
             onClick={onClose}
             className={({ isActive }) => [styles.navItem, isActive && styles.active].filter(Boolean).join(' ')}
           >

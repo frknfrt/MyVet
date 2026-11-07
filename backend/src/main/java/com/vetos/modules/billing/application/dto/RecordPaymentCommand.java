@@ -5,4 +5,8 @@ import com.vetos.modules.billing.domain.PaymentMethod;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-public record RecordPaymentCommand(UUID invoiceId, PaymentMethod method, BigDecimal amount, String pspRef) {}
+public record RecordPaymentCommand(UUID invoiceId, PaymentMethod method, BigDecimal amount, String pspRef, UUID requestId) {
+    public RecordPaymentCommand(UUID invoiceId, PaymentMethod method, BigDecimal amount, String pspRef) {
+        this(invoiceId, method, amount, pspRef, null);
+    }
+}

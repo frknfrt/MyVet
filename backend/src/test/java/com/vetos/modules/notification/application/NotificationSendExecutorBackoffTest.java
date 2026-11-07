@@ -22,7 +22,7 @@ class NotificationSendExecutorBackoffTest {
     @Test
     void should_scheduleShortBackoff_when_firstFailure() {
         NotificationSendExecutor executor =
-            new NotificationSendExecutor(notificationLogRepository, notificationSendPort, tenantLookupPort);
+            new NotificationSendExecutor(notificationLogRepository, notificationSendPort, tenantLookupPort, null);
         Instant before = Instant.now();
 
         Instant nextRetry = executor.computeNextRetryAt(1);
@@ -33,7 +33,7 @@ class NotificationSendExecutorBackoffTest {
     @Test
     void should_scheduleLongBackoff_when_fourthFailure() {
         NotificationSendExecutor executor =
-            new NotificationSendExecutor(notificationLogRepository, notificationSendPort, tenantLookupPort);
+            new NotificationSendExecutor(notificationLogRepository, notificationSendPort, tenantLookupPort, null);
         Instant before = Instant.now();
 
         Instant nextRetry = executor.computeNextRetryAt(4);
@@ -44,7 +44,7 @@ class NotificationSendExecutorBackoffTest {
     @Test
     void should_returnNull_when_fifthFailure_automaticRetriesExhausted() {
         NotificationSendExecutor executor =
-            new NotificationSendExecutor(notificationLogRepository, notificationSendPort, tenantLookupPort);
+            new NotificationSendExecutor(notificationLogRepository, notificationSendPort, tenantLookupPort, null);
 
         Instant nextRetry = executor.computeNextRetryAt(5);
 

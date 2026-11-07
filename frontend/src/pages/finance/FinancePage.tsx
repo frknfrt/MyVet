@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AppShell } from '../../components/layout/AppShell';
 import { billingApi, InvoiceSummary, OwnerBalance } from '../../api/billingApi';
 import { Button } from '../../components/ui/Button';
@@ -15,6 +15,8 @@ type Tab = 'invoices' | 'cash-register' | 'debtors';
 export function FinancePage() {
   const canUseStock = useFeatures().hasFeature('INVENTORY');
   const [tab, setTab] = useState<Tab>('invoices');
+  const [page, setPage] = useState(0);
+  const request = useRef(0);
   const [invoices, setInvoices] = useState<InvoiceSummary[]>([]);
   const [debtors, setDebtors] = useState<OwnerBalance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,10 +26,10 @@ export function FinancePage() {
 
   function loadInvoices() {
     setLoading(true);
-    billingApi
-      .listInvoices()
-      .then(setInvoices)
-      .finally(() => setLoading(false));
+    const generation = ++request.current;
+    billingApi.listInvoices(page)
+      .then(rows => { if (request.current === generation) setInvoices(rows); })
+      .finally(() => { if (request.current === generation) setLoading(false); });
   }
 
   function loadDebtors() {
@@ -37,7 +39,7 @@ export function FinancePage() {
   useEffect(() => {
     if (tab === 'invoices') loadInvoices();
     if (tab === 'debtors') loadDebtors();
-  }, [tab]);
+  }, [tab, page]);
 
   return (
     <AppShell>
@@ -102,6 +104,13 @@ export function FinancePage() {
         </div>
       )}
 
+      {tab === 'invoices' && (page > 0 || invoices.length === 50) && (
+        <nav aria-label="Fatura sayfaları">
+          <Button disabled={loading || page === 0} onClick={() => setPage(page - 1)}>Önceki</Button>
+          <span> Sayfa {page + 1} </span>
+          <Button disabled={loading || invoices.length < 50} onClick={() => setPage(page + 1)}>Sonraki</Button>
+        </nav>
+      )}
       {tab === 'cash-register' && <CashRegisterPanel />}
 
       {tab === 'debtors' && (

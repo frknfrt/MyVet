@@ -13,21 +13,27 @@ import { patientApi, PatientProfile } from '../../api/patientApi';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { LineChart } from '../../components/ui/LineChart';
-import { colorFor, initialsOf } from '../dashboard/avatarColor';
+import { PatientAvatar } from '../../components/patient/PatientAvatar';
 import { ageLabelFrom, formatDate } from '../encounter/ageUtils';
 import { EncounterStatusBadge } from '../encounter/encounterStatus';
+import { LegacyDataCard } from '../../components/legacy/LegacyDataCard';
 import { ImagingRecordDetailModal } from '../imaging/ImagingRecordDetailModal';
 import { ImagingStatusBadge, MODALITY_LABELS } from '../imaging/imagingStatus';
 import { LabResultDetailModal } from '../laboratory/LabResultDetailModal';
 import { LabResultStatusBadge } from '../laboratory/labResultStatus';
 import { VaccinationStatusBadge } from '../vaccinations/vaccinationStatus';
+import { FillFormButton } from '../forms/FillFormButton';
+import { SignedFormsList } from '../forms/SignedFormsList';
+import { FORM_ROLES } from '../forms/formRoles';
 import { PatientEditModal } from './PatientEditModal';
+import { PatientPhotoMenu } from './PatientPhotoMenu';
+import { PhotoUploadFailedNotice } from './PhotoUploadFailedNotice';
 import { buildPatientTimeline, buildWeightTrend, shortDateLabel, TimelineEntry } from './patientTimeline';
 import { PatientStatusBadge } from './statusBadge';
 import { useFeatures } from '../../auth/FeatureContext';
 import styles from './PatientDetailPage.module.css';
 
-type Tab = 'genel-bakis' | 'muayeneler' | 'asilar' | 'receteler' | 'lab' | 'goruntuleme';
+type Tab = 'genel-bakis' | 'muayeneler' | 'asilar' | 'receteler' | 'lab' | 'goruntuleme' | 'formlar';
 
 const TIMELINE_TYPE_LABELS: Record<TimelineEntry['type'], string> = {
   encounter: 'Muayene',
@@ -62,9 +68,11 @@ export function PatientDetailPage() {
   // PatientsController /patients yazma -- VET/RECEPTIONIST/ADMIN (TECHNICIAN yok).
   const canWritePatient = session ? ['VET', 'RECEPTIONIST', 'ADMIN'].includes(session.role) : false;
   // EncountersController POST /encounters -- sadece VET/ADMIN.
+  const canForms = session ? FORM_ROLES.includes(session.role) : false;
   const canStartEncounter = session?.role === 'VET' || session?.role === 'ADMIN';
 
   const [profile, setProfile] = useState<PatientProfile | null>(null);
+  const [photoMenuOpen, setPhotoMenuOpen] = useState(false);
   const [tab, setTab] = useState<Tab>('genel-bakis');
   const [encounters, setEncounters] = useState<EncounterDetail[]>([]);
   const [vaccinations, setVaccinations] = useState<VaccinationScheduleItem[] | null>(null);
@@ -163,11 +171,33 @@ export function PatientDetailPage() {
 
       {profile.criticalAlert && <div className={styles.criticalAlert}>⚠ {profile.criticalAlert}</div>}
       {error && <div className={styles.errorBanner}>{error}</div>}
+      <PhotoUploadFailedNotice />
 
       <div className={styles.headerCard}>
         <div className={styles.headerTop}>
-          <div className={styles.avatar} style={{ background: colorFor(profile.id) }}>
-            {initialsOf(profile.name)}
+          <div className={styles.avatarWrap}>
+            <PatientAvatar patientId={profile.id} name={profile.name} photoVersion={profile.photoVersion} size={64} />
+            {canWritePatient && (
+              <button
+                type="button"
+                className={styles.photoBadge}
+                aria-label="Fotoğrafı değiştir"
+                onClick={() => setPhotoMenuOpen((o) => !o)}
+              >
+                📷
+              </button>
+            )}
+            {canWritePatient && photoMenuOpen && (
+              <PatientPhotoMenu
+                patientId={profile.id}
+                hasPhoto={!!profile.photoVersion}
+                onClose={() => setPhotoMenuOpen(false)}
+                onChanged={(photoVersion) => {
+                  setProfile((p) => (p ? { ...p, photoVersion } : p));
+                  setPhotoMenuOpen(false);
+                }}
+              />
+            )}
           </div>
           <div className={styles.identity}>
             <div className={styles.nameRow}>
@@ -186,6 +216,7 @@ export function PatientDetailPage() {
                 Düzenle
               </Button>
             )}
+            {profile.status === 'ACTIVE' && patientId && <FillFormButton patientId={patientId} />}
             {profile.status === 'ACTIVE' && canStartEncounter && (
               <Button variant="primary" onClick={handleStartEncounter} disabled={startingEncounter}>
                 {startingEncounter ? 'Açılıyor...' : draftEncounterId ? 'Muayeneye Devam Et' : 'Muayene Başlat'}
@@ -230,6 +261,8 @@ export function PatientDetailPage() {
         )}
       </div>
 
+      {patientId && <LegacyDataCard entityType="PATIENT" id={patientId} />}
+
       <div className={styles.tabs}>
         <div className={`${styles.tab} ${tab === 'genel-bakis' ? styles.tabActive : ''}`} onClick={() => setTab('genel-bakis')}>
           Genel Bakış
@@ -251,6 +284,11 @@ export function PatientDetailPage() {
         {canImaging && (
           <div className={`${styles.tab} ${tab === 'goruntuleme' ? styles.tabActive : ''}`} onClick={() => setTab('goruntuleme')}>
             Görüntüleme
+          </div>
+        )}
+        {canForms && (
+          <div className={`${styles.tab} ${tab === 'formlar' ? styles.tabActive : ''}`} onClick={() => setTab('formlar')}>
+            Formlar
           </div>
         )}
       </div>
@@ -496,6 +534,8 @@ export function PatientDetailPage() {
           )}
         </div>
       )}
+
+      {tab === 'formlar' && canForms && patientId && <SignedFormsList patientId={patientId} />}
 
       <PatientEditModal
         open={editOpen}

@@ -41,7 +41,8 @@ public class PrescriptionsController {
             request.items().stream()
                 .map(i -> new PrescriptionItemInput(i.drugId(), i.drugName(), i.dosage(), i.frequency(), i.durationDays(), i.route(),
                     i.inventoryItemId(), i.stockQuantity()))
-                .toList()
+                .toList(),
+            com.vetos.modules.encounter.application.dto.AllergyAcknowledgement.of(request.allergyAcknowledged(), request.allergyOverrideReason())
         ));
         return ResponseEntity.created(java.net.URI.create("/api/v1/prescriptions/" + id)).build();
     }
