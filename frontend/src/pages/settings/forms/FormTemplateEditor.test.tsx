@@ -237,4 +237,24 @@ describe('FormTemplateEditor', () => {
     expect(container.textContent).not.toContain('Seçenekler (her satıra bir seçenek)');
   });
 
+  it('view identities survive insertion and automatic code edits without changing input nodes', async () => {
+    await render();
+    const signature = [...container.querySelectorAll<HTMLInputElement>('input[placeholder="Alan adı"]')].find(input => input.value === 'İmza')!;
+    await act(async () => btn('+ Alan ekle')!.click());
+    await act(async () => btn('Kısa metin')!.click());
+    expect([...container.querySelectorAll('input')]).toContain(signature);
+    expect(signature.value).toBe('İmza');
+    const first = container.querySelector<HTMLInputElement>('input[placeholder="Alan adı"]')!;
+    await typeInto('input[placeholder="Alan adı"]', 'Yeni ad');
+    expect(container.querySelector('input[placeholder="Alan adı"]')).toBe(first);
+    expect(first.value).toBe('Yeni ad');
+  });
+
+  it.each([null, 't1'])('beforeunload warns only for an unsaved template: %s', async templateId => {
+    await render({ templateId });
+    const event = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(templateId === null);
+  });
+
 });

@@ -12,6 +12,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -27,14 +31,14 @@ class UploadImagingRecordFileUseCaseTest {
     @Mock private FileStoragePort fileStoragePort;
 
     @Test
-    void should_storeContentViaPort_and_saveFileWithReturnedRef() {
+    void should_storeContentViaPort_and_saveFileWithReturnedRef() throws IOException {
         UploadImagingRecordFileUseCase useCase = new UploadImagingRecordFileUseCase(
             imagingRecordRepository, imagingRecordFileRepository, fileStoragePort
         );
         UUID tenantId = UUID.randomUUID();
         UUID recordId = UUID.randomUUID();
         ImagingRecord record = ImagingRecord.request(tenantId, UUID.randomUUID(), UUID.randomUUID(), ImagingModality.XRAY, null, null);
-        byte[] content = "dosya-icerigi".getBytes();
+        byte[] content = pngFixture();
         when(imagingRecordRepository.findById(recordId)).thenReturn(Optional.of(record));
         when(fileStoragePort.store(content, "image/png")).thenReturn("some-storage-ref");
         when(imagingRecordFileRepository.save(org.mockito.ArgumentMatchers.any()))
@@ -48,5 +52,11 @@ class UploadImagingRecordFileUseCaseTest {
         assertThat(captor.getValue().getStorageRef()).isEqualTo("some-storage-ref");
         assertThat(captor.getValue().getFileSize()).isEqualTo(content.length);
         assertThat(captor.getValue().getFileName()).isEqualTo("xray.png");
+    }
+
+    private static byte[] pngFixture() throws IOException {
+        var out = new ByteArrayOutputStream();
+        ImageIO.write(new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB), "png", out);
+        return out.toByteArray();
     }
 }

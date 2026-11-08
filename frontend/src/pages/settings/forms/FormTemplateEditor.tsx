@@ -78,6 +78,15 @@ export function FormTemplateEditor({ initialContent, sourceImageId, templateId, 
     ),
   );
   const imageUrl = useReferenceImage(sourceImageId);
+  // View-only identities survive immutable edits without changing persisted JSON.
+  const viewKeys = useRef(new WeakMap<object, string>());
+  const viewKeySequence = useRef(0);
+  function viewKey(value: object): string {
+    let key = viewKeys.current.get(value);
+    if (!key) { key = `form-view-${++viewKeySequence.current}`; viewKeys.current.set(value, key); }
+    return key;
+  }
+
 
   // Yeni (kaydedilmemis) sablon, icerik degismese de kaybolacak bir taslaktir.
   const dirty = !busy && (templateId === null || JSON.stringify(content) !== initialJson.current);
@@ -107,7 +116,22 @@ export function FormTemplateEditor({ initialContent, sourceImageId, templateId, 
   const cleaned = useMemo(() => cleanContent(content), [content]);
 
   function mutate(fn: (draft: FormTemplateContent) => FormTemplateContent) {
-    setContent((c) => fn(c));
+    setContent(current => {
+      current.sections.forEach(section => { viewKey(section); section.items.forEach(viewKey); });
+      const next = fn(current);
+      next.sections.forEach((section, si) => {
+        const previous = current.sections[si];
+        if (!viewKeys.current.has(section) && previous && current.sections.length === next.sections.length) {
+          viewKeys.current.set(section, viewKey(previous));
+        }
+        section.items.forEach((item, ii) => {
+          if (!viewKeys.current.has(item) && previous?.items.length === section.items.length && previous.items[ii]) {
+            viewKeys.current.set(item, viewKey(previous.items[ii]));
+          }
+        });
+      });
+      return next;
+    });
     setErrors([]);
     setNotice(null);
   }
@@ -235,7 +259,7 @@ export function FormTemplateEditor({ initialContent, sourceImageId, templateId, 
       </FieldWrap>
 
       {content.sections.map((section, si) => (
-        <div key={si} className={styles.section}>
+        <div key={viewKey(section)} className={styles.section}>
           <FieldWrap label="Bölüm başlığı (isteğe bağlı)">
             <Input
               value={section.title ?? ''}
@@ -244,7 +268,7 @@ export function FormTemplateEditor({ initialContent, sourceImageId, templateId, 
           </FieldWrap>
           {section.items.map((item, ii) => (
             <FormItemEditor
-              key={ii}
+              key={viewKey(item)}
               item={item}
               sectionCodes={section.items.filter((i) => i.type !== 'TEXT_BLOCK' && i.code).map((i) => i.code as string)}
               canMoveUp={ii > 0}
