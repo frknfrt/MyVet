@@ -284,6 +284,25 @@ class ExtractFormTemplateFromImageUseCaseTest {
     }
 
     @Test
+    void should_keepAgeBindingAndForm_when_modelChoosesNumberForAge() {
+        var result = runWithField("""
+            {"type":"NUMBER","code":"yas","label":"Yaş","required":true,"binding":"patient.age","unit":"yıl"}
+            """);
+        var field = result.content().sections().get(0).items().get(0);
+        assertThat(result.content().title()).isEqualTo("Form");
+        assertThat(field.code()).isEqualTo("yas");
+        assertThat(field.label()).isEqualTo("Yaş");
+        assertThat(field.required()).isTrue();
+        assertThat(field.type()).isEqualTo(FormItemType.SHORT_TEXT);
+        assertThat(field.binding()).isEqualTo("patient.age");
+        assertThat(field.unit()).isNull();
+        assertThat(result.warnings()).anyMatch(w -> w.contains("Yaş") && w.contains("metin"));
+        assertThat(port.calls).isEqualTo(1);
+        assertThat(result.modelConnected()).isTrue();
+        verify(quota, never()).release(any(), any(), anyInt());
+    }
+
+    @Test
     void should_stripIrrelevantMetadataFromText_andPreserveItsValueDefinition() {
         var result = runWithField("""
             {"type":"SHORT_TEXT","code":"ad","label":"Hasta adı","required":true,"binding":"patient.name",

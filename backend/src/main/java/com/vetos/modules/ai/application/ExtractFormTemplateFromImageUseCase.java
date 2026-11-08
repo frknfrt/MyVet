@@ -190,7 +190,7 @@ public class ExtractFormTemplateFromImageUseCase {
         return new FormTemplateContent(raw.title(), sections);
     }
 
-    /** Ture uymayan alanlari (model sik karistirir) sessizce temizler; bilinmeyen baglanti uyari ile kaldirilir. */
+    /** Ture uymayan metadata temizlenir; yas normalizasyonu ve bilinmeyen baglantilar uyariyla bildirilir. */
     private static FormItem normalize(FormItem item, List<String> warnings) {
         FormItemType type = item.type();
         boolean block = type == FormItemType.TEXT_BLOCK;
@@ -201,6 +201,10 @@ public class ExtractFormTemplateFromImageUseCase {
             warnings.add("Bilinmeyen veri bağlantısı kaldırıldı: " + binding
                 + (item.label() != null ? " (" + item.label() + ")" : ""));
             binding = null;
+        } else if (FormBinding.PATIENT_AGE.key().equals(binding) && type == FormItemType.NUMBER) {
+            // Yas kayittan "2 yil 3 ay" gibi metin gelir; sayisal AI secimi otomatik doldurmayi bozmamali.
+            type = FormItemType.SHORT_TEXT;
+            warnings.add("Yaş alanı otomatik doldurma için metin alanına dönüştürüldü: " + item.label());
         }
         return new FormItem(
             type,

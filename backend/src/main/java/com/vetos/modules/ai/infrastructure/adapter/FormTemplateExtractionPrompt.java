@@ -39,6 +39,12 @@ final class FormTemplateExtractionPrompt {
         owner.email (e-posta), patient.name (hayvanın adı), patient.species (tür: kedi/köpek...), patient.breed \
         (ırk), patient.sex (cinsiyet), patient.age (yaş), patient.color (renk), patient.weightKg (kilo/canlı \
         ağırlık), patient.microchipNumber (mikroçip/küpe no), clinic.name (klinik/muayenehane adı), today (bugünün tarihi).
+        Alan türü ile bağlantı uyumlu olmalı:
+        - patient.age: SHORT_TEXT (yaş "2 yıl 3 ay" gibi metindir); NUMBER kullanma.
+        - patient.weightKg: NUMBER; owner.birthDate ve today: DATE.
+        - owner.phone ve owner.secondaryPhone: PHONE, SHORT_TEXT veya LONG_TEXT.
+        - patient.species, patient.breed, patient.sex, patient.color: CHOICE, SHORT_TEXT veya LONG_TEXT.
+        - Diğer bağlantılar: SHORT_TEXT veya LONG_TEXT (kimlik ve mikroçip numaraları da metindir).
         Bağlantıyı YALNIZ açıkça belli olduğunda öner, emin değilsen null bırak. Örnekler: "Hasta Sahibi/Yakını" \
         yanındaki "Adı Soyadı" → owner.fullName; "Cep Telefonu" → owner.phone; "Ev Telefonu" → owner.secondaryPhone; \
         "TC No"/"Kimlik No" → owner.nationalId; "Adresi" → owner.address; hasta bölümündeki "Adı" → patient.name; \
