@@ -79,4 +79,21 @@ describe('FormRenderer', () => {
     await render(<FormRenderer content={content} values={{}} mode="preview" />);
     expect(container.textContent).toContain('İmza alanı');
   });
+  it.each(['', '   '])('does not render an empty paragraph: %s', async text => {
+    const empty = { title: 'Form', sections: [{ title: null, items: [item({ type: 'TEXT_BLOCK', text })] }] };
+    await render(<FormRenderer content={empty} values={{}} mode="readonly" />);
+    expect(container.querySelector('p')).toBeNull();
+  });
+
+  it('preserves field DOM identity when a preceding item is inserted', async () => {
+    await render(<FormRenderer content={content} values={{ ad: 'Ali' }} mode="fill" onChange={() => {}} />);
+    const input = container.querySelector<HTMLInputElement>('input[type=text]')!;
+    const id = input.id;
+    const changed = { ...content, sections: content.sections.map((section, i) => i === 0
+      ? { ...section, items: [item({ code: 'yeni', label: 'Yeni' }), ...section.items] } : section) };
+    await act(async () => root.render(<FormRenderer content={changed} values={{ ad: 'Ali' }} mode="fill" onChange={() => {}} />));
+    expect(container.querySelector(`[id="${id}"]`)).toBe(input);
+    expect(input.value).toBe('Ali');
+  });
+
 });

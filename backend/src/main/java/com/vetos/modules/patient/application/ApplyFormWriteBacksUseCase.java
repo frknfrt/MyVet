@@ -3,6 +3,8 @@ package com.vetos.modules.patient.application;
 import com.vetos.modules.patient.application.dto.FormWriteBackCommand;
 import com.vetos.modules.patient.application.dto.FormWriteBackResult;
 import com.vetos.modules.patient.domain.Owner;
+import com.vetos.modules.patient.domain.SignedFormWriteBackLookupPort;
+import com.vetos.modules.patient.domain.SignedFormWriteBackLookupPort.InvalidSourceException;
 import com.vetos.modules.patient.domain.OwnerRepository;
 import com.vetos.modules.patient.domain.Patient;
 import com.vetos.modules.patient.domain.PatientRepository;
@@ -18,9 +20,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -33,17 +37,25 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class ApplyFormWriteBacksUseCase {
 
+    // NUMERIC(6,2): pozitif olarak saklanabilen değer ve iki basamağa yuvarlama sınırları.
+    private static final BigDecimal MAX_WEIGHT_KG = new BigDecimal("9999.99");
+    private static final BigDecimal MIN_ROUNDABLE_WEIGHT_KG = new BigDecimal("0.005");
+
     private static final Set<String> WRITABLE = Set.of(
         "owner.phone", "owner.secondaryPhone", "owner.nationalId", "owner.birthDate", "owner.address",
         "owner.email", "patient.color", "patient.weightKg", "patient.microchipNumber"
     );
 
+    private final SignedFormWriteBackLookupPort signedFormLookup;
     private final OwnerRepository ownerRepository;
     private final PatientRepository patientRepository;
     private final DomainEventPublisher eventPublisher;
 
     @Transactional
     public FormWriteBackResult execute(FormWriteBackCommand command) {
+        if (command.signedFormId() == null) {
+            throw new InvalidSourceException();
+        }
         Owner owner = ownerRepository.findById(command.ownerId())
             .orElseThrow(() -> new OwnerNotFoundException(command.ownerId()));
         Patient patient = patientRepository.findById(command.patientId())
@@ -52,7 +64,9 @@ public class ApplyFormWriteBacksUseCase {
             throw new PatientOwnerMismatchException();
         }
 
+        var allowedValues = signedFormLookup.allowedValues(command.signedFormId(), command.patientId(), command.ownerId());
         List<String> applied = new ArrayList<>();
+        Set<String> appliedBindings = new HashSet<>();
         List<FormWriteBackResult.Skipped> skipped = new ArrayList<>();
         boolean ownerChanged = false;
         boolean patientChanged = false;
@@ -65,9 +79,17 @@ public class ApplyFormWriteBacksUseCase {
                 skipped.add(new FormWriteBackResult.Skipped(binding, "yazılamaz alan"));
                 continue;
             }
+            if (appliedBindings.contains(binding)) {
+                skipped.add(new FormWriteBackResult.Skipped(binding, "tekrarlanan alan"));
+                continue;
+            }
             String value = item.value() == null ? "" : item.value().trim();
             if (value.isEmpty()) {
                 skipped.add(new FormWriteBackResult.Skipped(binding, "boş değer"));
+                continue;
+            }
+            if (!allowedValues.getOrDefault(binding, Set.of()).contains(value)) {
+                skipped.add(new FormWriteBackResult.Skipped(binding, "imzalı formda geri yazılmasına izin verilen değer değil"));
                 continue;
             }
             String error = null;
@@ -99,7 +121,7 @@ public class ApplyFormWriteBacksUseCase {
                 }
                 case "patient.color" -> patient.updateColor(value);
                 case "patient.weightKg" -> {
-                    BigDecimal weight = parsePositive(value);
+                    BigDecimal weight = parseWeight(value);
                     if (weight == null) {
                         error = "geçersiz kilo";
                     } else {
@@ -117,6 +139,7 @@ public class ApplyFormWriteBacksUseCase {
                 continue;
             }
             applied.add(binding);
+            appliedBindings.add(binding);
             if (binding.startsWith("owner.")) {
                 ownerChanged = true;
             } else {
@@ -154,11 +177,12 @@ public class ApplyFormWriteBacksUseCase {
         }
     }
 
-    private static BigDecimal parsePositive(String v) {
+    private static BigDecimal parseWeight(String v) {
         try {
             BigDecimal d = new BigDecimal(v.replace(',', '.'));
-            return d.signum() > 0 ? d : null;
-        } catch (NumberFormatException e) {
+            if (d.compareTo(MIN_ROUNDABLE_WEIGHT_KG) < 0 || d.compareTo(MAX_WEIGHT_KG) > 0) return null;
+            return d.setScale(2, RoundingMode.HALF_UP);
+        } catch (NumberFormatException | ArithmeticException e) {
             return null;
         }
     }

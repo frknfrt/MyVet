@@ -46,8 +46,12 @@ class SignedFormIntegrityTest extends TenantScopedTestSupport {
     @Autowired CreateFormTemplateUseCase createFormTemplateUseCase;
     @Autowired UpdateFormTemplateUseCase updateFormTemplateUseCase;
     @Autowired CreateSignedFormUseCase createSignedFormUseCase;
+    @Autowired GetFormTemplateUseCase getFormTemplateUseCase;
+    @Autowired com.vetos.modules.patient.domain.SignedFormWriteBackLookupPort writeBackLookup;
     @Autowired GetSignedFormUseCase getSignedFormUseCase;
     @Autowired GetSignatureImageUseCase getSignatureImageUseCase;
+    @Autowired VoidSignedFormUseCase voidSignedFormUseCase;
+    @Autowired SignedFormRepository forms;
     @Autowired ListSignedFormsUseCase listSignedFormsUseCase;
     @PersistenceContext EntityManager entityManager;
 
@@ -84,6 +88,7 @@ class SignedFormIntegrityTest extends TenantScopedTestSupport {
     void purge() {
         for (UUID t : tenants) {
             inRootSessionVoid(() -> {
+                entityManager.createNativeQuery("DELETE FROM signed_form_submissions WHERE tenant_id = :t").setParameter("t", t).executeUpdate();
                 entityManager.createNativeQuery("DELETE FROM signed_forms WHERE tenant_id = :t").setParameter("t", t).executeUpdate();
                 entityManager.createNativeQuery("DELETE FROM form_templates WHERE tenant_id = :t").setParameter("t", t).executeUpdate();
             });
@@ -105,7 +110,7 @@ class SignedFormIntegrityTest extends TenantScopedTestSupport {
     private UUID sign(UUID tenant, UUID templateId) {
         return asTenant(tenant, () -> createSignedFormUseCase.execute(staffId, new CreateSignedFormCommand(
             templateId, patientId, null, Map.of("ad", "Pamuk"),
-            new SignerInput(SignerType.OWNER, null, null, null), Base64.getEncoder().encodeToString(PNG), "127.0.0.1", "JUnit")));
+            new SignerInput(SignerType.OWNER, null, null, null), Base64.getEncoder().encodeToString(PNG), "127.0.0.1", "JUnit", getFormTemplateUseCase.execute(templateId).contentHash(), UUID.randomUUID())));
     }
 
     @Test
@@ -212,5 +217,75 @@ class SignedFormIntegrityTest extends TenantScopedTestSupport {
         assertThatThrownBy(() -> asTenant(tenantB, () -> getSignedFormUseCase.execute(formId)))
             .isInstanceOf(SignedFormNotFoundException.class);
         assertThat(asTenant(tenantB, () -> listSignedFormsUseCase.execute(patientId, null))).isEmpty();
+    }
+
+    private UUID createBoundTemplate(UUID tenant) {
+        tenants.add(tenant);
+        var bound = new FormTemplateContent("Onam", List.of(new FormSection(null, List.of(
+            new FormItem(FormItemType.PHONE, "phone", "Telefon", null, false, "owner.phone", null, null, false),
+            new FormItem(FormItemType.SHORT_TEXT, "color", "Renk", null, false, "patient.color", null, null, false),
+            new FormItem(FormItemType.SIGNATURE, "imza", "İmza", null, true, null, null, null, false)))));
+        return asTenant(tenant, () -> createFormTemplateUseCase.execute(staffId, bound, null));
+    }
+
+    private UUID signBound(UUID tenant, UUID template, SignerType signer) {
+        return asTenant(tenant, () -> createSignedFormUseCase.execute(staffId, new CreateSignedFormCommand(
+            template, patientId, null, Map.of("phone", "5551112233", "color", "Sarı"),
+            new SignerInput(signer, "Test İmzalayan", null, null), Base64.getEncoder().encodeToString(PNG),
+            "127.0.0.1", "JUnit", getFormTemplateUseCase.execute(template).contentHash(), UUID.randomUUID())));
+    }
+
+    @Test
+    void writeBackUsesSignedSnapshotAfterTemplateEdit() {
+        UUID tenant = UUID.randomUUID();
+        UUID template = createBoundTemplate(tenant);
+        UUID form = signBound(tenant, template, SignerType.OWNER);
+        asTenantVoid(tenant, () -> updateFormTemplateUseCase.execute(staffId, template, content("Yeni Şablon", "Ad")));
+        var allowed = asTenant(tenant, () -> writeBackLookup.allowedValues(form, patientId, ownerId));
+        assertThat(allowed).containsEntry("owner.phone", java.util.Set.of("5551112233"))
+            .containsEntry("patient.color", java.util.Set.of("Sarı"));
+    }
+
+    @Test
+    void writeBackRejectsOtherTenantAndWrongPatientAndLimitsOtherSigner() {
+        UUID tenant = UUID.randomUUID();
+        UUID form = signBound(tenant, createBoundTemplate(tenant), SignerType.OTHER);
+        assertThat(asTenant(tenant, () -> writeBackLookup.allowedValues(form, patientId, ownerId)))
+            .containsOnlyKeys("patient.color");
+        assertThatThrownBy(() -> asTenant(UUID.randomUUID(), () -> writeBackLookup.allowedValues(form, patientId, ownerId)))
+            .isInstanceOf(SignedFormNotFoundException.class);
+        assertThatThrownBy(() -> asTenant(tenant, () -> writeBackLookup.allowedValues(form, UUID.randomUUID(), ownerId)))
+            .isInstanceOf(com.vetos.modules.patient.domain.SignedFormWriteBackLookupPort.InvalidSourceException.class);
+    }
+
+    @Test
+    void signatureAndVoidAreNotFoundAcrossTenants_withoutChangingOriginal() {
+        UUID tenant = UUID.randomUUID();
+        UUID id = sign(tenant, createTemplate(tenant, "Form"));
+        UUID other = UUID.randomUUID();
+        assertThatThrownBy(() -> asTenant(other, () -> getSignatureImageUseCase.execute(id)))
+            .isInstanceOf(SignedFormNotFoundException.class);
+        assertThatThrownBy(() -> asTenantVoid(other, () -> voidSignedFormUseCase.execute(staffId, id, "Yetkisiz")))
+            .isInstanceOf(SignedFormNotFoundException.class);
+        assertThat(asTenant(tenant, () -> forms.findById(id).orElseThrow().getStatus())).isEqualTo(SignedFormStatus.VALID);
+        assertThat(asTenant(tenant, () -> getSignatureImageUseCase.execute(id))).isEqualTo(PNG);
+    }
+
+    @Test
+    void voidMetadataPersistsAndDoesNotAlterSignedSnapshotOrDigest() {
+        UUID tenant = UUID.randomUUID();
+        UUID id = sign(tenant, createTemplate(tenant, "Form"));
+        var before = asTenant(tenant, () -> forms.findById(id).orElseThrow());
+        asTenantVoid(tenant, () -> voidSignedFormUseCase.execute(staffId, id, "  Yanlış kayıt  "));
+        var after = asTenant(tenant, () -> forms.findById(id).orElseThrow());
+        assertThat(after.getStatus()).isEqualTo(SignedFormStatus.VOIDED);
+        assertThat(after.getVoidReason()).isEqualTo("Yanlış kayıt");
+        assertThat(after.getVoidedBy()).isEqualTo(staffId);
+        assertThat(after.getVoidedAt()).isNotNull();
+        assertThat(after.getTemplateSnapshot()).isEqualTo(before.getTemplateSnapshot());
+        assertThat(after.getContentDigest()).isEqualTo(before.getContentDigest());
+        assertThat(asTenant(tenant, () -> getSignedFormUseCase.execute(id)).integrityOk()).isTrue();
+        assertThatThrownBy(() -> asTenantVoid(tenant, () -> voidSignedFormUseCase.execute(staffId, id, "Tekrar")))
+            .isInstanceOf(com.vetos.modules.consentform.domain.exception.SignedFormAlreadyVoidedException.class);
     }
 }

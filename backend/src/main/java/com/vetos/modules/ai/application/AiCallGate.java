@@ -15,7 +15,7 @@ import java.util.function.Supplier;
  * AI cagrilari icin esZamanlilik siniri (spec 2026-10-16 §4.1): en fazla 4 cagri, 5.'si en fazla
  * 10 sn bekler, yer acilmazsa 503 AI_BUSY. Kota ayirma bu kapinin ICINDE yapilir -- yer yoksa hak dusmez.
  * Ayni sebeple TenantRateLimitFilter'in bu istek icin dustugu dakikalik AI hakki da iade edilir
- * (bu kapidan gecen uc AI ucu, filtrenin AI havuzunu harcadigi uclarla birebir ayni).
+ * Filtrede AI havuzunu kullanan uclarda bu iade, reddedilen istegin dakika hakkini korur.
  */
 @Component
 public class AiCallGate {

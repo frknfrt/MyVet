@@ -26,7 +26,10 @@ public class TenantRateLimitFilter extends OncePerRequestFilter {
     static final Set<String> AI_GENERATION_PATHS = Set.of(
         "/api/v1/ai/soap-drafts",
         "/api/v1/ai/treatment-recommendations",
-        "/api/v1/ai/diagnosis-suggestions"
+        "/api/v1/ai/diagnosis-suggestions",
+        "/api/v1/ai/form-template-drafts",
+        "/api/v1/ai/lab-result-ocr",
+        "/api/v1/ai/imaging-findings-ocr"
     );
 
     private static final UrlPathHelper PATH_HELPER = new UrlPathHelper();

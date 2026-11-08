@@ -15,6 +15,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Map;
+import org.springframework.test.util.ReflectionTestUtils;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -126,13 +128,18 @@ class FormTemplateUseCasesTest {
         FormTemplate a = FormTemplate.create(tenantId, "A", "{}", UUID.randomUUID(), staffId);
         FormTemplate b = FormTemplate.create(tenantId, "B", "{}", null, staffId);
         when(templateRepository.findByStatusOrderByTitle(FormTemplateStatus.ACTIVE)).thenReturn(List.of(a, b));
-        when(signedFormRepository.countByTemplateId(any())).thenReturn(3L, 0L);
+        UUID aId = UUID.randomUUID(), bId = UUID.randomUUID();
+        ReflectionTestUtils.setField(a, "id", aId);
+        ReflectionTestUtils.setField(b, "id", bId);
+        when(signedFormRepository.countByTemplateIds(List.of(aId, bId))).thenReturn(Map.of(aId, 3L));
 
         List<FormTemplateSummary> result = new ListFormTemplatesUseCase(templateRepository, signedFormRepository).execute(false);
 
         assertThat(result).extracting(FormTemplateSummary::title).containsExactly("A", "B");
         assertThat(result).extracting(FormTemplateSummary::signedCount).containsExactly(3L, 0L);
         assertThat(result).extracting(FormTemplateSummary::hasSourceImage).containsExactly(true, false);
+        verify(signedFormRepository).countByTemplateIds(List.of(aId, bId));
+        verifyNoMoreInteractions(signedFormRepository);
     }
 
     @Test
@@ -140,6 +147,7 @@ class FormTemplateUseCasesTest {
         when(templateRepository.findAllByOrderByTitle()).thenReturn(List.of());
         assertThat(new ListFormTemplatesUseCase(templateRepository, signedFormRepository).execute(true)).isEmpty();
         verify(templateRepository, never()).findByStatusOrderByTitle(any());
+        verifyNoInteractions(signedFormRepository);
     }
 
     @Test
@@ -153,6 +161,7 @@ class FormTemplateUseCasesTest {
 
         assertThat(detail.clinicName()).isEqualTo("Veteriner Kliniği");
         assertThat(detail.content().title()).isEqualTo("Anestezi");
+        assertThat(detail.contentHash()).isEqualTo(t.contentHash()).matches("[a-f0-9]{64}");
     }
 
     @Test
@@ -188,5 +197,87 @@ class FormTemplateUseCasesTest {
         System.arraycopy(PNG, 0, big, 0, PNG.length);
         assertThatThrownBy(() -> useCase.execute(staffId, big)).isInstanceOf(UnsupportedFormSourceImageException.class);
         verifyNoInteractions(fileStoragePort);
+    }
+
+    private static FormTemplateContent invalidSignatureReference() {
+        return new FormTemplateContent("Form", List.of(new FormSection(null, List.of(
+            new FormItem(FormItemType.TEXT_BLOCK, null, null, "İmza: {{imza}}", false, null, null, null, false),
+            new FormItem(FormItemType.SIGNATURE, "imza", "İmza", null, true, null, null, null, false)))));
+    }
+
+    @Test
+    void create_shouldRejectSignatureReferenceWithoutSaving() {
+        assertThatThrownBy(() -> new CreateFormTemplateUseCase(templateRepository, sourceImageRepository)
+            .execute(staffId, invalidSignatureReference(), null)).isInstanceOf(InvalidFormTemplateException.class);
+        verifyNoInteractions(templateRepository, sourceImageRepository);
+    }
+
+    @Test
+    void update_shouldRejectSignatureReferenceAndPreserveExistingContent() {
+        UUID id = UUID.randomUUID();
+        var template = FormTemplate.create(tenantId, "Eski", FormTemplateContentCodec.toJson(validContent("Eski")), null, staffId);
+        String previous = template.getContent();
+        when(templateRepository.findById(id)).thenReturn(Optional.of(template));
+        assertThatThrownBy(() -> new UpdateFormTemplateUseCase(templateRepository)
+            .execute(staffId, id, invalidSignatureReference())).isInstanceOf(InvalidFormTemplateException.class);
+        assertThat(template.getContent()).isEqualTo(previous);
+        verify(templateRepository, never()).save(any());
+    }
+
+    private static FormTemplateContent duplicateChoiceContent() {
+        return new FormTemplateContent("Form", List.of(new FormSection(null, List.of(
+            new FormItem(FormItemType.CHOICE, "tercih", "Tercih", null, false, null, null, List.of("Evet", " Evet "), true),
+            new FormItem(FormItemType.SIGNATURE, "imza", "İmza", null, true, null, null, null, false)))));
+    }
+
+    @Test
+    void create_shouldRejectDuplicateChoiceWithoutSaving() {
+        assertThatThrownBy(() -> new CreateFormTemplateUseCase(templateRepository, sourceImageRepository)
+            .execute(staffId, duplicateChoiceContent(), null)).isInstanceOf(InvalidFormTemplateException.class);
+        verifyNoInteractions(templateRepository, sourceImageRepository);
+    }
+
+    @Test
+    void update_shouldRejectDuplicateChoiceAndPreservePreviousContent() {
+        UUID id = UUID.randomUUID();
+        var template = FormTemplate.create(tenantId, "Eski", FormTemplateContentCodec.toJson(validContent("Eski")), null, staffId);
+        String previous = template.getContent();
+        when(templateRepository.findById(id)).thenReturn(Optional.of(template));
+        assertThatThrownBy(() -> new UpdateFormTemplateUseCase(templateRepository)
+            .execute(staffId, id, duplicateChoiceContent())).isInstanceOf(InvalidFormTemplateException.class);
+        assertThat(template.getContent()).isEqualTo(previous);
+        verify(templateRepository, never()).save(any());
+    }
+
+    private static FormTemplateContent incompatibleBindingContent() {
+        return new FormTemplateContent("Form", List.of(new FormSection(null, List.of(
+            new FormItem(FormItemType.CHOICE, "tarih", "Tarih", null, false, "owner.birthDate", null, List.of("A", "B"), false),
+            new FormItem(FormItemType.SIGNATURE, "imza", "İmza", null, true, null, null, null, false)))));
+    }
+
+    @Test
+    void create_shouldRejectIncompatibleBindingWithoutSaving() {
+        assertThatThrownBy(() -> new CreateFormTemplateUseCase(templateRepository, sourceImageRepository)
+            .execute(staffId, incompatibleBindingContent(), null)).isInstanceOf(InvalidFormTemplateException.class);
+        verifyNoInteractions(templateRepository, sourceImageRepository);
+    }
+
+    @Test
+    void update_shouldRejectIncompatibleBindingAndPreserveContent() {
+        UUID id = UUID.randomUUID();
+        var template = FormTemplate.create(tenantId, "Eski", FormTemplateContentCodec.toJson(validContent("Eski")), null, staffId);
+        String previous = template.getContent();
+        when(templateRepository.findById(id)).thenReturn(Optional.of(template));
+        assertThatThrownBy(() -> new UpdateFormTemplateUseCase(templateRepository)
+            .execute(staffId, id, incompatibleBindingContent())).isInstanceOf(InvalidFormTemplateException.class);
+        assertThat(template.getContent()).isEqualTo(previous);
+        verify(templateRepository, never()).save(any());
+    }
+
+    @Test
+    void list_should_skipCountQuery_whenActiveListIsEmpty() {
+        when(templateRepository.findByStatusOrderByTitle(FormTemplateStatus.ACTIVE)).thenReturn(List.of());
+        assertThat(new ListFormTemplatesUseCase(templateRepository, signedFormRepository).execute(false)).isEmpty();
+        verifyNoInteractions(signedFormRepository);
     }
 }

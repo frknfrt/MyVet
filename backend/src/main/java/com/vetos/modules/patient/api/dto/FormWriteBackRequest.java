@@ -8,8 +8,8 @@ import java.util.UUID;
 public record FormWriteBackRequest(
     @NotNull UUID ownerId,
     @NotNull UUID patientId,
-    UUID signedFormId,
-    @NotNull List<Item> items
+    @NotNull UUID signedFormId,
+    @NotNull List<@jakarta.validation.Valid @NotNull Item> items
 ) {
     public record Item(String binding, String value) {}
 }

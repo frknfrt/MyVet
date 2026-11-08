@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { formsApi, type FormTemplateSummary } from '../../api/formsApi';
 import { useAuth } from '../../auth/AuthContext';
@@ -17,6 +17,26 @@ export function FillFormButton({ patientId, encounterId }: FillFormButtonProps) 
   const [open, setOpen] = useState(false);
   const [templates, setTemplates] = useState<FormTemplateSummary[] | null>(null);
   const [error, setError] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const outside = (event: PointerEvent) => {
+      if (event.target instanceof Node && !wrap.current?.contains(event.target)) setOpen(false);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpen(false);
+        wrap.current?.querySelector<HTMLButtonElement>('button[aria-haspopup="menu"]')?.focus();
+      }
+    };
+    document.addEventListener('pointerdown', outside);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('pointerdown', outside);
+      document.removeEventListener('keydown', escape);
+    };
+  }, [open]);
+
 
   if (!session || !FORM_ROLES.includes(session.role)) return null;
 
@@ -40,7 +60,7 @@ export function FillFormButton({ patientId, encounterId }: FillFormButtonProps) 
   }
 
   return (
-    <div className={styles.wrap}>
+    <div ref={wrap} className={styles.wrap}>
       <Button variant="secondary" onClick={toggle} aria-haspopup="menu" aria-expanded={open}>
         📝 Form Doldur
       </Button>

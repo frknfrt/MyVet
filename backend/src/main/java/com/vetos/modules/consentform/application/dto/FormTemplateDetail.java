@@ -6,5 +6,5 @@ import com.vetos.modules.consentform.domain.FormTemplateStatus;
 import java.util.UUID;
 
 public record FormTemplateDetail(
-    UUID id, String title, FormTemplateStatus status, FormTemplateContent content, UUID sourceImageId, String clinicName
+    UUID id, String title, FormTemplateStatus status, FormTemplateContent content, UUID sourceImageId, String clinicName, String contentHash
 ) {}

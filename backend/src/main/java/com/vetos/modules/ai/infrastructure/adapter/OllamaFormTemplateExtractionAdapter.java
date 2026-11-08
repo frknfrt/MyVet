@@ -40,17 +40,20 @@ class OllamaFormTemplateExtractionAdapter implements FormTemplateExtractionPort 
     OllamaFormTemplateExtractionAdapter(
         @Value("${ai.ollama.base-url:}") String baseUrl,
         @Value("${ai.ollama.vision-model:llava}") String visionModel,
-        @Value("${ai.ollama.vision-timeout-seconds:120}") int visionTimeoutSeconds,
+        @Value("${ai.form-template.read-timeout-seconds:45}") int readTimeoutSeconds,
         ObjectMapper objectMapper,
         IntegrationOutcomes outcomes,
         CircuitBreakerRegistry circuitBreakers
     ) {
+        if (readTimeoutSeconds < 1 || readTimeoutSeconds > 60) {
+            throw new IllegalArgumentException("ai.form-template.read-timeout-seconds must be between 1 and 60");
+        }
         this.baseUrl = baseUrl;
         this.visionModel = visionModel;
         this.objectMapper = objectMapper;
         this.outcomes = outcomes;
         this.circuitBreaker = circuitBreakers.circuitBreaker("ai");
-        this.restClient = OutboundHttp.restClient(Duration.ofSeconds(5), Duration.ofSeconds(visionTimeoutSeconds));
+        this.restClient = OutboundHttp.restClient(Duration.ofSeconds(5), Duration.ofSeconds(readTimeoutSeconds));
     }
 
     @Override

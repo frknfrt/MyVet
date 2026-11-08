@@ -35,6 +35,18 @@ public enum FormBinding {
 
     public boolean writable() { return writable; }
 
+    public boolean supports(FormItemType type) {
+        return switch (this) {
+            case OWNER_BIRTH_DATE, TODAY -> type == FormItemType.DATE;
+            case PATIENT_WEIGHT_KG -> type == FormItemType.NUMBER;
+            case OWNER_PHONE, OWNER_SECONDARY_PHONE -> type == FormItemType.PHONE
+                || type == FormItemType.SHORT_TEXT || type == FormItemType.LONG_TEXT;
+            case PATIENT_SPECIES, PATIENT_BREED, PATIENT_SEX, PATIENT_COLOR -> type == FormItemType.CHOICE
+                || type == FormItemType.SHORT_TEXT || type == FormItemType.LONG_TEXT;
+            default -> type == FormItemType.SHORT_TEXT || type == FormItemType.LONG_TEXT;
+        };
+    }
+
     public static Optional<FormBinding> fromKey(String key) {
         if (key == null) return Optional.empty();
         return Arrays.stream(values()).filter(b -> b.key.equals(key)).findFirst();

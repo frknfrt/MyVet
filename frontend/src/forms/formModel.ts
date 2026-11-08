@@ -96,6 +96,19 @@ export function isFormBinding(value: string | null): value is FormBinding {
   return value !== null && (BINDINGS as readonly string[]).includes(value);
 }
 
+/** Backend FormBinding.supports ile aynı tür sözleşmesi. */
+export function supportsBinding(type: FormItemType, binding: FormBinding): boolean {
+  switch (binding) {
+    case 'owner.birthDate': case 'today': return type === 'DATE';
+    case 'patient.weightKg': return type === 'NUMBER';
+    case 'owner.phone': case 'owner.secondaryPhone':
+      return type === 'PHONE' || type === 'SHORT_TEXT' || type === 'LONG_TEXT';
+    case 'patient.species': case 'patient.breed': case 'patient.sex': case 'patient.color':
+      return type === 'CHOICE' || type === 'SHORT_TEXT' || type === 'LONG_TEXT';
+    default: return type === 'SHORT_TEXT' || type === 'LONG_TEXT';
+  }
+}
+
 export function isWritableBinding(value: string | null): value is WritableBinding {
   return value !== null && (WRITABLE_BINDINGS as readonly string[]).includes(value);
 }

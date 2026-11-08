@@ -25,6 +25,7 @@ afterEach(() => {
   act(() => root.unmount());
   container.remove();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 async function render(onChange: (b: Blob | null) => void) {
@@ -104,4 +105,25 @@ describe('SignaturePad', () => {
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenLastCalledWith(null);
   });
+  it('ResizeObserver redraws existing strokes and disconnects on unmount', async () => {
+    let callback!: ResizeObserverCallback;
+    const observe = vi.fn(), disconnect = vi.fn();
+    vi.stubGlobal('ResizeObserver', class { constructor(cb: ResizeObserverCallback) { callback = cb; } observe = observe; disconnect = disconnect; });
+    const onChange = vi.fn();
+    await render(onChange);
+    const canvas = container.querySelector('canvas')!;
+    fire(canvas, 'pointerdown', 10, 10); fire(canvas, 'pointermove', 40, 30); fire(canvas, 'pointerup', 40, 30);
+    const before = onChange.mock.calls.length;
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(380);
+    act(() => callback([], {} as ResizeObserver));
+    expect(observe).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledTimes(before + 1);
+    expect(onChange).not.toHaveBeenCalledWith(null);
+    expect(container.textContent).not.toContain('Buraya imzalayın');
+    await act(async () => root.render(null));
+    expect(disconnect).toHaveBeenCalledTimes(1);
+    act(() => callback([], {} as ResizeObserver));
+    expect(onChange).toHaveBeenCalledTimes(before + 1);
+  });
+
 });

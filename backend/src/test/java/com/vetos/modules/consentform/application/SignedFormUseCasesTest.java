@@ -43,6 +43,7 @@ class SignedFormUseCasesTest {
     private final UUID patientId = UUID.randomUUID();
     private final UUID ownerId = UUID.randomUUID();
 
+    @Mock SignedFormSubmissionRepository submissions;
     @Mock FormTemplateRepository templateRepository;
     @Mock SignedFormRepository signedFormRepository;
     @Mock PatientLookupPort patientLookupPort;
@@ -57,6 +58,7 @@ class SignedFormUseCasesTest {
     void setUp() {
         TenantContext.set(tenantId);
         FormTemplateContent content = new FormTemplateContent("Anestezi Onamı", List.of(new FormSection("Bölüm", List.of(
+            new FormItem(FormItemType.TEXT_BLOCK, null, null, "Onay metni A", false, null, null, null, false),
             new FormItem(FormItemType.SHORT_TEXT, "ad", "Ad", null, true, null, null, null, false),
             new FormItem(FormItemType.CHOICE, "tur", "Tür", null, true, null, null, List.of("Evet", "Hayır"), false),
             new FormItem(FormItemType.SIGNATURE, "imza", "İmza", null, true, null, null, null, false)
@@ -68,7 +70,7 @@ class SignedFormUseCasesTest {
             .thenReturn(new OwnerSummary(ownerId, "Ayşe Yılmaz", null, null, null, null, null, false, false));
         when(fileStoragePort.store(any(), any())).thenReturn("ref-1");
         when(signedFormRepository.save(any())).thenAnswer(i -> i.getArgument(0));
-        useCase = new CreateSignedFormUseCase(templateRepository, signedFormRepository, patientLookupPort,
+        useCase = new CreateSignedFormUseCase(submissions, templateRepository, signedFormRepository, patientLookupPort,
             ownerLookupPort, fileStoragePort, encounterLookupPort);
     }
 
@@ -76,7 +78,7 @@ class SignedFormUseCasesTest {
     void clearTenant() { TenantContext.clear(); }
 
     private CreateSignedFormCommand command(Map<String, Object> values, SignerInput signer, String sigBase64) {
-        return new CreateSignedFormCommand(UUID.randomUUID(), patientId, null, values, signer, sigBase64, "10.0.0.5", "UA/1.0");
+        return new CreateSignedFormCommand(UUID.randomUUID(), patientId, null, values, signer, sigBase64, "10.0.0.5", "UA/1.0", template.contentHash(), UUID.randomUUID());
     }
 
     private static String b64(byte[] b) { return Base64.getEncoder().encodeToString(b); }
@@ -88,6 +90,32 @@ class SignedFormUseCasesTest {
         ArgumentCaptor<SignedForm> captor = ArgumentCaptor.forClass(SignedForm.class);
         verify(signedFormRepository).save(captor.capture());
         return captor.getValue();
+    }
+
+    @Test
+    void should_rejectTextOnlyTemplateEditBeforeSigning() {
+        var opened = command(OK_VALUES, OWNER_SIGNER, b64(PNG));
+        template.update(template.getTitle(), template.getContent().replace("Onay metni A", "Onay metni B"), staffId);
+
+        assertThatThrownBy(() -> useCase.execute(staffId, opened))
+            .isInstanceOf(FormTemplateChangedConflictException.class)
+            .extracting("errorCode").isEqualTo("FORM_TEMPLATE_CHANGED");
+        verifyNoInteractions(fileStoragePort, signedFormRepository, patientLookupPort);
+    }
+
+    @Test
+    void should_rejectMissingTemplateHashWithoutSaving() {
+        var cmd = new CreateSignedFormCommand(UUID.randomUUID(), patientId, null, OK_VALUES,
+            OWNER_SIGNER, b64(PNG), null, null, null, UUID.randomUUID());
+        assertThatThrownBy(() -> useCase.execute(staffId, cmd)).isInstanceOf(FormTemplateChangedConflictException.class);
+        verifyNoInteractions(fileStoragePort, signedFormRepository);
+    }
+
+    @Test
+    void should_acceptNewlyReadTemplateAfterEdit() {
+        template.update(template.getTitle(), template.getContent().replace("Onay metni A", "Onay metni B"), staffId);
+        useCase.execute(staffId, command(OK_VALUES, OWNER_SIGNER, b64(PNG)));
+        assertThat(savedForm().getTemplateSnapshot()).contains("Onay metni B");
     }
 
     @Test
@@ -135,7 +163,7 @@ class SignedFormUseCasesTest {
     @Test
     void should_truncateUserAgentTo500() {
         CreateSignedFormCommand c = new CreateSignedFormCommand(UUID.randomUUID(), patientId, null, OK_VALUES,
-            OWNER_SIGNER, b64(PNG), "1.1.1.1", "x".repeat(900));
+            OWNER_SIGNER, b64(PNG), "1.1.1.1", "x".repeat(900), template.contentHash(), UUID.randomUUID());
 
         useCase.execute(staffId, c);
 
@@ -231,14 +259,14 @@ class SignedFormUseCasesTest {
         when(encounterLookupPort.findSummaryById(enc)).thenReturn(new com.vetos.modules.encounter.domain.EncounterSummary(
             enc, UUID.randomUUID(), staffId, null));
         CreateSignedFormCommand other = new CreateSignedFormCommand(UUID.randomUUID(), patientId, enc, OK_VALUES,
-            OWNER_SIGNER, b64(PNG), null, null);
+            OWNER_SIGNER, b64(PNG), null, null, template.contentHash(), UUID.randomUUID());
         assertThatThrownBy(() -> useCase.execute(staffId, other)).isInstanceOf(InvalidEncounterException.class);
 
         UUID missing = UUID.randomUUID();
         when(encounterLookupPort.findSummaryById(missing))
             .thenThrow(new com.vetos.modules.encounter.domain.exception.EncounterNotFoundException(missing));
         CreateSignedFormCommand gone = new CreateSignedFormCommand(UUID.randomUUID(), patientId, missing, OK_VALUES,
-            OWNER_SIGNER, b64(PNG), null, null);
+            OWNER_SIGNER, b64(PNG), null, null, template.contentHash(), UUID.randomUUID());
         assertThatThrownBy(() -> useCase.execute(staffId, gone)).isInstanceOf(InvalidEncounterException.class)
             .extracting("errorCode").isEqualTo("INVALID_ENCOUNTER");
         verify(signedFormRepository, never()).save(any());
@@ -251,7 +279,7 @@ class SignedFormUseCasesTest {
             enc, patientId, staffId, null));
 
         useCase.execute(staffId, new CreateSignedFormCommand(UUID.randomUUID(), patientId, enc, OK_VALUES,
-            OWNER_SIGNER, b64(PNG), null, null));
+            OWNER_SIGNER, b64(PNG), null, null, template.contentHash(), UUID.randomUUID()));
 
         assertThat(savedForm().getEncounterId()).isEqualTo(enc);
     }
@@ -260,5 +288,155 @@ class SignedFormUseCasesTest {
     void list_should_requireFilter() {
         assertThatThrownBy(() -> new ListSignedFormsUseCase(signedFormRepository).execute(null, null))
             .isInstanceOf(InvalidSignedFormValuesException.class);
+    }
+
+    @Test
+    void completedRequestReturnsOriginalIdWithoutSavingAgain() {
+        var cmd = command(OK_VALUES, OWNER_SIGNER, b64(PNG));
+        UUID original = UUID.randomUUID();
+        when(submissions.claim(eq(tenantId), eq(cmd.requestId()), anyString())).thenReturn(Optional.of(original));
+        assertThat(useCase.execute(staffId, cmd)).isEqualTo(original);
+        verifyNoInteractions(templateRepository, patientLookupPort, ownerLookupPort, signedFormRepository, fileStoragePort);
+    }
+
+    @Test
+    void missingRequestIdCannotCreateAForm() {
+        var cmd = new CreateSignedFormCommand(UUID.randomUUID(), patientId, null, OK_VALUES,
+            OWNER_SIGNER, b64(PNG), null, null, template.contentHash(), null);
+        assertThatThrownBy(() -> useCase.execute(staffId, cmd)).isInstanceOf(InvalidSignedFormValuesException.class);
+        verifyNoInteractions(submissions, fileStoragePort, signedFormRepository);
+    }
+
+    @Test
+    void oversizedMalformedBase64IsRejectedBeforeDecodingOrReserving() {
+        String oversized = "*".repeat(4 * CreateSignedFormUseCase.MAX_SIGNATURE_BYTES);
+        assertThatThrownBy(() -> useCase.execute(staffId, command(OK_VALUES, OWNER_SIGNER, oversized)))
+            .isInstanceOf(InvalidSignatureException.class).hasMessageContaining("çok büyük");
+        verifyNoInteractions(submissions, fileStoragePort, signedFormRepository);
+    }
+
+    @Test
+    void decodedSizeIsCheckedWhenOverLimitImageFitsTheSameBase64Block() {
+        byte[] max = new byte[CreateSignedFormUseCase.MAX_SIGNATURE_BYTES];
+        byte[] over = new byte[max.length + 1];
+        System.arraycopy(PNG, 0, over, 0, PNG.length);
+        assertThat(b64(over).length()).isEqualTo(b64(max).length());
+        assertThatThrownBy(() -> useCase.execute(staffId, command(OK_VALUES, OWNER_SIGNER, b64(over))))
+            .isInstanceOf(InvalidSignatureException.class).hasMessageContaining("çok büyük");
+        verifyNoInteractions(submissions, fileStoragePort, signedFormRepository);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {true, false})
+    void exactLimitSignatureIsAcceptedWithOrWithoutPadding(boolean padded) {
+        byte[] max = new byte[CreateSignedFormUseCase.MAX_SIGNATURE_BYTES];
+        System.arraycopy(PNG, 0, max, 0, PNG.length);
+        String encoded = padded ? b64(max) : b64(max).replaceAll("=+$", "");
+        useCase.execute(staffId, command(OK_VALUES, OWNER_SIGNER, " \n" + encoded + "\t "));
+        verify(fileStoragePort).store(eq(max), eq("image/png"));
+        verify(signedFormRepository).save(any());
+    }
+
+    @Test
+    void legacyTemplateWithSignatureReferenceCannotCreateNewSignedForm() {
+        template.update(template.getTitle(), template.getContent().replace("Onay metni A", "Onay {{ imza }}"), staffId);
+        assertThatThrownBy(() -> useCase.execute(staffId, command(OK_VALUES, OWNER_SIGNER, b64(PNG))))
+            .isInstanceOf(InvalidFormTemplateException.class).hasMessageContaining("{{imza}}");
+        verifyNoInteractions(fileStoragePort, signedFormRepository);
+    }
+
+    private void enableMultipleChoice() {
+        var content = new FormTemplateContent("Form", List.of(new FormSection(null, List.of(
+            new FormItem(FormItemType.SHORT_TEXT, "ad", "Ad", null, true, null, null, null, false),
+            new FormItem(FormItemType.CHOICE, "tur", "Tercih", null, true, null, null, List.of("Evet", "Hayır"), true),
+            new FormItem(FormItemType.SIGNATURE, "imza", "İmza", null, true, null, null, null, false)))));
+        template.update("Form", FormTemplateContentCodec.toJson(content), staffId);
+    }
+
+    @Test
+    void repeatedSelectionCannotCreateSignedForm() {
+        enableMultipleChoice();
+        assertThatThrownBy(() -> useCase.execute(staffId, command(
+            Map.of("ad", "Pamuk", "tur", List.of("Evet", "Evet")), OWNER_SIGNER, b64(PNG))))
+            .isInstanceOf(InvalidSignedFormValuesException.class).hasMessageContaining("tekrarlanamaz");
+        verifyNoInteractions(fileStoragePort, signedFormRepository);
+    }
+
+    @Test
+    void distinctMultipleSelectionsKeepTheirOrder() {
+        enableMultipleChoice();
+        useCase.execute(staffId, command(Map.of("ad", "Pamuk", "tur", List.of("Hayır", "Evet")), OWNER_SIGNER, b64(PNG)));
+        assertThat(SignedFormValues.fromJson(savedForm().getValuesJson()).get("tur")).isEqualTo(List.of("Hayır", "Evet"));
+    }
+
+    @Test
+    void legacyTemplateWithIncompatibleBindingCannotCreateNewSignedForm() {
+        var content = new FormTemplateContent("Form", List.of(new FormSection(null, List.of(
+            new FormItem(FormItemType.SHORT_TEXT, "ad", "Ad", null, true, "patient.weightKg", null, null, false),
+            new FormItem(FormItemType.SIGNATURE, "imza", "İmza", null, true, null, null, null, false)))));
+        template.update("Form", FormTemplateContentCodec.toJson(content), staffId);
+        assertThatThrownBy(() -> useCase.execute(staffId, command(OK_VALUES, OWNER_SIGNER, b64(PNG))))
+            .isInstanceOf(InvalidFormTemplateException.class).hasMessageContaining("alan türüyle uyumsuz");
+        verifyNoInteractions(fileStoragePort, signedFormRepository);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {
+        "1234567890", "123456789012", "1234567890a", "123 5678901", "١٢٣٤٥٦٧٨٩٠١"
+    })
+    void ownerNationalIdMustBeElevenAsciiDigitsWhenProvided(String nationalId) {
+        var signer = new SignerInput(SignerType.OWNER, "İstemci adı", nationalId, null);
+        assertThatThrownBy(() -> useCase.execute(staffId, command(OK_VALUES, signer, b64(PNG))))
+            .isInstanceOf(InvalidSignedFormValuesException.class)
+            .hasMessageContaining("11 haneli rakam");
+        verifyNoInteractions(fileStoragePort, signedFormRepository);
+        verify(submissions, never()).complete(any(), any(), any());
+    }
+
+    @Test
+    void ownerNationalIdIsTrimmedAndIncludedInDigest_whileNameComesFromOwnerRecord() {
+        var signer = new SignerInput(SignerType.OWNER, "İstemci adı", " 12345678901 ", null);
+        useCase.execute(staffId, command(OK_VALUES, signer, b64(PNG)));
+        var form = savedForm();
+        assertThat(form.getSignerNationalId()).isEqualTo("12345678901");
+        assertThat(form.getSignerName()).isEqualTo("Ayşe Yılmaz");
+        String signerJson = SignedFormValues.signerJson(SignerType.OWNER, "Ayşe Yılmaz", "12345678901", null);
+        String metadata = SignedFormValues.metadataJson(form.getTemplateId(), form.getPatientId(), form.getOwnerId(),
+            form.getEncounterId(), form.getSignedAt(), form.getSignedBy(), form.getClientIp(), form.getUserAgent());
+        assertThat(form.getContentDigest()).isEqualTo(SignedFormDigest.compute(
+            form.getTemplateSnapshot(), form.getValuesJson(), signerJson, metadata, PNG));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.NullAndEmptySource
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"   "})
+    void ownerNationalIdRemainsOptional(String nationalId) {
+        var signer = new SignerInput(SignerType.OWNER, null, nationalId, null);
+        useCase.execute(staffId, command(OK_VALUES, signer, b64(PNG)));
+        assertThat(savedForm().getSignerNationalId()).isNull();
+    }
+
+    @Test
+    void list_should_useBothFiltersTogether() {
+        when(signedFormRepository.findByPatientIdAndOwnerIdOrderBySignedAtDesc(patientId, ownerId)).thenReturn(List.of());
+        assertThat(new ListSignedFormsUseCase(signedFormRepository).execute(patientId, ownerId)).isEmpty();
+        verify(signedFormRepository).findByPatientIdAndOwnerIdOrderBySignedAtDesc(patientId, ownerId);
+        verifyNoMoreInteractions(signedFormRepository);
+    }
+
+    @Test
+    void list_should_preservePatientOnlyFilter() {
+        when(signedFormRepository.findByPatientIdOrderBySignedAtDesc(patientId)).thenReturn(List.of());
+        assertThat(new ListSignedFormsUseCase(signedFormRepository).execute(patientId, null)).isEmpty();
+        verify(signedFormRepository).findByPatientIdOrderBySignedAtDesc(patientId);
+        verifyNoMoreInteractions(signedFormRepository);
+    }
+
+    @Test
+    void list_should_preserveOwnerOnlyFilter() {
+        when(signedFormRepository.findByOwnerIdOrderBySignedAtDesc(ownerId)).thenReturn(List.of());
+        assertThat(new ListSignedFormsUseCase(signedFormRepository).execute(null, ownerId)).isEmpty();
+        verify(signedFormRepository).findByOwnerIdOrderBySignedAtDesc(ownerId);
+        verifyNoMoreInteractions(signedFormRepository);
     }
 }

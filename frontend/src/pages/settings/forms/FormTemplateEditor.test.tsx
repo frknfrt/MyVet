@@ -167,4 +167,74 @@ describe('FormTemplateEditor', () => {
     });
     expect(container.querySelector<HTMLSelectElement>('select[aria-label="Bağlantı"]')!.value).toBe('');
   });
+  it.each([
+    ['SHORT_TEXT', 'owner.fullName', 'NUMBER', ''],
+    ['SHORT_TEXT', 'owner.fullName', 'LONG_TEXT', 'owner.fullName'],
+    ['SHORT_TEXT', 'patient.species', 'CHOICE', 'patient.species'],
+    ['CHOICE', 'patient.sex', 'SHORT_TEXT', 'patient.sex'],
+  ] as const)('tur degisimi yalniz uyumlu baglantiyi korur: %s %s -> %s', async (type, binding, nextType, expected) => {
+    await render({ initialContent: { title: 'X', sections: [{ title: null, items: [
+      item({ type, code: 'alan', label: 'Alan', binding, options: type === 'CHOICE' ? ['A', 'B'] : null }),
+      item({ type: 'SIGNATURE', code: 'imza', label: 'İmza' }),
+    ] }] } });
+    const select = container.querySelector<HTMLSelectElement>('select[aria-label="Alan türü"]')!;
+    await act(async () => {
+      select.value = nextType;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    const bindings = container.querySelector<HTMLSelectElement>('select[aria-label="Bağlantı"]')!;
+    expect(bindings.value).toBe(expected);
+    expect(bindings.querySelector<HTMLOptionElement>('option[value="owner.birthDate"]')!.disabled).toBe(true);
+  });
+
+  it.each([true, false])('sidebar navigation asks before leaving unsaved draft; allow=%s', async allow => {
+    await render();
+    const confirmation = vi.spyOn(window, 'confirm').mockReturnValue(allow);
+    const anchor = document.createElement('a'); anchor.href = '/patients'; document.body.appendChild(anchor);
+    const navigate = vi.fn((e: Event) => e.preventDefault()); anchor.addEventListener('click', navigate);
+    try {
+      anchor.click();
+      expect(confirmation).toHaveBeenCalledTimes(1);
+      expect(navigate).toHaveBeenCalledTimes(allow ? 1 : 0);
+    } finally { confirmation.mockRestore(); anchor.remove(); }
+  });
+
+  it('pristine saved template does not block sidebar navigation', async () => {
+    await render({ templateId: 't1' });
+    const confirmation = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const anchor = document.createElement('a'); anchor.href = '/patients'; document.body.appendChild(anchor);
+    const navigate = vi.fn((e: Event) => e.preventDefault()); anchor.addEventListener('click', navigate);
+    try { anchor.click(); expect(confirmation).not.toHaveBeenCalled(); expect(navigate).toHaveBeenCalledTimes(1); }
+    finally { confirmation.mockRestore(); anchor.remove(); }
+  });
+
+  it('modified saved template blocks navigation and removes guard on unmount', async () => {
+    await render({ templateId: 't1' });
+    await typeInto('input[placeholder="Alan adı"]', 'Yeni etiket');
+    const confirmation = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const anchor = document.createElement('a'); anchor.href = '/patients'; document.body.appendChild(anchor);
+    const navigate = vi.fn((e: Event) => e.preventDefault()); anchor.addEventListener('click', navigate);
+    try {
+      anchor.click(); expect(navigate).not.toHaveBeenCalled();
+      await act(async () => root.render(null));
+      anchor.click(); expect(navigate).toHaveBeenCalledTimes(1); expect(confirmation).toHaveBeenCalledTimes(1);
+    } finally { confirmation.mockRestore(); anchor.remove(); }
+  });
+
+  it('switching CHOICE to paragraph and back does not retain stale input metadata', async () => {
+    await render({ initialContent: { title: 'X', sections: [{ title: null, items: [
+      item({ type: 'CHOICE', code: 'secim', label: 'Seçim', binding: 'patient.sex', options: ['A', 'B'], multiple: true }),
+      item({ type: 'SIGNATURE', code: 'imza', label: 'İmza' }),
+    ] }] } });
+    const changeType = async (value: string) => {
+      const select = container.querySelector<HTMLSelectElement>('select[aria-label="Alan türü"]')!;
+      await act(async () => { select.value = value; select.dispatchEvent(new Event('change', { bubbles: true })); });
+    };
+    await changeType('TEXT_BLOCK');
+    expect(container.querySelector('select[aria-label="Bağlantı"]')).toBeNull();
+    await changeType('SHORT_TEXT');
+    expect(container.querySelector<HTMLSelectElement>('select[aria-label="Bağlantı"]')!.value).toBe('');
+    expect(container.textContent).not.toContain('Seçenekler (her satıra bir seçenek)');
+  });
+
 });

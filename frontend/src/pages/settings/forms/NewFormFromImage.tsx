@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ApiError } from '../../../api/client';
 import { formsApi, type FormTemplateDraft } from '../../../api/formsApi';
 import { Button } from '../../../components/ui/Button';
@@ -42,20 +42,25 @@ export function NewFormFromImage({ onSaved, onCancel }: Props) {
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
+  const generation = useRef(0);
+  useEffect(() => () => { generation.current++; }, []);
 
   async function handleFile(file: File | undefined) {
     if (!file) return;
+    const request = ++generation.current;
     setWorking(true);
     setError(null);
     try {
       const prepared = await prepareImage(file, 'document');
+      if (request !== generation.current) return;
       const sourceImageId = await formsApi.uploadSourceImage(prepared);
+      if (request !== generation.current) return;
       const result = await formsApi.extractDraft(sourceImageId);
-      setDraft(toDraft(sourceImageId, result));
+      if (request === generation.current) setDraft(toDraft(sourceImageId, result));
     } catch (err) {
-      setError(errorMessageOf(err));
+      if (request === generation.current) setError(errorMessageOf(err));
     } finally {
-      setWorking(false);
+      if (request === generation.current) setWorking(false);
     }
   }
 

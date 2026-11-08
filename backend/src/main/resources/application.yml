@@ -82,6 +82,10 @@ ai:
   # (Anthropic API, ucretli ama VRAM siniri yok). Ikisi ayni anda aktif olamaz --
   # bkz. OllamaSoapGenerationAdapter/ClaudeSoapGenerationAdapter @ConditionalOnProperty.
   provider: ${AI_PROVIDER:ollama}
+  form-template:
+    # Form taslağı için deneme başına okuma süresi; iki deneme yapılabilir.
+    # 1–60 saniye; lab/görüntüleme OCR sürelerinden bağımsızdır.
+    read-timeout-seconds: ${FORM_TEMPLATE_READ_TIMEOUT_SECONDS:45}
   ollama:
     # Lokal Ollama'ya baglanmak icin OLLAMA_BASE_URL=http://localhost:11434 set edin.
     # Bos birakilirsa (varsayilan) SOAP uretimi mock/simule modda kalir

@@ -68,8 +68,8 @@ export function PatientDetailPage() {
   // PatientsController /patients yazma -- VET/RECEPTIONIST/ADMIN (TECHNICIAN yok).
   const canWritePatient = session ? ['VET', 'RECEPTIONIST', 'ADMIN'].includes(session.role) : false;
   // EncountersController POST /encounters -- sadece VET/ADMIN.
-  const canForms = session ? FORM_ROLES.includes(session.role) : false;
   const canStartEncounter = session?.role === 'VET' || session?.role === 'ADMIN';
+  const canForms = session ? FORM_ROLES.includes(session.role) : false;
 
   const [profile, setProfile] = useState<PatientProfile | null>(null);
   const [photoMenuOpen, setPhotoMenuOpen] = useState(false);

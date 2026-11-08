@@ -95,4 +95,23 @@ describe('FillFormButton', () => {
     await mount();
     expect(container.querySelector('button')).toBeNull();
   });
+  it('Escape closes menu and returns focus to trigger', async () => {
+    mocks.listTemplates.mockResolvedValue([{ id: 't', title: 'Onam' }]);
+    await mount(); await openMenu();
+    expect(container.querySelector('[role=menu]')).not.toBeNull();
+    await act(async () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+    expect(container.querySelector('[role=menu]')).toBeNull();
+    expect(document.activeElement).toBe(container.querySelector('button'));
+    expect(container.querySelector('button')!.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('outside pointer closes menu but inside pointer leaves it open', async () => {
+    mocks.listTemplates.mockResolvedValue([{ id: 't', title: 'Onam' }]);
+    await mount(); await openMenu();
+    await act(async () => container.querySelector('[role=menu]')!.dispatchEvent(new Event('pointerdown', { bubbles: true })));
+    expect(container.querySelector('[role=menu]')).not.toBeNull();
+    await act(async () => document.body.dispatchEvent(new Event('pointerdown', { bubbles: true })));
+    expect(container.querySelector('[role=menu]')).toBeNull();
+  });
+
 });

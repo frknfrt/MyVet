@@ -5,5 +5,5 @@ import java.util.UUID;
 
 public record CreateSignedFormCommand(
     UUID templateId, UUID patientId, UUID encounterId, Map<String, Object> values,
-    SignerInput signer, String signaturePngBase64, String clientIp, String userAgent
+    SignerInput signer, String signaturePngBase64, String clientIp, String userAgent, String templateContentHash, UUID requestId
 ) {}

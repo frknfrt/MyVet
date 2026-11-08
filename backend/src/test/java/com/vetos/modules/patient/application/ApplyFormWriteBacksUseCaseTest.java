@@ -33,6 +33,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class ApplyFormWriteBacksUseCaseTest {
 
+    @Mock private com.vetos.modules.patient.domain.SignedFormWriteBackLookupPort signedFormLookup;
     @Mock private OwnerRepository ownerRepository;
     @Mock private PatientRepository patientRepository;
     @Mock private DomainEventPublisher eventPublisher;
@@ -46,19 +47,27 @@ class ApplyFormWriteBacksUseCaseTest {
 
     @BeforeEach
     void setUp() {
-        useCase = new ApplyFormWriteBacksUseCase(ownerRepository, patientRepository, eventPublisher);
+        useCase = new ApplyFormWriteBacksUseCase(signedFormLookup, ownerRepository, patientRepository, eventPublisher);
         tenantId = UUID.randomUUID();
         ownerId = UUID.randomUUID();
         patientId = UUID.randomUUID();
         owner = Owner.register(tenantId, "Hale Yilmaz", "5550000000", "eski@example.com", "eski adres");
         patient = Patient.register(tenantId, ownerId, UUID.randomUUID(), null, "Pamuk", Sex.FEMALE, null);
         org.springframework.test.util.ReflectionTestUtils.setField(patient, "id", patientId);
-        when(ownerRepository.findById(ownerId)).thenReturn(Optional.of(owner));
-        when(patientRepository.findById(patientId)).thenReturn(Optional.of(patient));
+        org.mockito.Mockito.lenient().when(ownerRepository.findById(ownerId)).thenReturn(Optional.of(owner));
+        org.mockito.Mockito.lenient().when(patientRepository.findById(patientId)).thenReturn(Optional.of(patient));
     }
 
     private FormWriteBackResult run(Item... items) {
-        return useCase.execute(new FormWriteBackCommand(ownerId, patientId, UUID.randomUUID(), List.of(items)));
+        UUID formId = UUID.randomUUID();
+        java.util.Map<String, java.util.Set<String>> allowed = new java.util.HashMap<>();
+        for (Item item : items) {
+            if (item.value() != null) {
+                allowed.computeIfAbsent(item.binding(), key -> new java.util.HashSet<>()).add(item.value().trim());
+            }
+        }
+        when(signedFormLookup.allowedValues(formId, patientId, ownerId)).thenReturn(allowed);
+        return useCase.execute(new FormWriteBackCommand(ownerId, patientId, formId, List.of(items)));
     }
 
     @Test
@@ -122,7 +131,7 @@ class ApplyFormWriteBacksUseCaseTest {
         org.springframework.test.util.ReflectionTestUtils.setField(patient, "ownerId", UUID.randomUUID());
 
         assertThatThrownBy(() -> useCase.execute(
-            new FormWriteBackCommand(ownerId, patientId, null, List.of(new Item("owner.phone", "5551112233")))))
+            new FormWriteBackCommand(ownerId, patientId, UUID.randomUUID(), List.of(new Item("owner.phone", "5551112233")))))
             .isInstanceOf(PatientOwnerMismatchException.class);
         verify(ownerRepository, never()).save(any());
     }
@@ -148,5 +157,118 @@ class ApplyFormWriteBacksUseCaseTest {
         assertThat(result.skipped()).hasSize(5);
         assertThat(owner.getEmail()).isEqualTo("eski@example.com");
         assertThat(patient.getWeightKg()).isNull();
+    }
+
+    @Test
+    void missingSignedFormCannotUpdateAnything() {
+        assertThatThrownBy(() -> useCase.execute(new FormWriteBackCommand(ownerId, patientId, null,
+            List.of(new Item("owner.phone", "5551112233")))))
+            .isInstanceOf(com.vetos.modules.patient.domain.SignedFormWriteBackLookupPort.InvalidSourceException.class);
+        org.mockito.Mockito.verifyNoInteractions(signedFormLookup, eventPublisher);
+        verify(ownerRepository, never()).save(any());
+        verify(patientRepository, never()).save(any());
+    }
+
+    @Test
+    void onlySignedAndAllowedValuesCanBeWritten() {
+        UUID formId = UUID.randomUUID();
+        when(signedFormLookup.allowedValues(formId, patientId, ownerId))
+            .thenReturn(java.util.Map.of("patient.color", java.util.Set.of("Sarı"), "owner.phone", java.util.Set.of("signed-phone")));
+        var result = useCase.execute(new FormWriteBackCommand(ownerId, patientId, formId, List.of(
+            new Item("owner.phone", "different-phone"), new Item("owner.email", "unsigned@example.com"),
+            new Item("patient.color", "Sarı"))));
+        assertThat(result.applied()).containsExactly("patient.color");
+        assertThat(result.skipped()).hasSize(2);
+        assertThat(owner.getPhone()).isEqualTo("5550000000");
+        assertThat(owner.getEmail()).isEqualTo("eski@example.com");
+        verify(ownerRepository, never()).save(any());
+        verify(patientRepository).save(patient);
+    }
+
+    @Test
+    void invalidSourceCannotSaveOrPublish() {
+        UUID formId = UUID.randomUUID();
+        when(signedFormLookup.allowedValues(formId, patientId, ownerId))
+            .thenThrow(new com.vetos.modules.patient.domain.SignedFormWriteBackLookupPort.InvalidSourceException());
+        assertThatThrownBy(() -> useCase.execute(new FormWriteBackCommand(ownerId, patientId, formId,
+            List.of(new Item("patient.microchipNumber", "900123456789012")))))
+            .isInstanceOf(com.vetos.modules.patient.domain.SignedFormWriteBackLookupPort.InvalidSourceException.class);
+        verify(ownerRepository, never()).save(any());
+        verify(patientRepository, never()).save(any());
+        org.mockito.Mockito.verifyNoInteractions(eventPublisher);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {
+        "10000", "9999.995", "999999999999999999999", "1e1000000", "1e-1000000", "0.001"
+    })
+    void unrepresentableWeightIsSkippedWhileOtherFieldsAreApplied(String weight) {
+        patient.recordWeight(new BigDecimal("12.50"));
+        var result = run(new Item("owner.phone", "5551112233"), new Item("patient.weightKg", weight),
+            new Item("patient.color", "Sarı"));
+        assertThat(result.applied()).containsExactly("owner.phone", "patient.color");
+        assertThat(result.skipped()).extracting(FormWriteBackResult.Skipped::binding).containsExactly("patient.weightKg");
+        assertThat(patient.getWeightKg()).isEqualByComparingTo("12.50");
+        assertThat(patient.getColor()).isEqualTo("Sarı");
+        assertThat(owner.getPhone()).isEqualTo("5551112233");
+        verify(ownerRepository).save(owner);
+        verify(patientRepository).save(patient);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource(value = {
+        "9999.99;9999.99", "9999,99;9999.99", "4.555;4.56", "4.5500;4.55", "0.005;0.01"
+    }, delimiter = ';')
+    void weightIsRoundedToDatabasePrecision(String value, String expected) {
+        var result = run(new Item("patient.weightKg", value));
+        assertThat(result.skipped()).isEmpty();
+        assertThat(patient.getWeightKg()).isEqualByComparingTo(expected);
+        verify(patientRepository).save(patient);
+    }
+
+    @Test
+    void repeatedBindingIsAppliedOnce() {
+        var result = run(new Item("owner.phone", "5551112233"), new Item("owner.phone", "5551112233"));
+        assertThat(result.applied()).containsExactly("owner.phone");
+        assertThat(result.skipped()).hasSize(1);
+        assertThat(result.skipped().get(0).reason()).isEqualTo("tekrarlanan alan");
+        verify(ownerRepository).save(owner);
+    }
+
+    @Test
+    void conflictingRepeatedBindingCannotOverwriteFirstAcceptedValue() {
+        var result = run(new Item("patient.color", "Sarı"), new Item("patient.color", "Siyah"));
+        assertThat(patient.getColor()).isEqualTo("Sarı");
+        assertThat(result.applied()).containsExactly("patient.color");
+        assertThat(result.skipped()).hasSize(1);
+        verify(patientRepository).save(patient);
+    }
+
+    @Test
+    void invalidFirstValueDoesNotBlockLaterValidValue() {
+        var result = run(new Item("owner.email", "bozuk"), new Item("owner.email", "yeni@example.com"));
+        assertThat(owner.getEmail()).isEqualTo("yeni@example.com");
+        assertThat(result.applied()).containsExactly("owner.email");
+        assertThat(result.skipped()).hasSize(1);
+    }
+
+    @Test
+    void missingOwnerIsNotFoundBeforeAnyWrite() {
+        when(ownerRepository.findById(ownerId)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> useCase.execute(new FormWriteBackCommand(ownerId, patientId, UUID.randomUUID(), List.of())))
+            .isInstanceOf(com.vetos.modules.patient.domain.exception.OwnerNotFoundException.class);
+        org.mockito.Mockito.verifyNoInteractions(signedFormLookup, eventPublisher);
+        verify(ownerRepository, never()).save(any());
+        verify(patientRepository, never()).save(any());
+    }
+
+    @Test
+    void missingPatientIsNotFoundBeforeAnyWrite() {
+        when(patientRepository.findById(patientId)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> useCase.execute(new FormWriteBackCommand(ownerId, patientId, UUID.randomUUID(), List.of())))
+            .isInstanceOf(com.vetos.modules.patient.domain.exception.PatientNotFoundException.class);
+        org.mockito.Mockito.verifyNoInteractions(signedFormLookup, eventPublisher);
+        verify(ownerRepository, never()).save(any());
+        verify(patientRepository, never()).save(any());
     }
 }

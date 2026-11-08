@@ -5,6 +5,8 @@ import com.vetos.modules.consentform.domain.ConsentFormPdfPort;
 import com.vetos.modules.consentform.domain.FormItem;
 import com.vetos.modules.consentform.domain.FormItemType;
 import com.vetos.modules.consentform.domain.FormSection;
+import com.vetos.modules.consentform.domain.FormPlaceholders;
+import com.vetos.modules.consentform.domain.exception.UnsupportedConsentPdfCharacterException;
 import org.openpdf.text.Chunk;
 import org.openpdf.text.Document;
 import org.openpdf.text.Element;
@@ -28,11 +30,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
- * Onay formunu PDF'e cevirir. Font yaklasimi EncounterReportPdfRenderer ile ayni:
- * Helvetica + Cp1254 (gomme yok). Cp1254'te "☒/☐" olmadigi icin secimler "[X] / [ ]" ile basilir.
+ * Onay formunu gömülü DejaVu Sans / Identity-H ile üretir.
+ * Desteklenmeyen karakterleri sessizce düşürmek yerine açıklayıcı hata verir.
  */
 @Component
 public class ConsentFormPdfRenderer implements ConsentFormPdfPort {
@@ -41,19 +42,49 @@ public class ConsentFormPdfRenderer implements ConsentFormPdfPort {
     private static final ZoneId ISTANBUL = ZoneId.of("Europe/Istanbul");
     private static final DateTimeFormatter DATE_TIME_FMT = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm").withZone(ISTANBUL);
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+    private static final BaseFont PDF_FONT = loadFont();
     private static final String BLANK = "……………";
-    private static final Pattern PLACEHOLDER = Pattern.compile("\\{\\{([a-z0-9_]+)}}");
+
+    private static BaseFont loadFont() {
+        try (var stream = ConsentFormPdfRenderer.class.getResourceAsStream("/fonts/DejaVuSans.ttf")) {
+            if (stream == null) throw new IllegalStateException("PDF font resource missing");
+            return BaseFont.createFont("DejaVuSans.ttf", BaseFont.IDENTITY_H, BaseFont.EMBEDDED, true, stream.readAllBytes(), null);
+        } catch (Exception e) {
+            throw new IllegalStateException("PDF Unicode font could not be loaded", e);
+        }
+    }
+
+    private static void checkText(Object value) {
+        if (value instanceof List<?> values) { values.forEach(ConsentFormPdfRenderer::checkText); return; }
+        if (value == null) return;
+        String.valueOf(value).codePoints().forEach(cp -> {
+            if (cp != '\n' && cp != '\r' && cp != '\t' && !PDF_FONT.charExists(cp)) {
+                throw new UnsupportedConsentPdfCharacterException(cp);
+            }
+        });
+    }
+
+    private static void validateCharacters(ConsentFormPdfData data) {
+        checkText(data.clinicName()); checkText(data.title()); checkText(data.signerLine());
+        checkText(data.voidReason()); checkText(data.digestShort());
+        if (data.values() != null) data.values().values().forEach(ConsentFormPdfRenderer::checkText);
+        if (data.content() != null) for (FormSection section : data.content().sections()) {
+            checkText(section.title());
+            for (FormItem item : section.items()) { checkText(item.label()); checkText(item.text()); checkText(item.options()); checkText(item.unit()); }
+        }
+    }
 
     @Override
     public byte[] render(ConsentFormPdfData data) {
+        validateCharacters(data);
         try {
-            BaseFont baseFont = BaseFont.createFont(BaseFont.HELVETICA, "Cp1254", BaseFont.NOT_EMBEDDED);
-            BaseFont boldBaseFont = BaseFont.createFont(BaseFont.HELVETICA_BOLD, "Cp1254", BaseFont.NOT_EMBEDDED);
+            BaseFont baseFont = PDF_FONT;
+            BaseFont boldBaseFont = PDF_FONT;
 
-            Font titleFont = new Font(boldBaseFont, 16, Font.NORMAL);
-            Font clinicFont = new Font(boldBaseFont, 12, Font.NORMAL);
-            Font sectionFont = new Font(boldBaseFont, 11, Font.NORMAL);
-            Font labelFont = new Font(boldBaseFont, 10, Font.NORMAL);
+            Font titleFont = new Font(boldBaseFont, 16, Font.BOLD);
+            Font clinicFont = new Font(boldBaseFont, 12, Font.BOLD);
+            Font sectionFont = new Font(boldBaseFont, 11, Font.BOLD);
+            Font labelFont = new Font(boldBaseFont, 10, Font.BOLD);
             Font bodyFont = new Font(baseFont, 10, Font.NORMAL);
             Font mutedFont = new Font(baseFont, 8, Font.NORMAL);
             Font voidFont = new Font(boldBaseFont, 11, Font.NORMAL, new Color(0xB0, 0x1E, 0x1E));
@@ -136,7 +167,7 @@ public class ConsentFormPdfRenderer implements ConsentFormPdfPort {
 
     private String fillPlaceholders(String text, Map<String, FormItem> byCode, Map<String, Object> values) {
         if (text == null) return "";
-        Matcher m = PLACEHOLDER.matcher(text);
+        Matcher m = FormPlaceholders.PATTERN.matcher(text);
         StringBuilder sb = new StringBuilder();
         while (m.find()) {
             FormItem target = byCode.get(m.group(1));

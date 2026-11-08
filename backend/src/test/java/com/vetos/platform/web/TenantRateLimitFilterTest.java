@@ -70,9 +70,44 @@ class TenantRateLimitFilterTest {
     }
 
     @Test
-    void should_coverAllThreeGenerationEndpoints() {
+    void should_coverAllRegisteredGenerationEndpoints() {
         assertThat(TenantRateLimitFilter.AI_GENERATION_PATHS).containsExactlyInAnyOrder(
-            "/api/v1/ai/soap-drafts", "/api/v1/ai/treatment-recommendations", "/api/v1/ai/diagnosis-suggestions"
+            "/api/v1/ai/soap-drafts", "/api/v1/ai/treatment-recommendations", "/api/v1/ai/diagnosis-suggestions",
+            "/api/v1/ai/form-template-drafts", "/api/v1/ai/lab-result-ocr", "/api/v1/ai/imaging-findings-ocr"
         );
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {
+        "/api/v1/ai/form-template-drafts", "/api/v1/ai/%66orm-template-drafts"
+    })
+    void formDraftConsumesSharedAiPool_andRejectsBeforeChain(String path) throws Exception {
+        TenantContext.set(UUID.randomUUID());
+        assertThat(call("POST", "/api/v1/ai/soap-drafts").getStatus()).isEqualTo(200);
+        var request = new MockHttpServletRequest("POST", path);
+        var response = new MockHttpServletResponse();
+        var chain = mock(FilterChain.class);
+        filter.doFilter(request, response, chain);
+        assertThat(response.getStatus()).isEqualTo(429);
+        assertThat(Long.parseLong(response.getHeader("Retry-After"))).isPositive();
+        assertThat(response.getContentAsString()).contains("\"errorCode\":\"RATE_LIMITED\"");
+        verifyNoInteractions(chain);
+    }
+
+    @Test
+    void formDraftLimitDoesNotConsumeAnotherTenantsPool() throws Exception {
+        TenantContext.set(UUID.randomUUID());
+        assertThat(call("POST", "/api/v1/ai/form-template-drafts").getStatus()).isEqualTo(200);
+        assertThat(call("POST", "/api/v1/ai/form-template-drafts").getStatus()).isEqualTo(429);
+        TenantContext.set(UUID.randomUUID());
+        assertThat(call("POST", "/api/v1/ai/form-template-drafts").getStatus()).isEqualTo(200);
+    }
+
+    @Test
+    void nonPostFormDraftRequestDoesNotConsumeAiPool() throws Exception {
+        TenantContext.set(UUID.randomUUID());
+        assertThat(call("GET", "/api/v1/ai/form-template-drafts").getStatus()).isEqualTo(200);
+        assertThat(call("POST", "/api/v1/ai/form-template-drafts").getStatus()).isEqualTo(200);
+        assertThat(call("POST", "/api/v1/ai/form-template-drafts").getStatus()).isEqualTo(429);
     }
 }

@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { blobToBase64, formsApi, type FormTemplateDetail } from '../../api/formsApi';
+import { blobToBase64, formsApi, type FormTemplateDetail, type CreateSignedFormPayload } from '../../api/formsApi';
 import { patientApi, type OwnerProfile, type PatientProfile } from '../../api/patientApi';
 import { computeWriteBackDiff, initialValues, resolveBindingValues, type SignerType, type WriteBackRow } from '../../forms/bindings';
 import { FormRenderer } from '../../forms/FormRenderer';
@@ -69,6 +69,8 @@ export function FillFormPage() {
   const [signedId, setSignedId] = useState<string | null>(null);
   const [writeBackNotice, setWriteBackNotice] = useState<string | null>(null);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const sending = useRef(false);
+  const submissionRequestId = useRef<string | null>(null);
   const errorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -98,6 +100,17 @@ export function FillFormPage() {
         : null,
     [loaded],
   );
+
+  useEffect(() => {
+    const style = document.documentElement.style;
+    const previous = style.getPropertyValue('scrollbar-gutter');
+    const priority = style.getPropertyPriority('scrollbar-gutter');
+    style.setProperty('scrollbar-gutter', 'stable');
+    return () => {
+      if (previous) style.setProperty('scrollbar-gutter', previous, priority);
+      else style.removeProperty('scrollbar-gutter');
+    };
+  }, []);
 
   const goBack = () => {
     if (location.key !== 'default') navigate(-1);
@@ -183,23 +196,28 @@ export function FillFormPage() {
   };
 
   const send = async (selected: WriteBackRow[]) => {
-    if (busy || !signature) return;
+    if (sending.current || busy || !signature) return;
+    sending.current = true;
     setBusy(true);
     setSubmitError(null);
     let id: string;
     try {
       const signaturePngBase64 = await blobToBase64(signature);
-      id = await formsApi.createSignedForm({
+      const payload: Omit<CreateSignedFormPayload, "requestId"> = {
         templateId: template.id,
+        templateContentHash: template.contentHash,
         patientId: patient.id,
         encounterId: encounterId ?? null,
         values,
         signer: signerPayload(),
         signaturePngBase64,
-      });
+      };
+      submissionRequestId.current ??= crypto.randomUUID();
+      id = await formsApi.createSignedForm({ ...payload, requestId: submissionRequestId.current });
     } catch (e) {
       setSubmitError(errMessage(e, 'Form kaydedilemedi.'));
       setStep('form');
+      sending.current = false;
       setBusy(false);
       return;
     }
@@ -222,6 +240,7 @@ export function FillFormPage() {
       }
     }
     setStep('done');
+    sending.current = false;
     setBusy(false);
   };
 

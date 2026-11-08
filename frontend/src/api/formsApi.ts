@@ -1,7 +1,5 @@
-import { apiClient } from './client';
+import { apiClient, API_BASE_URL } from './client';
 import type { FormTemplateContent, FormValues } from '../forms/formModel';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
 
 export type FormTemplateStatus = 'ACTIVE' | 'ARCHIVED';
 export type SignedFormStatus = 'VALID' | 'VOIDED';
@@ -23,6 +21,7 @@ export interface FormTemplateDetail {
   content: FormTemplateContent;
   sourceImageId: string | null;
   clinicName: string;
+  contentHash: string;
 }
 
 export interface FormTemplateDraft {
@@ -40,7 +39,9 @@ export interface SignerPayload {
 }
 
 export interface CreateSignedFormPayload {
+  requestId: string;
   templateId: string;
+  templateContentHash: string;
   patientId: string;
   encounterId: string | null;
   values: FormValues;
@@ -79,7 +80,7 @@ export interface SignedFormDetail {
 export interface WriteBackCommand {
   ownerId: string;
   patientId: string;
-  signedFormId: string | null;
+  signedFormId: string;
   items: { binding: string; value: string }[];
 }
 
@@ -122,10 +123,10 @@ export const formsApi = {
   templatePdfUrl: (id: string) => `${API_BASE_URL}/api/v1/form-templates/${id}/pdf`,
 
   createSignedForm: (payload: CreateSignedFormPayload) => apiClient.post<{ id: string }>('/api/v1/signed-forms', payload).then((r) => r.id),
-  listSignedForms: (filter: { patientId: string } | { ownerId: string }) => {
-    const qs = 'patientId' in filter
-      ? `patientId=${encodeURIComponent(filter.patientId)}`
-      : `ownerId=${encodeURIComponent(filter.ownerId)}`;
+  listSignedForms: (filter: { patientId: string; ownerId?: string } | { ownerId: string; patientId?: string }) => {
+    const qs = new URLSearchParams();
+    if (filter.patientId !== undefined) qs.set('patientId', filter.patientId);
+    if (filter.ownerId !== undefined) qs.set('ownerId', filter.ownerId);
     return apiClient.get<SignedFormSummary[]>(`/api/v1/signed-forms?${qs}`);
   },
   getSignedForm: (id: string) => apiClient.get<SignedFormDetail>(`/api/v1/signed-forms/${id}`),

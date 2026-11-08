@@ -21,7 +21,7 @@ import java.util.List;
 /**
  * Dijital onay formlari (2026-11-07, Task 3): ClaudeLabResultOcrAdapter ile AYNI desen (vision, devre
  * kesici, hata -> modelConnected=false). Fark: JSON'u ayristirmaz, kod blogu temizlenmis ham metni doner
- * (ayristirma/dogrulama/yeniden deneme use case'te). Uzun formlar icin daha yuksek token/zaman siniri.
+ * (ayristirma/dogrulama/yeniden deneme use case'te). Uzun formlar icin yuksek token siniri; bu akisa ozel yapilandirilabilir okuma suresi.
  */
 @Component
 @ConditionalOnProperty(prefix = "ai", name = "provider", havingValue = "claude")
@@ -44,20 +44,24 @@ class ClaudeFormTemplateExtractionAdapter implements FormTemplateExtractionPort 
         @Value("${ai.anthropic.model:claude-sonnet-5}") String model,
         ObjectMapper objectMapper,
         IntegrationOutcomes outcomes,
-        CircuitBreakerRegistry circuitBreakers
+        CircuitBreakerRegistry circuitBreakers,
+        @Value("${ai.form-template.read-timeout-seconds:45}") int readTimeoutSeconds
     ) {
-        this(apiKey, model, objectMapper, "https://api.anthropic.com/v1/messages", outcomes, circuitBreakers);
+        this(apiKey, model, objectMapper, "https://api.anthropic.com/v1/messages", outcomes, circuitBreakers, readTimeoutSeconds);
     }
 
     ClaudeFormTemplateExtractionAdapter(String apiKey, String model, ObjectMapper objectMapper, String apiUrl,
-                                        IntegrationOutcomes outcomes, CircuitBreakerRegistry circuitBreakers) {
+                                        IntegrationOutcomes outcomes, CircuitBreakerRegistry circuitBreakers, int readTimeoutSeconds) {
+        if (readTimeoutSeconds < 1 || readTimeoutSeconds > 60) {
+            throw new IllegalArgumentException("ai.form-template.read-timeout-seconds must be between 1 and 60");
+        }
         this.apiKey = apiKey;
         this.model = model;
         this.objectMapper = objectMapper;
         this.apiUrl = apiUrl;
         this.outcomes = outcomes;
         this.circuitBreaker = circuitBreakers.circuitBreaker("ai");
-        this.restClient = OutboundHttp.restClient(Duration.ofSeconds(5), Duration.ofSeconds(120));
+        this.restClient = OutboundHttp.restClient(Duration.ofSeconds(5), Duration.ofSeconds(readTimeoutSeconds));
     }
 
     @Override

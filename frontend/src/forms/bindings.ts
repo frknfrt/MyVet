@@ -137,7 +137,7 @@ function invalidReason(binding: WritableBinding, value: string, todayIso: string
       return isRealIsoDate(value) && value <= todayIso ? null : 'Geçersiz doğum tarihi — kayda yazılamaz';
     case 'patient.weightKg': {
       const n = Number(value.replace(',', '.'));
-      return /^\d+([.,]\d+)?$/.test(value) && n > 0 && n <= 9999.99 ? null : 'Geçersiz kilo — kayda yazılamaz';
+      return /^\d+([.,]\d+)?$/.test(value) && n >= 0.005 && n <= 9999.99 ? null : 'Geçersiz kilo — kayda yazılamaz';
     }
     case 'owner.email':
       return /^[^\s@]+@[^\s@]+$/.test(value) ? null : 'Geçersiz e-posta — kayda yazılamaz';

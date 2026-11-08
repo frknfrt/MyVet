@@ -29,9 +29,18 @@ public class GetSignedFormUseCase {
 
     @Transactional(readOnly = true)
     public SignedFormDetail execute(UUID id) {
+        return load(id).detail();
+    }
+
+    record Loaded(SignedForm form, SignedFormDetail detail, byte[] signaturePng) {}
+
+    Loaded load(UUID id) {
         SignedForm f = signedFormRepository.findById(id).orElseThrow(() -> new SignedFormNotFoundException(id));
         String signedByName = staffUserLookupPort.findSummaryById(f.getSignedBy()).fullName();
-        boolean ok = integrityOk(f);
+        byte[] png = null;
+        try { png = fileStoragePort.retrieve(f.getSignatureStorageRef()); }
+        catch (StoredFileNotFoundException e) { /* Missing signature is reported through integrityOk. */ }
+        boolean ok = png != null && integrityOk(f, png);
         FormTemplateContent content = null;
         Map<String, Object> values = null;
         try {
@@ -40,16 +49,16 @@ public class GetSignedFormUseCase {
         } catch (RuntimeException e) {
             ok = false; // kurcalanmis/bozuk JSON: 500 yerine integrityOk=false
         }
-        return new SignedFormDetail(
+        SignedFormDetail detail = new SignedFormDetail(
             f.getId(), f.getTemplateTitle(), content, values,
             new SignerInput(f.getSignerType(), f.getSignerName(), f.getSignerNationalId(), f.getSignerPhone()),
             f.getSignedAt(), signedByName, f.getPatientId(), f.getOwnerId(), f.getEncounterId(),
             f.getStatus(), f.getVoidReason(), f.getVoidedAt(), ok);
+        return new Loaded(f, detail, png);
     }
 
-    private boolean integrityOk(SignedForm f) {
+    private boolean integrityOk(SignedForm f, byte[] png) {
         try {
-            byte[] png = fileStoragePort.retrieve(f.getSignatureStorageRef());
             String signerJson = SignedFormValues.signerJson(
                 f.getSignerType(), f.getSignerName(), f.getSignerNationalId(), f.getSignerPhone());
             String metadataJson = SignedFormValues.metadataJson(f.getTemplateId(), f.getPatientId(), f.getOwnerId(),

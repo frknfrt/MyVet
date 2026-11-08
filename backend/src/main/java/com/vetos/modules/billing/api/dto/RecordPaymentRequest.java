@@ -6,4 +6,4 @@ import jakarta.validation.constraints.Positive;
 
 import java.math.BigDecimal;
 
-public record RecordPaymentRequest(@NotNull PaymentMethod method, @NotNull @Positive BigDecimal amount, String pspRef, java.util.UUID requestId) {}
+public record RecordPaymentRequest(@NotNull PaymentMethod method, @NotNull @Positive @jakarta.validation.constraints.Digits(integer = 10, fraction = 2) BigDecimal amount, String pspRef, java.util.UUID requestId) {}

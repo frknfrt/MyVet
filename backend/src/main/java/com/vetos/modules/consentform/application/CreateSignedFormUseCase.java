@@ -32,9 +32,11 @@ import java.util.regex.Pattern;
 public class CreateSignedFormUseCase {
 
     static final int MAX_SIGNATURE_BYTES = 200 * 1024;
+    private static final int MAX_SIGNATURE_BASE64_CHARS = ((MAX_SIGNATURE_BYTES + 2) / 3) * 4;
     private static final int MAX_USER_AGENT = 500;
     private static final Pattern NATIONAL_ID = Pattern.compile("\\d{11}");
 
+    private final SignedFormSubmissionRepository submissions;
     private final FormTemplateRepository templateRepository;
     private final SignedFormRepository signedFormRepository;
     private final PatientLookupPort patientLookupPort;
@@ -44,19 +46,35 @@ public class CreateSignedFormUseCase {
 
     @Transactional
     public UUID execute(UUID staffId, CreateSignedFormCommand cmd) {
+        if (cmd.requestId() == null) throw new InvalidSignedFormValuesException("İşlem anahtarı zorunludur");
+        if (cmd.templateContentHash() == null || cmd.templateContentHash().isBlank()) {
+            throw new com.vetos.modules.consentform.domain.exception.FormTemplateChangedConflictException();
+        }
+        byte[] png = decodeSignature(cmd.signaturePngBase64());
+        String valuesHashInput = SignedFormValues.toJson(
+            new java.util.TreeMap<>(cmd.values() == null ? Map.of() : cmd.values()));
+        String requestHash = SignedFormDigest.compute(cmd.templateContentHash(), valuesHashInput,
+            SignedFormValues.toJson(cmd.signer()),
+            SignedFormValues.toJson(java.util.Arrays.asList(staffId, cmd.templateId(), cmd.patientId(), cmd.encounterId())), png);
+        UUID tenantId = TenantContext.current();
+        var previous = submissions.claim(tenantId, cmd.requestId(), requestHash);
+        if (previous.isPresent()) return previous.get();
+
         FormTemplate template = templateRepository.findById(cmd.templateId())
             .orElseThrow(() -> new FormTemplateNotFoundException(cmd.templateId()));
         if (template.getStatus() != FormTemplateStatus.ACTIVE) {
             throw new FormTemplateArchivedException("Arşivlenmiş şablonla form imzalanamaz");
+        }
+        if (!template.contentHash().equals(cmd.templateContentHash())) {
+            throw new com.vetos.modules.consentform.domain.exception.FormTemplateChangedConflictException();
         }
         PatientSummary patient = patientLookupPort.findSummaryById(cmd.patientId());
 
         validateEncounter(cmd.encounterId(), patient.id());
 
         FormTemplateContent content = FormTemplateContentCodec.fromJson(template.getContent());
+        FormTemplateContentValidator.validate(content);
         Map<String, Object> values = SignedFormValues.normalize(content, cmd.values());
-        byte[] png = decodeSignature(cmd.signaturePngBase64());
-
         SignerInput signer = resolveSigner(cmd.signer(), patient);
         String valuesJson = SignedFormValues.toJson(values);
         String snapshot = template.getContent();
@@ -74,7 +92,9 @@ public class CreateSignedFormUseCase {
             patient.id(), patient.ownerId(), cmd.encounterId(),
             signer.type(), signer.name(), signer.nationalId(), signer.phone(),
             staffId, signedAt, cmd.clientIp(), ua, digest);
-        return signedFormRepository.save(form).getId();
+        UUID id = signedFormRepository.save(form).getId();
+        submissions.complete(tenantId, cmd.requestId(), id);
+        return id;
     }
 
     /** Muayene yoksa / baska kiracinin ise / baska hastaya aitse hep ayni 422 (404 ayrimi sizdirilmaz). */
@@ -95,15 +115,15 @@ public class CreateSignedFormUseCase {
         }
         String nationalId = blankToNull(in.nationalId());
         String phone = blankToNull(in.phone());
+        if (nationalId != null && !NATIONAL_ID.matcher(nationalId).matches()) {
+            throw new InvalidSignedFormValuesException("T.C. kimlik numarası 11 haneli rakam olmalıdır");
+        }
         if (in.type() == SignerType.OWNER) {
             String ownerName = ownerLookupPort.findSummaryById(patient.ownerId()).fullName();
             return new SignerInput(SignerType.OWNER, ownerName, nationalId, phone);
         }
         String name = blankToNull(in.name());
         if (name == null) throw new InvalidSignedFormValuesException("İmzalayan adı zorunludur");
-        if (nationalId != null && !NATIONAL_ID.matcher(nationalId).matches()) {
-            throw new InvalidSignedFormValuesException("T.C. kimlik numarası 11 haneli rakam olmalıdır");
-        }
         return new SignerInput(SignerType.OTHER, name, nationalId, phone);
     }
 
@@ -113,9 +133,18 @@ public class CreateSignedFormUseCase {
 
     private static byte[] decodeSignature(String base64) {
         if (base64 == null || base64.isBlank()) throw new InvalidSignatureException("İmza zorunludur");
+        String encoded = base64.strip();
+        if (encoded.length() > MAX_SIGNATURE_BASE64_CHARS) {
+            throw new InvalidSignatureException("İmza çok büyük (en çok 200 KB)");
+        }
+        int padding = encoded.endsWith("==") ? 2 : encoded.endsWith("=") ? 1 : 0;
+        int decodedLength = encoded.length() * 3 / 4 - padding;
+        if (decodedLength > MAX_SIGNATURE_BYTES) {
+            throw new InvalidSignatureException("İmza çok büyük (en çok 200 KB)");
+        }
         byte[] png;
         try {
-            png = Base64.getDecoder().decode(base64.strip());
+            png = Base64.getDecoder().decode(encoded);
         } catch (IllegalArgumentException e) {
             throw new InvalidSignatureException("İmza çözülemedi");
         }

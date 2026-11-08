@@ -96,4 +96,35 @@ class RecordPaymentUseCaseTest {
             .isInstanceOf(InvoiceNotFoundException.class);
         verifyNoInteractions(auditPort);
     }
+
+    @Test
+    void changedPayloadCannotReuseRequestId() {
+        var invoice = Invoice.createDraft(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), null, null);
+        UUID id = UUID.randomUUID(), requestId = UUID.randomUUID();
+        ReflectionTestUtils.setField(invoice, "id", id);
+        var payment = com.vetos.modules.billing.domain.Payment.record(invoice.getTenantId(), id, PaymentMethod.CASH,
+            BigDecimal.TEN, null, requestId);
+        when(invoiceRepository.findByIdForUpdate(id)).thenReturn(Optional.of(invoice));
+        when(paymentRepository.findByInvoiceId(id)).thenReturn(List.of(payment));
+        assertThatThrownBy(() -> useCase().execute(new RecordPaymentCommand(id, PaymentMethod.CASH,
+            BigDecimal.ONE, null, requestId))).isInstanceOf(com.vetos.modules.billing.domain.exception.InvoiceInvalidStateException.class);
+        verify(paymentRepository, org.mockito.Mockito.never()).save(any());
+        verifyNoInteractions(auditPort);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"0", "-1", "0.001", "1001"})
+    void invalidOrExcessPaymentCannotBeSaved(String amount) {
+        var invoice = Invoice.createDraft(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), null, null);
+        UUID id = UUID.randomUUID();
+        ReflectionTestUtils.setField(invoice, "id", id);
+        invoice.recalculateTotal(new BigDecimal("1000"));
+        invoice.issue();
+        when(invoiceRepository.findByIdForUpdate(id)).thenReturn(Optional.of(invoice));
+        org.mockito.Mockito.lenient().when(paymentRepository.findByInvoiceId(id)).thenReturn(List.of());
+        assertThatThrownBy(() -> useCase().execute(new RecordPaymentCommand(id, PaymentMethod.CASH,
+            new BigDecimal(amount), null))).isInstanceOf(com.vetos.modules.billing.domain.exception.InvoiceInvalidStateException.class);
+        verify(paymentRepository, org.mockito.Mockito.never()).save(any());
+        verifyNoInteractions(auditPort);
+    }
 }

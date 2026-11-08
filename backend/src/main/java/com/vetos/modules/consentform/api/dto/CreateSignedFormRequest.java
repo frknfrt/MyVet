@@ -9,11 +9,13 @@ import java.util.Map;
 import java.util.UUID;
 
 public record CreateSignedFormRequest(
+    @NotNull UUID requestId,
     @NotNull UUID templateId,
     @NotNull UUID patientId,
     UUID encounterId,
     Map<String, Object> values,
     @NotNull @Valid SignerRequest signer,
+    @NotBlank String templateContentHash,
     @NotBlank String signaturePngBase64
 ) {
     public record SignerRequest(@NotNull SignerType type, String name, String nationalId, String phone) {}

@@ -8,14 +8,13 @@ import {
   allCodes,
   cleanContent,
   hasSignature,
-  isFillable,
   newItem,
   slugify,
   TYPE_LABELS,
   uniqueCode,
   validateContent,
 } from '../../../forms/formEdit';
-import type { FormItem, FormItemType, FormTemplateContent } from '../../../forms/formModel';
+import { supportsBinding, type FormItem, type FormItemType, type FormTemplateContent } from '../../../forms/formModel';
 import { FormItemEditor } from './FormItemEditor';
 import { openProtectedFile } from './openProtectedFile';
 import styles from './FormTemplateEditor.module.css';
@@ -88,8 +87,21 @@ export function FormTemplateEditor({ initialContent, sourceImageId, templateId, 
       e.preventDefault();
       e.returnValue = '';
     };
+    const guardLink = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+      const anchor = e.target instanceof Element ? e.target.closest<HTMLAnchorElement>('a[href]') : null;
+      if (!anchor || anchor.target === '_blank' || anchor.hasAttribute('download')) return;
+      const destination = new URL(anchor.href, window.location.href);
+      if (destination.origin !== window.location.origin) return; // External navigation uses beforeunload.
+      if (destination.pathname === window.location.pathname && destination.search === window.location.search) return;
+      if (!window.confirm(LEAVE_MESSAGE)) { e.preventDefault(); e.stopPropagation(); }
+    };
     window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
+    document.addEventListener('click', guardLink, true);
+    return () => {
+      window.removeEventListener('beforeunload', handler);
+      document.removeEventListener('click', guardLink, true);
+    };
   }, [dirty]);
 
   const cleaned = useMemo(() => cleanContent(content), [content]);
@@ -131,8 +143,8 @@ export function FormTemplateEditor({ initialContent, sourceImageId, templateId, 
         code = uniqueCode(slugify(old.label ?? ''), allCodes(c, old));
         autoCodes.current.add(code);
       }
-      // Baglanti yalniz CHOICE disindaki doldurulabilir turlerde anlamli
-      const keepBinding = isFillable(type) && type !== 'CHOICE' && old.type !== 'CHOICE';
+      // Tür değişince yalnız uyumlu veri bağlantısını koru
+      const keepBinding = old.binding !== null && supportsBinding(type, old.binding);
       const next: FormItem = {
         ...old,
         type,

@@ -27,6 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ConsentFormPdfEndpointsSecurityTest {
 
     @Autowired private MockMvc mockMvc;
+    @org.springframework.beans.factory.annotation.Value("${app.frontend-base-url}") private String frontendOrigin;
     @Autowired private JwtTokenProvider jwtTokenProvider;
     @MockitoBean private RenderBlankTemplatePdfUseCase renderBlankTemplatePdfUseCase;
     @MockitoBean private RenderSignedFormPdfUseCase renderSignedFormPdfUseCase;
@@ -67,5 +68,44 @@ class ConsentFormPdfEndpointsSecurityTest {
             .andExpect(content().contentType("application/pdf"))
             .andExpect(header().string("Content-Disposition",
                 org.hamcrest.Matchers.startsWith("attachment; filename=\"Cerrahi-Islem-Onami-2026-11-07.pdf\"; filename*=UTF-8''")));
+    }
+
+    @Test
+    void missingTemplatePdfReturns404() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(renderBlankTemplatePdfUseCase.execute(id)).thenThrow(new com.vetos.modules.consentform.domain.exception.FormTemplateNotFoundException(id));
+        mockMvc.perform(get("/api/v1/form-templates/" + id + "/pdf").header("Authorization", bearer("ADMIN")))
+            .andExpect(status().isNotFound())
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.errorCode").value("FORM_TEMPLATE_NOT_FOUND"));
+    }
+
+    @Test
+    void missingSignedPdfReturns404() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(renderSignedFormPdfUseCase.execute(id)).thenThrow(new com.vetos.modules.consentform.domain.exception.SignedFormNotFoundException(id));
+        mockMvc.perform(get("/api/v1/signed-forms/" + id + "/pdf").header("Authorization", bearer("VET")))
+            .andExpect(status().isNotFound())
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.errorCode").value("SIGNED_FORM_NOT_FOUND"));
+    }
+
+    @Test
+    void unsupportedPdfGlyphReturnsActionable422() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(renderSignedFormPdfUseCase.execute(id)).thenThrow(new com.vetos.modules.consentform.domain.exception.UnsupportedConsentPdfCharacterException(0x6f22));
+        mockMvc.perform(get("/api/v1/signed-forms/" + id + "/pdf").header("Authorization", bearer("VET")))
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.errorCode").value("UNSUPPORTED_CONSENT_PDF_CHARACTER"));
+    }
+
+    @Test
+    void exposesFilenameHeaderOnlyThroughExistingAllowedOrigin() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(renderSignedFormPdfUseCase.execute(id)).thenReturn(new RenderedConsentPdf("%PDF-1".getBytes(), "Onam", LocalDate.of(2026, 11, 7)));
+        mockMvc.perform(get("/api/v1/signed-forms/" + id + "/pdf").header("Authorization", bearer("ADMIN")).header("Origin", frontendOrigin))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Access-Control-Expose-Headers", org.hamcrest.Matchers.containsString("Content-Disposition")))
+            .andExpect(header().exists("Content-Disposition"));
+        mockMvc.perform(get("/api/v1/signed-forms/" + id + "/pdf").header("Authorization", bearer("ADMIN")).header("Origin", "https://untrusted.invalid"))
+            .andExpect(status().isForbidden());
     }
 }

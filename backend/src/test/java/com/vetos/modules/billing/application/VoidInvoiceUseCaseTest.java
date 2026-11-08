@@ -39,7 +39,7 @@ class VoidInvoiceUseCaseTest {
         UUID id = UUID.randomUUID();
         ReflectionTestUtils.setField(invoice, "id", id);
         invoice.recalculateTotal(new BigDecimal("1250"));
-        when(invoiceRepository.findById(id)).thenReturn(Optional.of(invoice));
+        when(invoiceRepository.findByIdForUpdate(id)).thenReturn(Optional.of(invoice));
 
         useCase().execute(id);
 
@@ -56,7 +56,7 @@ class VoidInvoiceUseCaseTest {
     @Test
     void should_notRecord_whenInvoiceNotFound() {
         UUID id = UUID.randomUUID();
-        when(invoiceRepository.findById(id)).thenReturn(Optional.empty());
+        when(invoiceRepository.findByIdForUpdate(id)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> useCase().execute(id)).isInstanceOf(InvoiceNotFoundException.class);
         verifyNoInteractions(auditPort);

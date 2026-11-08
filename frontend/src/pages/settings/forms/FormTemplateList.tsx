@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ApiError } from '../../../api/client';
 import { formsApi, type FormTemplateSummary } from '../../../api/formsApi';
@@ -16,17 +16,28 @@ export function FormTemplateList() {
   const [loading, setLoading] = useState(true);
   const [showArchived, setShowArchived] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const generation = useRef(0);
+  const active = useRef(false);
+  const archivedFilter = useRef(showArchived);
 
   function load() {
+    if (!active.current) return;
+    const request = ++generation.current;
     setLoading(true);
+    setError(null);
     formsApi
-      .listTemplates(showArchived ? 'ALL' : 'ACTIVE')
-      .then(setRows)
-      .catch((e) => setError(errorMessageOf(e)))
-      .finally(() => setLoading(false));
+      .listTemplates(archivedFilter.current ? 'ALL' : 'ACTIVE')
+      .then(rows => { if (request === generation.current) setRows(rows); })
+      .catch(e => { if (request === generation.current) setError(errorMessageOf(e)); })
+      .finally(() => { if (request === generation.current) setLoading(false); });
   }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(load, [showArchived]);
+  useEffect(() => {
+    active.current = true;
+    archivedFilter.current = showArchived;
+    load();
+    return () => { active.current = false; generation.current++; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showArchived]);
 
   async function archive(row: FormTemplateSummary) {
     if (!window.confirm(`"${row.title}" arşivlensin mi? Yeni form doldurulurken listelenmez; imzalı formlar korunur.`)) return;
@@ -34,17 +45,17 @@ export function FormTemplateList() {
       await formsApi.archiveTemplate(row.id);
       load();
     } catch (e) {
-      setError(errorMessageOf(e));
+      if (active.current) setError(errorMessageOf(e));
     }
   }
 
   async function openReference(row: FormTemplateSummary) {
     try {
       const detail = await formsApi.getTemplate(row.id);
-      if (!detail.sourceImageId) return;
+      if (!active.current || !detail.sourceImageId) return;
       await openProtectedFile(formsApi.sourceImageUrl(detail.sourceImageId));
     } catch (e) {
-      setError(errorMessageOf(e));
+      if (active.current) setError(errorMessageOf(e));
     }
   }
 
@@ -60,7 +71,7 @@ export function FormTemplateList() {
         </Link>
       </div>
 
-      {error && <div className={styles.error}>{error}</div>}
+      {error && <div role="alert" className={styles.error}>{error}</div>}
 
       {loading ? (
         <div className={styles.empty}>Yükleniyor…</div>

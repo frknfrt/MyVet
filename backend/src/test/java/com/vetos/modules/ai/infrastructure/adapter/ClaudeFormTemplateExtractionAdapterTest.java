@@ -15,6 +15,11 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -27,12 +32,20 @@ class ClaudeFormTemplateExtractionAdapterTest {
     private String stubResponseBody;
     private int stubStatus = 200;
     private String capturedBody;
+    private boolean stall;
+    private final CountDownLatch releaseResponse = new CountDownLatch(1);
 
     @BeforeEach
     void startStubServer() throws IOException {
         stubServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         stubServer.createContext("/v1/messages", ex -> {
             capturedBody = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+            if (stall) {
+                try { releaseResponse.await(10, TimeUnit.SECONDS); }
+                catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                ex.close();
+                return;
+            }
             byte[] payload = stubResponseBody.getBytes(StandardCharsets.UTF_8);
             ex.getResponseHeaders().add("Content-Type", "application/json");
             ex.sendResponseHeaders(stubStatus, payload.length);
@@ -44,12 +57,17 @@ class ClaudeFormTemplateExtractionAdapterTest {
 
     @AfterEach
     void stopStubServer() {
+        releaseResponse.countDown();
         stubServer.stop(0);
     }
 
     private ClaudeFormTemplateExtractionAdapter adapter(String apiKey) {
+        return adapter(apiKey, 45);
+    }
+
+    private ClaudeFormTemplateExtractionAdapter adapter(String apiKey, int timeout) {
         String url = "http://127.0.0.1:" + stubServer.getAddress().getPort() + "/v1/messages";
-        return new ClaudeFormTemplateExtractionAdapter(apiKey, "claude-sonnet-5", new ObjectMapper(), url, outcomes, CircuitBreakerRegistry.ofDefaults());
+        return new ClaudeFormTemplateExtractionAdapter(apiKey, "claude-sonnet-5", new ObjectMapper(), url, outcomes, CircuitBreakerRegistry.ofDefaults(), timeout);
     }
 
     private static OcrImageInput image() {
@@ -86,5 +104,21 @@ class ClaudeFormTemplateExtractionAdapterTest {
 
         assertThat(draft.modelConnected()).isFalse();
         assertThat(draft.rawJson()).isNull();
+    }
+
+    @Test
+    void should_fallback_whenServerAcceptsRequestButNeverResponds() {
+        stall = true;
+        var draft = adapter("key", 1).extract(image());
+        assertThat(capturedBody).isNotNull();
+        assertThat(draft.modelConnected()).isFalse();
+        assertThat(draft.rawJson()).isNull();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {-1, 0, 61})
+    void should_rejectTimeoutOutsideSupportedRange(int timeout) {
+        assertThatThrownBy(() -> adapter("key", timeout)).isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("between 1 and 60");
     }
 }

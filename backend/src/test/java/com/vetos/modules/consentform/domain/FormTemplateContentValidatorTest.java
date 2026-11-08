@@ -126,4 +126,86 @@ class FormTemplateContentValidatorTest {
         assertThat(FormBinding.PATIENT_NAME.writable()).isFalse();
         assertThat(FormBinding.fromKey("nope")).isEmpty();
     }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"İmza: {{imza}}", "İmza: {{ imza }}"})
+    void should_reject_placeholderToSignature(String paragraph) {
+        assertRejected(content("Form", block(paragraph), signature()), "{{imza}}");
+    }
+
+    @Test
+    void should_accept_spacedPlaceholderToValueField() {
+        assertThatCode(() -> FormTemplateContentValidator.validate(content("Form",
+            text("ad", "Ad", null), block("Ad: {{ ad }}"), signature()))).doesNotThrowAnyException();
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"Evet", " Evet "})
+    void should_reject_duplicateChoiceOptions(String second) {
+        var choice = new FormItem(FormItemType.CHOICE, "tercih", "Tercih", null, false, null, null,
+            List.of("Evet", second), true);
+        assertRejected(content("Form", choice, signature()), "Seçenekler tekrarlanamaz");
+    }
+
+    @Test
+    void should_accept_distinctCaseSensitiveOptions() {
+        var choice = new FormItem(FormItemType.CHOICE, "tercih", "Tercih", null, false, null, null,
+            List.of("A", "a"), true);
+        assertThatCode(() -> FormTemplateContentValidator.validate(content("Form", choice, signature())))
+            .doesNotThrowAnyException();
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+        "CHOICE,owner.birthDate", "SHORT_TEXT,patient.weightKg", "NUMBER,owner.nationalId",
+        "DATE,owner.phone", "PHONE,owner.fullName", "SHORT_TEXT,today", "CHOICE,owner.email"
+    })
+    void should_reject_incompatibleBinding(FormItemType type, String binding) {
+        var field = new FormItem(type, "alan", "Alan", null, false, binding, null,
+            type == FormItemType.CHOICE ? List.of("A", "B") : null, false);
+        assertRejected(content("Form", field, signature()), "alan türüyle uyumsuz");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+        "DATE,owner.birthDate", "DATE,today", "NUMBER,patient.weightKg", "PHONE,owner.phone",
+        "SHORT_TEXT,owner.secondaryPhone", "SHORT_TEXT,owner.nationalId", "LONG_TEXT,owner.address",
+        "CHOICE,patient.species", "CHOICE,patient.sex", "CHOICE,patient.breed", "CHOICE,patient.color"
+    })
+    void should_accept_compatibleBinding(FormItemType type, String binding) {
+        var field = new FormItem(type, "alan", "Alan", null, false, binding, null,
+            type == FormItemType.CHOICE ? List.of("A", "B") : null, false);
+        assertThatCode(() -> FormTemplateContentValidator.validate(content("Form", field, signature())))
+            .doesNotThrowAnyException();
+    }
+
+    static java.util.stream.Stream<org.junit.jupiter.params.provider.Arguments> malformedStructures() {
+        var sig = signature();
+        return java.util.stream.Stream.of(
+            org.junit.jupiter.params.provider.Arguments.of(null, "Form içeriği boş"),
+            org.junit.jupiter.params.provider.Arguments.of(new FormTemplateContent("Form", null), "en az bir bölüm"),
+            org.junit.jupiter.params.provider.Arguments.of(new FormTemplateContent("Form", List.of()), "en az bir bölüm"),
+            org.junit.jupiter.params.provider.Arguments.of(new FormTemplateContent("Form", java.util.Arrays.asList((FormSection) null)), "Her bölümde"),
+            org.junit.jupiter.params.provider.Arguments.of(new FormTemplateContent("Form", List.of(new FormSection(null, null))), "Her bölümde"),
+            org.junit.jupiter.params.provider.Arguments.of(new FormTemplateContent("Form", List.of(new FormSection(null, List.of()))), "Her bölümde"),
+            org.junit.jupiter.params.provider.Arguments.of(new FormTemplateContent("Form", List.of(new FormSection(null, java.util.Arrays.asList(null, sig)))), "Öğe türü eksik"),
+            org.junit.jupiter.params.provider.Arguments.of(content("Form", new FormItem(null, "ad", "Ad", null, false, null, null, null, false), sig), "Öğe türü eksik"),
+            org.junit.jupiter.params.provider.Arguments.of(content("Form", text("ad", " ", null), sig), "etiketi boş"),
+            org.junit.jupiter.params.provider.Arguments.of(content("Form", text("a".repeat(41), "Ad", null), sig), "Alan kodu geçersiz"),
+            org.junit.jupiter.params.provider.Arguments.of(content("Form", block(" "), sig), "metni boş"),
+            org.junit.jupiter.params.provider.Arguments.of(content("Form", new FormItem(FormItemType.TEXT_BLOCK, "ad", null, "Metin", false, null, null, null, false), sig), "alan kodu olmamalı"),
+            org.junit.jupiter.params.provider.Arguments.of(content("Form", new FormItem(FormItemType.TEXT_BLOCK, null, null, "Metin", false, "owner.fullName", null, null, false), sig), "Metin bloğuna veri"),
+            org.junit.jupiter.params.provider.Arguments.of(content("Form", new FormItem(FormItemType.SHORT_TEXT, "ad", "Ad", "Yanlış", false, null, null, null, false), sig), "Yalnız metin bloğunda"),
+            org.junit.jupiter.params.provider.Arguments.of(content("Form", new FormItem(FormItemType.SHORT_TEXT, "ad", "Ad", null, false, null, "kg", null, false), sig), "Yalnız sayı alanında"),
+            org.junit.jupiter.params.provider.Arguments.of(content("Form", new FormItem(FormItemType.CHOICE, "ad", "Ad", null, false, null, null, List.of("A", " "), false), sig), "Seçenek boş"),
+            org.junit.jupiter.params.provider.Arguments.of(content("Form", new FormItem(FormItemType.SHORT_TEXT, "ad", "Ad", null, false, null, null, List.of("A", "B"), false), sig), "Yalnız seçimli alanda seçenek"),
+            org.junit.jupiter.params.provider.Arguments.of(content("Form", new FormItem(FormItemType.SHORT_TEXT, "ad", "Ad", null, false, null, null, null, true), sig), "Yalnız seçimli alan çoklu")
+        );
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.MethodSource("malformedStructures")
+    void malformedStructuresAreDomainErrorsRatherThanNullPointerFailures(FormTemplateContent invalid, String message) {
+        assertRejected(invalid, message);
+    }
 }

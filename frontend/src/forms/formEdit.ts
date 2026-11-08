@@ -1,5 +1,5 @@
 // Sablon duzenleyicisinin saf yardimcilari: kod uretimi, bos oge, istemci dogrulamasi.
-import type { FormItem, FormItemType, FormTemplateContent } from './formModel';
+import { isFormBinding, supportsBinding, type FormItem, type FormItemType, type FormTemplateContent } from './formModel';
 
 const TR_MAP: Record<string, string> = {
   ç: 'c', Ç: 'c', ğ: 'g', Ğ: 'g', ı: 'i', İ: 'i', ö: 'o', Ö: 'o', ş: 's', Ş: 's', ü: 'u', Ü: 'u',
@@ -97,14 +97,17 @@ export function validateContent(raw: FormTemplateContent): string[] {
   let signatures = 0;
   content.sections.forEach((section, si) => {
     const where = section.title ? `"${section.title}" bölümü` : `${si + 1}. bölüm`;
-    const sectionCodes = new Set(section.items.filter((i) => i.type !== 'TEXT_BLOCK' && i.code).map((i) => i.code as string));
+    const sectionCodes = new Set(section.items.filter((i) => i.type !== 'TEXT_BLOCK' && i.type !== 'SIGNATURE' && i.code).map((i) => i.code as string));
     section.items.forEach((i, ii) => {
       const name = `${where}, ${ii + 1}. öğe`;
       if (i.type === 'SIGNATURE') signatures++;
+      if (i.binding && (!isFormBinding(i.binding) || !supportsBinding(i.type, i.binding))) {
+        errors.push(`${name}: veri bağlantısı alan türüyle uyumsuz.`);
+      }
       if (i.type === 'TEXT_BLOCK') {
         if (!i.text) errors.push(`${name}: paragraf metni boş olamaz.`);
         for (const m of (i.text ?? '').matchAll(PLACEHOLDER)) {
-          if (!sectionCodes.has(m[1])) errors.push(`${name}: {{${m[1]}}} aynı bölümdeki bir alanın kodu olmalı.`);
+          if (!sectionCodes.has(m[1])) errors.push(`${name}: {{${m[1]}}} aynı bölümdeki bir değer alanının kodu olmalı.`);
         }
         return;
       }
@@ -112,7 +115,11 @@ export function validateContent(raw: FormTemplateContent): string[] {
       if (!i.code) errors.push(`${name}: alan kodu eksik.`);
       else if (seen.has(i.code)) errors.push(`${name}: "${i.code}" kodu başka bir alanda da var.`);
       else seen.add(i.code);
-      if (i.type === 'CHOICE' && (i.options?.length ?? 0) < 2) errors.push(`${name}: seçenekler en az 2 olmalı.`);
+      if (i.type === 'CHOICE') {
+        const options = i.options ?? [];
+        if (options.length < 2) errors.push(`${name}: seçenekler en az 2 olmalı.`);
+        if (new Set(options).size !== options.length) errors.push(`${name}: seçenekler tekrarlanamaz.`);
+      }
     });
   });
   if (signatures !== 1) errors.push('Formda tam olarak bir imza alanı olmalı.');

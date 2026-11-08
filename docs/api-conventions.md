@@ -186,3 +186,65 @@ En düşük sürümü yükseltme sırası:
 ### API dokümanı (OpenAPI)
 
 Geliştirmede `/swagger-ui.html` (JSON: `/v3/api-docs`) kimliksiz açıktır; içerik koddan otomatik çıkar, adreslere anotasyon eklenmez. `prod` profilinde kapalıdır.
+
+
+## İmzalı formda şablon sürümü
+
+GET /api/v1/form-templates/{id} yanıtındaki contentHash, başlık ve saklanan şablon içeriğinin SHA-256 özetidir. POST /api/v1/signed-forms aynı değeri zorunlu templateContentHash alanında taşır. Özet uyuşmazsa 409 FORM_TEMPLATE_CHANGED döner; dosya ve imzalı form oluşturulmaz. Kullanıcı formu yeniden açıp güncel metni okuyarak yeniden imzalar. Alan olmadan gönderim 400 döner. Backend ve frontend birlikte dağıtılmalı; eski açık form sayfaları yeniden açılmalıdır.
+
+
+## İmzalı formdan geri yazma doğrulaması
+
+POST /api/v1/form-write-backs için signedFormId zorunludur (eksikse 400). Geçerli ve bütünlüğü doğrulanmış form, istekle aynı hasta ve sahibe ait olmalıdır; uyuşmazlık/iptal/bütünlük hatası 422 INVALID_FORM_WRITE_BACK_SOURCE döndürür. Başka kiracıdaki veya bulunamayan form mevcut 404 davranışını kullanır. Yalnız imza anındaki şablon ve değerlerle eşleşen yazılabilir alanlar uygulanır. OTHER imzalayanın owner.* alanları, CHOICE alanları ve formda olmayan/değiştirilmiş değerler skipped listesine alınır. Seçilmemiş alanlar gönderilmez. patient.domain.SignedFormWriteBackLookupPort kontrolünü consentform adaptörü sağlar; patient modülü consentform’a bağımlı değildir.
+
+
+Formdan patient.weightKg geri yazılırken NUMERIC(6,2) depolama sınırı uygulanır. 9999.99 üzerindeki veya iki ondalık basamağa yuvarlandığında sıfır olacak değerler skipped listesine alınır; diğer geçerli alanlar aynı işlemde kaydedilir. Kabul edilen değerler HALF_UP ile iki ondalık basamağa yuvarlanır (örn. 4.555 → 4.56, 0.005 → 0.01). Virgüllü ondalık giriş desteklenir. İmza anındaki form değerleri bu işlemle değiştirilmez.
+
+
+## İmzalı form gönderiminin güvenli tekrarı
+
+POST /api/v1/signed-forms için UUID requestId zorunludur; eksikse 400 döner. Arayüz form ekranı açık kaldığı sürece aynı işlem anahtarını kullanır ve eşzamanlı çift gönderimi engeller. Aynı kiracı, personel, anahtar ve aynı içerikle tekrar gönderim 201 ve ilk belge kimliğini döndürür. Aynı anahtarla farklı içerik/personel 409 SIGNED_FORM_REQUEST_CONFLICT döndürür; kullanıcı Formlar listesini kontrol eder. Yeni form için ekran yeniden açılır ve yeni anahtar üretilir.
+
+Sunucu istek özetine şablon özeti, şablon/hasta/muayene/personel kimlikleri, alan değerleri, imzalayan ve imza baytlarını dahil eder. Alan haritasının anahtar sırası sonucu değiştirmez. IP/User-Agent tekrar anahtarının parçası değildir; ilk kaydın metadata’sı korunur. Tamamlanmış gönderim tekrarı şablon sonradan değişse/arşivlense de ilk belgeyi döndürür. İlk işlem geri alınırsa aynı anahtar yeniden kullanılabilir.
+
+V99__signed_form_submission_idempotency.sql, kiracı/anahtar birincil anahtarlı gönderim tablosunu ekler. Rezervasyon, belge/dosya kaydı ve tamamlama aynı transaction içindedir. Frontend ve backend birlikte dağıtılmalı; eski açık form sayfaları yeniden açılmalıdır. Mevcut imzalı kayıtlar okunmaya devam eder.
+
+
+Şablon metnindeki {{kod}} yer tutucuları aynı bölümde değer taşıyan alanlara referans verebilir. SIGNATURE alanı metin yer tutucusu hedefi olamaz; {{imza}} ve {{ imza }} bu kurala tabidir. Kontrol şablon oluşturma/düzenleme ve yeni imzalı kayıt oluşturma sırasında uygulanır. Daha önce saklanan hatalı bir şablon, yeni imza öncesinde yönetici tarafından düzeltilmelidir.
+
+
+CHOICE seçenekleri baştaki/sondaki boşluklar temizlenerek karşılaştırıldığında benzersiz olmalıdır; büyük/küçük harf farkı korunur. Şablon oluşturma/düzenleme ve yeni imzalı kayıt öncesi bu kural denetlenir. Tekrarlanan seçenekli eski şablon, yeni imza öncesinde düzeltilmelidir. Gönderilen seçim listesinde aynı değer birden çok kez bulunursa 422 INVALID_SIGNED_FORM_VALUES döner; farklı seçimlerin gönderim sırası korunur. Tarihsel imzalı kayıtların okunması değişmez.
+
+
+### Form alanı ve sistem bağlantısı uyumluluğu
+
+- owner.birthDate ve today: DATE.
+- patient.weightKg: NUMBER.
+- owner.phone ve owner.secondaryPhone: PHONE, SHORT_TEXT veya LONG_TEXT.
+- patient.species, patient.breed, patient.sex ve patient.color: CHOICE, SHORT_TEXT veya LONG_TEXT.
+- Diğer bağlantılar: SHORT_TEXT veya LONG_TEXT. TC/mikroçip numaraları metin olarak korunur.
+- TEXT_BLOCK ve SIGNATURE alanlarında bağlantı kullanılamaz.
+
+Uyumsuz tür/bağlantı çifti şablon oluşturma/düzenleme ve yeni imzalı kayıt öncesinde 422 INVALID_FORM_TEMPLATE ile reddedilir. Editör uyumsuz seçenekleri devre dışı bırakır; tür değişince uyumsuz bağlantıyı temizler, uyumlu bağlantıyı korur. Eski uyumsuz şablonlar yeni imza öncesinde düzenlenmelidir. Tarihsel imzalı belgelerin okunması değişmez. Migration gerekmez.
+
+
+### AI form taslağı çıkarma okuma zaman aşımı
+
+Claude ve Ollama form çıkarma adaptörleri ai.form-template.read-timeout-seconds ayarını kullanır. Ortam değişkeni FORM_TEMPLATE_READ_TIMEOUT_SECONDS; varsayılan 45, geçerli aralık 1–60 saniyedir. Aralık dışı değer adaptör oluşturulurken hata verir. Bu ayar lab/görüntüleme OCR sürelerini değiştirmez; form çıkarma için eski OLLAMA_VISION_TIMEOUT_SECONDS ayarının yerine geçer. Bağlantı süresi deneme başına 5 saniye olarak kalır.
+
+Geçersiz model JSON’u için en fazla bir yeniden deneme korunur; varsayılan artık 2 x 120 yerine 2 x 45 saniyelik HTTP okuma zaman aşımıdır. Ağ hatası/timeout modelConnected=false üzerinden mevcut boş taslak/kota iadesi davranışını kullanır; bu durumda tekrar denenmez. HTTP okuma timeout’u kesin toplam işlem deadline’ı değildir: bulkhead kuyruğu, bağlantı, veri işleme ve aralıklı veri gönderen sunucunun etkisi bu ayardan ayrı değerlendirilir. Bu değişiklik, tüm isteğin 90 saniyede kesin biteceği garantisini vermez. Canlı proxy süreleri bu turda doğrulanmadı.
+
+
+POST /api/v1/ai/form-template-drafts, TenantRateLimitFilter içindeki diğer AI üretim uçlarıyla aynı kiracı AI dakika havuzunu kullanır (vetly.rate-limit.tenant-ai-per-minute). Aynı kiracıdaki farklı personel veya tokenlar ortak havuza tabidir; kiracılar ayrıdır. Limit aşımında çıkarma use case’i çalışmadan 429 RATE_LIMITED, Retry-After ve standart requestId döner. Genel kiracı limiti önce uygulanmaya devam eder. Bu dakika limiti, kullanım kotası ve bulkhead eşzamanlılık kontrolünden ayrıdır. Bu değişiklik diğer OCR yollarının rate-limit kapsamını değiştirmez.
+
+
+Yeni imzalı form oluşturulurken signer.nationalId hem OWNER hem OTHER için isteğe bağlıdır. Boş değerler null olur; baştaki/sondaki boşluklar temizlenir. Dolu değer 11 ASCII rakamdan oluşmalıdır; aksi halde 422 INVALID_SIGNED_FORM_VALUES döner ve dosya/form kaydedilmez. Bu kontrol biçim kontrolüdür; TC checksum veya resmi kimlik doğrulaması eklenmemiştir. OWNER adı önceki gibi hasta sahibinin sunucu kaydından alınır. Kabul edilen TC değeri imzalayan snapshot’ına ve bütünlük özetine dahil edilir. Tarihsel belge okuma ve tamamlanmış requestId tekrarlarının mevcut davranışı değişmez.
+
+
+GET /api/v1/signed-forms: patientId ve ownerId birlikte verildiğinde AND uygulanır. Yalnız biri verilirse o filtre kullanılır; ikisi de yoksa mevcut 422 davranışı korunur. Eşleşmeyen kesişim boş listedir. Kiracı sınırı, signedAt azalan sırası ve iptal edilmiş formların listelenmesi değişmez.
+
+
+Form geri yazmada aynı binding tekrar ederse ilk geçerli ve izin verilen değer uygulanır; sonraki tekrarlar skipped/tekrarlanan alan olur. Geçersiz ilk değer sonraki geçerli değeri engellemez.
+
+
+Onay PDF’leri gömülü DejaVu Sans / Identity-H kullanır. Fontta olmayan karakterler sessizce kaybolmaz: 422 UNSUPPORTED_CONSENT_PDF_CHARACTER ve U+ karakter kodu döner. Tam Unicode kapsamı iddia edilmez. Font lisansı backend/src/main/resources/fonts altında dağıtılır.

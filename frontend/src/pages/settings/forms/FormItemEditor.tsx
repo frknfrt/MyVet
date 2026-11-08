@@ -1,5 +1,5 @@
 import { FieldWrap, Input, Select, Textarea } from '../../../components/ui/Field';
-import { BINDING_LABELS, BINDINGS, type FormBinding, type FormItem, type FormItemType } from '../../../forms/formModel';
+import { supportsBinding, BINDING_LABELS, BINDINGS, type FormBinding, type FormItem, type FormItemType } from '../../../forms/formModel';
 import { FILLABLE_TYPES, TYPE_LABELS, isFillable } from '../../../forms/formEdit';
 import styles from './FormTemplateEditor.module.css';
 
@@ -79,7 +79,7 @@ export function FormItemEditor({ item, sectionCodes, canMoveUp, canMoveDown, onP
           >
             <option value="">Bağlantı yok</option>
             {BINDINGS.map((b) => (
-              <option key={b} value={b}>
+              <option key={b} value={b} disabled={!supportsBinding(item.type, b)}>
                 {BINDING_LABELS[b]}
               </option>
             ))}

@@ -6,6 +6,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -27,10 +29,20 @@ class SignedFormRepositoryAdapter implements SignedFormRepository {
     }
 
     @Override
+    public List<SignedForm> findByPatientIdAndOwnerIdOrderBySignedAtDesc(UUID patientId, UUID ownerId) {
+        return jpaRepository.findByPatientIdAndOwnerIdOrderBySignedAtDesc(patientId, ownerId);
+    }
+
+    @Override
     public List<SignedForm> findByOwnerIdOrderBySignedAtDesc(UUID ownerId) {
         return jpaRepository.findByOwnerIdOrderBySignedAtDesc(ownerId);
     }
 
     @Override
-    public long countByTemplateId(UUID templateId) { return jpaRepository.countByTemplateId(templateId); }
+    public Map<UUID, Long> countByTemplateIds(List<UUID> templateIds) {
+        if (templateIds.isEmpty()) return Map.of();
+        return jpaRepository.countByTemplateIds(templateIds).stream()
+            .collect(Collectors.toMap(SignedFormJpaRepository.TemplateCount::getTemplateId,
+                SignedFormJpaRepository.TemplateCount::getTotal));
+    }
 }

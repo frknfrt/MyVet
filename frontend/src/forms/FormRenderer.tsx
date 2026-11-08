@@ -28,6 +28,7 @@ function asList(v: FormValue | undefined): string[] {
 
 /** Paragraf: {{kod}} yer tutucusu dolu ise kalin deger, bos ise altı çizili boşluk. */
 function TextBlock({ text, values, show }: { text: string; values: FormValues; show: boolean }) {
+  if (!text.trim()) return null;
   return (
     <p className={styles.paragraph}>
       {text.split(PLACEHOLDER_SPLIT).map((part, i) => {
@@ -138,12 +139,12 @@ export function FormRenderer({ content, values, onChange, mode, signatureSlot }:
             }
             if (item.type === 'SIGNATURE') {
               return (
-                <div key={ii} className={styles.signature}>
+                <div key={item.code ?? `signature-${ii}`} className={styles.signature}>
                   {signatureSlot ?? <div className={styles.signatureBox}>İmza alanı</div>}
                 </div>
               );
             }
-            return <FieldRow key={ii} item={item} values={values} onChange={onChange} mode={mode} />;
+            return <FieldRow key={item.code ?? `field-${ii}`} item={item} values={values} onChange={onChange} mode={mode} />;
           })}
         </section>
       ))}

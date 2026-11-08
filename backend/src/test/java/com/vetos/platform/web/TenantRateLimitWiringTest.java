@@ -73,4 +73,18 @@ class TenantRateLimitWiringTest {
             mockMvc.perform(get("/api/v1/public/signup/plans")).andExpect(status().is2xxSuccessful());
         }
     }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"/api/v1/ai/lab-result-ocr", "/api/v1/ai/imaging-findings-ocr"})
+    void ocrEndpointsConsumeTheSameTenantAiPoolBeforeController(String path) throws Exception {
+        String token = bearer(UUID.randomUUID());
+        for (int i = 0; i < 2; i++) {
+            mockMvc.perform(post(path).header("Authorization", token).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest());
+        }
+        mockMvc.perform(post(path).header("Authorization", token).contentType(MediaType.APPLICATION_JSON).content("{}"))
+            .andExpect(status().isTooManyRequests())
+            .andExpect(header().exists("Retry-After"))
+            .andExpect(jsonPath("$.errorCode").value("RATE_LIMITED"));
+    }
 }

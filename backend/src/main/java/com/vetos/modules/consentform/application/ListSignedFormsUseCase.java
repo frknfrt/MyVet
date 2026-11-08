@@ -17,11 +17,13 @@ public class ListSignedFormsUseCase {
 
     private final SignedFormRepository signedFormRepository;
 
-    /** patientId verilirse hastaya, yoksa ownerId ile sahibe gore (signed_at azalan). */
+    /** Iki filtre birlikte verilirse AND uygulanir; signed_at azalan sirasi korunur. */
     @Transactional(readOnly = true)
     public List<SignedFormSummary> execute(UUID patientId, UUID ownerId) {
         List<SignedForm> forms;
-        if (patientId != null) {
+        if (patientId != null && ownerId != null) {
+            forms = signedFormRepository.findByPatientIdAndOwnerIdOrderBySignedAtDesc(patientId, ownerId);
+        } else if (patientId != null) {
             forms = signedFormRepository.findByPatientIdOrderBySignedAtDesc(patientId);
         } else if (ownerId != null) {
             forms = signedFormRepository.findByOwnerIdOrderBySignedAtDesc(ownerId);

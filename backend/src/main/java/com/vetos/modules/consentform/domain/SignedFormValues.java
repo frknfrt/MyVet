@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -85,6 +86,7 @@ public final class SignedFormValues {
             if (item.required()) throw invalid(item, "için en az bir seçenek seçilmelidir");
             return null;
         }
+        if (new HashSet<>(picked).size() != picked.size()) throw invalid(item, "için aynı seçenek tekrarlanamaz");
         if (!item.multiple() && picked.size() != 1) throw invalid(item, "için yalnız bir seçenek seçilebilir");
         for (String p : picked) {
             if (item.options() == null || !item.options().contains(p)) throw invalid(item, "için geçersiz seçenek: " + p);

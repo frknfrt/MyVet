@@ -74,7 +74,7 @@ export function PatientHeaderBar({ profile, encounter, onBack }: PatientHeaderBa
 
         <div className={styles.rightActions}>
           <EncounterStatusBadge status={encounter.status} />
-          <FillFormButton patientId={profile.id} encounterId={encounter.id} />
+          {profile.status === 'ACTIVE' && <FillFormButton patientId={profile.id} encounterId={encounter.id} />}
           <Button variant="secondary" onClick={handleDownloadReport} disabled={downloadingReport}>
             {downloadingReport ? 'Hazırlanıyor...' : 'Rapor İndir (PDF)'}
           </Button>

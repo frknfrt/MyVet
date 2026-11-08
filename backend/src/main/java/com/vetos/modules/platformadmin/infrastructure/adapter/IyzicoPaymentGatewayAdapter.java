@@ -37,18 +37,9 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * iyzico Checkout Form (hosted odeme sayfasi) entegrasyonu. Gercek bir iyzico
- * sandbox hesabi bu ortamda henuz yok -- IYZICO_API_KEY/IYZICO_SECRET_KEY bos
- * ise tum cagrilar simule edilir (NotificationProviderAdapter'daki ayni desen,
- * bkz. isConfigured()). GERCEK MOD HTTP cagrilari iyzico'nun genel REST API
- * dokumantasyonuna (Checkout Form v2, IYZWSv2 HMAC-SHA256 imzalama) gore
- * yazildi ama canli bir sandbox'a karsi hic test edilmedi -- gercek
- * credential eklendiginde bir sandbox islemiyle mutlaka dogrulanmali.
- *
- * GUVENLIK: simulasyon kisayollari SADECE !isConfigured() iken devreye girer.
- * Kimlik bilgileri tanimliyken "SIMULATED-" onekli bir token da gercek mod
- * HTTP cagrisina duser (ve iyzico tarafinda gecersiz token olarak reddedilir);
- * boylece public callback ucundan bedava "odendi" isaretleme mumkun degildir.
+ * iyzico Checkout Form entegrasyonu. Yapılandırılmış sandbox ve canlı hesaplar sağlayıcıdan doğrulanır.
+ * Anahtarlar eksikse simülasyon yalnız açık dev/test profilinde ve prod kapalıyken kullanılabilir.
+ * Diğer profillerde ödeme başlatma reddedilir, callback başarılı sonuç üretemez.
  */
 @Component
 @Slf4j
@@ -101,7 +92,9 @@ class IyzicoPaymentGatewayAdapter implements PaymentGatewayPort {
     @Override
     public CheckoutSession initializeCheckout(String conversationId, BigDecimal amount, String buyerName, String buyerEmail) {
         if (!isConfigured()) {
-            if (!simulationAllowed) throw new PaymentProviderServiceUnavailableException();
+            if (!simulationAllowed) {
+                throw new PaymentProviderServiceUnavailableException();
+            }
             String simulatedToken = SIMULATED_TOKEN_PREFIX + conversationId;
             String checkoutFormUrl = callbackBaseUrl + CALLBACK_PATH + "?token=" + simulatedToken;
             log.info("iyzico checkout (simule): conversationId={}, tutar={}", conversationId, amount);
@@ -146,10 +139,9 @@ class IyzicoPaymentGatewayAdapter implements PaymentGatewayPort {
 
     @Override
     public CheckoutResult retrieveCheckoutResult(String token) {
-        // Simulasyon kisayolu SADECE kimlik bilgisi tanimli degilken gecerlidir --
-        // aksi halde public callback ucuna "SIMULATED-<fatura-id>" gonderen herkes
-        // ilgili faturayi bedava odenmis isaretletebilirdi.
-        if (!isConfigured() && !simulationAllowed) return new CheckoutResult(false, null, null);
+        if (!isConfigured() && !simulationAllowed) {
+            return new CheckoutResult(false, null, null);
+        }
         if (!isConfigured() && token.startsWith(SIMULATED_TOKEN_PREFIX)) {
             String conversationId = token.substring(SIMULATED_TOKEN_PREFIX.length());
             log.info("iyzico odeme sonucu (simule): conversationId={}", conversationId);

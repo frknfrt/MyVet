@@ -12,7 +12,6 @@ import java.util.regex.Pattern;
 public final class FormTemplateContentValidator {
 
     private static final Pattern CODE = Pattern.compile("[a-z0-9_]{1,40}");
-    private static final Pattern PLACEHOLDER = Pattern.compile("\\{\\{([a-z0-9_]{1,40})\\}\\}");
 
     private FormTemplateContentValidator() {}
 
@@ -53,7 +52,9 @@ public final class FormTemplateContentValidator {
         }
         if (item.binding() != null) {
             if (item.type() == FormItemType.SIGNATURE) fail("İmza alanına veri bağlantısı verilemez");
-            if (FormBinding.fromKey(item.binding()).isEmpty()) fail("Bilinmeyen veri bağlantısı: " + item.binding());
+            var binding = FormBinding.fromKey(item.binding());
+            if (binding.isEmpty()) fail("Bilinmeyen veri bağlantısı: " + item.binding());
+            if (!binding.orElseThrow().supports(item.type())) fail("Veri bağlantısı alan türüyle uyumsuz: " + item.binding());
         }
         if (item.unit() != null && item.type() != FormItemType.NUMBER) {
             fail("Yalnız sayı alanında birim olabilir: " + item.code());
@@ -64,6 +65,9 @@ public final class FormTemplateContentValidator {
             if (options.stream().anyMatch(FormTemplateContentValidator::isBlank)) {
                 fail("Seçenek boş olamaz: " + item.code());
             }
+            if (new HashSet<>(options.stream().map(String::strip).toList()).size() != options.size()) {
+                fail("Seçenekler tekrarlanamaz: " + item.code());
+            }
         } else {
             if (item.options() != null) fail("Yalnız seçimli alanda seçenek olabilir: " + item.code());
             if (item.multiple()) fail("Yalnız seçimli alan çoklu olabilir: " + item.code());
@@ -73,14 +77,14 @@ public final class FormTemplateContentValidator {
     private static void validatePlaceholders(FormSection section) {
         Set<String> sectionCodes = new HashSet<>();
         for (FormItem i : section.items()) {
-            if (i.type() != FormItemType.TEXT_BLOCK && i.code() != null) sectionCodes.add(i.code());
+            if (i.type() != FormItemType.TEXT_BLOCK && i.type() != FormItemType.SIGNATURE && i.code() != null) sectionCodes.add(i.code());
         }
         for (FormItem i : section.items()) {
             if (i.type() != FormItemType.TEXT_BLOCK) continue;
-            Matcher m = PLACEHOLDER.matcher(i.text());
+            Matcher m = FormPlaceholders.PATTERN.matcher(i.text());
             while (m.find()) {
                 if (!sectionCodes.contains(m.group(1))) {
-                    fail("Metindeki {{" + m.group(1) + "}} aynı bölümdeki bir alana karşılık gelmiyor");
+                    fail("Metindeki {{" + m.group(1) + "}} aynı bölümdeki bir değer alanına karşılık gelmiyor");
                 }
             }
         }

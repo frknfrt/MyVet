@@ -90,6 +90,27 @@ class IyzicoPaymentGatewayAdapterTest {
         assertThat(adapter.retrieveCheckoutResult("unused").success()).isFalse();
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"default", "prod", "prod,dev", "prod,test", "dev", "test"})
+    void simulationRequiresExplicitNonProductionProfile(String profiles) {
+        try (var context = new org.springframework.context.annotation.AnnotationConfigApplicationContext()) {
+            if (!profiles.equals("default")) context.getEnvironment().setActiveProfiles(profiles.split(","));
+            context.registerBean(IyzicoPaymentGatewayAdapter.class, () -> new IyzicoPaymentGatewayAdapter(
+                "", "", "https://sandbox-api.iyzipay.com", "http://localhost:8080", outcomes,
+                CircuitBreakerRegistry.ofDefaults(), RetryRegistry.ofDefaults()));
+            context.refresh();
+            var gateway = context.getBean(IyzicoPaymentGatewayAdapter.class);
+            String token = "SIMULATED-" + UUID.randomUUID();
+            if (profiles.equals("dev") || profiles.equals("test")) {
+                assertThat(gateway.retrieveCheckoutResult(token).success()).isTrue();
+            } else {
+                assertThatThrownBy(() -> gateway.initializeCheckout("invoice", BigDecimal.TEN, "Test", "test@example.org"))
+                    .isInstanceOf(PaymentProviderServiceUnavailableException.class);
+                assertThat(gateway.retrieveCheckoutResult(token).success()).isFalse();
+            }
+        }
+    }
+
     @AfterEach
     void stopStubServer() {
         stubServer.stop(0);

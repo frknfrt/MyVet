@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { formsApi, type SignedFormDetail } from '../../api/formsApi';
 import { useAuth } from '../../auth/AuthContext';
 import { Badge } from '../../components/ui/Badge';
@@ -17,9 +17,16 @@ interface Props {
 
 export function SignedFormViewModal({ signedFormId, onClose, onChanged }: Props) {
   const { session } = useAuth();
-  const [detail, setDetail] = useState<SignedFormDetail | null>(null);
+  const generation = useRef(0);
+  const [loadedDetail, setDetail] = useState<SignedFormDetail | null>(null);
   const [loadError, setLoadError] = useState(false);
-  const [signatureSrc, setSignatureSrc] = useState<string | null>(null);
+  const [refreshFailed, setRefreshFailed] = useState(false);
+  const signatureGeneration = useRef(0);
+  const [signatureAttempt, setSignatureAttempt] = useState(0);
+  const [signatureErrorFor, setSignatureErrorFor] = useState<string | null>(null);
+  const [signatureImage, setSignatureSrc] = useState<{ formId: string; url: string; request: number } | null>(null);
+  const detail = loadedDetail?.id === signedFormId ? loadedDetail : null;
+  const signatureSrc = signatureImage?.formId === signedFormId ? signatureImage.url : null;
   const [voiding, setVoiding] = useState(false);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
@@ -27,51 +34,67 @@ export function SignedFormViewModal({ signedFormId, onClose, onChanged }: Props)
 
   const canVoid = session?.role === 'VET' || session?.role === 'ADMIN';
 
-  const load = useCallback(async (id: string) => {
+  const load = useCallback(async (id: string, request: number, preserveOnFailure = false) => {
     try {
-      setDetail(await formsApi.getSignedForm(id));
+      const response = await formsApi.getSignedForm(id);
+      if (generation.current !== request) return;
+      setDetail(response);
       setLoadError(false);
+      setRefreshFailed(false);
     } catch {
-      setLoadError(true);
+      if (generation.current === request) {
+        if (preserveOnFailure) setRefreshFailed(true);
+        else setLoadError(true);
+      }
     }
   }, []);
 
   useEffect(() => {
+    const request = ++generation.current;
     setDetail(null);
+    setBusy(false);
     setLoadError(false);
+    setRefreshFailed(false);
     setVoiding(false);
     setReason('');
     setActionError(null);
-    if (signedFormId) void load(signedFormId);
+    if (signedFormId) void load(signedFormId, request);
+    return () => { generation.current++; };
   }, [signedFormId, load]);
 
   // Imza gorseli: yetkili fetch -> object URL (kapaninca iptal)
   useEffect(() => {
     if (!signedFormId) return;
+    const request = ++signatureGeneration.current;
     let cancelled = false;
     let objectUrl: string | null = null;
     setSignatureSrc(null);
+    setSignatureErrorFor(null);
     formsApi
       .fetchFile(formsApi.signatureUrl(signedFormId))
       .then(async (res) => {
-        if (!res.ok || cancelled) return;
+        if (cancelled) return;
+        if (!res.ok) throw new Error("signature");
         objectUrl = URL.createObjectURL(await res.blob());
         if (cancelled) URL.revokeObjectURL(objectUrl);
-        else setSignatureSrc(objectUrl);
+        else setSignatureSrc({ formId: signedFormId, url: objectUrl, request });
       })
-      .catch(() => {});
+      .catch(() => { if (!cancelled) setSignatureErrorFor(signedFormId); });
     return () => {
       cancelled = true;
+      signatureGeneration.current++;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [signedFormId]);
+  }, [signedFormId, signatureAttempt]);
 
   async function downloadPdf() {
     if (!signedFormId || busy) return;
+    const request = generation.current;
     setBusy(true);
     setActionError(null);
     try {
       const res = await formsApi.fetchFile(formsApi.signedFormPdfUrl(signedFormId));
+      if (generation.current !== request) return;
       if (!res.ok) throw new Error('pdf');
       const disposition = res.headers?.get?.('Content-Disposition') ?? '';
       const match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition);
@@ -83,34 +106,52 @@ export function SignedFormViewModal({ signedFormId, onClose, onChanged }: Props)
           filename = match[1];
         }
       }
-      const url = URL.createObjectURL(await res.blob());
+      const blob = await res.blob();
+      if (generation.current !== request) return;
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
+      document.body.appendChild(a);
+      try { a.click(); }
+      finally {
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      }
     } catch {
-      setActionError('PDF indirilemedi, lütfen tekrar deneyin.');
+      if (generation.current === request) setActionError('PDF indirilemedi, lütfen tekrar deneyin.');
     } finally {
-      setBusy(false);
+      if (generation.current === request) setBusy(false);
     }
   }
 
   async function confirmVoid() {
     if (!signedFormId || !reason.trim() || busy) return;
+    const request = generation.current;
     setBusy(true);
     setActionError(null);
     try {
       await formsApi.voidSignedForm(signedFormId, reason.trim());
+      onChanged?.();
+      if (generation.current !== request) return;
+      setDetail(current => current?.id === signedFormId
+        ? { ...current, status: 'VOIDED', voidReason: reason.trim(), voidedAt: null } : current);
       setVoiding(false);
       setReason('');
-      await load(signedFormId);
-      onChanged?.();
+      await load(signedFormId, request, true);
     } catch {
-      setActionError('Form iptal edilemedi, lütfen tekrar deneyin.');
+      if (generation.current === request) setActionError('Form iptal edilemedi, lütfen tekrar deneyin.');
     } finally {
-      setBusy(false);
+      if (generation.current === request) setBusy(false);
     }
+  }
+
+  async function retryRefresh() {
+    if (!signedFormId || busy) return;
+    const request = generation.current;
+    setBusy(true);
+    try { await load(signedFormId, request, true); }
+    finally { if (generation.current === request) setBusy(false); }
   }
 
   const signer = detail?.signer;
@@ -128,6 +169,12 @@ export function SignedFormViewModal({ signedFormId, onClose, onChanged }: Props)
               <strong>İPTAL EDİLDİ</strong>
               {detail.voidedAt && <span> · {formatDateTime(detail.voidedAt)}</span>}
               {detail.voidReason && <div>Gerekçe: {detail.voidReason}</div>}
+            </div>
+          )}
+          {refreshFailed && (
+            <div className={styles.warning} role="alert">
+              Form iptal edildi, ancak güncel bilgiler yüklenemedi.
+              <Button variant="secondary" onClick={retryRefresh} disabled={busy}>Bilgileri yeniden yükle</Button>
             </div>
           )}
           {!detail.integrityOk && (
@@ -156,10 +203,19 @@ export function SignedFormViewModal({ signedFormId, onClose, onChanged }: Props)
                 values={detail.values ?? {}}
                 mode="readonly"
                 signatureSlot={
-                  signatureSrc ? (
-                    <img src={signatureSrc} alt="İmza" className={styles.signature} />
+                  signatureErrorFor === signedFormId ? (
+                    <div role="alert" className={styles.error}>
+                      <p>İmza görseli yüklenemedi. Lütfen tekrar deneyin.</p>
+                      <Button variant="secondary" onClick={() => setSignatureAttempt(attempt => attempt + 1)}>
+                        İmzayı yeniden yükle
+                      </Button>
+                    </div>
+                  ) : signatureSrc ? (
+                    <img src={signatureSrc} alt="İmza" className={styles.signature} onError={() => {
+                      if (signatureGeneration.current === signatureImage?.request) setSignatureErrorFor(signedFormId);
+                    }} />
                   ) : (
-                    <div className={styles.metaLine}>İmza görseli yükleniyor...</div>
+                    <div role="status" className={styles.metaLine}>İmza görseli yükleniyor...</div>
                   )
                 }
               />

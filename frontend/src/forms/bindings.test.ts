@@ -133,7 +133,9 @@ describe('computeWriteBackDiff dogrulamalari', () => {
   it('kilo', () => {
     expect(one('patient.weightKg', '4,5')[0].valid).toBe(true);
     expect(one('patient.weightKg', '9999.99')[0].valid).toBe(true);
-    for (const bad of ['abc', '0', '-3', '10000']) {
+    expect(one('patient.weightKg', '0.005')[0].valid).toBe(true);
+    expect(one('patient.weightKg', '4,555')[0].valid).toBe(true);
+    for (const bad of ['abc', '0', '-3', '10000', '9999.995', '0.001', '999999999999999999999']) {
       expect(one('patient.weightKg', bad)[0]).toMatchObject({ valid: false, reason: 'Geçersiz kilo — kayda yazılamaz' });
     }
   });

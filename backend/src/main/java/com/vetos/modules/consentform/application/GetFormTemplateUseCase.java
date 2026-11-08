@@ -25,6 +25,6 @@ public class GetFormTemplateUseCase {
             .orElseThrow(() -> new FormTemplateNotFoundException(templateId));
         String clinicName = tenantLookupPort.findTenantName(t.getTenantId()).orElse("Veteriner Kliniği");
         return new FormTemplateDetail(t.getId(), t.getTitle(), t.getStatus(),
-            FormTemplateContentCodec.fromJson(t.getContent()), t.getSourceImageId(), clinicName);
+            FormTemplateContentCodec.fromJson(t.getContent()), t.getSourceImageId(), clinicName, t.contentHash());
     }
 }

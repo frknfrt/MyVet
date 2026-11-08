@@ -276,6 +276,140 @@ class ExtractFormTemplateFromImageUseCaseTest {
         verifyNoInteractions(recordAiJobUseCase, quota);
     }
 
+    private ExtractFormTemplateFromImageResult runWithField(String field) {
+        givenJpeg();
+        respond("{\"title\":\"Form\",\"sections\":[{\"items\":[" + field
+            + ",{\"type\":\"SIGNATURE\",\"code\":\"imza\",\"label\":\"İmza\",\"required\":true}]}]}");
+        return run();
+    }
+
+    @Test
+    void should_stripIrrelevantMetadataFromText_andPreserveItsValueDefinition() {
+        var result = runWithField("""
+            {"type":"SHORT_TEXT","code":"ad","label":"Hasta adı","required":true,"binding":"patient.name",
+             "text":"Yanlış metin","unit":"kg","options":["A","B"],"multiple":true}
+            """);
+        var field = result.content().sections().get(0).items().get(0);
+        assertThat(field.code()).isEqualTo("ad");
+        assertThat(field.label()).isEqualTo("Hasta adı");
+        assertThat(field.required()).isTrue();
+        assertThat(field.binding()).isEqualTo("patient.name");
+        assertThat(field.text()).isNull();
+        assertThat(field.unit()).isNull();
+        assertThat(field.options()).isNull();
+        assertThat(field.multiple()).isFalse();
+        assertThat(result.warnings()).isEmpty();
+        assertThat(port.calls).isEqualTo(1);
+    }
+
+    @Test
+    void should_stripCodeBindingAndInputMetadataFromParagraph_butPreserveText() {
+        var result = runWithField("""
+            {"type":"TEXT_BLOCK","code":"yanlis","label":null,"text":"Onay metni korunmalı.",
+             "binding":"owner.fullName","unit":"kg","options":["A","B"],"multiple":true}
+            """);
+        var field = result.content().sections().get(0).items().get(0);
+        assertThat(field.type()).isEqualTo(FormItemType.TEXT_BLOCK);
+        assertThat(field.text()).isEqualTo("Onay metni korunmalı.");
+        assertThat(field.code()).isNull();
+        assertThat(field.binding()).isNull();
+        assertThat(field.unit()).isNull();
+        assertThat(field.options()).isNull();
+        assertThat(field.multiple()).isFalse();
+        assertThat(result.warnings()).isEmpty();
+        assertThat(port.calls).isEqualTo(1);
+    }
+
+    @Test
+    void should_stripInputMetadataFromSignature_butPreserveItsIdentity() {
+        givenJpeg();
+        respond("""
+            {"title":"Form","sections":[{"items":[
+              {"type":"SIGNATURE","code":"onam_imza","label":"Sahip imzası","required":true,
+               "binding":"owner.fullName","text":"Yanlış metin","unit":"kg","options":["A","B"],"multiple":true}
+            ]}]}
+            """);
+        var result = run();
+        var field = result.content().sections().get(0).items().get(0);
+        assertThat(field.type()).isEqualTo(FormItemType.SIGNATURE);
+        assertThat(field.code()).isEqualTo("onam_imza");
+        assertThat(field.label()).isEqualTo("Sahip imzası");
+        assertThat(field.required()).isTrue();
+        assertThat(field.binding()).isNull();
+        assertThat(field.text()).isNull();
+        assertThat(field.unit()).isNull();
+        assertThat(field.options()).isNull();
+        assertThat(field.multiple()).isFalse();
+        assertThat(result.warnings()).isEmpty();
+        assertThat(port.calls).isEqualTo(1);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"", "   "})
+    void should_normalizeBlankNumberUnitAndBindingToNull(String blank) {
+        var result = runWithField("""
+            {"type":"NUMBER","code":"sayi","label":"Sayı","unit":"%s","binding":"%s",
+             "text":"Yanlış metin","options":["A","B"],"multiple":true}
+            """.formatted(blank, blank));
+        var field = result.content().sections().get(0).items().get(0);
+        assertThat(field.type()).isEqualTo(FormItemType.NUMBER);
+        assertThat(field.unit()).isNull();
+        assertThat(field.binding()).isNull();
+        assertThat(field.text()).isNull();
+        assertThat(field.options()).isNull();
+        assertThat(field.multiple()).isFalse();
+        assertThat(result.warnings()).isEmpty();
+        assertThat(port.calls).isEqualTo(1);
+    }
+
+    @Test
+    void should_preserveChoiceOptionsOrderAndMultiplicity_whileRemovingTextAndUnit() {
+        var result = runWithField("""
+            {"type":"CHOICE","code":"cinsiyet","label":"Cinsiyet","binding":"patient.sex",
+             "text":"Yanlış metin","unit":"kg","options":["Erkek","Dişi"],"multiple":true}
+            """);
+        var field = result.content().sections().get(0).items().get(0);
+        assertThat(field.type()).isEqualTo(FormItemType.CHOICE);
+        assertThat(field.binding()).isEqualTo("patient.sex");
+        assertThat(field.options()).containsExactly("Erkek", "Dişi");
+        assertThat(field.multiple()).isTrue();
+        assertThat(field.text()).isNull();
+        assertThat(field.unit()).isNull();
+        assertThat(result.warnings()).isEmpty();
+        assertThat(port.calls).isEqualTo(1);
+    }
+
+    @Test
+    void should_appendSignatureWithUnusedCode_withoutRenamingExistingFields() {
+        givenJpeg();
+        respond("""
+            {"title":"Form","sections":[{"items":[
+              {"type":"SHORT_TEXT","code":"imza","label":"Alan 1"},
+              {"type":"SHORT_TEXT","code":"imza_2","label":"Alan 2"}
+            ]}]}
+            """);
+        var result = run();
+        var fields = result.content().sections().get(0).items();
+        assertThat(fields).extracting(FormItem::code).containsExactly("imza", "imza_2", "imza_3");
+        assertThat(fields.get(2).type()).isEqualTo(FormItemType.SIGNATURE);
+        assertThat(result.warnings()).containsExactly("İmza alanı bulunamadı; sona eklendi.");
+        assertThat(port.calls).isEqualTo(1);
+    }
+
+    @Test
+    void should_retryKnownButIncompatibleBinding_insteadOfSilentlyChangingFieldMeaning() {
+        givenJpeg();
+        respond(VALID.replace("patient.name", "patient.weightKg"));
+        respond(VALID);
+        var result = run();
+        assertThat(port.calls).isEqualTo(2);
+        var field = result.content().sections().get(0).items().get(0);
+        assertThat(field.type()).isEqualTo(FormItemType.SHORT_TEXT);
+        assertThat(field.binding()).isEqualTo("patient.name");
+        assertThat(result.warnings()).isEmpty();
+        verify(quota, times(1)).reserve(tenantId, UsageKind.AI, 1);
+    }
+
     private static void assertFallback(ExtractFormTemplateFromImageResult result) {
         assertThat(result.content().title()).isEmpty();
         assertThat(result.content().sections()).hasSize(1);

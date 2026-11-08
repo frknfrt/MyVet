@@ -22,7 +22,7 @@ public class VoidInvoiceUseCase {
 
     @Transactional
     public void execute(UUID invoiceId) {
-        Invoice invoice = invoiceRepository.findById(invoiceId)
+        Invoice invoice = invoiceRepository.findByIdForUpdate(invoiceId)
             .orElseThrow(() -> new InvoiceNotFoundException(invoiceId));
         invoice.voidInvoice();
         invoiceRepository.save(invoice);

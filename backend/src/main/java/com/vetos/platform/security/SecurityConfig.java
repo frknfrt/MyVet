@@ -118,7 +118,7 @@ public class SecurityConfig {
         // Randevu, Muayene Baslat, Yeni Stok Kalemi, Kasa Ac, widget randevu
         // talebi) bu yuzden tarayicida sessizce basarisiz oluyordu.
         // X-Request-Id: kullanici hata bildirirken frontend bu id'yi gosterebilsin diye.
-        configuration.setExposedHeaders(List.of("Location", "X-Request-Id"));
+        configuration.setExposedHeaders(List.of("Location", "X-Request-Id", "Content-Disposition"));
         configuration.setAllowCredentials(true);
 
         CorsConfiguration iyzicoCallback = new CorsConfiguration();

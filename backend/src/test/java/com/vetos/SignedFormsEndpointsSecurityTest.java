@@ -48,9 +48,9 @@ class SignedFormsEndpointsSecurityTest {
 
     private static String createBody() {
         return """
-            {"templateId":"%s","patientId":"%s","encounterId":null,"values":{"ad":"Pamuk"},
-             "signer":{"type":"OWNER","name":null,"nationalId":null,"phone":null},"signaturePngBase64":"iVBORw0KGgo="}
-            """.formatted(UUID.randomUUID(), UUID.randomUUID());
+            {"requestId":"%s","templateId":"%s","patientId":"%s","encounterId":null,"values":{"ad":"Pamuk"},
+             "signer":{"type":"OWNER","name":null,"nationalId":null,"phone":null},"templateContentHash":"test-hash","signaturePngBase64":"iVBORw0KGgo="}
+            """.formatted(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
     }
 
     @Test

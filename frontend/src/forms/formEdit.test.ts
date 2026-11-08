@@ -77,11 +77,51 @@ describe('validateContent', () => {
   });
 });
 
+describe('imza alanina metin referansi', () => {
+  it.each(['İmza: {{imza}}', 'İmza: {{ imza }}'])('reddeder: %s', text => {
+    const block = item({ type: 'TEXT_BLOCK', text });
+    expect(validateContent(content([block, sig])).join()).toContain('{{imza}}');
+  });
+  it('ayni bolumdeki deger alanina bosluklu referansi kabul eder', () => {
+    const block = item({ type: 'TEXT_BLOCK', text: 'Merhaba {{ ad }}' });
+    expect(validateContent(content([field, block, sig]))).toEqual([]);
+  });
+});
+
 describe('fallbackContent', () => {
   it('bos baslik, tek bolum, tek imza', () => {
     const c = fallbackContent();
     expect(c.title).toBe('');
     expect(c.sections).toHaveLength(1);
     expect(c.sections[0].items.map((i) => i.type)).toEqual(['SIGNATURE']);
+  });
+});
+
+describe('tekrarlanan secenekler', () => {
+  it.each([{ options: ['Evet', 'Evet'] }, { options: ['Evet', ' Evet '] }])('reddeder: $options', ({ options }) => {
+    const choice = item({ type: 'CHOICE', code: 'tercih', label: 'Tercih', options, multiple: true });
+    expect(validateContent(content([choice, sig])).join()).toContain('seçenekler tekrarlanamaz');
+  });
+  it('buyuk kucuk harf farkli secenekleri ayri kabul eder', () => {
+    const choice = item({ type: 'CHOICE', code: 'tercih', label: 'Tercih', options: ['A', 'a'], multiple: true });
+    expect(validateContent(content([choice, sig]))).toEqual([]);
+  });
+});
+
+describe('alan turu ve veri baglantisi', () => {
+  it.each([
+    ['CHOICE', 'owner.birthDate'], ['SHORT_TEXT', 'patient.weightKg'], ['NUMBER', 'owner.nationalId'],
+    ['DATE', 'owner.phone'], ['PHONE', 'owner.fullName'], ['SHORT_TEXT', 'today'], ['CHOICE', 'owner.email'],
+  ] as const)('uyumsuz baglantiyi reddeder: %s %s', (type, binding) => {
+    const f = item({ type, binding, code: 'alan', label: 'Alan', options: type === 'CHOICE' ? ['A', 'B'] : null });
+    expect(validateContent(content([f, sig])).join()).toContain('alan türüyle uyumsuz');
+  });
+  it.each([
+    ['DATE', 'owner.birthDate'], ['DATE', 'today'], ['NUMBER', 'patient.weightKg'], ['PHONE', 'owner.phone'],
+    ['SHORT_TEXT', 'owner.secondaryPhone'], ['SHORT_TEXT', 'owner.nationalId'], ['LONG_TEXT', 'owner.address'],
+    ['CHOICE', 'patient.species'], ['CHOICE', 'patient.sex'], ['CHOICE', 'patient.breed'], ['CHOICE', 'patient.color'],
+  ] as const)('uyumlu baglantiyi kabul eder: %s %s', (type, binding) => {
+    const f = item({ type, binding, code: 'alan', label: 'Alan', options: type === 'CHOICE' ? ['A', 'B'] : null });
+    expect(validateContent(content([f, sig]))).toEqual([]);
   });
 });

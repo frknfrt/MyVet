@@ -156,4 +156,38 @@ class ConsentFormPdfRendererTest {
         byte[] pdf = renderer.render(withSignature(new byte[]{1, 2, 3, 4, 5}));
         assertThat(extract(pdf)).contains("İmza görseli okunamadı", "İmzalayan: Ayşe (hasta sahibi)");
     }
+
+    @Test
+    void shouldPreserveGreekCyrillicAndExtendedLatin() throws Exception {
+        var values = vals(); values.put("ad", "Жанна Ω Łódź");
+        byte[] pdf = renderer.render(signed(values, "İmzalayan: Жанна Ω Łódź", false, null, true, content()));
+        assertThat(extract(pdf)).contains("Жанна", "Ω", "Łódź", "İmza");
+        String sample = System.getProperty("consent.pdf.sample");
+        if (sample != null) {
+            var path = java.nio.file.Path.of(sample);
+            java.nio.file.Files.createDirectories(path.getParent());
+            java.nio.file.Files.write(path, pdf);
+        }
+    }
+
+    @Test
+    void unsupportedGlyphMustBeExplicitErrorInsteadOfSilentlyDisappearing() {
+        var values = vals(); values.put("ad", "漢字");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> renderer.render(signed(values, "x", false, null, true, content())))
+            .isInstanceOf(com.vetos.modules.consentform.domain.exception.UnsupportedConsentPdfCharacterException.class)
+            .hasMessageContaining("U+6F22");
+    }
+
+    @Test
+    void shouldFillSpacedPlaceholdersAcceptedByValidator() throws Exception {
+        var base = content();
+        var sections = base.sections().stream().map(section -> new FormSection(section.title(),
+            section.items().stream().map(item -> item.type() == FormItemType.TEXT_BLOCK
+                ? new FormItem(item.type(), item.code(), item.label(), item.text().replace("{{ad}}", "{{ ad }}"),
+                    item.required(), item.binding(), item.unit(), item.options(), item.multiple()) : item).toList())).toList();
+        var spaced = new FormTemplateContent(base.title(), sections);
+        com.vetos.modules.consentform.domain.FormTemplateContentValidator.validate(spaced);
+        String text = extract(renderer.render(signed(vals(), "x", false, null, true, spaced)));
+        assertThat(text).contains("Ben Pamuk işlemi").doesNotContain("{{ ad }}");
+    }
 }

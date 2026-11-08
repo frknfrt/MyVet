@@ -167,6 +167,10 @@ class TenantIsolationTest extends TenantScopedTestSupport {
     /** Bir kiraci ve onun altindaki ortak ust kayitlar. */
     private record TenantFixture(UUID tenantId, UUID branchId, UUID ownerId, UUID staffUserId) {}
 
+    @Autowired private com.vetos.modules.consentform.application.CreateSignedFormUseCase createSignedFormForIsolation;
+    @Autowired private com.vetos.modules.consentform.domain.FormTemplateRepository consentTemplates;
+    @Autowired private com.vetos.modules.encounter.domain.EncounterLookupPort consentEncounterLookup;
+
     private TenantFixture createTenantFixture(String label) {
         UUID tenantId = inRootSession(() -> tenantRepository.save(Tenant.register(label, null)).getId());
         createdTenantIds.add(tenantId);
@@ -200,6 +204,10 @@ class TenantIsolationTest extends TenantScopedTestSupport {
      */
     private void purgeTenant(UUID tenantId) {
         inRootSessionVoid(() -> {
+            entityManager.createNativeQuery("DELETE FROM stored_files WHERE id::text IN (SELECT signature_storage_ref FROM signed_forms WHERE tenant_id = :t)").setParameter("t", tenantId).executeUpdate();
+            entityManager.createNativeQuery("DELETE FROM signed_form_submissions WHERE tenant_id = :t").setParameter("t", tenantId).executeUpdate();
+            entityManager.createNativeQuery("DELETE FROM signed_forms WHERE tenant_id = :t").setParameter("t", tenantId).executeUpdate();
+            entityManager.createNativeQuery("DELETE FROM form_templates WHERE tenant_id = :t").setParameter("t", tenantId).executeUpdate();
             String b = "(SELECT id FROM branches WHERE tenant_id = :t)";
             String o = "(SELECT id FROM owners WHERE tenant_id = :t)";
             String p = "(SELECT id FROM patients WHERE owner_id IN " + o + ")";
@@ -736,5 +744,34 @@ class TenantIsolationTest extends TenantScopedTestSupport {
         // Platform yonetimi / giris baglamsiz (root) calisir ve tum kiracilari gorur.
         assertThat(inRootSession(() -> subscriptionRepository.findByTenantId(b.tenantId()))).isPresent();
     }
-}
 
+    @Test
+    void signedFormRejectsForeignEncounterWithRealLookupAndRollsBackReservation() {
+        TenantFixture a = createTenantFixture("Onam A"), b = createTenantFixture("Onam B");
+        UUID patientA = createPatient(a), patientB = createPatient(b);
+        UUID foreign = createEncounter(b, patientB);
+        assertThat(asTenant(b.tenantId(), () -> consentEncounterLookup.findSummaryById(foreign)).patientId()).isEqualTo(patientB);
+        assertThatThrownBy(() -> asTenant(a.tenantId(), () -> consentEncounterLookup.findSummaryById(foreign)))
+            .isInstanceOf(com.vetos.modules.encounter.domain.exception.EncounterNotFoundException.class);
+        var content = new com.vetos.modules.consentform.domain.FormTemplateContent("Onam", List.of(
+            new com.vetos.modules.consentform.domain.FormSection(null, List.of(
+                new com.vetos.modules.consentform.domain.FormItem(com.vetos.modules.consentform.domain.FormItemType.SIGNATURE,
+                    "imza", "İmza", null, true, null, null, null, false)))));
+        var template = asTenant(a.tenantId(), () -> consentTemplates.save(com.vetos.modules.consentform.domain.FormTemplate.create(
+            a.tenantId(), "Onam", com.vetos.modules.consentform.domain.FormTemplateContentCodec.toJson(content), null, a.staffUserId())));
+        UUID request = UUID.randomUUID();
+        var signer = new com.vetos.modules.consentform.application.dto.SignerInput(com.vetos.modules.consentform.domain.SignerType.OWNER, null, null, null);
+        String png = java.util.Base64.getEncoder().encodeToString(new byte[]{(byte) 0x89, 0x50, 0x4e, 0x47});
+        var bad = new com.vetos.modules.consentform.application.dto.CreateSignedFormCommand(template.getId(), patientA, foreign,
+            java.util.Map.of(), signer, png, null, null, template.contentHash(), request);
+        assertThatThrownBy(() -> asTenant(a.tenantId(), () -> createSignedFormForIsolation.execute(a.staffUserId(), bad)))
+            .isInstanceOf(com.vetos.modules.consentform.domain.exception.InvalidEncounterException.class);
+        Number reservations = inRootSession(() -> (Number) entityManager.createNativeQuery("SELECT COUNT(*) FROM signed_form_submissions WHERE tenant_id = :t")
+            .setParameter("t", a.tenantId()).getSingleResult());
+        assertThat(reservations.longValue()).isZero();
+        UUID own = createEncounter(a, patientA);
+        var good = new com.vetos.modules.consentform.application.dto.CreateSignedFormCommand(template.getId(), patientA, own,
+            java.util.Map.of(), signer, png, null, null, template.contentHash(), request);
+        assertThat(asTenant(a.tenantId(), () -> createSignedFormForIsolation.execute(a.staffUserId(), good))).isNotNull();
+    }
+}

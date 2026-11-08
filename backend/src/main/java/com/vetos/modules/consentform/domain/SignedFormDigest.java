@@ -6,7 +6,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 
-/** Imzali formun SHA-256 ozeti: snapshot \n values \n signer \n imza PNG baytlari. */
+/** Imzali formun SHA-256 ozeti: snapshot \n values \n signer \n metadata \n imza PNG baytlari. */
 public final class SignedFormDigest {
     private SignedFormDigest() {}
 

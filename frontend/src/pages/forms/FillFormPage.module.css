@@ -1,5 +1,4 @@
 .page {
-  scrollbar-gutter: stable;
   min-height: 100vh;
   background: var(--color-cream);
   color: var(--color-text-ink);

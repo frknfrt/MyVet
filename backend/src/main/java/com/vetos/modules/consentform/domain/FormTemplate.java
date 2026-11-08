@@ -48,6 +48,15 @@ public class FormTemplate {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    public String contentHash() {
+        try {
+            byte[] contentBytes = (title + "\n" + content).getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(contentBytes));
+        } catch (java.security.NoSuchAlgorithmException ex) {
+            throw new IllegalStateException(ex);
+        }
+    }
+
     public static FormTemplate create(UUID tenantId, String title, String content, UUID sourceImageId, UUID staffId) {
         FormTemplate t = new FormTemplate();
         Instant now = Instant.now();
