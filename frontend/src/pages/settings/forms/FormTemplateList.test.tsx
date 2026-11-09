@@ -16,7 +16,12 @@ afterEach(() => { act(() => root.unmount()); container.remove(); vi.restoreAllMo
 async function render() { container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container); await act(async () => root.render(<MemoryRouter><FormTemplateList /></MemoryRouter>)); }
 async function toggle() { await act(async () => container.querySelector<HTMLInputElement>('input[type=checkbox]')!.click()); }
 
-it('shows empty state and create link', async () => { await render(); expect(container.textContent).toContain('Henüz form şablonu yok'); expect(container.querySelector('a')!.getAttribute('href')).toBe('/ayarlar/formlar/yeni'); });
+it('shows empty state and create link', async () => {
+  await render();
+  expect(container.textContent).toContain('Henüz form şablonu yok');
+  const createLink = [...container.querySelectorAll('a')].find(link => link.textContent?.trim() === '+ Yeni form');
+  expect(createLink?.getAttribute('href')).toBe('/ayarlar/formlar/yeni');
+});
 
 it.each([true, false])('archives only after confirmation: %s', async allow => {
   vi.mocked(formsApi.listTemplates).mockResolvedValueOnce([row('ACTIVE')]);
