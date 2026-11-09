@@ -31,7 +31,9 @@ test('Platform admin → Randevu → Muayene → Fatura altın yolu', async ({ p
     await field(page, 'E-posta').fill('admin@myvet.local');
     await field(page, 'Şifre').fill('change-me-local-dev-only');
     await page.getByRole('button', { name: 'Giriş yap' }).click();
-    await expect(page).toHaveURL(/\/platform-admin\/tenants/);
+    await expect(page).toHaveURL(/\/platform-admin\/overview$/);
+    await page.getByRole('link', { name: 'Kiracılar', exact: true }).click();
+    await expect(page).toHaveURL(/\/platform-admin\/tenants$/);
 
     await page.getByRole('button', { name: '+ Yeni Klinik' }).click();
     await field(page, 'Klinik adı').fill(clinicName);
