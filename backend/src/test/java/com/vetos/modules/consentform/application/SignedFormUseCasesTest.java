@@ -44,6 +44,8 @@ class SignedFormUseCasesTest {
     private final UUID ownerId = UUID.randomUUID();
 
     @Mock SignedFormSubmissionRepository submissions;
+    @Mock PrivacyNoticeUseCase privacyNotices;
+    @Mock com.vetos.modules.patient.domain.OwnerCommunicationPreferencesPort communicationPreferences;
     @Mock FormTemplateRepository templateRepository;
     @Mock SignedFormRepository signedFormRepository;
     @Mock PatientLookupPort patientLookupPort;
@@ -70,7 +72,7 @@ class SignedFormUseCasesTest {
             .thenReturn(new OwnerSummary(ownerId, "Ayşe Yılmaz", null, null, null, null, null, false, false));
         when(fileStoragePort.store(any(), any())).thenReturn("ref-1");
         when(signedFormRepository.save(any())).thenAnswer(i -> i.getArgument(0));
-        useCase = new CreateSignedFormUseCase(submissions, templateRepository, signedFormRepository, patientLookupPort,
+        useCase = new CreateSignedFormUseCase(submissions, privacyNotices, communicationPreferences, templateRepository, signedFormRepository, patientLookupPort,
             ownerLookupPort, fileStoragePort, encounterLookupPort);
     }
 
@@ -439,4 +441,69 @@ class SignedFormUseCasesTest {
         verify(signedFormRepository).findByOwnerIdOrderBySignedAtDesc(ownerId);
         verifyNoMoreInteractions(signedFormRepository);
     }
+    private PrivacyNotice enablePrivacy() {
+        var raw=FormTemplateContentCodec.fromJson(template.getContent());
+        template=FormTemplate.create(tenantId,raw.title(),FormTemplateContentCodec.toJson(
+            new FormTemplateContent(raw.title(),raw.sections(),null,true)),null,staffId);
+        when(templateRepository.findById(any())).thenReturn(Optional.of(template));
+        var notice=new PrivacyNotice(2,"Kliniğin imza anındaki aydınlatma metni");
+        when(privacyNotices.current()).thenReturn(notice);
+        return notice;
+    }
+
+    @Test
+    void enabledFormRequiresExplicitAcknowledgement_withoutStoringSignature() {
+        enablePrivacy();
+        assertThatThrownBy(() -> useCase.execute(staffId,command(OK_VALUES,OWNER_SIGNER,b64(PNG))))
+            .isInstanceOf(InvalidSignedFormValuesException.class).hasMessageContaining("aydınlatma beyanı");
+        verify(fileStoragePort,never()).store(any(),any());
+        verify(signedFormRepository,never()).save(any());
+    }
+
+    @Test
+    void staleNoticeHashIsRejected_withoutStoringSignature() {
+        enablePrivacy();
+        assertThatThrownBy(() -> useCase.execute(staffId,command(OK_VALUES,OWNER_SIGNER,b64(PNG)).acknowledgingPrivacyNotice("old")))
+            .isInstanceOf(InvalidSignedFormValuesException.class).hasMessageContaining("metni değişti");
+        verify(fileStoragePort,never()).store(any(),any());
+    }
+
+    @Test
+    void storesExactNoticeInSnapshot_andAppliesServiceChannelsOnlyForOwner() {
+        var notice=enablePrivacy();
+        var original=command(OK_VALUES,OWNER_SIGNER,b64(PNG));
+        var cmd=new CreateSignedFormCommand(original.templateId(),patientId,null,OK_VALUES,OWNER_SIGNER,b64(PNG),
+            original.clientIp(),original.userAgent(),original.templateContentHash(),original.requestId(),true,notice.hash(),true,false,true);
+        useCase.execute(staffId,cmd);
+        var saved=savedForm();
+        var snapshot=FormTemplateContentCodec.fromJson(saved.getTemplateSnapshot());
+        assertThat(snapshot.privacyNotice().text()).isEqualTo(notice.text());
+        assertThat(snapshot.privacyNotice().hash()).isEqualTo(notice.hash());
+        assertThat(snapshot.privacyNotice().sms()).isTrue();
+        assertThat(snapshot.privacyNotice().whatsapp()).isFalse();
+        assertThat(snapshot.privacyNotice().email()).isTrue();
+        verify(communicationPreferences).apply(ownerId,true,false,true);
+        var signerJson=SignedFormValues.signerJson(saved.getSignerType(),saved.getSignerName(),saved.getSignerNationalId(),saved.getSignerPhone());
+        var metadata=SignedFormValues.metadataJson(saved.getTemplateId(),saved.getPatientId(),saved.getOwnerId(),saved.getEncounterId(),
+            saved.getSignedAt(),saved.getSignedBy(),saved.getClientIp(),saved.getUserAgent());
+        var modified=saved.getTemplateSnapshot().replace(notice.text(),"Değiştirilmiş metin");
+        assertThat(SignedFormDigest.compute(modified,saved.getValuesJson(),signerJson,metadata,PNG)).isNotEqualTo(saved.getContentDigest());
+    }
+
+    @Test
+    void otherSignerAcknowledgementDoesNotChangeOwnerPreferences() {
+        var notice=enablePrivacy();
+        useCase.execute(staffId,command(OK_VALUES,new SignerInput(SignerType.OTHER,"Ali",null,null),b64(PNG))
+            .acknowledgingPrivacyNotice(notice.hash()));
+        assertThat(FormTemplateContentCodec.fromJson(savedForm().getTemplateSnapshot()).privacyNotice()).isNotNull();
+        verifyNoInteractions(communicationPreferences);
+    }
+
+    @Test
+    void disabledTemplateCannotBeUsedToInjectPrivacyOrChannelChoices() {
+        assertThatThrownBy(() -> useCase.execute(staffId,command(OK_VALUES,OWNER_SIGNER,b64(PNG)).acknowledgingPrivacyNotice("unexpected")))
+            .isInstanceOf(InvalidSignedFormValuesException.class).hasMessageContaining("etkin değil");
+        verifyNoInteractions(communicationPreferences);
+    }
+
 }

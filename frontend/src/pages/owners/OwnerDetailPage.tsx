@@ -91,6 +91,7 @@ export function OwnerDetailPage() {
             <div className={styles.consentRow}>
               <ConsentBadge label="SMS" granted={profile.smsConsent} />
               <ConsentBadge label="WhatsApp" granted={profile.whatsappConsent} />
+              <ConsentBadge label="E-posta bildirimleri" granted={!!profile.emailNotificationConsent} />
               <ConsentBadge label="Bildirim" granted={profile.notificationConsent} />
               <ConsentBadge label="E-posta Pazarlama" granted={profile.marketingConsent} />
             </div>

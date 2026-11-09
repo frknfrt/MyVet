@@ -71,6 +71,7 @@ export function newItem(type: FormItemType, content: FormTemplateContent): FormI
 /** Kaydetmeden once bos satir/bosluklari temizler. */
 export function cleanContent(content: FormTemplateContent): FormTemplateContent {
   return {
+    ...(content.privacyOptionsEnabled ? { privacyOptionsEnabled: true } : {}),
     title: content.title.trim(),
     sections: content.sections.map((s) => ({
       title: s.title?.trim() ? s.title.trim() : null,

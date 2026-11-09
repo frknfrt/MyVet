@@ -10,6 +10,7 @@ import { FillFormPage } from './FillFormPage';
 
 const mocks = vi.hoisted(() => ({
   getTemplate: vi.fn(),
+  getPrivacyNotice: vi.fn(),
   createSignedForm: vi.fn(),
   applyWriteBacks: vi.fn(),
   fetchFile: vi.fn(),
@@ -23,6 +24,7 @@ vi.mock('../../api/formsApi', async (importActual) => {
     ...actual,
     formsApi: {
       getTemplate: mocks.getTemplate,
+      getPrivacyNotice: mocks.getPrivacyNotice,
       createSignedForm: mocks.createSignedForm,
       applyWriteBacks: mocks.applyWriteBacks,
       fetchFile: mocks.fetchFile,
@@ -71,6 +73,7 @@ beforeEach(() => {
   mocks.getTemplate.mockResolvedValue({ id: 't1', title: 'Anestezi Onayı', status: 'ACTIVE', content, sourceImageId: null, clinicName: 'Vetly Klinik', contentHash: 'opened-template-hash' });
   mocks.getProfile.mockResolvedValue({ id: 'p1', name: 'Pamuk', ownerId: 'o1', speciesName: 'Kedi', breedName: null, sex: null, birthDate: null, color: null, weightKg: 10, microchipNumber: null });
   mocks.getOwnerProfile.mockResolvedValue({ id: 'o1', fullName: 'Ayşe Yılmaz', phone: '0532 111 22 33', secondaryPhone: null, email: null, address: null, birthDate: null, nationalId: null });
+  mocks.getPrivacyNotice.mockResolvedValue({version:1,text:'Kliniğin test aydınlatma metni',hash:'notice-v1'});
   mocks.createSignedForm.mockResolvedValue('sf1');
   mocks.applyWriteBacks.mockResolvedValue({ applied: [], skipped: [] });
 });
@@ -389,4 +392,41 @@ describe('FillFormPage', () => {
     } finally { style.removeProperty('scrollbar-gutter'); }
   });
 
+});
+
+async function presentPrivacyForm() {
+  mocks.getTemplate.mockResolvedValue({id:'t1',title:'Anestezi Onayı',status:'ACTIVE',content:{...content,privacyOptionsEnabled:true},clinicName:'Vetly Klinik',contentHash:'opened-template-hash'});
+  await render();type(field('Ek not'),'not');await click('Hasta sahibine sun');
+}
+
+it('enabled forms show unchecked notice and independent optional channels after handoff', async () => {
+  await presentPrivacyForm();
+  const checks=Array.from(container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'));
+  expect(checks).toHaveLength(4);expect(checks.every(c => !c.checked)).toBe(true);
+  expect(container.textContent).not.toContain('Kliniğin test aydınlatma metni');
+  await click('KVKK Aydınlatma Metni');
+  expect(container.querySelector('[role="dialog"]')?.textContent).toContain('Kliniğin test aydınlatma metni');
+  await click('Metni kapat');await click('mock-imzala');await click('Onayla ve Gönder');
+  expect(mocks.createSignedForm).not.toHaveBeenCalled();
+  expect(container.textContent).toContain('Lütfen aydınlatma beyanını işaretleyin.');
+  await act(async () => checks[0].click());await click('mock-imzala');await click('Onayla ve Gönder');
+  expect(mocks.createSignedForm.mock.calls[0][0]).toMatchObject({privacyNoticeAcknowledged:true,privacyNoticeHash:'notice-v1',smsNotification:false,whatsappNotification:false,emailNotification:false});
+});
+
+it('channel choices are independent and returning to preparation clears signature and choices', async () => {
+  await presentPrivacyForm();
+  let checks=Array.from(container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'));
+  await act(async () => {checks[0].click();checks[2].click();});await click('mock-imzala');
+  await click('Düzenlemeye dön');await click('Hasta sahibine sun');
+  checks=Array.from(container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'));
+  expect(checks.every(c => !c.checked)).toBe(true);
+  await act(async () => {checks[0].click();checks[1].click();});await click('Onayla ve Gönder');
+  expect(mocks.createSignedForm).not.toHaveBeenCalled();
+  await click('mock-imzala');await click('Onayla ve Gönder');
+  expect(mocks.createSignedForm.mock.calls[0][0]).toMatchObject({smsNotification:true,whatsappNotification:false,emailNotification:false});
+});
+
+it('does not request a notice or display its checkboxes for disabled templates', async () => {
+  await render();expect(mocks.getPrivacyNotice).not.toHaveBeenCalled();
+  expect(container.querySelectorAll('input[type="checkbox"]')).toHaveLength(0);
 });

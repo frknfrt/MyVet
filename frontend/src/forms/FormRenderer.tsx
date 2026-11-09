@@ -1,4 +1,5 @@
 import { Fragment, useId, type ReactNode } from 'react';
+import { PrivacyNoticeLink } from './PrivacyNoticeLink';
 import { fillPlaceholders } from './bindings';
 import type { FormItem, FormTemplateContent, FormValue, FormValues } from './formModel';
 import styles from './FormRenderer.module.css';
@@ -140,6 +141,11 @@ export function FormRenderer({ content, values, onChange, mode, signatureSlot }:
             if (item.type === 'SIGNATURE') {
               return (
                 <div key={item.code ?? `signature-${ii}`} className={styles.signature}>
+                  {mode === 'readonly' && content.privacyNotice && <section aria-label="İmzalı KVKK ve iletişim tercihleri">
+                    <PrivacyNoticeLink text={content.privacyNotice.text} version={content.privacyNotice.version} />
+                    <p>✓ {content.privacyNotice.statement}</p>
+                    <p>Hizmet bildirimleri: SMS {content.privacyNotice.sms ? 'Evet' : 'Hayır'} · WhatsApp {content.privacyNotice.whatsapp ? 'Evet' : 'Hayır'} · E-posta {content.privacyNotice.email ? 'Evet' : 'Hayır'}</p>
+                  </section>}
                   {signatureSlot ?? <div className={styles.signatureBox}>İmza alanı</div>}
                 </div>
               );

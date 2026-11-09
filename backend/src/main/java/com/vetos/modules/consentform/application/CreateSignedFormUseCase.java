@@ -37,6 +37,8 @@ public class CreateSignedFormUseCase {
     private static final Pattern NATIONAL_ID = Pattern.compile("\\d{11}");
 
     private final SignedFormSubmissionRepository submissions;
+    private final PrivacyNoticeUseCase privacyNotices;
+    private final com.vetos.modules.patient.domain.OwnerCommunicationPreferencesPort communicationPreferences;
     private final FormTemplateRepository templateRepository;
     private final SignedFormRepository signedFormRepository;
     private final PatientLookupPort patientLookupPort;
@@ -55,7 +57,7 @@ public class CreateSignedFormUseCase {
             new java.util.TreeMap<>(cmd.values() == null ? Map.of() : cmd.values()));
         String requestHash = SignedFormDigest.compute(cmd.templateContentHash(), valuesHashInput,
             SignedFormValues.toJson(cmd.signer()),
-            SignedFormValues.toJson(java.util.Arrays.asList(staffId, cmd.templateId(), cmd.patientId(), cmd.encounterId())), png);
+            SignedFormValues.toJson(java.util.Arrays.asList(staffId, cmd.templateId(), cmd.patientId(), cmd.encounterId(), cmd.privacyNoticeAcknowledged(), cmd.privacyNoticeHash(), cmd.smsNotification(), cmd.whatsappNotification(), cmd.emailNotification())), png);
         UUID tenantId = TenantContext.current();
         var previous = submissions.claim(tenantId, cmd.requestId(), requestHash);
         if (previous.isPresent()) return previous.get();
@@ -77,7 +79,16 @@ public class CreateSignedFormUseCase {
         Map<String, Object> values = SignedFormValues.normalize(content, cmd.values());
         SignerInput signer = resolveSigner(cmd.signer(), patient);
         String valuesJson = SignedFormValues.toJson(values);
-        String snapshot = template.getContent();
+        PrivacyNoticeAcknowledgement acknowledgement = null;
+        if (content.privacyOptionsEnabled()) {
+            if (!cmd.privacyNoticeAcknowledged()) throw new InvalidSignedFormValuesException("İmzalayanın aydınlatma beyanı zorunludur");
+            PrivacyNotice notice = PrivacyNoticeUseCase.requireCurrent(privacyNotices.current(), cmd.privacyNoticeHash());
+            acknowledgement = PrivacyNoticeAcknowledgement.of(notice, cmd.smsNotification(), cmd.whatsappNotification(), cmd.emailNotification());
+        } else if (cmd.privacyNoticeAcknowledged() || cmd.privacyNoticeHash() != null || cmd.smsNotification() || cmd.whatsappNotification() || cmd.emailNotification()) {
+            throw new InvalidSignedFormValuesException("Bu şablonda KVKK ve iletişim tercihleri bölümü etkin değil");
+        }
+        String snapshot = FormTemplateContentCodec.toJson(new FormTemplateContent(content.title(), content.sections(),
+            acknowledgement, content.privacyOptionsEnabled()));
         String signerJson = SignedFormValues.signerJson(signer.type(), signer.name(), signer.nationalId(), signer.phone());
         String ref = fileStoragePort.store(png, "image/png");
         String ua = cmd.userAgent() == null ? null
@@ -93,6 +104,9 @@ public class CreateSignedFormUseCase {
             signer.type(), signer.name(), signer.nationalId(), signer.phone(),
             staffId, signedAt, cmd.clientIp(), ua, digest);
         UUID id = signedFormRepository.save(form).getId();
+        if (acknowledgement != null && signer.type() == SignerType.OWNER) {
+            communicationPreferences.apply(patient.ownerId(), acknowledgement.sms(), acknowledgement.whatsapp(), acknowledgement.email());
+        }
         submissions.complete(tenantId, cmd.requestId(), id);
         return id;
     }

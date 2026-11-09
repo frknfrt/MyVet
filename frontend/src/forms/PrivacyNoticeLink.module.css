@@ -1,0 +1,8 @@
+.header { padding-right:28px; padding-bottom:20px; border-bottom:1px solid var(--color-border); }
+.eyebrow { display:block; font-size:10px; font-weight:700; letter-spacing:.12em; color:var(--color-text-muted); margin-bottom:8px; }
+.header h2 { font-size:21px; line-height:1.4; letter-spacing:-.02em; color:var(--color-text-ink); margin-bottom:10px; }
+.version { display:inline-block; font-size:11px; font-weight:600; padding:4px 10px; border-radius:var(--radius-full); background:var(--color-brand-100); color:var(--color-brand-700); }
+.content { max-height:58vh; overflow-y:auto; overscroll-behavior:contain; padding:22px 12px 8px 0; color:var(--color-text-ink); font-size:13px; line-height:1.85; scrollbar-gutter:stable; }
+.content p { margin:0 0 16px; white-space:pre-wrap; overflow-wrap:anywhere; }
+.footer { display:flex; justify-content:flex-end; padding-top:16px; border-top:1px solid var(--color-border); }
+@media(max-width:640px) { .header h2 { font-size:18px; } .content { max-height:55vh; } .footer button { width:100%; justify-content:center; } }

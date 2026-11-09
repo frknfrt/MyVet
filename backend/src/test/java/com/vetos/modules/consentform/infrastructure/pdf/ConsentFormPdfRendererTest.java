@@ -190,4 +190,35 @@ class ConsentFormPdfRendererTest {
         String text = extract(renderer.render(signed(vals(), "x", false, null, true, spaced)));
         assertThat(text).contains("Ben Pamuk işlemi").doesNotContain("{{ ad }}");
     }
+    @Test
+    void printsExactPrivacySnapshotBeforeSignature_andIndependentChannels() throws Exception {
+        var original=content();
+        var notice=com.vetos.modules.consentform.domain.PrivacyNoticeAcknowledgement.of(
+            new com.vetos.modules.consentform.domain.PrivacyNotice(3,"Veri sorumlusu: Test Klinik\n\nİletişim ve başvuru: klinik@example.test"),true,false,true);
+        var signedContent=new FormTemplateContent(original.title(),original.sections(),notice,true);
+        byte[] pdf=renderer.render(signed(vals(),"İmzalayan: Ayşe (hasta sahibi)",false,null,true,signedContent));
+        String text=extract(pdf);
+        assertThat(text).contains("KVKK Aydınlatma Metni", "sürüm 3", notice.text().split("\n")[0],"klinik@example.test",
+            "[X] "+notice.statement(),"SMS Evet / WhatsApp Hayır / E-posta Evet");
+        assertThat(text.indexOf("KVKK Aydınlatma Metni")).isLessThan(text.indexOf("İmzalayan:"));
+        if(System.getProperty("kvkk.pdf.sample")!=null) java.nio.file.Files.write(java.nio.file.Path.of(System.getProperty("kvkk.pdf.sample")),pdf);
+    }
+
+    @Test
+    void fullCommonNoticeIsNotTruncated_whenItSpansPages() throws Exception {
+        var original=content();
+        var notice=com.vetos.modules.consentform.domain.PrivacyNoticeAcknowledgement.of(
+            com.vetos.modules.consentform.domain.CommonPrivacyNotice.forClinic("Örnek Veteriner Kliniği"),false,false,false);
+        byte[] pdf=renderer.render(signed(vals(),"İmzalayan: Ayşe (hasta sahibi)",false,null,true,
+            new FormTemplateContent(original.title(),original.sections(),notice,true)));
+        var reader=new PdfReader(pdf);
+        try {
+            assertThat(reader.getNumberOfPages()).isGreaterThanOrEqualTo(2);
+            String lastPage = new PdfTextExtractor(reader).getTextFromPage(reader.getNumberOfPages());
+            assertThat(lastPage).contains("İmza\n", "İmzalayan: Ayşe", "İmza tarihi:");
+        } finally {reader.close();}
+        assertThat(extract(pdf)).contains("Örnek Veteriner Kliniği","SMS Hayır / WhatsApp Hayır / E-posta Hayır", "İmzalayan: Ayşe");
+        if(System.getProperty("kvkk.pdf.long.sample")!=null) java.nio.file.Files.write(java.nio.file.Path.of(System.getProperty("kvkk.pdf.long.sample")),pdf);
+    }
+
 }

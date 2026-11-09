@@ -27,6 +27,7 @@ describe('formsApi olusturma uclari govdedeki id yi doner', () => {
     const id = await formsApi.createSignedForm({
       requestId: 'submission-id', templateId: 't', templateContentHash: 'opened-template-hash', patientId: 'p', encounterId: null, values: {},
       signer: { type: 'OWNER', name: null, nationalId: null, phone: null }, signaturePngBase64: 'AAA',
+      privacyNoticeAcknowledged: false, privacyNoticeHash: null, smsNotification: false, whatsappNotification: false, emailNotification: false,
     });
     expect(id).toBe('sf-1');
     expect(apiClient.post).toHaveBeenCalledWith('/api/v1/signed-forms', expect.objectContaining({ templateContentHash: 'opened-template-hash', requestId: 'submission-id' }));

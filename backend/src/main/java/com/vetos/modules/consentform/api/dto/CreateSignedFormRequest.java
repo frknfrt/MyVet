@@ -16,7 +16,9 @@ public record CreateSignedFormRequest(
     Map<String, Object> values,
     @NotNull @Valid SignerRequest signer,
     @NotBlank String templateContentHash,
-    @NotBlank String signaturePngBase64
+    @NotBlank String signaturePngBase64,
+    boolean privacyNoticeAcknowledged,
+    String privacyNoticeHash, boolean smsNotification, boolean whatsappNotification, boolean emailNotification
 ) {
     public record SignerRequest(@NotNull SignerType type, String name, String nationalId, String phone) {}
 }

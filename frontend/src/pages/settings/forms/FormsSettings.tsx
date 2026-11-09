@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { ApiError } from '../../../api/client';
 import { formsApi, type FormTemplateDetail } from '../../../api/formsApi';
+import { PrivacyNoticeSettings } from './PrivacyNoticeSettings';
 import { FormTemplateEditor } from './FormTemplateEditor';
 import { FormTemplateList } from './FormTemplateList';
 import { NewFormFromImage } from './NewFormFromImage';
@@ -44,6 +45,7 @@ export function FormsSettings() {
   return (
     <Routes>
       <Route index element={<FormTemplateList />} />
+      <Route path="kvkk" element={<PrivacyNoticeSettings />} />
       <Route path="yeni" element={<NewFormFromImage onSaved={() => navigate(LIST_PATH)} onCancel={() => navigate(LIST_PATH)} />} />
       <Route path=":templateId" element={<EditTemplate />} />
     </Routes>

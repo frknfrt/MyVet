@@ -98,6 +98,7 @@ export interface OwnerSearchResult {
 }
 
 export interface OwnerProfile {
+  emailNotificationConsent?: boolean;
   id: string;
   fullName: string;
   middleName: string | null;

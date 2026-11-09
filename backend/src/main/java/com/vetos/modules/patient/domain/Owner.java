@@ -147,6 +147,15 @@ public class Owner {
         updateNationalId(nationalId);
     }
 
+    @Column(name = "email_notification_consent", nullable = false)
+    private boolean emailNotificationConsent;
+
+    public void setServiceCommunicationPreferences(boolean sms, boolean whatsapp, boolean email) {
+        this.smsConsent = sms;
+        this.whatsappConsent = whatsapp;
+        this.emailNotificationConsent = email;
+    }
+
     public void setMarketingConsent(boolean marketingConsent) {
         this.marketingConsent = marketingConsent;
     }

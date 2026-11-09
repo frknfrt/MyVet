@@ -47,7 +47,7 @@ public class SignedFormsController {
         UUID id = createSignedFormUseCase.execute(principal.staffUserId(), new CreateSignedFormCommand(
             request.templateId(), request.patientId(), request.encounterId(), request.values(),
             new SignerInput(s.type(), s.name(), s.nationalId(), s.phone()),
-            request.signaturePngBase64(), httpRequest.getRemoteAddr(), httpRequest.getHeader("User-Agent"), request.templateContentHash(), request.requestId()));
+            request.signaturePngBase64(), httpRequest.getRemoteAddr(), httpRequest.getHeader("User-Agent"), request.templateContentHash(), request.requestId(), request.privacyNoticeAcknowledged(), request.privacyNoticeHash(), request.smsNotification(), request.whatsappNotification(), request.emailNotification()));
         return ResponseEntity.status(HttpStatus.CREATED).body(new IdResponse(id));
     }
 

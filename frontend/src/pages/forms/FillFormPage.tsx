@@ -1,10 +1,11 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { blobToBase64, formsApi, type FormTemplateDetail, type CreateSignedFormPayload } from '../../api/formsApi';
+import { blobToBase64, formsApi, type FormTemplateDetail, type CreateSignedFormPayload, type PrivacyNotice } from '../../api/formsApi';
 import { patientApi, type OwnerProfile, type PatientProfile } from '../../api/patientApi';
 import { computeWriteBackDiff, initialValues, resolveBindingValues, type SignerType, type WriteBackRow } from '../../forms/bindings';
 import { FormRenderer } from '../../forms/FormRenderer';
 import type { FormItem, FormValue, FormValues } from '../../forms/formModel';
+import { PrivacyNoticeLink } from '../../forms/PrivacyNoticeLink';
 import { SignaturePad } from '../../forms/SignaturePad';
 import { isValidTcKimlik } from '../owners/tcKimlik';
 import styles from './FillFormPage.module.css';
@@ -15,6 +16,7 @@ interface Loaded {
   template: FormTemplateDetail;
   patient: PatientProfile;
   owner: OwnerProfile;
+  privacyNotice: PrivacyNotice | null;
 }
 
 function errMessage(e: unknown, fallback: string): string {
@@ -57,6 +59,11 @@ export function FillFormPage() {
   const [otherTc, setOtherTc] = useState('');
   const [otherPhone, setOtherPhone] = useState('');
   const [signature, setSignature] = useState<Blob | null>(null);
+  const [signatureRevision,setSignatureRevision] = useState(0);
+  const [presenting,setPresenting] = useState(false);
+  const [privacyAcknowledged,setPrivacyAcknowledged] = useState(false);
+  const [channels,setChannels] = useState({sms:false,whatsapp:false,email:false});
+  const [privacyError,setPrivacyError] = useState<string|null>(null);
   const [step, setStep] = useState<Step>('form');
   const [busy, setBusy] = useState(false);
   const [formErrors, setFormErrors] = useState<string[]>([]);
@@ -76,14 +83,19 @@ export function FillFormPage() {
   useEffect(() => {
     if (!templateId || !patientId) return;
     let cancelled = false;
+    setLoaded(null);setPresenting(false);setSignature(null);setPrivacyAcknowledged(false);
+    setChannels({sms:false,whatsapp:false,email:false});submissionRequestId.current=null;
     (async () => {
       try {
         const [template, patient] = await Promise.all([formsApi.getTemplate(templateId), patientApi.getProfile(patientId)]);
-        const owner = await patientApi.getOwnerProfile(patient.ownerId);
+        const [owner,privacyNotice] = await Promise.all([
+          patientApi.getOwnerProfile(patient.ownerId),
+          template.content.privacyOptionsEnabled ? formsApi.getPrivacyNotice() : Promise.resolve(null),
+        ]);
         if (cancelled) return;
         const resolved = resolveBindingValues({ patient, owner, clinicName: template.clinicName, today: new Date() });
         setValues(initialValues(template.content, resolved));
-        setLoaded({ template, patient, owner });
+        setLoaded({ template, patient, owner, privacyNotice });
       } catch (e) {
         if (!cancelled) setLoadError(`Form açılamadı: ${errMessage(e, 'Bilgiler yüklenemedi.')}`);
       }
@@ -140,7 +152,11 @@ export function FillFormPage() {
     );
   }
 
-  const { template, owner, patient } = loaded;
+  const { template, owner, patient, privacyNotice } = loaded;
+  const privacyEnabled = !!template.content.privacyOptionsEnabled;
+  const changeSigner = (kind: SignerType) => {
+    setSignerKind(kind);setSignature(null);setSignatureRevision(n => n+1);setPrivacyAcknowledged(false);setChannels({sms:false,whatsapp:false,email:false});
+  };
 
   const onChange = (code: string, value: FormValue) => {
     setValues((prev) => ({ ...prev, [code]: value }));
@@ -157,10 +173,12 @@ export function FillFormPage() {
           phone: otherPhone.trim() || null,
         };
 
-  const validate = (): boolean => {
+  const validate = (requireSigning = true): boolean => {
     const missing = allFieldItems(loaded).filter((i) => i.required && isEmptyValue(values[i.code ?? '']));
     setFormErrors(missing.map((i) => `${i.label} alanı zorunlu`));
-    const sigErr = signature ? null : 'Lütfen imza atın';
+    const sigErr = !requireSigning || signature ? null : 'Lütfen imza atın';
+    const privacyErr = requireSigning && privacyEnabled && !privacyAcknowledged ? 'Lütfen aydınlatma beyanını işaretleyin.' : null;
+    setPrivacyError(privacyErr);
     setSignatureError(sigErr);
     let nErr: string | null = null;
     let tErr: string | null = null;
@@ -170,7 +188,7 @@ export function FillFormPage() {
     }
     setNameError(nErr);
     setTcError(tErr);
-    const ok = missing.length === 0 && !sigErr && !nErr && !tErr;
+    const ok = missing.length === 0 && !sigErr && !nErr && !tErr && !privacyErr;
     if (!ok) {
       requestAnimationFrame(() => {
         if (missing.length > 0 && missing[0].code) scrollToField(missing[0].code);
@@ -183,6 +201,11 @@ export function FillFormPage() {
   const submit = async () => {
     if (busy) return;
     setSubmitError(null);
+    if (privacyEnabled && !presenting) {
+      if (!validate(false)) return;
+      setSignature(null);setPrivacyAcknowledged(false);setChannels({sms:false,whatsapp:false,email:false});
+      setPresenting(true);window.scrollTo?.({top:0});return;
+    }
     if (!validate()) return;
     const diff = computeWriteBackDiff(template.content, values, resolved, signerKind);
     if (diff.length > 0) {
@@ -196,7 +219,7 @@ export function FillFormPage() {
   };
 
   const send = async (selected: WriteBackRow[]) => {
-    if (sending.current || busy || !signature) return;
+    if (sending.current || busy || !signature || (privacyEnabled && (!privacyAcknowledged || !privacyNotice))) return;
     sending.current = true;
     setBusy(true);
     setSubmitError(null);
@@ -211,6 +234,11 @@ export function FillFormPage() {
         values,
         signer: signerPayload(),
         signaturePngBase64,
+        privacyNoticeAcknowledged: privacyEnabled && privacyAcknowledged,
+        privacyNoticeHash: privacyEnabled ? privacyNotice?.hash ?? null : null,
+        smsNotification: privacyEnabled && channels.sms,
+        whatsappNotification: privacyEnabled && channels.whatsapp,
+        emailNotification: privacyEnabled && channels.email,
       };
       submissionRequestId.current ??= crypto.randomUUID();
       id = await formsApi.createSignedForm({ ...payload, requestId: submissionRequestId.current });
@@ -346,14 +374,15 @@ export function FillFormPage() {
 
   const signatureSection = (
     <div className={styles.signBox}>
+      {!presenting && <>
       <fieldset className={styles.signer}>
         <legend className={styles.signLegend}>İmzalayan</legend>
         <label className={styles.signerOpt}>
-          <input type="radio" name={`${uid}-signer`} checked={signerKind === 'OWNER'} onChange={() => setSignerKind('OWNER')} />
+          <input type="radio" name={`${uid}-signer`} checked={signerKind === 'OWNER'} onChange={() => changeSigner('OWNER')} />
           <span>Hasta sahibi — {owner.fullName}</span>
         </label>
         <label className={styles.signerOpt}>
-          <input type="radio" name={`${uid}-signer`} checked={signerKind === 'OTHER'} onChange={() => setSignerKind('OTHER')} />
+          <input type="radio" name={`${uid}-signer`} checked={signerKind === 'OTHER'} onChange={() => changeSigner('OTHER')} />
           <span>Başka biri imzalıyor</span>
         </label>
       </fieldset>
@@ -375,7 +404,27 @@ export function FillFormPage() {
           </div>
         </div>
       )}
-      <SignaturePad onChange={(b) => { setSignature(b); if (b) setSignatureError(null); }} />
+      </>}
+      {presenting && <p>İmzalayan: {signerKind === 'OWNER' ? owner.fullName : otherName}</p>}
+      {presenting && privacyNotice && <section className={styles.privacyBox} aria-label="KVKK ve iletişim tercihleri">
+        <div className={styles.privacyLine}>
+          <input id={`${uid}-privacy`} type="checkbox" checked={privacyAcknowledged}
+            onChange={e => {setPrivacyAcknowledged(e.target.checked);setPrivacyError(null);setDirty(true);setSignature(null);setSignatureRevision(n => n+1);}} />
+          <label htmlFor={`${uid}-privacy`}>Aydınlatma metni tarafıma sunuldu ve bilgilendirildim.</label>
+          <PrivacyNoticeLink text={privacyNotice.text} version={privacyNotice.version}/>
+        </div>
+        <p>Randevu, aşı ve tedavi takibi için bildirim almak istediğim kanallar (isteğe bağlı):</p>
+        <div className={styles.channelOptions}>
+          {([['sms','SMS'],['whatsapp','WhatsApp'],['email','E-posta']] as const).map(([key,label]) =>
+            <label key={key}><input type="checkbox" checked={channels[key]}
+              onChange={e => {setChannels(c => ({...c,[key]:e.target.checked}));setDirty(true);setSignature(null);setSignatureRevision(n => n+1);}} />{label}</label>)}
+        </div>
+        <p>Bu seçimler reklam veya kampanya izni değildir. Hiçbir kanalı seçmeden formu imzalayabilirsiniz.</p>
+        {signerKind === 'OTHER' && <p>Tercihleriniz bu belgede saklanır; hasta sahibinin iletişim tercihleri değiştirilmez.</p>}
+        {privacyError && <p className={styles.fieldError} role="alert">{privacyError}</p>}
+      </section>}
+      {(!privacyEnabled || presenting) && <SignaturePad key={signatureRevision} onChange={(b) => { setSignature(b); if (b) setSignatureError(null); }} />}
+      {privacyEnabled && !presenting && <p>İmza ve kişisel tercihler tablet hasta sahibine sunulduktan sonra alınır.</p>}
       {signatureError && <span className={styles.fieldError} role="alert">{signatureError}</span>}
     </div>
   );
@@ -384,7 +433,7 @@ export function FillFormPage() {
     <div className={styles.page}>
       {topBar}
       <main className={styles.body}>
-        <FormRenderer content={template.content} values={values} onChange={onChange} mode="fill" signatureSlot={signatureSection} />
+        <FormRenderer content={template.content} values={values} onChange={onChange} mode={presenting ? 'readonly' : 'fill'} signatureSlot={signatureSection} />
         <div ref={errorRef}>
           {formErrors.length > 0 && (
             <ul className={styles.error} role="alert">
@@ -394,8 +443,11 @@ export function FillFormPage() {
           {submitError && <div className={styles.error} role="alert">{submitError}</div>}
         </div>
         <div className={styles.actions}>
+          {presenting && <button type="button" className={styles.secondary} disabled={busy} onClick={() => {
+            setPresenting(false);setSignature(null);setPrivacyAcknowledged(false);setChannels({sms:false,whatsapp:false,email:false});setPrivacyError(null);
+          }}>Düzenlemeye dön</button>}
           <button type="button" className={styles.primary} disabled={busy} onClick={submit}>
-            {busy ? 'Gönderiliyor…' : 'Onayla ve Gönder'}
+            {busy ? 'Gönderiliyor…' : privacyEnabled && !presenting ? 'Hasta sahibine sun' : 'Onayla ve Gönder'}
           </button>
         </div>
       </main>

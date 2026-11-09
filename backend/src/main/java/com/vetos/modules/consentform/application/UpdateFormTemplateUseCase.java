@@ -29,6 +29,7 @@ public class UpdateFormTemplateUseCase {
             throw new FormTemplateArchivedException();
         }
         FormTemplateContentValidator.validate(content);
+        if (content.privacyNotice() != null) throw new com.vetos.modules.consentform.domain.exception.InvalidFormTemplateException("Şablona imzalı KVKK beyanı eklenemez");
         template.update(content.title(), FormTemplateContentCodec.toJson(content), staffId);
         templateRepository.save(template);
     }

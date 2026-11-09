@@ -25,6 +25,7 @@ public class CreateFormTemplateUseCase {
     @Transactional
     public UUID execute(UUID staffId, FormTemplateContent content, UUID sourceImageId) {
         FormTemplateContentValidator.validate(content);
+        if (content.privacyNotice() != null) throw new com.vetos.modules.consentform.domain.exception.InvalidFormTemplateException("Şablona imzalı KVKK beyanı eklenemez");
         if (sourceImageId != null && sourceImageRepository.findById(sourceImageId).isEmpty()) {
             throw new FormSourceImageNotFoundException(sourceImageId);
         }

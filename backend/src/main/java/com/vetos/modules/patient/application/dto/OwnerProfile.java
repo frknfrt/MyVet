@@ -29,7 +29,8 @@ public record OwnerProfile(
     String protocolNumber,
     LocalDate birthDate,
     String nationalId,
-    List<PatientSummaryItem> patients
+    List<PatientSummaryItem> patients,
+    boolean emailNotificationConsent
 ) {
     public record PatientSummaryItem(UUID id, String name, String speciesName, String breedName, PatientStatus status) {}
 }

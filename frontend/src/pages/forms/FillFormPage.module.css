@@ -223,3 +223,9 @@
   gap: var(--space-4);
   padding-top: var(--space-8);
 }
+
+.privacyBox { padding: 16px 0; border-top: 1px solid var(--border); }
+.privacyLine { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.privacyLine input, .channelOptions input { width:22px; height:22px; flex-shrink:0; }
+.channelOptions { display:flex; flex-wrap:wrap; gap:20px; }
+.channelOptions label { display:flex; align-items:center; gap:8px; min-height:44px; }

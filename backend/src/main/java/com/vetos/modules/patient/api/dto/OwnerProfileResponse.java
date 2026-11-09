@@ -30,7 +30,8 @@ public record OwnerProfileResponse(
     String protocolNumber,
     LocalDate birthDate,
     String nationalId,
-    List<PatientItem> patients
+    List<PatientItem> patients,
+    boolean emailNotificationConsent
 ) {
     public record PatientItem(UUID id, String name, String speciesName, String breedName, PatientStatus status) {}
 
@@ -43,7 +44,7 @@ public record OwnerProfileResponse(
             profile.protocolNumber(), profile.birthDate(), profile.nationalId(),
             profile.patients().stream()
                 .map(p -> new PatientItem(p.id(), p.name(), p.speciesName(), p.breedName(), p.status()))
-                .toList()
+                .toList(), profile.emailNotificationConsent()
         );
     }
 }

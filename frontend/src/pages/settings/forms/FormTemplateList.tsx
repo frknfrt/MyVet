@@ -61,6 +61,7 @@ export function FormTemplateList() {
 
   return (
     <div>
+      <p><Link to="/ayarlar/formlar/kvkk">KVKK aydınlatma metnini düzenle</Link></p>
       <div className={styles.head}>
         <label className={styles.check}>
           <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />

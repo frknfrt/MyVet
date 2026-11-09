@@ -1,7 +1,9 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppShell } from '../../components/layout/AppShell';
 import { ApiError } from '../../api/client';
+import { formsApi, type PrivacyNotice } from '../../api/formsApi';
+import { PrivacyNoticeLink } from '../../forms/PrivacyNoticeLink';
 import { patientApi } from '../../api/patientApi';
 import { Button } from '../../components/ui/Button';
 import { FieldWrap, Input, Textarea } from '../../components/ui/Field';
@@ -29,11 +31,17 @@ export function NewOwnerPage() {
   const [referralSource, setReferralSource] = useState('');
   const [clientDiscount, setClientDiscount] = useState('0');
   const [protocolNumber, setProtocolNumber] = useState('');
-  const [kvkkConsent, setKvkkConsent] = useState(false);
-  const [smsConsent, setSmsConsent] = useState(true);
-  const [whatsappConsent, setWhatsappConsent] = useState(true);
+  const [noticePresented, setNoticePresented] = useState(false);
+  const [notice, setNotice] = useState<PrivacyNotice|null>(null);
+  const [noticeLoadError,setNoticeLoadError] = useState<string|null>(null);
+  const [createdOwnerId,setCreatedOwnerId] = useState<string|null>(null);
+  useEffect(() => { let active=true;formsApi.getPrivacyNotice().then(n => {if(active)setNotice(n);})
+    .catch(() => {if(active)setNoticeLoadError('Aydınlatma metni yüklenemedi. Metin sunum kaydı oluşturulmayacak.');});
+    return () => {active=false;}; },[]);
+  const [smsConsent] = useState(false);
+  const [whatsappConsent] = useState(false);
   const [notificationConsent, setNotificationConsent] = useState(true);
-  const [marketingConsent, setMarketingConsent] = useState(false);
+  const [marketingConsent] = useState(false);
   const [criticalAlert, setCriticalAlert] = useState('');
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
@@ -43,7 +51,7 @@ export function NewOwnerPage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (busy || !!nationalIdError) return;
+    if (busy || createdOwnerId || !!nationalIdError) return;
     setBusy(true);
     setError(null);
     try {
@@ -69,11 +77,10 @@ export function NewOwnerPage() {
         notificationConsent,
         protocolNumber: protocolNumber || undefined,
       });
-      try {
-        await patientApi.recordConsent(owner.id, 'KVKK_ACIK_RIZA');
-      } catch {
-        // Sahip zaten olusturuldu -- KVKK kaydi basarisiz olsa da geri alinmaz,
-        // resepsiyon KVKK sekmesinden manuel olarak ekleyebilir.
+      setCreatedOwnerId(owner.id);
+      if (noticePresented && notice) {
+        try { await formsApi.recordNoticeDelivery(owner.id, notice.hash); }
+        catch (e) {setError(`Hasta sahibi oluşturuldu; aydınlatma sunum kaydı oluşturulamadı: ${errorMessageOf(e)}`);return;}
       }
       navigate(`/musteriler/${owner.id}`);
     } catch (err) {
@@ -91,6 +98,7 @@ export function NewOwnerPage() {
 
       <div className={styles.card}>
         <h1 className={styles.title}>Yeni Hasta Sahibi</h1>
+        {createdOwnerId && <Button type="button" onClick={() => navigate(`/musteriler/${createdOwnerId}`)}>Oluşturulan hasta sahibine git</Button>}
         <p className={styles.lede}>Yeni bir hasta sahibi kaydı oluşturun — hayvanlarını daha sonra bu kişinin sayfasından ekleyebilirsiniz.</p>
 
         <form onSubmit={handleSubmit}>
@@ -161,32 +169,22 @@ export function NewOwnerPage() {
             </FieldWrap>
           </div>
           <div className={styles.kvkkBox}>
-            <label>
-              <input type="checkbox" checked={kvkkConsent} onChange={(e) => setKvkkConsent(e.target.checked)} required />
-              <span>
-                <strong>KVKK Aydınlatma Metni'ni okudum, açık rızam vardır.</strong> Kişisel verilerin işlenmesine
-                ilişkin bu onay, hasta sahibi kaydı için zorunludur ve tarih/IP ile birlikte kayıt altına alınır.
-              </span>
+            {notice && <PrivacyNoticeLink text={notice.text} version={notice.version}/>}
+            <label><input type="checkbox" checked={noticePresented} disabled={!notice || !!createdOwnerId}
+              onChange={e => setNoticePresented(e.target.checked)} />
+              KVKK aydınlatma metnini ilgili kişiye sundum (klinik çalışanının beyanı).
             </label>
+            <p>Hasta sahibinin bilgilendirme beyanı ve imzası, bu bölümün etkin olduğu formun tablet ekranında alınır. Bu kayıt açık rıza değildir.</p>
+            {noticeLoadError && <p role="alert">{noticeLoadError}</p>}
           </div>
 
           <div className={styles.consentRow}>
-            <label className={styles.checkboxRow}>
-              <input type="checkbox" checked={smsConsent} onChange={(e) => setSmsConsent(e.target.checked)} />
-              SMS gönderim izni
-            </label>
-            <label className={styles.checkboxRow}>
-              <input type="checkbox" checked={whatsappConsent} onChange={(e) => setWhatsappConsent(e.target.checked)} />
-              WhatsApp gönderim izni
-            </label>
+            <p>SMS, WhatsApp ve e-posta hizmet tercihlerini hasta sahibi tablet formunda kendisi seçer.</p>
             <label className={styles.checkboxRow}>
               <input type="checkbox" checked={notificationConsent} onChange={(e) => setNotificationConsent(e.target.checked)} />
               Uygulama bildirimi izni
             </label>
-            <label className={styles.checkboxRow}>
-              <input type="checkbox" checked={marketingConsent} onChange={(e) => setMarketingConsent(e.target.checked)} />
-              E-posta pazarlama izni
-            </label>
+
           </div>
 
           <div className={styles.sectionLabel}>Notlar</div>
@@ -203,7 +201,7 @@ export function NewOwnerPage() {
             <Button type="button" variant="secondary" onClick={() => navigate('/hastalar')}>
               Vazgeç
             </Button>
-            <Button type="submit" variant="primary" disabled={busy || !!nationalIdError}>
+            <Button type="submit" variant="primary" disabled={busy || !!createdOwnerId || !!nationalIdError}>
               {busy ? 'Kaydediliyor...' : 'Hasta Sahibini Kaydet'}
             </Button>
           </div>

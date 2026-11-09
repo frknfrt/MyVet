@@ -323,6 +323,11 @@ export function FormTemplateEditor({ initialContent, sourceImageId, templateId, 
 
   return (
     <div>
+      <label style={{display:'block',marginBottom:16}}>
+        <input type="checkbox" checked={!!content.privacyOptionsEnabled} onChange={e => mutate(c => ({...c,privacyOptionsEnabled:e.target.checked}))} />
+        Bu forma KVKK aydınlatma ve SMS / WhatsApp / e-posta bildirim tercihleri bölümünü ekle
+      </label>
+      <p>Bu bölüm imza öncesinde gösterilir. İletişim tercihleri isteğe bağlıdır ve pazarlama izni değildir.</p>
       {isDraft ? (
         <div className={styles.aiFrame}>
           <div className={styles.aiTitle}>AI taslağı — onayınızı bekliyor</div>

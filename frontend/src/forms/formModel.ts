@@ -84,7 +84,14 @@ export interface FormSection {
   items: FormItem[];
 }
 
+export interface PrivacyNoticeAcknowledgement {
+  version: number; text: string; hash: string; statement: string;
+  sms: boolean; whatsapp: boolean; email: boolean;
+}
+
 export interface FormTemplateContent {
+  privacyOptionsEnabled?: boolean;
+  privacyNotice?: PrivacyNoticeAcknowledgement | null;
   title: string;
   sections: FormSection[];
 }

@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { formsApi, type NoticeDelivery } from '../../api/formsApi';
+import { PrivacyNoticeLink } from '../../forms/PrivacyNoticeLink';
 import { useAuth } from '../../auth/AuthContext';
 import { ApiError } from '../../api/client';
 import { ConsentRecordItem, ConsentType, patientApi } from '../../api/patientApi';
@@ -10,8 +12,8 @@ import styles from './ConsentTab.module.css';
 const CONSENT_TYPES: { type: ConsentType; label: string; description: string }[] = [
   {
     type: 'KVKK_ACIK_RIZA',
-    label: 'KVKK Açık Rıza',
-    description: 'Kişisel verilerin hizmet sunumu için işlenmesine ilişkin temel onay.',
+    label: 'Geçmiş KVKK Açık Rıza',
+    description: 'Önceki akıştan kalan kayıtlar. Yeni bilgilendirme beyanı imzalı formda saklanır; bu kayıtlar kendiliğinden dönüştürülmez.',
   },
   {
     type: 'PAZARLAMA',
@@ -49,6 +51,10 @@ export function ConsentTab({ ownerId }: ConsentTabProps) {
   const canWrite = session ? ['VET', 'RECEPTIONIST', 'ADMIN'].includes(session.role) : false;
   const [records, setRecords] = useState<ConsentRecordItem[] | null>(null);
   const [busyType, setBusyType] = useState<ConsentType | null>(null);
+  const [deliveries,setDeliveries] = useState<NoticeDelivery[]>([]);
+  const [deliveryError,setDeliveryError] = useState<string|null>(null);
+  useEffect(() => {let active=true;formsApi.noticeDeliveries(ownerId).then(d => {if(active)setDeliveries(d);})
+    .catch(() => {if(active)setDeliveryError('Aydınlatma sunum kayıtları yüklenemedi.');});return () => {active=false;};},[ownerId]);
   const [error, setError] = useState<string | null>(null);
 
   function load() {
@@ -96,6 +102,15 @@ export function ConsentTab({ ownerId }: ConsentTabProps) {
     <div>
       {error && <div className={settingsStyles.errorBanner}>{error}</div>}
 
+      <section>
+        <h3>Aydınlatma metni sunum kayıtları</h3>
+        <p>Bu kayıtlar klinik çalışanının metni sunduğuna dair beyanıdır; hasta sahibinin imzası veya açık rızası değildir. İmzalı beyanlar Formlar sekmesindedir.</p>
+        {deliveryError && <p role="alert">{deliveryError}</p>}
+        {deliveries.map(d => <div key={d.id}>
+          <p>{new Date(d.recordedAt).toLocaleString('tr-TR')} · Kaydeden kullanıcı: {d.recordedBy}</p>
+          <PrivacyNoticeLink text={d.text} version={d.version}/>
+        </div>)}
+      </section>
       <div className={styles.grid}>
         {CONSENT_TYPES.map(({ type, label, description }) => {
           const latest = latestFor(records, type);
@@ -122,11 +137,11 @@ export function ConsentTab({ ownerId }: ConsentTabProps) {
                   <Button variant="danger" onClick={() => handleRevoke(latest!)} disabled={busyType === type}>
                     Geri Çek
                   </Button>
-                ) : (
+                ) : type !== 'KVKK_ACIK_RIZA' ? (
                   <Button variant="secondary" onClick={() => handleGrant(type)} disabled={busyType === type}>
                     Onay Al
                   </Button>
-                ))}
+                ) : null)}
             </div>
           );
         })}

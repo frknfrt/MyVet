@@ -38,7 +38,15 @@ export interface SignerPayload {
   phone: string | null;
 }
 
+export interface PrivacyNotice { version: number; text: string; hash: string }
+export interface NoticeDelivery { id: string; version: number; text: string; hash: string; recordedBy: string; recordedAt: string }
+
 export interface CreateSignedFormPayload {
+  privacyNoticeAcknowledged: boolean;
+  privacyNoticeHash: string | null;
+  smsNotification: boolean;
+  whatsappNotification: boolean;
+  emailNotification: boolean;
   requestId: string;
   templateId: string;
   templateContentHash: string;
@@ -104,6 +112,10 @@ export function blobToBase64(blob: Blob): Promise<string> {
 }
 
 export const formsApi = {
+  getPrivacyNotice: () => apiClient.get<{notice: PrivacyNotice}>('/api/v1/privacy-notice').then(r => r.notice),
+  savePrivacyNotice: (text: string, expectedVersion: number) => apiClient.put<PrivacyNotice>('/api/v1/privacy-notice', {text,expectedVersion}),
+  recordNoticeDelivery: (ownerId: string, hash: string) => apiClient.post<void>('/api/v1/privacy-notice/deliveries', {ownerId,hash}),
+  noticeDeliveries: (ownerId: string) => apiClient.get<NoticeDelivery[]>(`/api/v1/privacy-notice/deliveries?ownerId=${encodeURIComponent(ownerId)}`),
   uploadSourceImage: (file: File | Blob) => {
     const form = new FormData();
     form.append('file', file);

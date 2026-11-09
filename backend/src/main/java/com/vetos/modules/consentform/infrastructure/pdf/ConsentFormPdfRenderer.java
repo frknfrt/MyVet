@@ -68,6 +68,9 @@ public class ConsentFormPdfRenderer implements ConsentFormPdfPort {
         checkText(data.clinicName()); checkText(data.title()); checkText(data.signerLine());
         checkText(data.voidReason()); checkText(data.digestShort());
         if (data.values() != null) data.values().values().forEach(ConsentFormPdfRenderer::checkText);
+        if (data.content() != null && data.content().privacyNotice() != null) {
+            checkText(data.content().privacyNotice().text());checkText(data.content().privacyNotice().statement());
+        }
         if (data.content() != null) for (FormSection section : data.content().sections()) {
             checkText(section.title());
             for (FormItem item : section.items()) { checkText(item.label()); checkText(item.text()); checkText(item.options()); checkText(item.unit()); }
@@ -206,10 +209,28 @@ public class ConsentFormPdfRenderer implements ConsentFormPdfPort {
     }
 
     private void addSignature(Document document, FormItem item, ConsentFormPdfData data, Font labelFont, Font bodyFont) throws Exception {
+        if (data.content() != null && data.content().privacyNotice() != null) {
+            var notice = data.content().privacyNotice();
+            Paragraph heading = new Paragraph("KVKK Aydınlatma Metni — sürüm " + notice.version(), labelFont);
+            heading.setSpacingBefore(12);document.add(heading);
+            for (String paragraph : notice.text().split("\\R\\s*\\R")) {
+                Paragraph p = new Paragraph(paragraph,bodyFont);p.setSpacingAfter(6);document.add(p);
+            }
+            document.add(new Paragraph("[X] " + notice.statement(),bodyFont));
+            document.add(new Paragraph("Hizmet bildirim tercihleri (pazarlama izni değildir): SMS " + (notice.sms() ? "Evet" : "Hayır")
+                + " / WhatsApp " + (notice.whatsapp() ? "Evet" : "Hayır") + " / E-posta " + (notice.email() ? "Evet" : "Hayır"),bodyFont));
+        }
         Paragraph label = new Paragraph(item.label(), labelFont);
         label.setSpacingBefore(14);
         label.setSpacingAfter(4);
-        document.add(label);
+        PdfPTable signatureBlock = new PdfPTable(1);
+        signatureBlock.setWidthPercentage(100);
+        signatureBlock.setKeepTogether(true);
+        signatureBlock.setSplitRows(false);
+        PdfPCell signatureCell = new PdfPCell();
+        signatureCell.setBorder(PdfPCell.NO_BORDER);
+        signatureCell.setPadding(0);
+        signatureCell.addElement(label);
 
         PdfPTable box = new PdfPTable(1);
         box.setWidthPercentage(50);
@@ -230,9 +251,17 @@ public class ConsentFormPdfRenderer implements ConsentFormPdfPort {
             }
         }
         box.addCell(cell);
-        document.add(box);
-
-        addSignatureMeta(document, data, bodyFont);
+        signatureCell.addElement(box);
+        if (data.signerLine() != null) {
+            Paragraph signer = new Paragraph(data.signerLine(), bodyFont);
+            signer.setSpacingBefore(4);
+            signatureCell.addElement(signer);
+        }
+        if (data.signedAt() != null) {
+            signatureCell.addElement(new Paragraph("İmza tarihi: " + DATE_TIME_FMT.format(data.signedAt()), bodyFont));
+        }
+        signatureBlock.addCell(signatureCell);
+        document.add(signatureBlock);
     }
 
     private void addSignatureMeta(Document document, ConsentFormPdfData data, Font bodyFont) throws Exception {

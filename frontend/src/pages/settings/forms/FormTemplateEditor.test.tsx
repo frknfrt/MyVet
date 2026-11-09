@@ -258,3 +258,17 @@ describe('FormTemplateEditor', () => {
   });
 
 });
+
+it('retains the chosen KVKK section when normalizing a template for saving', async () => {
+  const {cleanContent}=await import('../../../forms/formEdit');
+  expect(cleanContent({title:' Form ',sections:[],privacyOptionsEnabled:true}).privacyOptionsEnabled).toBe(true);
+  expect(cleanContent({title:'Form',sections:[]}).privacyOptionsEnabled).toBeUndefined();
+});
+
+it('lets the clinic opt in to the KVKK section for this template', async () => {
+  await render({sourceImageId:null});
+  const checkbox=Array.from(container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')).find(i => i.parentElement?.textContent?.includes('Bu forma KVKK'))!;
+  expect(checkbox.checked).toBe(false);await act(async () => checkbox.click());
+  await act(async () => btn('Formu Oluştur')!.click());
+  expect(formsApi.createTemplate).toHaveBeenCalledWith(expect.objectContaining({content:expect.objectContaining({privacyOptionsEnabled:true})}));
+});
