@@ -1,0 +1,167 @@
+name: Production Deploy
+run-name: Production · ${{ inputs.mode }} · ${{ github.sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Check: yalnız canlı ön kontrol · Deploy: yedekle ve yayınla'
+        type: choice
+        required: true
+        default: Check
+        options: [Check, Deploy]
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUTF8: '1'
+
+concurrency:
+  group: vetly-production
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    name: Main dalını doğrula
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Yalnız main ve elle başlatılan yayın
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          MODE: ${{ inputs.mode }}
+        run: |
+          test "$EVENT" = workflow_dispatch
+          test "$REF" = refs/heads/main
+          case "$MODE" in Check|Deploy) ;; *) exit 1 ;; esac
+
+  tests:
+    name: Uygulama CI testleri
+    needs: guard
+    uses: ./.github/workflows/ci.yml
+
+  package:
+    name: Commit paketini hazırla
+    needs: tests
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: pwsh
+    outputs:
+      release_id: ${{ steps.package.outputs.release_id }}
+      manifest_sha256: ${{ steps.package.outputs.manifest_sha256 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - name: Deployment güvenlik ve regresyon testleri
+        run: python -m unittest discover -s scripts/deploy -p test_pipeline.py -v
+      - name: Backend, eklenti ve frontend production paketi
+        run: ./scripts/deploy.ps1 -Mode Prepare -SourceMode commit
+      - name: Commit, kaynak ve manifest kimliğini kaydet
+        id: package
+        run: python scripts/deploy/github_actions.py export-package
+      - name: Değişmez yayın paketini sakla
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: production-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            .deploy/releases/${{ steps.package.outputs.release_id }}/app.jar
+            .deploy/releases/${{ steps.package.outputs.release_id }}/frontend.tar.gz
+            .deploy/releases/${{ steps.package.outputs.release_id }}/migrations.json
+            .deploy/releases/${{ steps.package.outputs.release_id }}/source-files.json
+            .deploy/releases/${{ steps.package.outputs.release_id }}/release.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+  production:
+    name: VPS · ${{ inputs.mode }}
+    needs: package
+    runs-on: windows-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: https://uygulama.vetly.com.tr
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      VETLY_RELEASE_ID: ${{ needs.package.outputs.release_id }}
+      VETLY_MANIFEST_SHA256: ${{ needs.package.outputs.manifest_sha256 }}
+      VETLY_MODE: ${{ inputs.mode }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          # deploy.ps1 uzak main'i tekrar fetch eder; salt okunur token post-job temizlenir.
+          persist-credentials: true
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: production-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .deploy/releases/${{ needs.package.outputs.release_id }}
+          digest-mismatch: error
+      - name: Aynı commit ve aynı paketi doğrula
+        run: python scripts/deploy/github_actions.py verify-package
+      - name: İzole SSH kimliğini hazırla
+        env:
+          VETLY_SSH_PRIVATE_KEY: ${{ secrets.VETLY_SSH_PRIVATE_KEY }}
+          VETLY_SSH_KNOWN_HOSTS: ${{ secrets.VETLY_SSH_KNOWN_HOSTS }}
+        run: python scripts/deploy/github_actions.py configure-ssh
+      - name: Canlı kontroller, yedekleme ve seçilen işlem
+        run: |
+          & ./scripts/deploy.ps1 -Mode $env:VETLY_MODE -ReleaseId $env:VETLY_RELEASE_ID -SshConfigFile $env:VETLY_SSH_CONFIG -ExpectedManifestSha256 $env:VETLY_MANIFEST_SHA256 2>&1 | Tee-Object -FilePath "$env:RUNNER_TEMP/publish.log"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: SSH kimliğini temizle
+        if: always()
+        run: python scripts/deploy/github_actions.py cleanup-ssh
+      - name: Sonuç dosyaları ve yayın günlüğü
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: production-result-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            .deploy/releases/${{ needs.package.outputs.release_id }}/last-*.json
+            ${{ runner.temp }}/publish.log
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: İşlem özeti
+        if: always()
+        env:
+          RESULT: ${{ job.status }}
+        run: |
+          @"
+          ## Production işlemi
+
+          Mod: $env:VETLY_MODE
+
+          Sonuç: $env:RESULT
+
+          Commit: $env:GITHUB_SHA
+
+          Paket: $env:VETLY_RELEASE_ID
+
+          Check modu servis yeniden başlatmaz ve veritabanına migration uygulamaz.
+          Deploy sırasında bağlantı kesilirse otomatik tekrar çalıştırmayın; sunucu sonucunu kontrol edin.
+          "@ >> $env:GITHUB_STEP_SUMMARY

@@ -1,5 +1,7 @@
 # Deployment (Production)
 
+Önerilen yeni akış: yerel kontrol paneli ve aşamalı PowerShell pipeline. Başlatma, bir kerelik SSH/sudo kurulumu ve geri alma sınırları: [Deployment otomasyonu](deployment-automation.md). Aşağıdaki komutlar manuel alternatif olarak korunmuştur.
+
 Canlı ortam: **https://uygulama.vetly.com.tr** — Güzel Hosting VPS üzerinde, Docker'sız (sunucu OpenVZ, Docker güvenilir çalışmıyor).
 
 ## Sunucu yerleşimi
@@ -283,7 +285,7 @@ Uygulama bazı sık okunan, az değişen bilgileri kendi belleğinde tutar (Redi
 - [ ] `META_WHATSAPP_TEMPLATE_NAME` (şablonsuz WhatsApp sadece 24 saatlik pencere içinde gider)
 - [x] WhatsApp numarasi gercek numarayla degistirildi (2026-11-05) -- Test Number kisitlamasi kalkti, gercek musteri numaralarina gonderim test edildi, sorunsuz calisiyor.
 - [ ] Tanıtım sitesi (`vetly.com.tr`) API adresini `https://myvet-21n4.onrender.com`'dan `https://uygulama.vetly.com.tr`'ye taşımak — ardından Render servisini kapatmak
-- [ ] Bu adımları bir `deploy.ps1` betiğine çevirmek
+- [x] Yerel deployment paneli + `scripts/deploy.ps1` pipeline (kurulum: `docs/deployment-automation.md`)
 
 ## Eklenti 0.3.1 ve stok birimi düzeltmeleri (2026-10-25)
 
@@ -292,3 +294,8 @@ Uygulama bazı sık okunan, az değişen bilgileri kendi belleğinde tutar (Redi
 - Mevcut ürünlerin birimi (tablet, pipet) bir sonraki TARBİL stok yüklemesinde kendiliğinden güncellenir; elle ayarlanmış birim ve bekleyen düşümü olan ürün atlanır.
 - Sıra: önce web (0.3.1 zip indirilebilir), sonra backend.
 
+
+
+## GitHub Actions ile yayın
+
+Elle başlatılan, CI testlerini zorunlu tutan Check/Deploy akışı için [GitHub Actions deployment kılavuzu](deployment-github-actions.md).

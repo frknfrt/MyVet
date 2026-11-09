@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="deploy-session" content="__DEPLOY_TOKEN__"><title>Vetly · Deployment</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<body>
+<header class="topbar"><a class="brand" href="/" aria-label="Vetly Deployment">v<span>vetly<span class="brand-sub">/ deployment</span></span></a><div class="top-actions"><span class="local-label"><i></i> Yerel kontrol paneli</span><button id="close-panel" class="button secondary">Paneli kapat</button></div></header>
+<main>
+  <div class="page-head"><div><p class="eyebrow">YAYIN YÖNETİMİ</p><h1>Kontrollü yayın, tek panel.</h1><p class="lead">Paketi hazırlayın, kontrolleri izleyin ve doğrulanan sürümü canlıya alın.</p></div><div class="environment"><span>CANLI ORTAM</span><strong>uygulama.vetly.com.tr</strong><small>VPS · Nginx · systemd</small></div></div>
+  <div id="api-error" class="banner error" role="alert" hidden></div>
+  <div class="workspace">
+    <section class="pipeline card" aria-labelledby="pipeline-title">
+      <div class="card-head"><div><p class="eyebrow">PIPELINE</p><h2 id="pipeline-title">Yayın aşamaları</h2></div><span id="job-status" class="pill">Hazır</span></div>
+      <div class="progress-meta"><span id="job-description">Henüz bir işlem başlatılmadı</span><span id="progress-count">0 / 9</span></div>
+      <progress id="progress" max="9" value="0" aria-label="Pipeline ilerlemesi"></progress>
+      <ol id="stages" class="stages"></ol>
+      <div id="job-result" class="job-result" role="status" hidden></div>
+    </section>
+    <aside>
+      <section class="card actions-card"><p class="eyebrow">1 · PAKETİ HAZIRLA</p><h2>Kaynaklardan yeni sürüm</h2><p>Çalışan geliştirme ortamınıza dokunmadan ayrı bir klasörde derlenir.</p><label class="field-label" for="source-mode">Paket kaynağı</label><select id="source-mode"><option value="commit" selected>Son commit (önerilen)</option><option value="working-tree">Çalışma klasörü</option></select><p id="source-hint" class="hint">Changelist’teki tüm commitlenmemiş değişiklikler dışarıda kalır.</p><label id="dirty-option" class="check" hidden><input id="allow-dirty" type="checkbox"><span>Commitlenmemiş uygulama değişikliklerini dahil et</span></label><button id="prepare" class="button secondary">Yeni paket hazırla</button><small class="hint">Graphify, .env dosyaları ve özel anahtarlar pakete alınmaz.</small></section>
+      <section class="card actions-card"><p class="eyebrow">2 · KONTROL ET VE YAYINLA</p><label class="field-label" for="release">Hazır paket</label><select id="release"><option value="">Henüz paket yok</option></select><dl id="release-details" class="details"></dl><label id="dirty-release-option" class="check" hidden><input id="allow-dirty-release" type="checkbox"><span>Seçili paketin yerel değişikliklerini kabul ediyorum</span></label><div class="action-row"><button id="check" class="button secondary" disabled>Yalnız kontrol et</button><button id="deploy" class="button primary" disabled>Kontrol ederek yayınla</button></div><p class="hint">Yayın; yedekleme, backend, sağlık kontrolü, frontend ve HTTPS kontrolleriyle ilerler. Başarısız aşamada durur.</p></section>
+      <details class="setup"><summary>İlk kurulum ve güvenlik</summary><p>SSH anahtarı, bilinen sunucu kaydı ve root-owned deploy yardımcısı bir kez kurulmalıdır. Ayrıntılar projedeki <code>docs/deployment-automation.md</code> dosyasındadır.</p><p>Panel yalnız bu bilgisayarda çalışır. Şifre veya serbest PowerShell komutu kabul etmez. Veritabanını otomatik geri yüklemez.</p><p>Hazırlama aşaması backend test süitini çalıştırmaz; derleme ve paket doğrulaması yapar.</p></details>
+    </aside>
+  </div>
+  <section class="card logs-card"><div class="card-head"><div><p class="eyebrow">CANLI ÇIKTI</p><h2>İşlem günlüğü</h2></div><label class="check compact"><input id="autoscroll" type="checkbox" checked><span>Otomatik kaydır</span></label></div><pre id="logs" tabindex="0" aria-label="Pipeline işlem günlüğü">İşlem başlatıldığında komut çıktıları burada görünecek.</pre><p class="log-footer">İşlem kayıtları <code>.deploy/ui/history/</code> altında saklanır. Tarayıcıyı kapatmak çalışan pipeline’ı durdurmaz.</p></section>
+</main>
+<dialog id="confirm"><form method="dialog"><p class="eyebrow">CANLIYA YAYIN</p><h2>Bu paketi yayınlayalım mı?</h2><p id="confirm-package"></p><p>Canlı uygulama yedeklenecek; tüm kontroller geçerse backend yeniden başlatılacak ve frontend yayınlanacak. Kısa bir kesinti olabilir.</p><div class="dialog-actions"><button class="button secondary" value="cancel">Vazgeç</button><button class="button primary" value="deploy">Kontrolleri başlat ve yayınla</button></div></form></dialog>
+</body></html>

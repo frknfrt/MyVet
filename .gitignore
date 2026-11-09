@@ -37,3 +37,7 @@ extension/dist/
 extension/key.pem
 # Faz 7: npm run package ciktisi (derleme urunu, repoda tutulmaz)
 frontend/public/downloads/
+
+# Local deployment dashboard, isolated builds, release packages and logs
+.deploy/
+scripts/deploy/__pycache__/
