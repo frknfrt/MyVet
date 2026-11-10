@@ -80,10 +80,22 @@ def configure_ssh():
                            check=True, capture_output=True)
         else: identity.chmod(0o600)
         known_hosts.write_text(hosts + "\n", encoding="ascii", newline="\n")
-        for args in (["ssh-keygen", "-y", "-P", "", "-f", str(identity)],
-                     ["ssh-keygen", "-F", "70.40.139.40", "-f", str(known_hosts)]):
-            result = subprocess.run(args, capture_output=True, timeout=15)
-            if result.returncode: raise ReleaseError("SSH anahtarı parolasız/geçerli olmalı ve known_hosts hedef sunucuyu içermelidir")
+        identity_check = subprocess.run(["ssh-keygen", "-y", "-P", "", "-f", str(identity)], capture_output=True, timeout=15)
+        if identity_check.returncode:
+            # Ham stderr anahtar/ortam bilgisi içerebilir; yalnız sabit açıklamalar loglanır.
+            reason = identity_check.stderr.decode("utf-8", "replace").lower()
+            if "passphrase" in reason:
+                detail = "Anahtar parolalı. Bilgisayarınızdaki parolasız vetly_github_ci dosyasını production secret'ına yükleyin."
+            elif any(text in reason for text in ("bad permissions", "unprotected private key", "permissions for")):
+                detail = "Runner üzerindeki private anahtar dosyasının erişim izinleri OpenSSH tarafından reddedildi."
+            else:
+                detail = "Geçerli OpenSSH private anahtarı okunamadı. BEGIN/END satırları dahil dosyanın tamamını yükleyin."
+            raise ReleaseError("VETLY_SSH_PRIVATE_KEY doğrulanamadı: " + detail)
+        print("VETLY_SSH_PRIVATE_KEY: parolasız private anahtar doğrulandı")
+        host_check = subprocess.run(["ssh-keygen", "-F", "70.40.139.40", "-f", str(known_hosts)], capture_output=True, timeout=15)
+        if host_check.returncode:
+            raise ReleaseError("VETLY_SSH_KNOWN_HOSTS doğrulanamadı: 70.40.139.40 için kayıt bulunamadı. Değer tek satırda '70.40.139.40 ssh-ed25519 AAAA...' biçiminde olmalı; yalnız SHA256 parmak izi yeterli değildir.")
+        print("VETLY_SSH_KNOWN_HOSTS: hedef sunucu kaydı doğrulandı")
         config = directory / "config"
         config.write_text('Host 70.40.139.40\n    HostName 70.40.139.40\n    User furkan\n'
             + f'    IdentityFile "{identity.as_posix()}"\n    UserKnownHostsFile "{known_hosts.as_posix()}"\n'

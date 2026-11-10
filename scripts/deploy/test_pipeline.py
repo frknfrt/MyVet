@@ -444,8 +444,45 @@ class GitHubActions(Fixture):
             github_actions.remove_ssh(Path(values["VETLY_SSH_DIR"]))
             self.assertFalse(config.parent.exists())
             os.environ["VETLY_SSH_KNOWN_HOSTS"]="wrong.invalid "+public
-            with self.assertRaises(release.ReleaseError):github_actions.configure_ssh()
+            with self.assertRaisesRegex(release.ReleaseError,"VETLY_SSH_KNOWN_HOSTS"):github_actions.configure_ssh()
             self.assertEqual(list(self.root.glob("vetly-ssh-*")),[])
+
+
+    @unittest.skipUnless(shutil.which("ssh-keygen"),"OpenSSH gerekli")
+    def test_encrypted_private_key_reports_its_secret_name_and_cleans_up(self):
+        key=self.root/"encrypted-key"
+        subprocess.run(["ssh-keygen","-q","-t","ed25519","-N","fixture-only-password","-f",str(key)],check=True,capture_output=True)
+        output=self.root/"environment"
+        with patch.dict(os.environ,{"RUNNER_TEMP":str(self.root),"GITHUB_ENV":str(output),
+             "VETLY_SSH_PRIVATE_KEY":key.read_text(),"VETLY_SSH_KNOWN_HOSTS":"70.40.139.40 ssh-ed25519 invalid"}):
+            with self.assertRaisesRegex(release.ReleaseError,"VETLY_SSH_PRIVATE_KEY.*parolal") as error:
+                github_actions.configure_ssh()
+        self.assertNotIn("fixture-only-password",str(error.exception))
+        self.assertNotIn(key.read_text(),str(error.exception))
+        self.assertFalse(output.exists());self.assertEqual(list(self.root.glob("vetly-ssh-*")),[])
+
+    @unittest.skipUnless(shutil.which("ssh-keygen"),"OpenSSH gerekli")
+    def test_malformed_private_key_reports_only_safe_instructions(self):
+        private="-----BEGIN OPENSSH PRIVATE KEY-----\nfixture-sensitive-content\n-----END OPENSSH PRIVATE KEY-----"
+        with patch.dict(os.environ,{"RUNNER_TEMP":str(self.root),"GITHUB_ENV":str(self.root/"environment"),
+             "VETLY_SSH_PRIVATE_KEY":private,"VETLY_SSH_KNOWN_HOSTS":"70.40.139.40 ssh-ed25519 invalid"}):
+            with self.assertRaisesRegex(release.ReleaseError,"VETLY_SSH_PRIVATE_KEY") as error:github_actions.configure_ssh()
+        self.assertNotIn("fixture-sensitive-content",str(error.exception))
+        self.assertEqual(list(self.root.glob("vetly-ssh-*")),[])
+
+
+    def test_private_key_acl_error_is_distinguished_without_raw_stderr(self):
+        real_run=subprocess.run
+        def run(args,**kwargs):
+            if args[:2]==["ssh-keygen","-y"]:
+                return subprocess.CompletedProcess(args,255,stdout=b"",stderr=b"bad permissions fixture-sensitive-detail")
+            return real_run(args,**kwargs)
+        with patch.dict(os.environ,{"RUNNER_TEMP":str(self.root),"GITHUB_ENV":str(self.root/"environment"),
+             "VETLY_SSH_PRIVATE_KEY":"-----BEGIN OPENSSH PRIVATE KEY-----\nfixture\n-----END OPENSSH PRIVATE KEY-----",
+             "VETLY_SSH_KNOWN_HOSTS":"70.40.139.40 ssh-ed25519 fixture"}),patch.object(github_actions.subprocess,"run",side_effect=run):
+            with self.assertRaisesRegex(release.ReleaseError,"VETLY_SSH_PRIVATE_KEY.*izin") as error:github_actions.configure_ssh()
+        self.assertNotIn("fixture-sensitive-detail",str(error.exception))
+        self.assertEqual(list(self.root.glob("vetly-ssh-*")),[])
 
 
 if __name__ == "__main__": unittest.main()
