@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { test, expect, Page } from '@playwright/test';
 
 function field(page: Page, label: string) {
@@ -20,7 +21,7 @@ test('Hızlı Satış: anonim müşteriyle ürün satışı ve günlük ciroya y
 
   const runId = Date.now();
   const clinicName = `E2E Klinik ${runId}`;
-  const adminEmail = `e2e-admin-${runId}@example.com`;
+  const adminEmail = `e2e-admin-${randomUUID()}@example.com`;
   const password = 'password123';
   const productName = `E2E Ürün ${runId}`;
 

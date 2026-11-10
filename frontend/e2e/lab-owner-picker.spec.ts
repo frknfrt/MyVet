@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { test, expect, Page } from '@playwright/test';
 
 /**
@@ -13,7 +14,7 @@ test('Laboratuvar sonucu yükleme: müşteri dropdown\'ında yavaş tıklama se�
 
   const runId = Date.now();
   const clinicName = `E2E Klinik ${runId}`;
-  const adminEmail = `e2e-admin-${runId}@example.com`;
+  const adminEmail = `e2e-admin-${randomUUID()}@example.com`;
   const password = 'password123';
   const ownerName = `E2E Sahip ${runId}`;
   const ownerPhone = `555${String(runId).slice(-7)}`;
