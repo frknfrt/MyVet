@@ -51,8 +51,7 @@ test('Laboratuvar sonucu yükleme: müşteri dropdown\'ında yavaş tıklama se�
     await field(page, 'Ad Soyad').fill(ownerName);
     await field(page, 'Telefon').fill(ownerPhone);
     await field(page, 'Doğum Tarihi').fill('1990-01-01');
-    await page.getByLabel(/KVKK Aydınlatma Metni/).check();
-    await page.getByRole('button', { name: 'Müşteriyi Kaydet' }).click();
+    await page.getByRole('button', { name: 'Hasta Sahibini Kaydet' }).click();
     await expect(page).toHaveURL(/\/musteriler\/[0-9a-f-]{36}$/);
   });
 
