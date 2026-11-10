@@ -59,7 +59,7 @@ test('Laboratuvar sonucu yükleme: müşteri dropdown\'ında yavaş tıklama se�
     await page.goto('/laboratuvar');
     await page.getByRole('button', { name: '+ Yeni Sonuç Yükle' }).click();
 
-    await page.getByPlaceholder('Müşteri bilinmiyor').fill(ownerName);
+    await page.getByRole('dialog').getByPlaceholder('Hasta sahibi bilinmiyor').fill(ownerName);
     const option = page.getByText(ownerName).last();
     await expect(option).toBeVisible();
 
