@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { test, expect, Page } from '@playwright/test';
 
 /**
@@ -5,7 +6,7 @@ import { test, expect, Page } from '@playwright/test';
  * htmlFor/id ile eşlemiyor (bkz. components/ui/Field.tsx) -- bu yüzden
  * getByLabel() güvenilir çalışmıyor. Bunun yerine label metninin hemen
  * bir sonraki kardeş elemanını (FieldWrap'in gerçek DOM yapısı: <div><label/>
- * {children}</div>) buluyoruz. Checkbox'lar (KVKK, saldırgan vb.) <label>
+ * {children}</div>) buluyoruz. Checkbox'lar (saldırgan vb.) <label>
  * içine SARILI olduğu için onlarda getByLabel() sorunsuz çalışıyor.
  */
 function field(page: Page, label: string) {
@@ -17,7 +18,7 @@ test('Platform admin → Randevu → Muayene → Fatura altın yolu', async ({ p
 
   const runId = Date.now();
   const clinicName = `E2E Klinik ${runId}`;
-  const adminEmail = `e2e-admin-${runId}@example.com`;
+  const adminEmail = `e2e-admin-${randomUUID()}@example.com`;
   const password = 'password123';
   const ownerName = `E2E Sahip ${runId}`;
   const ownerPhone = `555${String(runId).slice(-7)}`;
@@ -75,20 +76,19 @@ test('Platform admin → Randevu → Muayene → Fatura altın yolu', async ({ p
     await expect(page.getByText(serviceName)).toBeVisible();
   });
 
-  await test.step('5. Yeni müşteri oluştur (KVKK onayı dahil)', async () => {
+  await test.step('5. Yeni hasta sahibi oluştur', async () => {
     await page.goto('/musteriler/yeni');
     await field(page, 'Ad Soyad').fill(ownerName);
     await field(page, 'Telefon').fill(ownerPhone);
     await field(page, 'Doğum Tarihi').fill('1990-01-01');
-    await page.getByLabel(/KVKK Aydınlatma Metni/).check();
-    await page.getByRole('button', { name: 'Müşteriyi Kaydet' }).click();
+    await page.getByRole('button', { name: 'Hasta Sahibini Kaydet' }).click();
     await expect(page).toHaveURL(/\/musteriler\/[0-9a-f-]{36}$/);
     await expect(page.getByText(ownerName)).toBeVisible();
   });
 
   await test.step('6. Yeni hasta oluştur', async () => {
     await page.goto('/hastalar/yeni');
-    await page.getByPlaceholder('Müşteri adı veya telefonuyla arayın...').fill(ownerName);
+    await page.getByPlaceholder('Hasta sahibinin adı veya telefonuyla arayın...').fill(ownerName);
     await page.getByText(ownerName).first().click();
     await field(page, 'Adı').fill(patientName);
     await field(page, 'Tür').selectOption({ label: speciesName });
@@ -104,7 +104,8 @@ test('Platform admin → Randevu → Muayene → Fatura altın yolu', async ({ p
     await page.getByText(patientName, { exact: false }).first().click();
     await field(page, 'Hizmet').selectOption({ label: serviceOptionLabel });
     await page.getByRole('button', { name: 'Randevu Oluştur' }).click();
-    await expect(page.getByText(patientName)).toBeVisible();
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+    await expect(page.getByText(patientName, { exact: true })).toBeVisible();
   });
 
   await test.step('8. Check-in yap → muayeneye başla', async () => {
@@ -112,7 +113,8 @@ test('Platform admin → Randevu → Muayene → Fatura altın yolu', async ({ p
     // WIDGET olmayan kaynaklarda randevuyu doğrudan CONFIRMED açıyor, "Onayla"
     // adımı yalnızca web sitesi widget'ından gelen REQUESTED randevular için var.
     await page.getByText(patientName).first().click();
-    await page.getByRole('button', { name: 'Check-in yap' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Geldi olarak işaretle' }).click();
+    await expect(page.getByRole('dialog')).not.toBeVisible();
 
     await page.getByText(patientName).first().click();
     await page.getByRole('button', { name: "Muayeneyi Başlat (SOAP'a Git)" }).click();
@@ -120,34 +122,50 @@ test('Platform admin → Randevu → Muayene → Fatura altın yolu', async ({ p
     await expect(page).toHaveURL(/\/muayene\//);
   });
 
-  await test.step('9. Vital bulguları gir', async () => {
+  await test.step('9. Vital bulguları otomatik kaydet', async () => {
     await field(page, 'Ağırlık (kg)').fill('12.5');
     await field(page, 'Ateş (°C)').fill('38.5');
     await field(page, 'Nabız (bpm)').fill('90');
+    const saved = page.waitForResponse(response =>
+      response.url().endsWith('/vitals') && response.request().method() === 'PUT' && response.ok() &&
+      response.request().postDataJSON().respiratoryRate === 20);
     await field(page, 'Solunum (/dk)').fill('20');
-    await page.getByRole('button', { name: 'Vitalleri Kaydet' }).click();
-    // React StrictMode (dev) bazen aynı flash mesajını iki kez render ediyor -- .first() ile toleranslı.
-    await expect(page.getByText('Vital bulgular kaydedildi').first()).toBeVisible();
+    await saved;
   });
 
   await test.step('10. Fiziksel Muayene — bir sistemi Anormal işaretle', async () => {
+    await page.getByRole('button', { name: 'Sistemleri göster', exact: true }).click();
     const cardioRow = page.locator('xpath=//div[normalize-space(text())="Kardiyovasküler"]/parent::div');
-    await cardioRow.getByRole('button', { name: 'Anormal' }).click();
+    await cardioRow.getByRole('button', { name: 'Anormal', exact: true }).click();
+    const saved = page.waitForResponse(response =>
+      response.url().endsWith('/physical-exam') && response.request().method() === 'PUT' && response.ok() &&
+      JSON.stringify(response.request().postDataJSON()).includes('Üfürüm duyuldu (E2E test notu)'));
     await cardioRow.locator('textarea').fill('Üfürüm duyuldu (E2E test notu)');
-    await page.getByRole('button', { name: 'Fiziksel Muayeneyi Kaydet' }).click();
-    await expect(page.getByText('Fiziksel muayene kaydedildi').first()).toBeVisible();
+    await saved;
   });
 
-  await test.step('11. SOAP notunu doldur ve muayeneyi tamamla', async () => {
-    await field(page, 'Subjective (S)').fill('Sahip, hastanın son 2 gündür iştahsız olduğunu belirtti.');
-    await field(page, 'Objective (O)').fill('Genel durum iyi, hafif letarji mevcut.');
-    await field(page, 'Assessment (A)').fill('Hafif gastroenterit şüphesi.');
-    await field(page, 'Plan (P)').fill('Destekleyici tedavi, 3 gün sonra kontrol.');
-    await page.getByRole('button', { name: 'SOAP Kaydet' }).click();
-    await expect(page.getByText('SOAP kaydedildi').first()).toBeVisible();
+  await test.step('11. SOAP notunu otomatik kaydet, kalıcılığını doğrula ve muayeneyi tamamla', async () => {
+    await field(page, 'Şikâyet / Anamnez (S)').fill('Sahip, hastanın son 2 gündür iştahsız olduğunu belirtti.');
+    await field(page, 'Muayene Bulguları (O)').fill('Genel durum iyi, hafif letarji mevcut.');
+    await field(page, 'Ön Tanı (A)').fill('Hafif gastroenterit şüphesi.');
+    const saved = page.waitForResponse(response =>
+      response.url().endsWith('/soap') && response.request().method() === 'PUT' && response.ok() &&
+      response.request().postDataJSON().plan === 'Destekleyici tedavi, 3 gün sonra kontrol.');
+    await field(page, 'Tedavi Planı (P)').fill('Destekleyici tedavi, 3 gün sonra kontrol.');
+    await saved;
+
+    await page.reload();
+    await expect(field(page, 'Şikâyet / Anamnez (S)')).toHaveValue('Sahip, hastanın son 2 gündür iştahsız olduğunu belirtti.');
+    await expect(field(page, 'Muayene Bulguları (O)')).toHaveValue('Genel durum iyi, hafif letarji mevcut.');
+    await expect(field(page, 'Ön Tanı (A)')).toHaveValue('Hafif gastroenterit şüphesi.');
+    await expect(field(page, 'Tedavi Planı (P)')).toHaveValue('Destekleyici tedavi, 3 gün sonra kontrol.');
+    await expect(field(page, 'Ağırlık (kg)')).toHaveValue('12.5');
+    await expect(field(page, 'Solunum (/dk)')).toHaveValue('20');
+    const cardioRow = page.locator('xpath=//div[normalize-space(text())="Kardiyovasküler"]/parent::div');
+    await expect(cardioRow.locator('textarea')).toHaveValue('Üfürüm duyuldu (E2E test notu)');
 
     await page.getByRole('button', { name: 'Muayeneyi Tamamla' }).click();
-    await expect(field(page, 'Subjective (S)')).toBeDisabled();
+    await expect(field(page, 'Şikâyet / Anamnez (S)')).toBeDisabled();
   });
 
   await test.step('12. Finans — otomatik taslak faturayı bul, kalem ekle, fatura kes', async () => {
@@ -161,13 +179,15 @@ test('Platform admin → Randevu → Muayene → Fatura altın yolu', async ({ p
     await expect(page.getByText(serviceName).first()).toBeVisible();
 
     await page.getByRole('button', { name: 'Faturayı Kes' }).click();
-    await expect(page.getByText(/e-Fatura/)).toBeVisible();
+    await expect(page.getByRole('dialog').getByText('Kesildi', { exact: true })).toBeVisible();
   });
 
   await test.step('13. Ödeme al', async () => {
     await field(page, 'Tutar').fill('500');
     await page.getByRole('button', { name: 'Ödeme Al' }).click();
-    // "Yöntem" select'indeki "Nakit" option'ıyla strict-mode collision -- .first() ödeme satırını alır.
-    await expect(page.getByText('Nakit').first()).toBeVisible();
+    const invoiceDialog = page.getByRole('dialog');
+    await expect(invoiceDialog.getByText('Kısmi Ödendi', { exact: true })).toBeVisible();
+    await expect(invoiceDialog.getByText('Nakit', { exact: true }).filter({ visible: true })).toBeVisible();
+    await expect(invoiceDialog.getByText('100.00 ₺', { exact: true })).toBeVisible();
   });
 });
