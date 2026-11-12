@@ -1,6 +1,8 @@
 package com.vetos.modules.platformadmin.domain;
 
 import com.vetos.platform.feature.Feature;
+import com.vetos.modules.tenant.domain.BillingPeriod;
+import com.vetos.modules.platformadmin.domain.exception.AnnualPlanUnavailableException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -103,6 +105,14 @@ public class Plan {
         this.imageUrl = imageUrl;
         this.features = new ArrayList<>(features);
         this.enabledFeatures = new HashSet<>(enabledFeatures);
+    }
+
+    public BigDecimal priceFor(BillingPeriod period) {
+        if (period == BillingPeriod.ANNUAL) {
+            if (annualPrice == null) throw new AnnualPlanUnavailableException();
+            return annualPrice;
+        }
+        return monthlyPrice;
     }
 
     public void activate() {

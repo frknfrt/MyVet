@@ -17,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import com.vetos.modules.tenant.domain.BillingPeriod;
 import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
@@ -66,10 +67,10 @@ class HandleSignupPaymentCallbackUseCaseTest {
 
         when(paymentGatewayPort.retrieveCheckoutResult("tok-1"))
             .thenReturn(new CheckoutResult(true, request.getId().toString(), "pay_123"));
-        when(tenantSignupRequestRepository.findById(request.getId())).thenReturn(Optional.of(request));
+        when(tenantSignupRequestRepository.findByIdForUpdate(request.getId())).thenReturn(Optional.of(request));
         when(planRepository.findByCode("PRO")).thenReturn(Optional.of(plan));
         when(tenantAdminPort.createTenantForPaidSignup(
-            "Mutlu Pati", "-", "Mutlu Pati", "-", "-", "PRO", today.plusMonths(1)
+            "Mutlu Pati", "-", "Mutlu Pati", "-", "-", "PRO", today.plusMonths(1), BillingPeriod.MONTHLY
         )).thenReturn(new TenantSignupResult(tenantId, branchId));
         when(tenantAdminPort.createAdminInviteForPaidSignup(tenantId, branchId, "ayse@example.com", "Ayse Yilmaz"))
             .thenReturn(savedInvite);
@@ -106,10 +107,10 @@ class HandleSignupPaymentCallbackUseCaseTest {
 
         when(paymentGatewayPort.retrieveCheckoutResult("tok-5"))
             .thenReturn(new CheckoutResult(true, request.getId().toString(), "pay_555"));
-        when(tenantSignupRequestRepository.findById(request.getId())).thenReturn(Optional.of(request));
+        when(tenantSignupRequestRepository.findByIdForUpdate(request.getId())).thenReturn(Optional.of(request));
         when(planRepository.findByCode("PRO")).thenReturn(Optional.of(plan));
         when(tenantAdminPort.createTenantForPaidSignup(
-            "Mutlu Pati", "-", "Mutlu Pati", "-", "-", "PRO", today.plusMonths(1)
+            "Mutlu Pati", "-", "Mutlu Pati", "-", "-", "PRO", today.plusMonths(1), BillingPeriod.MONTHLY
         )).thenReturn(new TenantSignupResult(tenantId, branchId));
         when(tenantAdminPort.createAdminInviteForPaidSignup(tenantId, branchId, "ayse@example.com", "Ayse Yilmaz"))
             .thenReturn(savedInvite);
@@ -143,7 +144,7 @@ class HandleSignupPaymentCallbackUseCaseTest {
         request.complete();
         when(paymentGatewayPort.retrieveCheckoutResult("tok-3"))
             .thenReturn(new CheckoutResult(true, request.getId().toString(), "pay_123"));
-        when(tenantSignupRequestRepository.findById(request.getId())).thenReturn(Optional.of(request));
+        when(tenantSignupRequestRepository.findByIdForUpdate(request.getId())).thenReturn(Optional.of(request));
 
         boolean result = useCase.execute("tok-3", LocalDate.of(2026, 8, 30));
 
@@ -156,9 +157,48 @@ class HandleSignupPaymentCallbackUseCaseTest {
         UUID unknownId = UUID.randomUUID();
         when(paymentGatewayPort.retrieveCheckoutResult("tok-4"))
             .thenReturn(new CheckoutResult(true, unknownId.toString(), "pay_123"));
-        when(tenantSignupRequestRepository.findById(unknownId)).thenReturn(Optional.empty());
+        when(tenantSignupRequestRepository.findByIdForUpdate(unknownId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> useCase.execute("tok-4", LocalDate.of(2026, 8, 30)))
             .isInstanceOf(TenantSignupRequestNotFoundException.class);
+    }
+
+    @Test
+    void should_activateAnnualSubscriptionAndInvoiceSnapshotOnce() {
+        LocalDate today = LocalDate.of(2028, 2, 29);
+        LocalDate end = LocalDate.of(2029, 2, 28);
+        TenantSignupRequest request = TenantSignupRequest.create(
+            "Klinik", "Ayse", "ayse@example.com", null, "PRO", null, new BigDecimal("19000.00"), BillingPeriod.ANNUAL
+        );
+        ReflectionTestUtils.setField(request, "id", UUID.randomUUID());
+        Plan changedPlan = Plan.create("PRO", "Pro", new BigDecimal("3000.00"));
+        ReflectionTestUtils.setField(changedPlan, "annualPrice", new BigDecimal("30000.00"));
+        UUID tenantId = UUID.randomUUID();
+        UUID branchId = UUID.randomUUID();
+        StaffInvite invite = StaffInvite.create(tenantId, branchId, "ayse@example.com", "Ayse", StaffRole.ADMIN, null);
+        when(paymentGatewayPort.retrieveCheckoutResult("annual"))
+            .thenReturn(new CheckoutResult(true, request.getId().toString(), "paid"));
+        when(tenantSignupRequestRepository.findByIdForUpdate(request.getId())).thenReturn(Optional.of(request));
+        when(planRepository.findByCode("PRO")).thenReturn(Optional.of(changedPlan));
+        when(tenantAdminPort.createTenantForPaidSignup("Klinik", "-", "Klinik", "-", "-", "PRO", end, BillingPeriod.ANNUAL))
+            .thenReturn(new TenantSignupResult(tenantId, branchId));
+        when(tenantAdminPort.createAdminInviteForPaidSignup(tenantId, branchId, "ayse@example.com", "Ayse")).thenReturn(invite);
+        when(platformInvoiceRepository.save(any())).thenAnswer(inv -> {
+            PlatformInvoice invoice = inv.getArgument(0);
+            ReflectionTestUtils.setField(invoice, "id", UUID.randomUUID());
+            return invoice;
+        });
+
+        assertThat(useCase.execute("annual", today)).isTrue();
+        assertThat(useCase.execute("annual", today)).isTrue();
+
+        ArgumentCaptor<PlatformInvoice> invoice = ArgumentCaptor.forClass(PlatformInvoice.class);
+        verify(platformInvoiceRepository).save(invoice.capture());
+        assertThat(invoice.getValue().getAmount()).isEqualByComparingTo("19000.00");
+        assertThat(invoice.getValue().getPeriodEnd()).isEqualTo(end);
+        ArgumentCaptor<RecordPlatformPaymentCommand> payment = ArgumentCaptor.forClass(RecordPlatformPaymentCommand.class);
+        verify(recordPlatformPaymentUseCase).execute(payment.capture());
+        assertThat(payment.getValue().amount()).isEqualByComparingTo("19000.00");
+        verify(tenantAdminPort).createTenantForPaidSignup("Klinik", "-", "Klinik", "-", "-", "PRO", end, BillingPeriod.ANNUAL);
     }
 }

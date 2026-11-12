@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import com.vetos.modules.tenant.domain.BillingPeriod;
 import java.util.UUID;
 
 @Service
@@ -45,9 +46,13 @@ public class GenerateDueInvoicesUseCase {
             }
 
             LocalDate periodStart = subscription.renewsAt();
-            LocalDate periodEnd = periodStart.plusMonths(1);
+            if (subscription.billingPeriod() == BillingPeriod.ANNUAL && plan.getAnnualPrice() == null) {
+                log.warn("Yillik fiyat tanimli degil, fatura uretilemedi: tenantId={}", subscription.tenantId());
+                continue;
+            }
+            LocalDate periodEnd = subscription.billingPeriod().endDate(periodStart);
             PlatformInvoice invoice = PlatformInvoice.issue(
-                subscription.tenantId(), subscription.planCode(), plan.getMonthlyPrice(), periodStart, periodEnd, today
+                subscription.tenantId(), subscription.planCode(), plan.priceFor(subscription.billingPeriod()), periodStart, periodEnd, today
             );
             platformInvoiceRepository.save(invoice);
             tenantAdminPort.advanceRenewal(subscription.tenantId(), periodEnd);

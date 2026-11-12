@@ -1,6 +1,7 @@
 package com.vetos.modules.platformadmin.domain;
 
 import jakarta.persistence.*;
+import com.vetos.modules.tenant.domain.BillingPeriod;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -57,6 +58,10 @@ public class TenantSignupRequest {
     @Column(name = "charged_amount")
     private BigDecimal chargedAmount;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "billing_period", nullable = false)
+    private BillingPeriod billingPeriod = BillingPeriod.MONTHLY;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -70,6 +75,13 @@ public class TenantSignupRequest {
         String clinicName, String adminFullName, String adminEmail, String phone, String planCode,
         String couponCode, BigDecimal chargedAmount
     ) {
+        return create(clinicName, adminFullName, adminEmail, phone, planCode, couponCode, chargedAmount, BillingPeriod.MONTHLY);
+    }
+
+    public static TenantSignupRequest create(
+        String clinicName, String adminFullName, String adminEmail, String phone, String planCode,
+        String couponCode, BigDecimal chargedAmount, BillingPeriod billingPeriod
+    ) {
         TenantSignupRequest request = new TenantSignupRequest();
         request.clinicName = clinicName;
         request.adminFullName = adminFullName;
@@ -79,6 +91,7 @@ public class TenantSignupRequest {
         request.status = TenantSignupRequestStatus.PENDING;
         request.couponCode = couponCode;
         request.chargedAmount = chargedAmount;
+        request.billingPeriod = java.util.Objects.requireNonNull(billingPeriod);
         request.createdAt = Instant.now();
         return request;
     }

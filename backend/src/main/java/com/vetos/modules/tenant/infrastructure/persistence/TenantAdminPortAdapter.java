@@ -2,6 +2,7 @@ package com.vetos.modules.tenant.infrastructure.persistence;
 
 import com.vetos.modules.tenant.domain.BillableSubscription;
 import com.vetos.modules.tenant.domain.BillingStatus;
+import com.vetos.modules.tenant.domain.BillingPeriod;
 import com.vetos.modules.tenant.domain.Branch;
 import com.vetos.modules.tenant.domain.StaffInvite;
 import com.vetos.modules.tenant.domain.StaffInviteRepository;
@@ -89,7 +90,7 @@ class TenantAdminPortAdapter implements TenantAdminPort {
             .filter(s -> !"TRIAL".equals(s.getPlanCode()))
             .filter(s -> s.getRenewsAt() != null && !s.getRenewsAt().isAfter(date))
             .filter(s -> s.getBillingStatus() != BillingStatus.CANCELED)
-            .map(s -> new BillableSubscription(s.getTenantId(), s.getPlanCode(), s.getRenewsAt()))
+            .map(s -> new BillableSubscription(s.getTenantId(), s.getPlanCode(), s.getRenewsAt(), s.getBillingPeriod()))
             .toList();
     }
 
@@ -105,7 +106,7 @@ class TenantAdminPortAdapter implements TenantAdminPort {
             .filter(s -> tenantJpaRepository.findById(s.getTenantId())
                 .map(t -> t.getStatus() != com.vetos.modules.tenant.domain.TenantStatus.SUSPENDED)
                 .orElse(false))
-            .map(s -> new BillableSubscription(s.getTenantId(), s.getPlanCode(), s.getRenewsAt()))
+            .map(s -> new BillableSubscription(s.getTenantId(), s.getPlanCode(), s.getRenewsAt(), s.getBillingPeriod()))
             .toList();
     }
 
@@ -174,7 +175,7 @@ class TenantAdminPortAdapter implements TenantAdminPort {
     @Override
     public TenantSignupResult createTenantForPaidSignup(
         String tenantName, String taxNumber, String branchName, String address, String city,
-        String planCode, LocalDate renewsAt
+        String planCode, LocalDate renewsAt, BillingPeriod billingPeriod
     ) {
         Tenant tenant = tenantJpaRepository.save(Tenant.register(tenantName, taxNumber));
         tenant.activate();
@@ -184,7 +185,7 @@ class TenantAdminPortAdapter implements TenantAdminPort {
         branch.updateDetails(address, city, branch.getTimezone(), null);
         branch = branchJpaRepository.save(branch);
 
-        subscriptionJpaRepository.save(Subscription.startPaid(tenant.getId(), planCode, renewsAt));
+        subscriptionJpaRepository.save(Subscription.startPaid(tenant.getId(), planCode, renewsAt, billingPeriod));
 
         return new TenantSignupResult(tenant.getId(), branch.getId());
     }

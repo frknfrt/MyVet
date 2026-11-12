@@ -41,7 +41,7 @@ public class PublicSignupController {
     @PostMapping("/checkout")
     public CheckoutSessionResponse checkout(@RequestBody @Valid InitiateSignupCheckoutRequest request) {
         CheckoutSession session = initiateSignupCheckoutUseCase.execute(
-            request.clinicName(), request.adminFullName(), request.adminEmail(), request.phone(), request.planCode(), request.couponCode()
+            request.clinicName(), request.adminFullName(), request.adminEmail(), request.phone(), request.planCode(), request.couponCode(), request.billingPeriod()
         );
         return new CheckoutSessionResponse(session.checkoutFormUrl());
     }

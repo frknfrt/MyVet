@@ -7,5 +7,6 @@ import java.util.UUID;
 public interface TenantSignupRequestRepository {
     TenantSignupRequest save(TenantSignupRequest request);
     Optional<TenantSignupRequest> findById(UUID id);
+    Optional<TenantSignupRequest> findByIdForUpdate(UUID id);
     List<TenantSignupRequest> findAllByOrderByCreatedAtDesc();
 }

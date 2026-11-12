@@ -12,6 +12,7 @@ import com.vetos.modules.platformadmin.domain.exception.CouponNotRedeemableExcep
 import com.vetos.modules.platformadmin.domain.exception.PlanNotFoundException;
 import com.vetos.modules.platformadmin.domain.exception.SignupEmailAlreadyRegisteredConflictException;
 import com.vetos.modules.tenant.domain.TenantAdminPort;
+import com.vetos.modules.tenant.domain.BillingPeriod;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +34,15 @@ public class InitiateSignupCheckoutUseCase {
     public CheckoutSession execute(
         String clinicName, String adminFullName, String adminEmail, String phone, String planCode, String couponCode
     ) {
+        return execute(clinicName, adminFullName, adminEmail, phone, planCode, couponCode, BillingPeriod.MONTHLY);
+    }
+
+    @Transactional
+    public CheckoutSession execute(
+        String clinicName, String adminFullName, String adminEmail, String phone, String planCode,
+        String couponCode, BillingPeriod billingPeriod
+    ) {
+        BillingPeriod period = billingPeriod == null ? BillingPeriod.MONTHLY : billingPeriod;
         Plan plan = planRepository.findByCode(planCode)
             .filter(Plan::isActive)
             .orElseThrow(() -> new PlanNotFoundException(planCode));
@@ -41,7 +51,7 @@ public class InitiateSignupCheckoutUseCase {
             throw new SignupEmailAlreadyRegisteredConflictException(adminEmail);
         }
 
-        BigDecimal chargedAmount = plan.getMonthlyPrice();
+        BigDecimal chargedAmount = plan.priceFor(period);
         String normalizedCouponCode = null;
         if (couponCode != null && !couponCode.isBlank()) {
             String normalized = couponCode.trim().toUpperCase();
@@ -53,7 +63,7 @@ public class InitiateSignupCheckoutUseCase {
         }
 
         TenantSignupRequest request = tenantSignupRequestRepository.save(
-            TenantSignupRequest.create(clinicName, adminFullName, adminEmail, phone, planCode, normalizedCouponCode, chargedAmount)
+            TenantSignupRequest.create(clinicName, adminFullName, adminEmail, phone, planCode, normalizedCouponCode, chargedAmount, period)
         );
 
         return paymentGatewayPort.initializeCheckout(

@@ -61,9 +61,16 @@ public interface TenantAdminPort {
      * createTenant(...)'tan farkli olarak burada admin sifresi CAGIRAN
      * TARAFTAN gelmiyor -- odeme yapan ziyaretci henuz hicbir sifre girmedi.
      */
-    TenantSignupResult createTenantForPaidSignup(
+    default TenantSignupResult createTenantForPaidSignup(
         String tenantName, String taxNumber, String branchName, String address, String city,
         String planCode, LocalDate renewsAt
+    ) {
+        return createTenantForPaidSignup(tenantName, taxNumber, branchName, address, city, planCode, renewsAt, BillingPeriod.MONTHLY);
+    }
+
+    TenantSignupResult createTenantForPaidSignup(
+        String tenantName, String taxNumber, String branchName, String address, String city,
+        String planCode, LocalDate renewsAt, BillingPeriod billingPeriod
     );
 
     /**

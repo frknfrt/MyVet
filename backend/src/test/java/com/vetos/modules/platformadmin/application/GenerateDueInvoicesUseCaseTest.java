@@ -12,12 +12,16 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import org.mockito.ArgumentCaptor;
+import org.springframework.test.util.ReflectionTestUtils;
+import com.vetos.modules.tenant.domain.BillingPeriod;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -98,5 +102,37 @@ class GenerateDueInvoicesUseCaseTest {
             tenantId, "Test Klinik", "123", TenantStatus.ACTIVE, Instant.now(), "PRO", BillingStatus.ACTIVE,
             LocalDate.of(2026, 1, 1), LocalDate.of(2026, 8, 28), 1, 3, null, null
         );
+    }
+
+    @Test
+    void should_renewAnnualSubscriptionAtAnnualPrice() {
+        UUID tenantId = UUID.randomUUID();
+        LocalDate today = LocalDate.of(2027, 11, 12);
+        Plan plan = Plan.create("PRO", "Pro", new BigDecimal("2000.00"));
+        ReflectionTestUtils.setField(plan, "annualPrice", new BigDecimal("19000.00"));
+        when(tenantAdminPort.listSubscriptionsDueOnOrBefore(today)).thenReturn(List.of(
+            new BillableSubscription(tenantId, "PRO", today, BillingPeriod.ANNUAL)));
+        when(planRepository.findByCode("PRO")).thenReturn(Optional.of(plan));
+        when(tenantAdminPort.getOverview(tenantId)).thenReturn(overview(tenantId));
+        new GenerateDueInvoicesUseCase(tenantAdminPort, planRepository, platformInvoiceRepository,
+            platformBillingEmailPort, platformBillingSmsPort).execute(today);
+        ArgumentCaptor<PlatformInvoice> captor = ArgumentCaptor.forClass(PlatformInvoice.class);
+        verify(platformInvoiceRepository).save(captor.capture());
+        assertThat(captor.getValue().getAmount()).isEqualByComparingTo("19000.00");
+        assertThat(captor.getValue().getPeriodEnd()).isEqualTo(today.plusYears(1));
+        verify(tenantAdminPort).advanceRenewal(tenantId, today.plusYears(1));
+    }
+
+    @Test
+    void should_skipAnnualRenewalWhenAnnualPriceRemoved() {
+        UUID tenantId = UUID.randomUUID();
+        LocalDate today = LocalDate.of(2027, 11, 12);
+        when(tenantAdminPort.listSubscriptionsDueOnOrBefore(today)).thenReturn(List.of(
+            new BillableSubscription(tenantId, "PRO", today, BillingPeriod.ANNUAL)));
+        when(planRepository.findByCode("PRO")).thenReturn(Optional.of(Plan.create("PRO", "Pro", new BigDecimal("2000"))));
+        new GenerateDueInvoicesUseCase(tenantAdminPort, planRepository, platformInvoiceRepository,
+            platformBillingEmailPort, platformBillingSmsPort).execute(today);
+        verify(platformInvoiceRepository, never()).save(any());
+        verify(tenantAdminPort, never()).advanceRenewal(any(), any());
     }
 }

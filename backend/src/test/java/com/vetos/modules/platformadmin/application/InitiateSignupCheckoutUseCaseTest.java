@@ -14,6 +14,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import com.vetos.modules.platformadmin.domain.exception.AnnualPlanUnavailableException;
+import com.vetos.modules.tenant.domain.BillingPeriod;
 import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
@@ -150,5 +152,52 @@ class InitiateSignupCheckoutUseCaseTest {
 
         verifyNoInteractions(paymentGatewayPort);
         verifyNoInteractions(tenantSignupRequestRepository);
+    }
+
+    @Test
+    void should_chargeAnnualPriceAndStorePeriodWithCoupon() {
+        Plan plan = Plan.create("PRO", "Pro", new BigDecimal("2000.00"));
+        ReflectionTestUtils.setField(plan, "annualPrice", new BigDecimal("19000.00"));
+        when(planRepository.findByCode("PRO")).thenReturn(Optional.of(plan));
+        Coupon coupon = Coupon.create("YEAR10", CouponDiscountType.PERCENTAGE, new BigDecimal("10"), null, null);
+        when(couponRepository.findByCode("YEAR10")).thenReturn(Optional.of(coupon));
+        when(tenantSignupRequestRepository.save(any())).thenAnswer(inv -> {
+            TenantSignupRequest request = inv.getArgument(0);
+            ReflectionTestUtils.setField(request, "id", UUID.randomUUID());
+            return request;
+        });
+
+        useCase.execute("Klinik", "Ayse", "ayse@example.com", null, "PRO", "year10",
+            BillingPeriod.ANNUAL);
+
+        ArgumentCaptor<TenantSignupRequest> captor = ArgumentCaptor.forClass(TenantSignupRequest.class);
+        verify(tenantSignupRequestRepository).save(captor.capture());
+        assertThat(captor.getValue().getBillingPeriod()).isEqualTo(BillingPeriod.ANNUAL);
+        assertThat(captor.getValue().getChargedAmount()).isEqualByComparingTo("17100.00");
+        verify(paymentGatewayPort).initializeCheckout(any(), eq(new BigDecimal("17100.00")), eq("Ayse"), eq("ayse@example.com"));
+    }
+
+    @Test
+    void should_rejectAnnualCheckoutWithoutAnnualPrice() {
+        when(planRepository.findByCode("PRO")).thenReturn(Optional.of(Plan.create("PRO", "Pro", new BigDecimal("2000"))));
+        assertThatThrownBy(() -> useCase.execute("Klinik", "Ayse", "ayse@example.com", null, "PRO", null,
+            BillingPeriod.ANNUAL))
+            .isInstanceOf(AnnualPlanUnavailableException.class);
+        verifyNoInteractions(paymentGatewayPort, tenantSignupRequestRepository);
+    }
+
+    @Test
+    void should_defaultMissingPeriodToMonthly() {
+        when(planRepository.findByCode("PRO")).thenReturn(Optional.of(Plan.create("PRO", "Pro", new BigDecimal("2000"))));
+        when(tenantSignupRequestRepository.save(any())).thenAnswer(inv -> {
+            TenantSignupRequest request = inv.getArgument(0);
+            ReflectionTestUtils.setField(request, "id", UUID.randomUUID());
+            return request;
+        });
+        useCase.execute("Klinik", "Ayse", "ayse@example.com", null, "PRO", null, null);
+        ArgumentCaptor<TenantSignupRequest> captor = ArgumentCaptor.forClass(TenantSignupRequest.class);
+        verify(tenantSignupRequestRepository).save(captor.capture());
+        assertThat(captor.getValue().getBillingPeriod()).isEqualTo(BillingPeriod.MONTHLY);
+        assertThat(captor.getValue().getChargedAmount()).isEqualByComparingTo("2000");
     }
 }

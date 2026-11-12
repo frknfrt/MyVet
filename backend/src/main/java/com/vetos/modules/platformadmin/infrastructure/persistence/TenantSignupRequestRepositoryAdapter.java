@@ -22,5 +22,8 @@ class TenantSignupRequestRepositoryAdapter implements TenantSignupRequestReposit
     public Optional<TenantSignupRequest> findById(UUID id) { return jpaRepository.findById(id); }
 
     @Override
+    public Optional<TenantSignupRequest> findByIdForUpdate(UUID id) { return jpaRepository.findByIdForUpdate(id); }
+
+    @Override
     public List<TenantSignupRequest> findAllByOrderByCreatedAtDesc() { return jpaRepository.findAllByOrderByCreatedAtDesc(); }
 }

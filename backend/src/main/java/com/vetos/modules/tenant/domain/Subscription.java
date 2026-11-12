@@ -38,6 +38,10 @@ public class Subscription {
     @Column(name = "billing_status", nullable = false)
     private BillingStatus billingStatus;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "billing_period", nullable = false)
+    private BillingPeriod billingPeriod = BillingPeriod.MONTHLY;
+
     public static Subscription startTrial(UUID tenantId) {
         Subscription subscription = new Subscription();
         subscription.tenantId = tenantId;
@@ -49,12 +53,17 @@ public class Subscription {
     }
 
     public static Subscription startPaid(UUID tenantId, String planCode, LocalDate renewsAt) {
+        return startPaid(tenantId, planCode, renewsAt, BillingPeriod.MONTHLY);
+    }
+
+    public static Subscription startPaid(UUID tenantId, String planCode, LocalDate renewsAt, BillingPeriod billingPeriod) {
         Subscription subscription = new Subscription();
         subscription.tenantId = tenantId;
         subscription.planCode = planCode;
         subscription.startedAt = LocalDate.now();
         subscription.renewsAt = renewsAt;
         subscription.billingStatus = BillingStatus.ACTIVE;
+        subscription.billingPeriod = java.util.Objects.requireNonNull(billingPeriod);
         return subscription;
     }
 

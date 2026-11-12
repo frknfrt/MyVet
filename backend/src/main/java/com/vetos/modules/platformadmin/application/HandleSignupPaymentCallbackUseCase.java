@@ -61,7 +61,7 @@ public class HandleSignupPaymentCallbackUseCase {
         }
 
         UUID requestId = UUID.fromString(result.conversationId());
-        TenantSignupRequest request = tenantSignupRequestRepository.findById(requestId)
+        TenantSignupRequest request = tenantSignupRequestRepository.findByIdForUpdate(requestId)
             .orElseThrow(() -> new TenantSignupRequestNotFoundException(requestId));
 
         if (request.isCompleted()) {
@@ -72,9 +72,9 @@ public class HandleSignupPaymentCallbackUseCase {
         Plan plan = planRepository.findByCode(request.getPlanCode())
             .orElseThrow(() -> new PlanNotFoundException(request.getPlanCode()));
 
-        LocalDate renewsAt = today.plusMonths(1);
+        LocalDate renewsAt = request.getBillingPeriod().endDate(today);
         TenantSignupResult tenant = tenantAdminPort.createTenantForPaidSignup(
-            request.getClinicName(), "-", request.getClinicName(), "-", "-", request.getPlanCode(), renewsAt
+            request.getClinicName(), "-", request.getClinicName(), "-", "-", request.getPlanCode(), renewsAt, request.getBillingPeriod()
         );
 
         StaffInvite invite = tenantAdminPort.createAdminInviteForPaidSignup(
