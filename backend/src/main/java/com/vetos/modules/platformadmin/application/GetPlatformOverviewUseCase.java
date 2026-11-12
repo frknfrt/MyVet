@@ -1,5 +1,6 @@
 package com.vetos.modules.platformadmin.application;
 
+import com.vetos.platform.subscription.ReservedPlanCodes;
 import com.vetos.modules.platformadmin.application.dto.PlanRevenueBreakdown;
 import com.vetos.modules.platformadmin.application.dto.ChurnReasonBreakdown;
 import com.vetos.modules.platformadmin.application.dto.PlatformOverviewSummary;
@@ -47,11 +48,16 @@ public class GetPlatformOverviewUseCase {
     private final PlatformInvoiceRepository platformInvoiceRepository;
 
     public PlatformOverviewSummary execute() {
-        List<TenantAdminOverview> tenants = tenantAdminPort.listAll();
+        List<TenantAdminOverview> allTenants = tenantAdminPort.listAll();
         Map<String, Plan> plansByCode = planRepository.findAll().stream()
             .collect(Collectors.toMap(Plan::getCode, p -> p, (a, b) -> a));
 
-        int totalTenants = tenants.size();
+        int totalTenants = allTenants.size();
+        // INTERNAL (test ekibi) hesaplari musteri sayilarina ve gelire karismaz.
+        int internalTenants = (int) allTenants.stream().filter(t -> ReservedPlanCodes.INTERNAL.equals(t.planCode())).count();
+        List<TenantAdminOverview> tenants = allTenants.stream()
+            .filter(t -> !ReservedPlanCodes.INTERNAL.equals(t.planCode()))
+            .toList();
         int activeTenants = (int) tenants.stream().filter(t -> t.status() == TenantStatus.ACTIVE).count();
         int suspendedTenants = (int) tenants.stream().filter(t -> t.status() == TenantStatus.SUSPENDED).count();
         int trialBillingTenants = (int) tenants.stream().filter(t -> t.billingStatus() == BillingStatus.TRIAL).count();
@@ -87,7 +93,7 @@ public class GetPlatformOverviewUseCase {
         List<ChurnReasonBreakdown> churnBreakdown = buildChurnBreakdown(tenants);
 
         return new PlatformOverviewSummary(
-            totalTenants, activeTenants, suspendedTenants, trialBillingTenants, newTenantsLast30Days,
+            totalTenants, activeTenants, suspendedTenants, trialBillingTenants, internalTenants, newTenantsLast30Days,
             mrr, collectedThisMonth, overdueInvoiceCount, overdueInvoiceTotal, planBreakdown, recentTenants, churnBreakdown
         );
     }

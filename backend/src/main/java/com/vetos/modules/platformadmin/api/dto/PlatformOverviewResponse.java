@@ -10,6 +10,7 @@ public record PlatformOverviewResponse(
     int activeTenants,
     int suspendedTenants,
     int trialBillingTenants,
+    int internalTenants,
     int newTenantsLast30Days,
     BigDecimal monthlyRecurringRevenue,
     BigDecimal collectedThisMonth,
@@ -21,7 +22,7 @@ public record PlatformOverviewResponse(
 ) {
     public static PlatformOverviewResponse from(PlatformOverviewSummary s) {
         return new PlatformOverviewResponse(
-            s.totalTenants(), s.activeTenants(), s.suspendedTenants(), s.trialBillingTenants(), s.newTenantsLast30Days(),
+            s.totalTenants(), s.activeTenants(), s.suspendedTenants(), s.trialBillingTenants(), s.internalTenants(), s.newTenantsLast30Days(),
             s.monthlyRecurringRevenue(), s.collectedThisMonth(), s.overdueInvoiceCount(), s.overdueInvoiceTotal(),
             s.planBreakdown().stream().map(PlanRevenueBreakdownResponse::from).toList(),
             s.recentTenants().stream().map(RecentTenantResponse::from).toList(),

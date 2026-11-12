@@ -19,6 +19,9 @@ import styles from './PlatformAdminPages.module.css';
 import {
   BILLING_STATUS_LABELS, BILLING_STATUS_TONES, formatDate, PLATFORM_INVOICE_STATUS_LABELS,
   PLATFORM_INVOICE_STATUS_TONES, TENANT_STATUS_LABELS, TENANT_STATUS_TONES, TENANT_SUSPENSION_REASON_LABELS,
+  INTERNAL_PLAN_CODE,
+  isInternalPlan,
+  planCodeLabel,
 } from './tenantBadges';
 
 function errorMessageOf(err: unknown): string {
@@ -262,7 +265,7 @@ export function TenantDetailPage() {
               <div className={styles.cardTitle}>Abonelik</div>
               <div className={styles.infoRow}>
                 <span className={styles.infoLabel}>Plan</span>
-                <span>{tenant.planCode}</span>
+                <span>{planCodeLabel(tenant.planCode)}</span>
               </div>
               <div className={styles.infoRow}>
                 <span className={styles.infoLabel}>Faturalama Durumu</span>
@@ -432,7 +435,13 @@ export function TenantDetailPage() {
                   {plans.map((p) => (
                     <option key={p.id} value={p.code} />
                   ))}
+                  <option value={INTERNAL_PLAN_CODE} label="Test hesabı (süresiz)" />
                 </datalist>
+                {isInternalPlan(form.planCode) && (
+                  <div className={styles.muted}>
+                    Test hesabı: süresi dolmaz, tüm modüller açıktır, fatura kesilmez. Yenileme tarihi boş bırakılabilir.
+                  </div>
+                )}
               </FieldWrap>
               <FieldWrap label="Faturalama Durumu">
                 <Select

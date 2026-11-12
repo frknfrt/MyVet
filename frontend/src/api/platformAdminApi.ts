@@ -180,6 +180,8 @@ export interface PlatformOverview {
   activeTenants: number;
   suspendedTenants: number;
   trialBillingTenants: number;
+  /** Test ekibi hesapları (INTERNAL plan) — müşteri sayılarına dahil değildir. */
+  internalTenants: number;
   newTenantsLast30Days: number;
   monthlyRecurringRevenue: number;
   collectedThisMonth: number;

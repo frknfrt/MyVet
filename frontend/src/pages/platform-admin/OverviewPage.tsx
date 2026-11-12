@@ -70,6 +70,10 @@ export function OverviewPage() {
               <div className={overviewStyles.summaryCount}>{overview.trialBillingTenants}</div>
             </div>
             <div className={overviewStyles.summaryCard}>
+              <div className={overviewStyles.summaryLabel}>Test Hesabı</div>
+              <div className={overviewStyles.summaryCount}>{overview.internalTenants}</div>
+            </div>
+            <div className={overviewStyles.summaryCard}>
               <div className={overviewStyles.summaryLabel}>Son 30 Günde Yeni</div>
               <div className={overviewStyles.summaryCount}>{overview.newTenantsLast30Days}</div>
             </div>

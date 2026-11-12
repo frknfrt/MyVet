@@ -153,4 +153,24 @@ class GetPlatformOverviewUseCaseTest {
         assertThat(summary.recentTenants()).isEmpty();
         assertThat(summary.churnBreakdown()).isEmpty();
     }
+
+    @Test
+    void should_countInternalSeparately_when_tenantHasInternalPlan() {
+        Instant now = Instant.now();
+        when(tenantAdminPort.listAll()).thenReturn(List.of(
+            tenant("Test Ekibi", TenantStatus.ACTIVE, BillingStatus.ACTIVE, "INTERNAL", now),
+            tenant("Deneme Klinik", TenantStatus.TRIAL, BillingStatus.TRIAL, "TRIAL", now),
+            tenant("Musteri Klinik", TenantStatus.ACTIVE, BillingStatus.ACTIVE, "PRO", now)
+        ));
+
+        when(planRepository.findAll()).thenReturn(List.of());
+        when(platformInvoiceRepository.findByStatus(org.mockito.ArgumentMatchers.any())).thenReturn(List.of());
+        GetPlatformOverviewUseCase useCase = new GetPlatformOverviewUseCase(tenantAdminPort, planRepository, platformInvoiceRepository);
+        PlatformOverviewSummary summary = useCase.execute();
+
+        assertThat(summary.internalTenants()).isEqualTo(1);
+        assertThat(summary.trialBillingTenants()).isEqualTo(1);
+        assertThat(summary.activeTenants()).isEqualTo(1);
+        assertThat(summary.planBreakdown()).noneMatch(p -> p.planCode().equals("INTERNAL"));
+    }
 }

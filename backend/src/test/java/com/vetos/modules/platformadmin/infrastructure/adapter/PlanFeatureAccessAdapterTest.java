@@ -83,4 +83,11 @@ class PlanFeatureAccessAdapterTest {
         assertThat(adapter(true).enabledFeatures(TENANT)).isEqualTo(EnumSet.allOf(Feature.class));
         verifyNoInteractions(planRepository);
     }
+
+    @Test
+    void should_enableAllFeatures_when_planIsInternalAndEnforcementOn() {
+        when(tenantAdminPort.findPlanCode(TENANT)).thenReturn(Optional.of("INTERNAL"));
+
+        assertThat(adapter(true).enabledFeatures(TENANT)).containsExactlyInAnyOrder(Feature.values());
+    }
 }

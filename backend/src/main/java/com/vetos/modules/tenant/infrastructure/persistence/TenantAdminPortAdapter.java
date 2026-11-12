@@ -21,6 +21,7 @@ import com.vetos.modules.tenant.domain.exception.EmailAlreadyRegisteredConflictE
 import com.vetos.modules.tenant.domain.exception.SubscriptionNotFoundException;
 import com.vetos.modules.tenant.domain.exception.TenantNotFoundException;
 import com.vetos.platform.event.DomainEventPublisher;
+import com.vetos.platform.subscription.ReservedPlanCodes;
 import com.vetos.platform.subscription.TrialProperties;
 import com.vetos.platform.tenancy.TenantContext;
 import lombok.RequiredArgsConstructor;
@@ -89,7 +90,7 @@ class TenantAdminPortAdapter implements TenantAdminPort {
     @Override
     public List<BillableSubscription> listSubscriptionsDueOnOrBefore(LocalDate date) {
         return subscriptionJpaRepository.findAll().stream()
-            .filter(s -> !"TRIAL".equals(s.getPlanCode()))
+            .filter(s -> !ReservedPlanCodes.isReserved(s.getPlanCode()))
             .filter(s -> s.getRenewsAt() != null && !s.getRenewsAt().isAfter(date))
             .filter(s -> s.getBillingStatus() != BillingStatus.CANCELED)
             .map(s -> new BillableSubscription(s.getTenantId(), s.getPlanCode(), s.getRenewsAt(), s.getBillingPeriod()))

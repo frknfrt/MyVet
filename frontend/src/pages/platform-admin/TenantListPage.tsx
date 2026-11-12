@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { FieldWrap, Input } from '../../components/ui/Field';
 import { Modal } from '../../components/ui/Modal';
 import styles from './PlatformAdminPages.module.css';
-import { BILLING_STATUS_LABELS, BILLING_STATUS_TONES, TENANT_STATUS_LABELS, TENANT_STATUS_TONES } from './tenantBadges';
+import { BILLING_STATUS_LABELS, BILLING_STATUS_TONES, TENANT_STATUS_LABELS, TENANT_STATUS_TONES, planCodeLabel } from './tenantBadges';
 
 function errorMessageOf(err: unknown): string {
   return err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Beklenmeyen bir hata oluştu';
@@ -101,7 +101,7 @@ export function TenantListPage() {
           filtered.map((t) => (
             <div key={t.tenantId} className={styles.row} onClick={() => navigate(`/platform-admin/tenants/${t.tenantId}`)}>
               <div>{t.name}</div>
-              <div className={styles.muted}>{t.planCode}</div>
+              <div className={styles.muted}>{planCodeLabel(t.planCode)}</div>
               <div>
                 <Badge tone={BILLING_STATUS_TONES[t.billingStatus]}>{BILLING_STATUS_LABELS[t.billingStatus]}</Badge>
               </div>

@@ -1,5 +1,6 @@
 package com.vetos.modules.platformadmin.infrastructure.adapter;
 
+import com.vetos.platform.subscription.ReservedPlanCodes;
 import com.vetos.platform.branch.BranchLimitPort;
 import com.vetos.platform.quota.QuotaProperties;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +42,9 @@ class PlanBranchLimitAdapter implements BranchLimitPort {
         if (planCode.isEmpty()) {
             log.warn("Abonelik bulunamadi, sube siniri 0: tenantId={}", tenantId);
             return 0;
+        }
+        if (ReservedPlanCodes.INTERNAL.equals(planCode.get())) {
+            return null; // test ekibi hesabi: sinirsiz
         }
         if (PlanFeatureAccessAdapter.TRIAL_PLAN_CODE.equals(planCode.get())) {
             return properties.trial().maxBranches();

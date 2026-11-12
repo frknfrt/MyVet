@@ -56,3 +56,18 @@ export const TENANT_SUSPENSION_REASON_LABELS: Record<TenantSuspensionReason, str
   CLOSED_BUSINESS: 'İşyeri Kapandı',
   OTHER: 'Diğer',
 };
+
+/** plans tablosunda satırı olmayan, sistemin ismen tanıdığı plan kodları. */
+export const INTERNAL_PLAN_CODE = 'INTERNAL';
+export const TRIAL_PLAN_CODE = 'TRIAL';
+
+export function isInternalPlan(planCode: string): boolean {
+  return planCode === INTERNAL_PLAN_CODE;
+}
+
+/** Ayrılmış plan kodlarını okunur etikete çevirir; gerçek paket kodları olduğu gibi kalır. */
+export function planCodeLabel(planCode: string): string {
+  if (planCode === INTERNAL_PLAN_CODE) return 'Test Hesabı (süresiz)';
+  if (planCode === TRIAL_PLAN_CODE) return 'Deneme';
+  return planCode;
+}

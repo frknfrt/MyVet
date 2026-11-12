@@ -50,7 +50,8 @@ class PlanFeatureAccessAdapter implements FeatureAccessPort {
             log.warn("Abonelik bulunamadi, tum ozellikler kapali: tenantId={}", tenantId);
             return EnumSet.noneOf(Feature.class);
         }
-        if (TRIAL_PLAN_CODE.equals(planCode.get())) {
+        if (ReservedPlanCodes.isReserved(planCode.get())) {
+            // TRIAL ve INTERNAL (test ekibi): tum moduller acik.
             return EnumSet.allOf(Feature.class);
         }
         return planLookup.planByCode(planCode.get())

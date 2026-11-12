@@ -8,6 +8,7 @@ public record PlatformOverviewSummary(
     int activeTenants,
     int suspendedTenants,
     int trialBillingTenants,
+    int internalTenants,
     int newTenantsLast30Days,
     BigDecimal monthlyRecurringRevenue,
     BigDecimal collectedThisMonth,

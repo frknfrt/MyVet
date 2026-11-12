@@ -1,5 +1,6 @@
 package com.vetos.modules.platformadmin.infrastructure.adapter;
 
+import com.vetos.platform.subscription.ReservedPlanCodes;
 import com.vetos.modules.platformadmin.infrastructure.persistence.MonthlyUsageStore;
 import com.vetos.platform.quota.MonthlyQuotaExceededException;
 import com.vetos.platform.quota.QuotaProperties;
@@ -113,6 +114,9 @@ class PlanUsageQuotaAdapter implements UsageQuotaPort {
         if (planCode.isEmpty()) {
             log.warn("Abonelik bulunamadi, kota 0: tenantId={}", tenantId);
             return 0;
+        }
+        if (ReservedPlanCodes.INTERNAL.equals(planCode.get())) {
+            return null; // test ekibi hesabi: sinirsiz
         }
         if (PlanFeatureAccessAdapter.TRIAL_PLAN_CODE.equals(planCode.get())) {
             return kind == UsageKind.AI ? properties.trial().ai() : properties.trial().message();

@@ -156,4 +156,14 @@ class PlanUsageQuotaAdapterTest {
             "2026-10", false, new UsageSnapshot.Item(34, 100), new UsageSnapshot.Item(1240, null)
         ));
     }
+
+    @Test
+    void should_reportUnlimitedQuota_when_planIsInternal() {
+        when(tenantAdminPort.findPlanCode(TENANT)).thenReturn(Optional.of("INTERNAL"));
+
+        var usage = adapter(true, OCT).currentUsage(TENANT);
+
+        org.assertj.core.api.Assertions.assertThat(usage.ai().quota()).isNull();
+        org.assertj.core.api.Assertions.assertThat(usage.message().quota()).isNull();
+    }
 }
