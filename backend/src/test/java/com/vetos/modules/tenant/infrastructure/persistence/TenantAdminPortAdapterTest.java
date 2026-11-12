@@ -46,7 +46,8 @@ class TenantAdminPortAdapterTest {
     private TenantAdminPortAdapter adapter() {
         return new TenantAdminPortAdapter(
             tenantJpaRepository, subscriptionJpaRepository, branchJpaRepository,
-            staffUserJpaRepository, staffInviteRepository, passwordEncoder, eventPublisher
+            staffUserJpaRepository, staffInviteRepository, passwordEncoder, eventPublisher,
+            new com.vetos.platform.subscription.TrialProperties(7, 300, 5, 60, 3, 3)
         );
     }
 

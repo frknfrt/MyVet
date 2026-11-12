@@ -2,6 +2,7 @@ package com.vetos.modules.platformadmin.infrastructure.adapter;
 
 import com.vetos.platform.feature.Feature;
 import com.vetos.platform.feature.FeatureAccessPort;
+import com.vetos.platform.subscription.ReservedPlanCodes;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -21,7 +22,7 @@ import java.util.UUID;
 @Slf4j
 class PlanFeatureAccessAdapter implements FeatureAccessPort {
 
-    static final String TRIAL_PLAN_CODE = "TRIAL";
+    static final String TRIAL_PLAN_CODE = ReservedPlanCodes.TRIAL;
 
     private final PlanLookup planLookup;
     private final boolean enforcementEnabled;

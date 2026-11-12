@@ -1,5 +1,6 @@
 package com.vetos.modules.tenant.domain;
 
+import com.vetos.platform.subscription.ReservedPlanCodes;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -42,12 +43,12 @@ public class Subscription {
     @Column(name = "billing_period", nullable = false)
     private BillingPeriod billingPeriod = BillingPeriod.MONTHLY;
 
-    public static Subscription startTrial(UUID tenantId) {
+    public static Subscription startTrial(UUID tenantId, int trialDays) {
         Subscription subscription = new Subscription();
         subscription.tenantId = tenantId;
-        subscription.planCode = "TRIAL";
+        subscription.planCode = ReservedPlanCodes.TRIAL;
         subscription.startedAt = LocalDate.now();
-        subscription.renewsAt = LocalDate.now().plusDays(14);
+        subscription.renewsAt = LocalDate.now().plusDays(trialDays);
         subscription.billingStatus = BillingStatus.TRIAL;
         return subscription;
     }
@@ -71,6 +72,22 @@ public class Subscription {
         this.planCode = planCode;
         this.billingStatus = billingStatus;
         this.renewsAt = renewsAt;
+    }
+
+    /**
+     * Deneme, renewsAt gunu BOYUNCA gecerlidir; ertesi gun dolmus sayilir.
+     * Dolmusluk saklanan bir durum degil, tarih karsilastirmasidir (spec 2026-11-13 S4.2).
+     */
+    public boolean isTrialExpired(LocalDate today) {
+        return ReservedPlanCodes.TRIAL.equals(planCode) && renewsAt != null && renewsAt.isBefore(today);
+    }
+
+    /** Denemeden ucretli pakete gecis (odeme onaylaninca). */
+    public void activatePaid(String planCode, LocalDate renewsAt, BillingPeriod billingPeriod) {
+        this.planCode = planCode;
+        this.renewsAt = renewsAt;
+        this.billingPeriod = java.util.Objects.requireNonNull(billingPeriod);
+        this.billingStatus = BillingStatus.ACTIVE;
     }
 
     public void advanceRenewal(LocalDate newRenewsAt) {

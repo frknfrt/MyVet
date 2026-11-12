@@ -21,6 +21,7 @@ import com.vetos.modules.tenant.domain.exception.EmailAlreadyRegisteredConflictE
 import com.vetos.modules.tenant.domain.exception.SubscriptionNotFoundException;
 import com.vetos.modules.tenant.domain.exception.TenantNotFoundException;
 import com.vetos.platform.event.DomainEventPublisher;
+import com.vetos.platform.subscription.TrialProperties;
 import com.vetos.platform.tenancy.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -42,6 +43,7 @@ class TenantAdminPortAdapter implements TenantAdminPort {
     private final StaffInviteRepository staffInviteRepository;
     private final PasswordEncoder passwordEncoder;
     private final DomainEventPublisher eventPublisher;
+    private final TrialProperties trialProperties;
 
     @Override
     public List<TenantAdminOverview> listAll() {
@@ -149,7 +151,7 @@ class TenantAdminPortAdapter implements TenantAdminPort {
         Branch branch = Branch.create(tenant.getId(), branchName);
         branch.updateDetails(address, city, branch.getTimezone(), null);
         branch = branchJpaRepository.save(branch);
-        subscriptionJpaRepository.save(Subscription.startTrial(tenant.getId()));
+        subscriptionJpaRepository.save(Subscription.startTrial(tenant.getId(), trialProperties.days()));
 
         String passwordHash = passwordEncoder.encode(adminPassword);
         // Koprulme kurali: sadece StaffUser yazimini sarar. existsByEmail

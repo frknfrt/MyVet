@@ -44,15 +44,48 @@ class SubscriptionTest {
     }
 
     @Test
-    void should_startTrialWithFourteenDayPeriod_when_startTrialCalled() {
+    void should_endAfterSevenDays_when_trialStartedWithSevenDays() {
         UUID tenantId = UUID.randomUUID();
 
-        Subscription subscription = Subscription.startTrial(tenantId);
+        Subscription subscription = Subscription.startTrial(tenantId, 7);
 
         assertThat(subscription.getTenantId()).isEqualTo(tenantId);
         assertThat(subscription.getPlanCode()).isEqualTo("TRIAL");
         assertThat(subscription.getBillingStatus()).isEqualTo(BillingStatus.TRIAL);
-        assertThat(subscription.getRenewsAt()).isEqualTo(subscription.getStartedAt().plusDays(14));
+        assertThat(subscription.getRenewsAt()).isEqualTo(LocalDate.now().plusDays(7));
+    }
+
+    @Test
+    void should_notBeExpired_when_todayIsRenewalDay() {
+        Subscription subscription = Subscription.startTrial(UUID.randomUUID(), 7);
+
+        assertThat(subscription.isTrialExpired(subscription.getRenewsAt())).isFalse();
+    }
+
+    @Test
+    void should_beExpired_when_todayIsAfterRenewalDay() {
+        Subscription subscription = Subscription.startTrial(UUID.randomUUID(), 7);
+
+        assertThat(subscription.isTrialExpired(subscription.getRenewsAt().plusDays(1))).isTrue();
+    }
+
+    @Test
+    void should_neverBeExpired_when_planIsNotTrial() {
+        Subscription subscription = Subscription.startPaid(UUID.randomUUID(), "PRO", LocalDate.now().minusDays(30));
+
+        assertThat(subscription.isTrialExpired(LocalDate.now())).isFalse();
+    }
+
+    @Test
+    void should_becomeActivePaid_when_activatePaidCalled() {
+        Subscription subscription = Subscription.startTrial(UUID.randomUUID(), 7);
+
+        subscription.activatePaid("PRO", LocalDate.now().plusMonths(12), BillingPeriod.ANNUAL);
+
+        assertThat(subscription.getPlanCode()).isEqualTo("PRO");
+        assertThat(subscription.getBillingStatus()).isEqualTo(BillingStatus.ACTIVE);
+        assertThat(subscription.getBillingPeriod()).isEqualTo(BillingPeriod.ANNUAL);
+        assertThat(subscription.isTrialExpired(LocalDate.now().plusYears(5))).isFalse();
     }
 
     @Test
