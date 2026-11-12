@@ -178,6 +178,10 @@ void onEncounterFinalized(EncounterFinalizedEvent event) {
 
 - **Üçüncü SecurityFilterChain — TARBİL eklentisi (`TarbilExtensionSecurityConfig`, `@Order(2)`):** yalnız `/api/v1/tarbil-extension/**`. `vtx_` önekli anahtar `platform/security/ExtensionTokenAuthenticator` portuyla doğrulanır; portun uygulaması `integration/tarbil` modülünde (platform bir modüle bağımlı olamaz). JWT bu zincirde, eklenti anahtarı ana zincirde geçersizdir.
 
+### 6.3 Kenar durum: deneme süresi erişim kapısı (2026-11)
+
+- **`platform/subscription/SubscriptionAccessPort` + `SubscriptionGateInterceptor`:** `FeatureAccessPort`/`FeatureGateInterceptor` ile aynı desen; portun uygulaması `tenant` modülünde. Denemenin dolması saklanan bir durum değil, her sorguda `planCode == TRIAL && renewsAt < bugün (Europe/Istanbul)` karşılaştırmasıdır — `Tenant.status` `SUSPENDED` yapılmaz (giriş açık kalmalı). `TenantContext` taşımayan public klinik uçları aynı kuralı `PublicTenantGuard` ile uygular. `INTERNAL` plan kodu (test ekibi hesabı) kapıdan, kotalardan ve faturalamadan muaftır.
+
 ## 7. Sonraki Adım Önerisi
 
 Bu mimari iskeletini artık somut koda dökebiliriz — örneğin `patient` ve `encounter` modüllerini örnek olarak tam paket yapısıyla (entity, port, use-case, adapter, controller) yazıp bir başlangıç şablonu (boilerplate) çıkarabiliriz, ya da önce Spring Modulith testiyle bu sınırları doğrulayan bir iskelet proje (skeleton repo yapısı) kurabiliriz.

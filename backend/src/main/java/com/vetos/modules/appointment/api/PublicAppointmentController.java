@@ -1,5 +1,6 @@
 package com.vetos.modules.appointment.api;
 
+import com.vetos.platform.subscription.PublicTenantGuard;
 import com.vetos.modules.appointment.api.dto.PublicAppointmentRequest;
 import com.vetos.modules.appointment.api.dto.ServiceTypeResponse;
 import com.vetos.modules.appointment.application.ListServiceTypesUseCase;
@@ -27,14 +28,17 @@ public class PublicAppointmentController {
 
     private final ListServiceTypesUseCase listServiceTypesUseCase;
     private final ScheduleAppointmentUseCase scheduleAppointmentUseCase;
+    private final PublicTenantGuard publicTenantGuard;
 
     @GetMapping("/service-types")
     public List<ServiceTypeResponse> listServiceTypes(@RequestParam UUID tenantId) {
+        publicTenantGuard.requireOperational(tenantId);
         return listServiceTypesUseCase.execute(tenantId).stream().map(ServiceTypeResponse::from).toList();
     }
 
     @PostMapping("/appointment-requests")
     public ResponseEntity<Void> requestAppointment(@RequestBody @Valid PublicAppointmentRequest request) {
+        publicTenantGuard.requireOperational(request.tenantId());
         UUID id = scheduleAppointmentUseCase.execute(new ScheduleAppointmentCommand(
             request.tenantId(), request.branchId(), request.patientId(), request.ownerId(), null,
             request.serviceTypeId(), request.scheduledStart(), request.scheduledEnd(),

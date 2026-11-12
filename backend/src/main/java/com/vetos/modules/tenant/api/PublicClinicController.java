@@ -1,5 +1,7 @@
 package com.vetos.modules.tenant.api;
 
+import com.vetos.modules.tenant.application.dto.BranchOverview;
+import com.vetos.platform.subscription.PublicTenantGuard;
 import com.vetos.modules.tenant.api.dto.BranchOverviewResponse;
 import com.vetos.modules.tenant.application.GetCurrentBranchUseCase;
 import lombok.RequiredArgsConstructor;
@@ -21,9 +23,12 @@ import java.util.UUID;
 public class PublicClinicController {
 
     private final GetCurrentBranchUseCase getCurrentBranchUseCase;
+    private final PublicTenantGuard publicTenantGuard;
 
     @GetMapping("/{branchId}")
     public BranchOverviewResponse get(@PathVariable UUID branchId) {
-        return BranchOverviewResponse.from(getCurrentBranchUseCase.execute(branchId));
+        BranchOverview overview = getCurrentBranchUseCase.execute(branchId);
+        publicTenantGuard.requireOperational(overview.tenantId());
+        return BranchOverviewResponse.from(overview);
     }
 }

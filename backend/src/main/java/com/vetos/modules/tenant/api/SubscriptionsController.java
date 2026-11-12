@@ -1,5 +1,7 @@
 package com.vetos.modules.tenant.api;
 
+import com.vetos.modules.tenant.api.dto.SubscriptionAccessResponse;
+import com.vetos.platform.subscription.SubscriptionAccessPort;
 import com.vetos.modules.tenant.api.dto.EnabledFeaturesResponse;
 import com.vetos.modules.tenant.api.dto.SubscriptionResponse;
 import com.vetos.modules.tenant.application.CancelSubscriptionUseCase;
@@ -26,6 +28,13 @@ public class SubscriptionsController {
     private final UsageQuotaPort usageQuotaPort;
     private final CancelSubscriptionUseCase cancelSubscriptionUseCase;
     private final ReactivateSubscriptionUseCase reactivateSubscriptionUseCase;
+    private final SubscriptionAccessPort subscriptionAccessPort;
+
+    /** Tum personel: deneme bandi ve kilit yonlendirmesi icin erisim durumu. Deneme dolmusken de acik. */
+    @GetMapping("/access")
+    public SubscriptionAccessResponse getAccess() {
+        return SubscriptionAccessResponse.from(subscriptionAccessPort.accessOf(TenantContext.current()));
+    }
 
     /** Klinik yoneticisi: bu ayki AI / mesaj kullanimi ve paket kotalari. */
     @GetMapping("/usage")

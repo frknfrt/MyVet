@@ -1,5 +1,6 @@
 package com.vetos.modules.patient.api;
 
+import com.vetos.platform.subscription.PublicTenantGuard;
 import com.vetos.modules.patient.api.dto.*;
 import com.vetos.modules.patient.application.ListSpeciesUseCase;
 import com.vetos.modules.patient.application.RegisterOwnerUseCase;
@@ -28,6 +29,7 @@ public class PublicPatientIntakeController {
     private final RegisterOwnerUseCase registerOwnerUseCase;
     private final RegisterPatientUseCase registerPatientUseCase;
     private final ListSpeciesUseCase listSpeciesUseCase;
+    private final PublicTenantGuard publicTenantGuard;
 
     @GetMapping("/species")
     public List<SpeciesResponse> listSpecies() {
@@ -36,6 +38,7 @@ public class PublicPatientIntakeController {
 
     @PostMapping("/owners")
     public ResponseEntity<OwnerResponse> registerOwner(@RequestBody @Valid PublicRegisterOwnerRequest request) {
+        publicTenantGuard.requireOperational(request.tenantId());
         UUID id = registerOwnerUseCase.execute(new RegisterOwnerCommand(
             request.tenantId(), request.fullName(), null, request.phone(), null, request.email(), null,
             null, null, null, null, null, null, null, false, true, true, true, null, null, null

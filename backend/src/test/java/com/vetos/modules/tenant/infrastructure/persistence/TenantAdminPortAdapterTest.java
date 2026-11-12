@@ -47,7 +47,8 @@ class TenantAdminPortAdapterTest {
         return new TenantAdminPortAdapter(
             tenantJpaRepository, subscriptionJpaRepository, branchJpaRepository,
             staffUserJpaRepository, staffInviteRepository, passwordEncoder, eventPublisher,
-            new com.vetos.platform.subscription.TrialProperties(7, 300, 5, 60, 3, 3)
+            new com.vetos.platform.subscription.TrialProperties(7, 300, 5, 60, 3, 3),
+            org.mockito.Mockito.mock(com.vetos.platform.subscription.SubscriptionAccessPort.class)
         );
     }
 

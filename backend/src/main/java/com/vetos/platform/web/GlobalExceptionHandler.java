@@ -190,6 +190,12 @@ public class GlobalExceptionHandler {
         if (name.endsWith("ConflictException")) {
             return HttpStatus.CONFLICT;
         }
+        if (name.endsWith("PaymentRequiredException")) {
+            return HttpStatus.PAYMENT_REQUIRED;
+        }
+        if (name.endsWith("TooManyRequestsException")) {
+            return HttpStatus.TOO_MANY_REQUESTS;
+        }
         if (name.endsWith("ServiceUnavailableException")) {
             return HttpStatus.SERVICE_UNAVAILABLE;
         }

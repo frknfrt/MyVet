@@ -22,6 +22,7 @@ import com.vetos.modules.tenant.domain.exception.SubscriptionNotFoundException;
 import com.vetos.modules.tenant.domain.exception.TenantNotFoundException;
 import com.vetos.platform.event.DomainEventPublisher;
 import com.vetos.platform.subscription.ReservedPlanCodes;
+import com.vetos.platform.subscription.SubscriptionAccessPort;
 import com.vetos.platform.subscription.TrialProperties;
 import com.vetos.platform.tenancy.TenantContext;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +46,7 @@ class TenantAdminPortAdapter implements TenantAdminPort {
     private final PasswordEncoder passwordEncoder;
     private final DomainEventPublisher eventPublisher;
     private final TrialProperties trialProperties;
+    private final SubscriptionAccessPort subscriptionAccessPort;
 
     @Override
     public List<TenantAdminOverview> listAll() {
@@ -69,6 +71,7 @@ class TenantAdminPortAdapter implements TenantAdminPort {
             .orElseThrow(() -> new SubscriptionNotFoundException(tenantId));
         subscription.changePlan(planCode, billingStatus, renewsAt);
         subscriptionJpaRepository.save(subscription);
+        subscriptionAccessPort.evict(tenantId);
     }
 
     @Override
@@ -119,6 +122,7 @@ class TenantAdminPortAdapter implements TenantAdminPort {
             .orElseThrow(() -> new SubscriptionNotFoundException(tenantId));
         subscription.advanceRenewal(newRenewsAt);
         subscriptionJpaRepository.save(subscription);
+        subscriptionAccessPort.evict(tenantId);
     }
 
     @Override

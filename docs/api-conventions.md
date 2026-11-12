@@ -21,6 +21,7 @@
 | 204 | Başarılı DELETE |
 | 400 | Validation hatası (Bean Validation) |
 | 401 | Kimlik doğrulanmadı (token yok/geçersiz) |
+| 402 | Deneme süresi dolmuş (`TRIAL_EXPIRED`) — yalnız `/api/v1/auth/**` ve `/api/v1/subscriptions/**` açık kalır; istisna adı `*PaymentRequiredException` |
 | 403 | Kimlik doğrulandı ama yetkisi yok |
 | 404 | Kaynak bulunamadı |
 | 409 | Çakışma (örn. aynı saatte randevu çakışması) |
