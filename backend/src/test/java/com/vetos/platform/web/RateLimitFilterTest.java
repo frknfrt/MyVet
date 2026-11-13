@@ -252,4 +252,24 @@ class RateLimitFilterTest {
         }
         assertThat(small.trackedClientCount()).isLessThanOrEqualTo(5);
     }
+
+    @Test
+    void should_return429_when_eleventhTrialStartFromSameIpWithinFiveMinutes() throws ServletException, IOException {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        FilterChain chain = mock(FilterChain.class);
+        when(request.getRequestURI()).thenReturn("/api/v1/public/signup/trial/start");
+        when(request.getContextPath()).thenReturn("");
+        when(request.getRemoteAddr()).thenReturn("10.0.0.77");
+        StringWriter body = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(body));
+
+        for (int i = 0; i < 11; i++) {
+            filter.doFilter(request, response, chain);
+        }
+
+        verify(chain, times(10)).doFilter(request, response);
+        verify(response).setStatus(429);
+        assertThat(body.toString()).contains("RATE_LIMITED");
+    }
 }

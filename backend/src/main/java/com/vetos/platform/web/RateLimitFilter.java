@@ -35,6 +35,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final Cache<String, Bucket> publicBuckets;
     private final Cache<String, Bucket> platformAdminAuthBuckets;
     private final Cache<String, Bucket> extensionPairBuckets;
+    private final Cache<String, Bucket> trialSignupBuckets;
 
     public RateLimitFilter() {
         this(DEFAULT_MAX_TRACKED_CLIENTS);
@@ -46,6 +47,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         this.publicBuckets = newCache(maxTrackedClientsPerPool);
         this.platformAdminAuthBuckets = newCache(maxTrackedClientsPerPool);
         this.extensionPairBuckets = newCache(maxTrackedClientsPerPool);
+        this.trialSignupBuckets = newCache(maxTrackedClientsPerPool);
     }
 
     private static Cache<String, Bucket> newCache(long maximumSize) {
@@ -59,7 +61,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     long trackedClientCount() {
         long total = 0;
-        for (Cache<String, Bucket> cache : List.of(authBuckets, publicBuckets, platformAdminAuthBuckets, extensionPairBuckets)) {
+        for (Cache<String, Bucket> cache : List.of(authBuckets, publicBuckets, platformAdminAuthBuckets, extensionPairBuckets, trialSignupBuckets)) {
             cache.cleanUp();
             total += cache.estimatedSize();
         }
@@ -91,6 +93,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
             // TARBIL eklentisi eslestirme kodu deneme saldirisina karsi -- personel girisi
             // kadar siki (5dk'da 10), ayri havuzda.
             buckets = extensionPairBuckets;
+            limit = Bandwidth.builder().capacity(10).refillIntervally(10, Duration.ofMinutes(5)).build();
+        } else if (path.startsWith("/api/v1/public/signup/trial/")) {
+            // Deneme kaydi: her istek SMS maliyeti doguru ya da kod denemesidir -- personel
+            // girisi kadar siki (5dk icinde 10), genel public havuzundan ayri.
+            buckets = trialSignupBuckets;
             limit = Bandwidth.builder().capacity(10).refillIntervally(10, Duration.ofMinutes(5)).build();
         } else if (path.startsWith("/api/v1/public/")) {
             buckets = publicBuckets;

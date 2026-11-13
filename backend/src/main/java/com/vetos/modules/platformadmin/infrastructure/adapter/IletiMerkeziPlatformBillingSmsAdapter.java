@@ -38,17 +38,10 @@ import java.util.Map;
 @Slf4j
 class IletiMerkeziPlatformBillingSmsAdapter implements PlatformBillingSmsPort {
 
-    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
-    private static final Duration READ_TIMEOUT = Duration.ofSeconds(15);
+    private static final String LABEL = "Platform fatura SMS'i";
     private static final DateTimeFormatter DUE_DATE_FORMAT = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
-    private final String apiKey;
-    private final String hash;
-    private final String sender;
-    private final String sendUrl;
-    private final RestClient restClient;
-    private final ObjectMapper objectMapper = new ObjectMapper();
-    private final IntegrationOutcomes outcomes;
+    private final IletiMerkeziSmsClient client;
 
     @Autowired
     IletiMerkeziPlatformBillingSmsAdapter(
@@ -57,21 +50,11 @@ class IletiMerkeziPlatformBillingSmsAdapter implements PlatformBillingSmsPort {
         @Value("${platform-billing.ileti-merkezi.sender:vetly}") String sender,
         IntegrationOutcomes outcomes
     ) {
-        this(apiKey, hash, sender, "https://api.iletimerkezi.com/v1/send-sms/json", outcomes);
+        this(apiKey, hash, sender, IletiMerkeziSmsClient.DEFAULT_SEND_URL, outcomes);
     }
 
-    // paket-ozel: testler yerel sahte sunuculara yonlendirmek icin kullanir
     IletiMerkeziPlatformBillingSmsAdapter(String apiKey, String hash, String sender, String sendUrl, IntegrationOutcomes outcomes) {
-        this.apiKey = apiKey;
-        this.hash = hash;
-        this.sender = sender;
-        this.sendUrl = sendUrl;
-        this.outcomes = outcomes;
-        this.restClient = OutboundHttp.restClient(CONNECT_TIMEOUT, READ_TIMEOUT);
-    }
-
-    private boolean isConfigured() {
-        return !apiKey.isBlank() && !hash.isBlank();
+        this.client = new IletiMerkeziSmsClient(apiKey, hash, sender, sendUrl, outcomes);
     }
 
     @Override
@@ -94,87 +77,15 @@ class IletiMerkeziPlatformBillingSmsAdapter implements PlatformBillingSmsPort {
     }
 
     private void send(String recipientPhone, String messageText) {
-        if (!isConfigured()) {
-            log.info("Platform fatura SMS'i (simule): to={}, mesaj=\"{}\"", LogMasking.phone(recipientPhone), messageText);
-            return;
-        }
-
-        String requestBody = toJson(requestBody(apiKey, hash, sender, messageText, toE164(recipientPhone)));
-
-        try {
-            Map<?, ?> response = restClient.post()
-                .uri(sendUrl)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(requestBody)
-                .retrieve()
-                .body(Map.class);
-            // Ileti Merkezi is-seviyesi hatalari (kimlik, bakiye) HTTP 200 + response.status.code olarak doner.
-            int code = statusCode(response);
-            if (code == 200) {
-                outcomes.record(IntegrationOutcomes.SMS, true);
-                log.info("Platform fatura SMS'i gonderildi: to={}", LogMasking.phone(recipientPhone));
-            } else {
-                outcomes.record(IntegrationOutcomes.SMS, code > 0 && !IntegrationOutcomes.isOutageStatus(code));
-                log.warn("Platform fatura SMS'i gonderilemedi: to={}, kod={}", LogMasking.phone(recipientPhone), code);
-            }
-        } catch (RestClientResponseException e) {
-            outcomes.record(IntegrationOutcomes.SMS, !IntegrationOutcomes.isOutageStatus(e.getStatusCode().value()));
-            log.warn("Platform fatura SMS'i gonderilemedi: to={}, durum={}, govde={}",
-                LogMasking.phone(recipientPhone), e.getStatusCode(), LogMasking.body(e.getResponseBodyAsString()));
-        } catch (Exception e) {
-            outcomes.record(IntegrationOutcomes.SMS, false);
-            log.warn("Platform fatura SMS'i gonderilemedi: to={}, hata={}", LogMasking.phone(recipientPhone), e.getMessage());
-        }
-    }
-
-    private static int statusCode(Map<?, ?> response) {
-        Object responseNode = response == null ? null : response.get("response");
-        Object status = responseNode instanceof Map<?, ?> node ? node.get("status") : null;
-        Object code = status instanceof Map<?, ?> s ? s.get("code") : null;
-        return code instanceof Number n ? n.intValue() : -1;
-    }
-
-    /** Turkiye pazarina ozel basit normallestirme -- 0'la baslayan yerel numarayi +90'a cevirir. */
-    private static String toE164(String rawPhone) {
-        String digits = rawPhone.replaceAll("[^+0-9]", "");
-        if (digits.startsWith("+")) return digits;
-        if (digits.startsWith("90")) return "+" + digits;
-        if (digits.startsWith("0")) return "+90" + digits.substring(1);
-        return "+90" + digits;
+        client.send(recipientPhone, messageText, LABEL);
     }
 
     // paket-ozel: JSON kacislama testi dogrudan cagirir
     static Map<String, Object> requestBody(String apiKey, String hash, String sender, String messageText, String recipientE164) {
-        Map<String, Object> authentication = new LinkedHashMap<>();
-        authentication.put("key", apiKey);
-        authentication.put("hash", hash);
-
-        Map<String, Object> receipents = new LinkedHashMap<>();
-        receipents.put("number", List.of(recipientE164));
-
-        Map<String, Object> message = new LinkedHashMap<>();
-        message.put("text", messageText);
-        message.put("receipents", receipents);
-
-        Map<String, Object> order = new LinkedHashMap<>();
-        order.put("sender", sender);
-        order.put("iys", "0");
-        order.put("message", message);
-
-        Map<String, Object> request = new LinkedHashMap<>();
-        request.put("authentication", authentication);
-        request.put("order", order);
-
-        Map<String, Object> root = new LinkedHashMap<>();
-        root.put("request", request);
-        return root;
+        return IletiMerkeziSmsClient.requestBody(apiKey, hash, sender, messageText, recipientE164);
     }
 
     String toJson(Map<String, Object> body) {
-        try {
-            return objectMapper.writeValueAsString(body);
-        } catch (JsonProcessingException e) {
-            throw new IllegalStateException("Ileti Merkezi istek govdesi olusturulamadi", e);
-        }
+        return client.toJson(body);
     }
 }
