@@ -29,10 +29,41 @@ erDiagram
     SUBSCRIPTION {
         uuid id PK
         uuid tenant_id FK
-        string plan_code
+        string plan_code "TRIAL ve INTERNAL ayrilmis kodlar (plans satiri yok)"
         date started_at
-        date renews_at
+        date renews_at "TRIAL icin deneme bitisi"
         string billing_status
+        string billing_period
+    }
+
+    TRIAL_SIGNUP_REQUEST {
+        uuid id PK
+        string full_name
+        string email
+        string phone "E.164; COMPLETED icin essiz"
+        string clinic_name
+        string city
+        string chamber_registration_no "beyan, dogrulanmaz"
+        string password_hash "tamamlaninca NULL"
+        string otp_hash "tamamlaninca NULL"
+        timestamp otp_expires_at
+        int otp_attempts
+        int otp_send_count
+        string status "PENDING, COMPLETED, EXPIRED"
+        uuid tenant_id FK "tamamlaninca"
+        timestamp consent_accepted_at
+        timestamp created_at
+    }
+
+    TRIAL_UPGRADE_REQUEST {
+        uuid id PK "iyzico conversationId"
+        uuid tenant_id FK
+        string plan_code
+        string billing_period
+        string coupon_code
+        decimal charged_amount
+        string status "PENDING, COMPLETED"
+        timestamp created_at
     }
 
     %% ================= KULLANICI / ROL =================

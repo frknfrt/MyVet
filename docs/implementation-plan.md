@@ -323,3 +323,16 @@ gercek TCKN'nin e-Fatura'ya baglanmasi ayrica degerlendirilecek.
 - `NewOwnerPage.tsx`, `OwnerEditModal.tsx`: "Doğum Tarihi" (zorunlu) ve
   "TC Kimlik No" (opsiyonel, 11 hane) alanlari; `OwnerDetailPage.tsx`'te
   goruntuleniyor.
+
+## Self-servis 7 günlük deneme (2026-11-13)
+
+Tasarım: `docs/superpowers/specs/2026-11-13-self-servis-deneme-design.md` · Plan: `docs/superpowers/plans/2026-11-13-self-servis-deneme.md`.
+
+- **Kayıt:** vitrin sitesinde (`vetly-site`, `/deneme`) form + SMS kodu → `POST /api/v1/public/signup/trial/{start,verify,resend}` (`TrialSignupRequest`, `V103`). Onay beklenmez; klinik, şube ve yönetici hesabı kod doğrulanınca oluşur. Oda sicil numarası kaydedilir ama **doğrulanmaz** (sorgulanabilir açık bir resmi kaynak bulunamadı — kullanıcı kararı).
+- **Süre:** 7 gün (`vetly.trial.days`); platform admin'in açtığı denemeler de 7 gün.
+- **Süre dolunca:** `SubscriptionGateInterceptor` 402 `TRIAL_EXPIRED` döner (yalnız `/auth` ve `/subscriptions` açık), panel `/uyelik` sayfasına düşer. Giriş açık kalır, veri silinmez. Public klinik uçları, hatırlatma zamanlayıcıları ve TARBİL eklenti anahtarı da kapanır.
+- **Ücretliye geçiş:** `POST /api/v1/subscriptions/upgrade-checkout` → iyzico → callback (`TrialUpgradeRequest`, `V104`). Fatura ödeme **başarılı olunca** kesilir; yarım kalan ödeme açık fatura bırakmaz.
+- **Test hesapları:** ayrılmış plan kodu `INTERNAL` — süresiz, tüm modüller açık, kotasız, faturalama dışı. `V102` mevcut tüm denemeleri buna çevirir (kullanıcı kararı: mevcut denemeler test ekibine ait).
+- **Bildirimler:** hoş geldiniz + bitişe 2 gün kala + son gün (SMS ve e-posta); `PlatformBillingScheduler`'ın beşinci adımı.
+- **Bilinçli olarak kapsam dışı:** belge yükleme/manuel onay, otomatik kart çekimi, ücretli paketler arası geçiş, ödeme yapmayan kliniğin verisinin silinmesi, kayıt sonrası otomatik oturum açma (site ve panel farklı alan adında).
+- **Bilinen sınırlamalar:** vitrindeki `Pricing.tsx`/`Faq.tsx` bu turda güncellenmedi (dosyalarda commit edilmemiş başka çalışma vardı); doğrulama kodu kayıt adımının uçtan uca (Playwright) testi yok, backend entegrasyon testiyle kapsanıyor.

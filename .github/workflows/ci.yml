@@ -50,6 +50,8 @@ jobs:
         env:
           DB_PORT: 5433
           VITE_API_BASE_URL: http://localhost:8080
+          # trial-flow.spec.ts odeme simulasyonuna ihtiyac duyar; simulasyon yalniz dev/test profilinde acik.
+          SPRING_PROFILES_ACTIVE: dev
         run: |
           (cd backend && ./mvnw -B spring-boot:run) > "$RUNNER_TEMP/vetly-e2e.log" 2>&1 &
           backend_pid=$!

@@ -38,6 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /** Canli docker-compose Postgres gerekir. Spec 2026-11-13 S3.1: vitrinden self-servis deneme kaydi. */
 @SpringBootTest
 @AutoConfigureMockMvc
+@org.springframework.test.context.ActiveProfiles("test") // SMS simulasyonu yalniz dev/test profilinde
 class TrialSignupIntegrationTest {
 
     private static final String PASSWORD = "Sifre12345!";

@@ -12,7 +12,7 @@ Tam liste (P0/P1/P2/P3, notlarla): `docs/screen-priorities.xlsx`
 - [ ] Forgot Password
 - [x] Clinic Setup Wizard
 - [x] Invite Team Members — *(Ayarlar > Kullanıcılar'da "Ekip Üyesi Davet Et" — `StaffInvite` + `InviteEmailPort`/`MockInviteEmailAdapter`, TARBİL/e-Fatura ile aynı port/adapter deseni; kabul linki `/davet/:token`'da şifre belirleyip hesabı etkinleştiriyor. Gerçek bir e-posta sağlayıcısı yok, link sunucu loglarına yazılır — kullanıcı onayıyla mock bırakıldı.)*
-- [ ] Subscription Plan Selection — *(kayıtta otomatik 14 günlük deneme atanıyor; plan seçim ekranı yok, bkz. Ayarlar > Abonelik'in salt-okunur görünümü)*
+- [x] Subscription Plan Selection — *(2026-11: vitrinden self-servis 7 günlük deneme; paket seçimi Ayarlar > Abonelik'te ve süre dolunca açılan `/uyelik` sayfasında (`PlanPicker`). Ücretli paketler arası geçiş hâlâ yok.)*
 
 ### 1. Dashboard
 - [x] Ana Panel (rol bazli render: Doktor/Resepsiyon/Yonetici) — *("İşletme özeti" sekmesi sadece ADMIN/RECEPTIONIST'e görünüyor (`/invoices/**` yetkisiyle uyumlu, önceden VET/TECHNICIAN'a boş/403 veri gösteriyordu); VET için "Bana atanan" varsayılan açık, TECHNICIAN için "Bekleme Salonu" sekmesi varsayılan.)*

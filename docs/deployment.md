@@ -120,6 +120,14 @@ Düzenleme: `sudo nano /etc/vetly/backend.env`, ardından `sudo systemctl restar
 - `PLATFORM_ADMIN_*` sadece ilk açılışta (tablo boşken) hesap oluşturur; sonradan değiştirmek mevcut hesabı güncellemez.
 - DB şifresini değiştirmek: `sudo -u postgres psql -c "\password vetly"` + `backend.env`'de `DB_PASSWORD`'ü güncelle.
 
+## Self-servis deneme (2026-11)
+
+- Vitrindeki `/deneme` kaydı telefonu SMS koduyla doğrular. **Canlıda `ILETI_MERKEZI_API_KEY` ve `ILETI_MERKEZI_HASH` tanımlı değilse doğrulama kodu isteği 503 döner, kimse kayıt olamaz** (kod yalnızca dev/test profilinde loga yazılır). Yayından önce bu iki değişkeni ve İleti Merkezi'nde gönderici başlığını doğrulayın.
+- Denemeden ücretliye geçiş iyzico ile yapılır: `IYZICO_API_KEY`/`IYZICO_SECRET_KEY`/`IYZICO_CALLBACK_BASE_URL` canlıda tanımlı olmalı (simülasyon üretimde kapalı).
+- Ayarlar (hepsi isteğe bağlı): `VETLY_TRIAL_DAYS` (7), `VETLY_TRIAL_OTP_TTL_SECONDS` (300), `VETLY_TRIAL_OTP_MAX_ATTEMPTS` (5), `VETLY_TRIAL_OTP_RESEND_COOLDOWN_SECONDS` (60), `VETLY_TRIAL_OTP_MAX_SENDS` (3), `VETLY_TRIAL_MAX_REQUESTS_PER_PHONE_PER_DAY` (3).
+- `VETLY_SITE_ORIGIN` vitrin sitesinin adresi olmalı (CORS); `FRONTEND_BASE_URL` kayıt sonrası yönlendirme ve e-posta/SMS bağlantılarında kullanılır.
+- `V102` migration'ı, uygulandığı an var olan tüm `TRIAL` abonelikleri süresiz test hesabına (`INTERNAL`) çevirir. Aralarında gerçek müşteri varsa yayından ÖNCE platform admin panelinden planını değiştirin.
+
 ## Güvenlik notları
 
 - **Ödeme dağıtım kontrolü:** V96 için PostgreSQL sunucusunda btree_gist uzantısı kullanılabilir olmalı. Aktif hekim randevuları aynı zaman aralığını paylaşıyorsa migration durur. Önce kliniğin doğru randevuyu belirlemesini sağlayın. V97 oturum iptal kaydını oluşturur. Üretimde sağlayıcı kimliği eksikse gerçek işlem kesinleştirilmez. Yerel simülasyon için açık dev veya test profili gerekir. Sandbox ödemeleri için ayrı test kliniği ve finans verisi kullanın. Gönderimi doğrulanıyor durumunda kalan bildirimleri tekrar göndermeden önce sağlayıcı kayıtlarıyla karşılaştırın.
