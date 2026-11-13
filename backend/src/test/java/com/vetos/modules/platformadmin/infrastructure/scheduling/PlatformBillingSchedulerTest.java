@@ -23,12 +23,13 @@ class PlatformBillingSchedulerTest {
     @Mock private RemindDueSoonInvoicesUseCase remindDueSoonInvoicesUseCase;
     @Mock private FlagOverdueAndSuspendUseCase flagOverdueAndSuspendUseCase;
     @Mock private SuspendExpiredCancellationsUseCase suspendExpiredCancellationsUseCase;
+    @Mock private com.vetos.modules.platformadmin.application.RemindEndingTrialsUseCase remindEndingTrialsUseCase;
     @Mock private AdvisoryLock advisoryLock;
 
     @Test
     void should_skipEntirely_when_lockNotAcquired() {
         PlatformBillingScheduler scheduler = new PlatformBillingScheduler(
-            generateDueInvoicesUseCase, remindDueSoonInvoicesUseCase, flagOverdueAndSuspendUseCase, suspendExpiredCancellationsUseCase, advisoryLock
+            generateDueInvoicesUseCase, remindDueSoonInvoicesUseCase, flagOverdueAndSuspendUseCase, suspendExpiredCancellationsUseCase, remindEndingTrialsUseCase, advisoryLock
         );
         when(advisoryLock.tryAcquire(anyLong())).thenReturn(false);
 
@@ -40,7 +41,7 @@ class PlatformBillingSchedulerTest {
     @Test
     void should_runAllFourSteps_when_lockAcquired() {
         PlatformBillingScheduler scheduler = new PlatformBillingScheduler(
-            generateDueInvoicesUseCase, remindDueSoonInvoicesUseCase, flagOverdueAndSuspendUseCase, suspendExpiredCancellationsUseCase, advisoryLock
+            generateDueInvoicesUseCase, remindDueSoonInvoicesUseCase, flagOverdueAndSuspendUseCase, suspendExpiredCancellationsUseCase, remindEndingTrialsUseCase, advisoryLock
         );
         when(advisoryLock.tryAcquire(anyLong())).thenReturn(true);
 
@@ -50,5 +51,6 @@ class PlatformBillingSchedulerTest {
         verify(remindDueSoonInvoicesUseCase).execute(any());
         verify(flagOverdueAndSuspendUseCase).execute(any());
         verify(suspendExpiredCancellationsUseCase).execute(any());
+        verify(remindEndingTrialsUseCase).execute(any());
     }
 }

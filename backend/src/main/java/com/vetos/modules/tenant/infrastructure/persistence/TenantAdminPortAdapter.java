@@ -4,6 +4,7 @@ import com.vetos.modules.tenant.domain.BillableSubscription;
 import com.vetos.modules.tenant.domain.BillingStatus;
 import com.vetos.modules.tenant.domain.BillingPeriod;
 import com.vetos.modules.tenant.domain.Branch;
+import com.vetos.modules.tenant.domain.EndingTrial;
 import com.vetos.modules.tenant.domain.StaffInvite;
 import com.vetos.modules.tenant.domain.StaffInviteRepository;
 import com.vetos.modules.tenant.domain.StaffInviteStatus;
@@ -128,6 +129,15 @@ class TenantAdminPortAdapter implements TenantAdminPort {
         tenant.activate();
         tenantJpaRepository.save(tenant);
         subscriptionAccessPort.evict(tenantId);
+    }
+
+    @Override
+    public List<EndingTrial> listTrialsEndingOn(LocalDate date) {
+        return subscriptionJpaRepository.findAll().stream()
+            .filter(s -> ReservedPlanCodes.TRIAL.equals(s.getPlanCode()))
+            .filter(s -> date.equals(s.getRenewsAt()))
+            .map(s -> new EndingTrial(s.getTenantId(), s.getRenewsAt()))
+            .toList();
     }
 
     @Override
