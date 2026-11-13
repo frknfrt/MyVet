@@ -2,6 +2,7 @@ import { ReactNode, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { Sidebar } from './Sidebar';
+import { TrialBanner } from '../subscription/TrialBanner';
 import styles from './AppShell.module.css';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -57,7 +58,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         isOpen={mobileNavOpen}
         onClose={() => setMobileNavOpen(false)}
       />
-      <main className={styles.main}>{children}</main>
+      <main className={styles.main}>
+        <TrialBanner />
+        {children}
+      </main>
     </div>
   );
 }

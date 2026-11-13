@@ -1,5 +1,5 @@
 import { FormEvent, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { AuthLayout } from '../components/layout/AuthLayout';
@@ -10,7 +10,10 @@ import styles from './LoginPage.module.css';
 export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  // Vitrindeki deneme kaydından gelen kullanıcı: e-posta dolu gelir, kısa bir bilgi notu görünür.
+  const [searchParams] = useSearchParams();
+  const fromTrialSignup = searchParams.get('deneme') === '1';
+  const [email, setEmail] = useState(() => searchParams.get('email') ?? '');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +42,11 @@ export function LoginPage() {
         <h1 className={styles.cardTitle}>Tekrar hoş geldiniz</h1>
         <p className={styles.lede}>Klinik hesabınıza giriş yapın</p>
 
+        {fromTrialSignup && !error && (
+          <div className={styles.infoBanner} role="status">
+            Hesabınız oluşturuldu. Şifrenizle giriş yapın.
+          </div>
+        )}
         {error && <div className={styles.errorBanner}>{error}</div>}
 
         <FieldWrap label="E-posta">
