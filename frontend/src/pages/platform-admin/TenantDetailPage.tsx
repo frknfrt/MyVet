@@ -4,7 +4,7 @@ import { StaffRole, storeSession } from '../../auth/session';
 import { ApiError } from '../../api/client';
 import {
   BillingStatus, Plan, PlatformInvoice, PlatformPaymentMethod, platformAdminApi, TenantAdminOverview,
-  TenantIntegrationHealth, TenantSuspensionReason,
+  TenantIntegrationHealth, TenantSuspensionReason, TrialSignupRequest,
 } from '../../api/platformAdminApi';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
@@ -67,10 +67,24 @@ export function TenantDetailPage() {
     platformAdminApi.getTenantUsage(tenantId).then(setUsage).catch(() => setUsage(null));
   }
 
+  const [trialSignup, setTrialSignup] = useState<TrialSignupRequest | null>(null);
   useEffect(load, [tenantId]);
   useEffect(() => {
     platformAdminApi.listPlans().then(setPlans).catch(() => undefined);
   }, []);
+  // Vitrinden self-servis açılan kliniklerde beyan edilen oda sicil numarası (yoksa satır gizlenir).
+  useEffect(() => {
+    let cancelled = false;
+    platformAdminApi
+      .listTrialSignupRequests()
+      .then((list) => {
+        if (!cancelled) setTrialSignup(list.find((r) => r.tenantId === tenantId) ?? null);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
 
   const fetchAuditPage = useCallback(
     (q: AuditQuery) => platformAdminApi.listTenantAuditEvents(tenantId ?? '', q),
@@ -276,9 +290,15 @@ export function TenantDetailPage() {
                 <span>{formatDate(tenant.startedAt)}</span>
               </div>
               <div className={styles.infoRow}>
-                <span className={styles.infoLabel}>Yenileme Tarihi</span>
+                <span className={styles.infoLabel}>{tenant.planCode === 'TRIAL' ? 'Deneme Bitişi' : 'Yenileme Tarihi'}</span>
                 <span>{formatDate(tenant.renewsAt)}</span>
               </div>
+              {trialSignup && (
+                <div className={styles.infoRow}>
+                  <span className={styles.infoLabel}>Oda Sicil No (beyan)</span>
+                  <span>{trialSignup.chamberRegistrationNo}</span>
+                </div>
+              )}
               <div className={styles.modalActions}>
                 <Button variant="primary" onClick={openSubscriptionModal}>
                   Plan / Durum Değiştir

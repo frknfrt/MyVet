@@ -219,6 +219,20 @@ export interface TenantSignupRequest {
   createdAt: string;
 }
 
+/** Vitrin sitesinden self-servis açılan 7 günlük deneme kaydı. */
+export interface TrialSignupRequest {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  clinicName: string;
+  city: string;
+  chamberRegistrationNo: string;
+  status: 'PENDING' | 'COMPLETED' | 'EXPIRED';
+  tenantId: string | null;
+  createdAt: string;
+  completedAt: string | null;
+}
 
 export type CouponDiscountType = 'PERCENTAGE' | 'FIXED_AMOUNT';
 
@@ -370,6 +384,8 @@ export const platformAdminApi = {
   impersonateTenant: (tenantId: string) =>
     platformAdminClient.post<ImpersonationSession>(`/api/v1/platform-admin/tenants/${tenantId}/impersonate`),
   listSignupRequests: () => platformAdminClient.get<TenantSignupRequest[]>('/api/v1/platform-admin/signup-requests'),
+  listTrialSignupRequests: () =>
+    platformAdminClient.get<TrialSignupRequest[]>('/api/v1/platform-admin/signup-requests/trials'),
   listCoupons: () => platformAdminClient.get<Coupon[]>('/api/v1/platform-admin/coupons'),
   createCoupon: (payload: CreateCouponPayload) =>
     platformAdminClient.post<Coupon>('/api/v1/platform-admin/coupons', payload),

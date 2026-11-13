@@ -5,6 +5,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import styles from './PlatformAdminPages.module.css';
 import leadsStyles from './LeadsPage.module.css';
+import { TrialSignupsSection } from './TrialSignupsSection';
 
 function errorMessageOf(err: unknown): string {
   return err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Beklenmeyen bir hata oluştu';
@@ -95,6 +96,7 @@ export function LeadsPage() {
           })
         )}
       </div>
+      <TrialSignupsSection />
     </div>
   );
 }
