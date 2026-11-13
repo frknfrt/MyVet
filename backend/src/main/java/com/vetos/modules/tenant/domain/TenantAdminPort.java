@@ -78,6 +78,16 @@ public interface TenantAdminPort {
      * bir StaffInvite olusturur ve kaydeder (StaffInviteRepository sadece bu
      * modul icinde kullanilir -- diger moduller bu port araciligiyla erisir).
      */
+    /**
+     * Vitrinden self-servis deneme kaydi (spec 2026-11-13): createTenant ile ayni adimlar, ama
+     * yonetici sifresi ZATEN hash olarak gelir (kayit istegi duz sifreyi saklamaz) ve yoneticinin
+     * telefonu ile oda sicil numarasi da yazilir. Vergi no/adres bilinmedigi icin "-" konur.
+     */
+    UUID createTrialTenant(
+        String tenantName, String city, String adminFullName, String adminEmail,
+        String adminPasswordHash, String adminPhoneE164, String licenseNumber
+    );
+
     StaffInvite createAdminInviteForPaidSignup(UUID tenantId, UUID branchId, String email, String fullName);
 
     /** Odeme oncesi e-posta benzersizligini kontrol etmek icin. */

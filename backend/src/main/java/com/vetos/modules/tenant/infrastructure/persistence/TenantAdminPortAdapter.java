@@ -151,25 +151,48 @@ class TenantAdminPortAdapter implements TenantAdminPort {
         if (staffUserJpaRepository.existsByEmail(adminEmail)) {
             throw new EmailAlreadyRegisteredConflictException(adminEmail);
         }
+        return createTrialTenantWithAdmin(
+            tenantName, taxNumber, branchName, address, city,
+            adminFullName, adminEmail, passwordEncoder.encode(adminPassword), null, null
+        );
+    }
 
+    @Override
+    public UUID createTrialTenant(
+        String tenantName, String city, String adminFullName, String adminEmail,
+        String adminPasswordHash, String adminPhoneE164, String licenseNumber
+    ) {
+        if (staffUserJpaRepository.existsByEmail(adminEmail)) {
+            throw new EmailAlreadyRegisteredConflictException(adminEmail);
+        }
+        return createTrialTenantWithAdmin(
+            tenantName, "-", tenantName, "-", city,
+            adminFullName, adminEmail, adminPasswordHash, adminPhoneE164, licenseNumber
+        );
+    }
+
+    private UUID createTrialTenantWithAdmin(
+        String tenantName, String taxNumber, String branchName, String address, String city,
+        String adminFullName, String adminEmail, String passwordHash, String adminPhone, String licenseNumber
+    ) {
         Tenant tenant = tenantJpaRepository.save(Tenant.register(tenantName, taxNumber));
         Branch branch = Branch.create(tenant.getId(), branchName);
         branch.updateDetails(address, city, branch.getTimezone(), null);
         branch = branchJpaRepository.save(branch);
         subscriptionJpaRepository.save(Subscription.startTrial(tenant.getId(), trialProperties.days()));
 
-        String passwordHash = passwordEncoder.encode(adminPassword);
         // Koprulme kurali: sadece StaffUser yazimini sarar. existsByEmail
-        // yukarida, KAPSAM DISINDA kalir -- staff_users.email tum kiracilarda
+        // cagiran metotta, KAPSAM DISINDA kalir -- staff_users.email tum kiracilarda
         // essiz oldugu icin o kontrol GLOBAL calismak zorunda.
         final UUID newTenantId = tenant.getId();
         final UUID newBranchId = branch.getId();
-        StaffUser admin;
+        StaffUser admin = StaffUser.register(newTenantId, newBranchId, adminFullName, adminEmail, passwordHash, StaffRole.ADMIN);
+        if (adminPhone != null || licenseNumber != null) {
+            admin.updateProfile(adminFullName, adminPhone, licenseNumber, null, null);
+        }
         TenantContext.set(newTenantId);
         try {
-            admin = staffUserJpaRepository.save(
-                StaffUser.register(newTenantId, newBranchId, adminFullName, adminEmail, passwordHash, StaffRole.ADMIN)
-            );
+            admin = staffUserJpaRepository.save(admin);
         } finally {
             TenantContext.clear();
         }

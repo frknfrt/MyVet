@@ -1,5 +1,8 @@
 package com.vetos.modules.platformadmin.api;
 
+import com.vetos.modules.platformadmin.api.dto.TrialSignupVerifiedResponse;
+import com.vetos.modules.platformadmin.api.dto.VerifyTrialSignupRequest;
+import com.vetos.modules.platformadmin.application.VerifyTrialSignupUseCase;
 import com.vetos.modules.platformadmin.api.dto.ResendTrialCodeRequest;
 import com.vetos.modules.platformadmin.api.dto.StartTrialSignupRequest;
 import com.vetos.modules.platformadmin.api.dto.TrialCodeResentResponse;
@@ -28,6 +31,13 @@ public class PublicTrialSignupController {
 
     private final StartTrialSignupUseCase startTrialSignupUseCase;
     private final ResendTrialCodeUseCase resendTrialCodeUseCase;
+    private final VerifyTrialSignupUseCase verifyTrialSignupUseCase;
+
+    /** Ikinci adim: kod dogruysa klinigi olusturur; yanit, e-postasi dolu gelen panel giris adresidir. */
+    @PostMapping("/verify")
+    public TrialSignupVerifiedResponse verify(@RequestBody @Valid VerifyTrialSignupRequest request) {
+        return new TrialSignupVerifiedResponse(verifyTrialSignupUseCase.execute(request.requestId(), request.code()));
+    }
 
     /** Ilk adim: istegi kaydeder, telefona dogrulama kodu gonderir. */
     @PostMapping("/start")
