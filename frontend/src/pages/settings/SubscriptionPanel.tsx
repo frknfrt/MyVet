@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { ApiError } from '../../api/client';
 import {
-  BillingStatus, CatalogPlan, PlatformInvoice, PlatformInvoiceStatus, SubscriptionOverview, UsageSnapshot, subscriptionApi,
+  BillingPeriod, BillingStatus, CatalogPlan, PlatformInvoice, PlatformInvoiceStatus, SubscriptionOverview, UsageSnapshot,
+  subscriptionApi,
 } from '../../api/subscriptionApi';
+import { PlanPicker } from '../../components/subscription/PlanPicker';
+import { redirectTo } from '../subscription/redirectTo';
 import { Badge, BadgeTone } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -20,6 +23,12 @@ const STATUS_LABELS: Record<BillingStatus, string> = {
   ACTIVE: 'Aktif',
   PAST_DUE: 'Ödeme Gecikti',
   CANCELED: 'İptal Edildi',
+};
+
+/** plans tablosunda satırı olmayan ayrılmış plan kodlarının görünen adları. */
+const RESERVED_PLAN_LABELS: Record<string, string> = {
+  TRIAL: '7 Günlük Deneme',
+  INTERNAL: 'Test Hesabı',
 };
 
 const STATUS_TONES: Record<BillingStatus, BadgeTone> = {
@@ -68,6 +77,9 @@ export function SubscriptionPanel() {
   const [checkoutLoadingId, setCheckoutLoadingId] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [paymentResult, setPaymentResult] = useState<'basarili' | 'hata' | null>(null);
+
+  const [upgradingPlanCode, setUpgradingPlanCode] = useState<string | null>(null);
+  const [upgradeError, setUpgradeError] = useState<string | null>(null);
 
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [canceling, setCanceling] = useState(false);
@@ -123,6 +135,18 @@ export function SubscriptionPanel() {
     }
   }
 
+  async function handleUpgrade(planCode: string, billingPeriod: BillingPeriod, couponCode?: string) {
+    setUpgradingPlanCode(planCode);
+    setUpgradeError(null);
+    try {
+      const session = await subscriptionApi.initiateUpgradeCheckout({ planCode, billingPeriod, couponCode });
+      redirectTo(session.checkoutFormUrl);
+    } catch (err) {
+      setUpgradeError(errorMessageOf(err));
+      setUpgradingPlanCode(null);
+    }
+  }
+
   async function handleConfirmCancel() {
     setCanceling(true);
     setCancelError(null);
@@ -171,11 +195,11 @@ export function SubscriptionPanel() {
         <div className={settingsStyles.errorBanner}>Ödeme tamamlanamadı, lütfen tekrar deneyin.</div>
       )}
 
-      <Card className={styles.card}>
+      <Card className={subscription.planCode === 'TRIAL' ? styles.cardWide : styles.card}>
         {currentPlan?.imageUrl && (
           <img src={currentPlan.imageUrl} alt="" className={styles.planImage} />
         )}
-        <div className={styles.planCode}>{currentPlan?.name ?? subscription.planCode}</div>
+        <div className={styles.planCode}>{currentPlan?.name ?? RESERVED_PLAN_LABELS[subscription.planCode] ?? subscription.planCode}</div>
         {currentPlan?.badge && <span className={styles.planBadge}>{currentPlan.badge}</span>}
         <Badge tone={STATUS_TONES[subscription.billingStatus]}>{STATUS_LABELS[subscription.billingStatus]}</Badge>
 
@@ -194,7 +218,7 @@ export function SubscriptionPanel() {
           <span>{formatDate(subscription.startedAt)}</span>
         </div>
         <div className={styles.row}>
-          <span className={styles.rowLabel}>Yenileme Tarihi</span>
+          <span className={styles.rowLabel}>{subscription.planCode === 'TRIAL' ? 'Deneme Bitişi' : 'Yenileme Tarihi'}</span>
           <span>{formatDate(subscription.renewsAt)}</span>
         </div>
 
@@ -214,6 +238,19 @@ export function SubscriptionPanel() {
             ) : (
               <p>Üyeliğiniz iptal edildi.</p>
             )}
+          </div>
+        ) : subscription.billingStatus === 'TRIAL' && subscription.planCode === 'TRIAL' ? (
+          <div className={styles.trialUpgrade}>
+            <div className={styles.ctaHint}>
+              Denemeniz {formatDate(subscription.renewsAt)} günü sona erer. Kesintisiz devam etmek için paketinizi
+              seçip üyeliğinizi şimdi başlatabilirsiniz; girdiğiniz veriler yerinde kalır.
+            </div>
+            <PlanPicker
+              plans={plans}
+              onSelect={handleUpgrade}
+              submittingPlanCode={upgradingPlanCode}
+              error={upgradeError}
+            />
           </div>
         ) : (
           <div className={styles.ctaRow}>

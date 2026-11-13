@@ -9,6 +9,21 @@ export interface SubscriptionOverview {
   billingStatus: BillingStatus;
 }
 
+export type BillingPeriod = 'MONTHLY' | 'ANNUAL';
+
+/** Kliniğin abonelik erişim durumu; trialEndsAt/daysLeft yalnız TRIAL ve TRIAL_EXPIRED için dolu. */
+export interface SubscriptionAccess {
+  state: 'TRIAL' | 'TRIAL_EXPIRED' | 'INTERNAL' | 'ACTIVE';
+  trialEndsAt: string | null;
+  daysLeft: number | null;
+}
+
+export interface UpgradeCheckoutPayload {
+  planCode: string;
+  billingPeriod: BillingPeriod;
+  couponCode?: string;
+}
+
 export interface EnabledFeatures {
   enabledFeatures: string[];
   enforcementActive: boolean;
@@ -65,6 +80,10 @@ export interface UsageSnapshot {
 export const subscriptionApi = {
   getCurrent: () => apiClient.get<SubscriptionOverview>('/api/v1/subscriptions/current'),
   getFeatures: () => apiClient.get<EnabledFeatures>('/api/v1/subscriptions/features'),
+  getAccess: () => apiClient.get<SubscriptionAccess>('/api/v1/subscriptions/access'),
+  /** Deneme sürümünden seçilen pakete geçiş için ödeme sayfası adresini döner. */
+  initiateUpgradeCheckout: (payload: UpgradeCheckoutPayload) =>
+    apiClient.post<CheckoutSession>('/api/v1/subscriptions/upgrade-checkout', payload),
   getInvoices: () => apiClient.get<TenantBillingOverview>('/api/v1/subscriptions/invoices'),
   getUsage: () => apiClient.get<UsageSnapshot>('/api/v1/subscriptions/usage'),
   getPlans: () => apiClient.get<CatalogPlan[]>('/api/v1/subscriptions/plans'),

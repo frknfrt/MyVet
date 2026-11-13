@@ -27,6 +27,7 @@ const ReportsPage = lazy(() => import('./pages/reports/ReportsPage').then(m => (
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const ClinicSitePage = lazy(() => import('./pages/public/ClinicSitePage').then(m => ({ default: m.ClinicSitePage })));
 const FillFormPage = lazy(() => import('./pages/forms/FillFormPage').then(m => ({ default: m.FillFormPage })));
+const MembershipPage = lazy(() => import('./pages/subscription/MembershipPage').then(m => ({ default: m.MembershipPage })));
 const PlatformAdminApp = lazy(() => import('./platformAdmin/PlatformAdminApp').then(m => ({ default: m.PlatformAdminApp })));
 
 export function App() {
@@ -37,6 +38,8 @@ export function App() {
       <Route path="/davet/:token" element={<AcceptInvitePage />} />
       <Route path="/sifremi-unuttum" element={<ForgotPasswordPage />} />
       <Route path="/sifre-sifirla/:token" element={<ResetPasswordPage />} />
+      {/* Deneme süresi dolan klinik: RequireAuth tüm panel rotalarını buraya yönlendirir. */}
+      <Route path="/uyelik" element={<MembershipPage />} />
       <Route
         path="/panel"
         element={

@@ -4,15 +4,18 @@ import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
 import { AuthProvider } from './auth/AuthContext';
 import { FeatureProvider } from './auth/FeatureContext';
+import { SubscriptionAccessProvider } from './auth/SubscriptionAccessContext';
 import './styles/global.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <FeatureProvider>
-          <App />
-        </FeatureProvider>
+        <SubscriptionAccessProvider>
+          <FeatureProvider>
+            <App />
+          </FeatureProvider>
+        </SubscriptionAccessProvider>
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>

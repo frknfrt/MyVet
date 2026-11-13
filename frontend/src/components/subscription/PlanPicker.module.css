@@ -1,0 +1,155 @@
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+.periodToggle {
+  display: inline-flex;
+  background: var(--color-cream);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  padding: 3px;
+}
+
+.periodOption,
+.periodActive {
+  border: none;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  padding: 6px 16px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+}
+
+.periodActive {
+  background: var(--color-paper);
+  color: var(--color-text-ink);
+  box-shadow: var(--shadow-sm);
+}
+
+.periodOption:focus-visible,
+.periodActive:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+  width: 100%;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.planName {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--color-text-ink);
+}
+
+.planBadge {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-gold-600);
+  background: var(--color-gold-100);
+  border-radius: var(--radius-full);
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+.price {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  min-height: 34px;
+}
+
+.amount {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 24px;
+  color: var(--color-text-ink);
+}
+
+.per,
+.unavailable,
+.description {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.description {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.features {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  flex: 1;
+}
+
+.features li {
+  padding-left: 18px;
+  position: relative;
+}
+
+.features li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--color-brand-500);
+  font-weight: 700;
+}
+
+.selectButton {
+  margin-top: var(--space-2);
+  width: 100%;
+  justify-content: center;
+}
+
+.couponRow {
+  width: 100%;
+  max-width: 260px;
+}
+
+.error {
+  width: 100%;
+  background: var(--color-danger-100);
+  color: var(--color-danger-700);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  font-size: 13px;
+}
+
+.empty {
+  font-size: 14px;
+  color: var(--color-text-muted);
+}

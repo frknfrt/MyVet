@@ -34,6 +34,19 @@ export function setUnauthorizedHandler(handler: (() => void) | null) {
   onUnauthorized = handler;
 }
 
+let onPaymentRequired: (() => void) | null = null;
+
+/** Sunucu 402 TRIAL_EXPIRED dondurdugunde (deneme suresi dolmus) cagrilacak handler'i kaydeder. */
+export function setPaymentRequiredHandler(handler: (() => void) | null) {
+  onPaymentRequired = handler;
+}
+
+function notifyIfTrialExpired(status: number, errorCode: unknown) {
+  if (status === 402 && errorCode === 'TRIAL_EXPIRED') {
+    onPaymentRequired?.();
+  }
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -53,6 +66,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     if (response.status === 401) {
       onUnauthorized?.();
     }
+    notifyIfTrialExpired(response.status, body?.errorCode);
     throw new ApiError(
       body?.message ?? 'Beklenmeyen bir hata olustu',
       body?.errorCode ?? 'UNKNOWN_ERROR',
@@ -78,6 +92,7 @@ async function requestForLocationId(path: string, data?: unknown): Promise<strin
     if (response.status === 401) {
       onUnauthorized?.();
     }
+    notifyIfTrialExpired(response.status, body?.errorCode);
     throw new ApiError(
       body?.message ?? 'Beklenmeyen bir hata olustu',
       body?.errorCode ?? 'UNKNOWN_ERROR',
@@ -113,6 +128,7 @@ async function sendMultipart(path: string, form: FormData, method: 'POST' | 'PUT
     if (response.status === 401) {
       onUnauthorized?.();
     }
+    notifyIfTrialExpired(response.status, body?.errorCode);
     throw new ApiError(
       body?.message ?? 'Beklenmeyen bir hata olustu',
       body?.errorCode ?? 'UNKNOWN_ERROR',
