@@ -1,5 +1,7 @@
 package com.vetos.modules.platformadmin.api;
 
+import com.vetos.modules.platformadmin.application.HandleTrialUpgradePaymentCallbackUseCase;
+import com.vetos.modules.platformadmin.domain.TrialUpgradeRequestRepository;
 import com.vetos.modules.platformadmin.application.HandlePaymentCallbackUseCase;
 import com.vetos.modules.platformadmin.application.HandleSignupPaymentCallbackUseCase;
 import com.vetos.modules.platformadmin.domain.CheckoutResult;
@@ -45,6 +47,8 @@ public class PublicPaymentCallbackController {
     private final HandleSignupPaymentCallbackUseCase handleSignupPaymentCallbackUseCase;
     private final PaymentGatewayPort paymentGatewayPort;
     private final TenantSignupRequestRepository tenantSignupRequestRepository;
+    private final HandleTrialUpgradePaymentCallbackUseCase handleTrialUpgradePaymentCallbackUseCase;
+    private final TrialUpgradeRequestRepository trialUpgradeRequestRepository;
     private final String frontendBaseUrl;
     private final String vetlySiteOrigin;
 
@@ -53,6 +57,8 @@ public class PublicPaymentCallbackController {
         HandleSignupPaymentCallbackUseCase handleSignupPaymentCallbackUseCase,
         PaymentGatewayPort paymentGatewayPort,
         TenantSignupRequestRepository tenantSignupRequestRepository,
+        HandleTrialUpgradePaymentCallbackUseCase handleTrialUpgradePaymentCallbackUseCase,
+        TrialUpgradeRequestRepository trialUpgradeRequestRepository,
         @Value("${app.frontend-base-url}") String frontendBaseUrl,
         @Value("${app.vetly-site-origin:http://localhost:5175}") String vetlySiteOrigin
     ) {
@@ -60,6 +66,8 @@ public class PublicPaymentCallbackController {
         this.handleSignupPaymentCallbackUseCase = handleSignupPaymentCallbackUseCase;
         this.paymentGatewayPort = paymentGatewayPort;
         this.tenantSignupRequestRepository = tenantSignupRequestRepository;
+        this.handleTrialUpgradePaymentCallbackUseCase = handleTrialUpgradePaymentCallbackUseCase;
+        this.trialUpgradeRequestRepository = trialUpgradeRequestRepository;
         this.frontendBaseUrl = frontendBaseUrl;
         this.vetlySiteOrigin = vetlySiteOrigin;
     }
@@ -104,6 +112,24 @@ public class PublicPaymentCallbackController {
             } catch (Exception e) {
                 log.error("iyzico kayit callback'i islenemedi: hata={}", e.getClass().getSimpleName());
                 return redirectToSignup(false);
+            }
+        }
+
+        // Denemeden ucretli pakete gecis odemesi (spec 2026-11-13 S4.4): conversationId bir
+        // TrialUpgradeRequest'e aitse fatura odeme SONRASI kesilir, panel abonelik sayfasina doner.
+        boolean isTrialUpgradeRequest;
+        try {
+            isTrialUpgradeRequest = trialUpgradeRequestRepository.findById(UUID.fromString(result.conversationId())).isPresent();
+        } catch (IllegalArgumentException | NullPointerException malformedOrMissingConversationId) {
+            isTrialUpgradeRequest = false;
+        }
+        if (isTrialUpgradeRequest) {
+            try {
+                boolean success = handleTrialUpgradePaymentCallbackUseCase.execute(token, today);
+                return redirectToApp(success);
+            } catch (Exception e) {
+                log.error("iyzico deneme-yukseltme callback'i islenemedi: hata={}", e.getClass().getSimpleName());
+                return redirectToApp(false);
             }
         }
 

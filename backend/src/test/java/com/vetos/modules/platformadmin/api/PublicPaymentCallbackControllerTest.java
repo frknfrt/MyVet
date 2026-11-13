@@ -39,6 +39,8 @@ class PublicPaymentCallbackControllerTest {
     @Mock private HandleSignupPaymentCallbackUseCase handleSignupPaymentCallbackUseCase;
     @Mock private PaymentGatewayPort paymentGatewayPort;
     @Mock private TenantSignupRequestRepository tenantSignupRequestRepository;
+    @Mock private com.vetos.modules.platformadmin.application.HandleTrialUpgradePaymentCallbackUseCase handleTrialUpgradePaymentCallbackUseCase;
+    @Mock private com.vetos.modules.platformadmin.domain.TrialUpgradeRequestRepository trialUpgradeRequestRepository;
 
     private PublicPaymentCallbackController controller;
 
@@ -46,7 +48,8 @@ class PublicPaymentCallbackControllerTest {
     void setUp() {
         controller = new PublicPaymentCallbackController(
             handlePaymentCallbackUseCase, handleSignupPaymentCallbackUseCase, paymentGatewayPort,
-            tenantSignupRequestRepository, FRONTEND, VETLY_SITE
+            tenantSignupRequestRepository, handleTrialUpgradePaymentCallbackUseCase, trialUpgradeRequestRepository,
+            FRONTEND, VETLY_SITE
         );
     }
 
@@ -194,5 +197,35 @@ class PublicPaymentCallbackControllerTest {
             .thenThrow(new RuntimeException("beklenmedik hata"));
 
         assertThat(location(controller.handlePost("token-1"))).isEqualTo(VETLY_SITE + "/?kayit=hata");
+    }
+
+    @Test
+    void should_routeToTrialUpgrade_when_conversationIdIsUpgradeRequest() {
+        UUID requestId = UUID.randomUUID();
+        stubCheckoutResult("token-up", requestId);
+        when(tenantSignupRequestRepository.findById(requestId)).thenReturn(Optional.empty());
+        when(trialUpgradeRequestRepository.findById(requestId)).thenReturn(Optional.of(
+            com.vetos.modules.platformadmin.domain.TrialUpgradeRequest.create(
+                UUID.randomUUID(), "PRO", com.vetos.modules.tenant.domain.BillingPeriod.MONTHLY, null, new java.math.BigDecimal("10.00"))));
+        when(handleTrialUpgradePaymentCallbackUseCase.execute(anyString(), any(LocalDate.class))).thenReturn(true);
+
+        assertThat(location(controller.handlePost("token-up"))).isEqualTo(FRONTEND + "/ayarlar/abonelik?odeme=basarili");
+        verify(handleTrialUpgradePaymentCallbackUseCase).execute(anyString(), any(LocalDate.class));
+        verifyNoInteractions(handlePaymentCallbackUseCase, handleSignupPaymentCallbackUseCase);
+    }
+
+    @Test
+    void should_redirectToAppFailure_when_trialUpgradeHandlerThrows() {
+        UUID requestId = UUID.randomUUID();
+        stubCheckoutResult("token-up", requestId);
+        when(tenantSignupRequestRepository.findById(requestId)).thenReturn(Optional.empty());
+        when(trialUpgradeRequestRepository.findById(requestId)).thenReturn(Optional.of(
+            com.vetos.modules.platformadmin.domain.TrialUpgradeRequest.create(
+                UUID.randomUUID(), "PRO", com.vetos.modules.tenant.domain.BillingPeriod.MONTHLY, null, new java.math.BigDecimal("10.00"))));
+        when(handleTrialUpgradePaymentCallbackUseCase.execute(anyString(), any(LocalDate.class)))
+            .thenThrow(new IllegalStateException("beklenmeyen"));
+
+        assertThat(location(controller.handlePost("token-up"))).isEqualTo(FRONTEND + "/ayarlar/abonelik?odeme=hata");
+        verifyNoInteractions(handlePaymentCallbackUseCase);
     }
 }

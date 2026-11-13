@@ -117,6 +117,20 @@ class TenantAdminPortAdapter implements TenantAdminPort {
     }
 
     @Override
+    public void activatePaidPlan(UUID tenantId, String planCode, LocalDate renewsAt, BillingPeriod billingPeriod) {
+        Subscription subscription = subscriptionJpaRepository.findByTenantId(tenantId)
+            .orElseThrow(() -> new SubscriptionNotFoundException(tenantId));
+        subscription.activatePaid(planCode, renewsAt, billingPeriod);
+        subscriptionJpaRepository.save(subscription);
+
+        Tenant tenant = tenantJpaRepository.findById(tenantId)
+            .orElseThrow(() -> new TenantNotFoundException(tenantId));
+        tenant.activate();
+        tenantJpaRepository.save(tenant);
+        subscriptionAccessPort.evict(tenantId);
+    }
+
+    @Override
     public void advanceRenewal(UUID tenantId, LocalDate newRenewsAt) {
         Subscription subscription = subscriptionJpaRepository.findByTenantId(tenantId)
             .orElseThrow(() -> new SubscriptionNotFoundException(tenantId));

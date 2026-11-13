@@ -88,6 +88,12 @@ public interface TenantAdminPort {
         String adminPasswordHash, String adminPhoneE164, String licenseNumber
     );
 
+    /**
+     * Denemeden ucretli pakete gecis (odeme onaylaninca): abonelik secilen pakete ACTIVE olarak
+     * gecer, Tenant.status ACTIVE olur.
+     */
+    void activatePaidPlan(UUID tenantId, String planCode, LocalDate renewsAt, BillingPeriod billingPeriod);
+
     StaffInvite createAdminInviteForPaidSignup(UUID tenantId, UUID branchId, String email, String fullName);
 
     /** Odeme oncesi e-posta benzersizligini kontrol etmek icin. */
