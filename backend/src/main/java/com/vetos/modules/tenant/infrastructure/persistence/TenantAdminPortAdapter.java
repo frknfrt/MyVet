@@ -39,6 +39,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 class TenantAdminPortAdapter implements TenantAdminPort {
 
+    private static final java.time.ZoneId ISTANBUL = java.time.ZoneId.of("Europe/Istanbul");
+
     private final TenantJpaRepository tenantJpaRepository;
     private final SubscriptionJpaRepository subscriptionJpaRepository;
     private final BranchJpaRepository branchJpaRepository;
@@ -203,7 +205,7 @@ class TenantAdminPortAdapter implements TenantAdminPort {
         Branch branch = Branch.create(tenant.getId(), branchName);
         branch.updateDetails(address, city, branch.getTimezone(), null);
         branch = branchJpaRepository.save(branch);
-        subscriptionJpaRepository.save(Subscription.startTrial(tenant.getId(), trialProperties.days()));
+        subscriptionJpaRepository.save(Subscription.startTrial(tenant.getId(), LocalDate.now(ISTANBUL), trialProperties.days()));
 
         // Koprulme kurali: sadece StaffUser yazimini sarar. existsByEmail
         // cagiran metotta, KAPSAM DISINDA kalir -- staff_users.email tum kiracilarda

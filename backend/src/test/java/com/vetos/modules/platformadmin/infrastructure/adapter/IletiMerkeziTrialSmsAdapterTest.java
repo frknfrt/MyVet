@@ -40,4 +40,16 @@ class IletiMerkeziTrialSmsAdapterTest {
             adapter.sendTrialLastDay("+905321112233", "Pati Klinik");
         }).doesNotThrowAnyException();
     }
+
+    @Test
+    void should_refuseVerificationCode_when_configuredProviderRejectsSend() {
+        // Kimlik bilgisi var ama saglayiciya ulasilamiyor (bakiye/onay/ag hatasi ile ayni sonuc).
+        IletiMerkeziSmsClient client = new IletiMerkeziSmsClient(
+            "key", "hash", "vetly", "http://127.0.0.1:1/send-sms/json", mock(IntegrationOutcomes.class));
+        IletiMerkeziTrialSmsAdapter adapter = new IletiMerkeziTrialSmsAdapter(client, false);
+
+        assertThatThrownBy(() -> adapter.sendVerificationCode("+905321112233", "123456"))
+            .isInstanceOf(TrialSmsServiceUnavailableException.class);
+        assertThatCode(() -> adapter.sendTrialLastDay("+905321112233", "Pati Klinik")).doesNotThrowAnyException();
+    }
 }

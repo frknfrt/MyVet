@@ -15,7 +15,7 @@ final class TrialTestSupport {
 
     static final Instant NOW = Instant.parse("2026-11-13T09:00:00Z");
     static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
-    static final TrialProperties PROPERTIES = new TrialProperties(7, 300, 5, 60, 3, 3);
+    static final TrialProperties PROPERTIES = new TrialProperties(7, 300, 5, 60, 3, 3, 300);
     static final String PHONE = "+905321112233";
 
     /** Gercek hash yerine okunabilir, deterministik sahte kodlayici. */

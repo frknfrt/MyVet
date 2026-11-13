@@ -55,7 +55,7 @@ class CancelSubscriptionUseCaseTest {
 
     @Test
     void should_reject_when_subscriptionIsTrial() {
-        Subscription subscription = Subscription.startTrial(tenantId, 7);
+        Subscription subscription = Subscription.startTrial(tenantId, java.time.LocalDate.now(), 7);
         when(subscriptionRepository.findByTenantId(tenantId)).thenReturn(Optional.of(subscription));
 
         assertThatThrownBy(() -> useCase().execute(tenantId))

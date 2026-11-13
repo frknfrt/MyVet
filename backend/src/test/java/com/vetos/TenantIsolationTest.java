@@ -735,7 +735,7 @@ class TenantIsolationTest extends TenantScopedTestSupport {
             b.tenantId(), "TRIAL", BigDecimal.TEN, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 31), LocalDate.of(2026, 10, 1))).getId());
         UUID inviteBId = asTenant(b.tenantId(), () -> staffInviteRepository.save(StaffInvite.create(
             b.tenantId(), b.branchId(), "davet-" + UUID.randomUUID() + "@test.local", "Yeni Hekim", StaffRole.VET, b.staffUserId())).getId());
-        asTenant(b.tenantId(), () -> subscriptionRepository.save(Subscription.startTrial(b.tenantId(), 7)));
+        asTenant(b.tenantId(), () -> subscriptionRepository.save(Subscription.startTrial(b.tenantId(), java.time.LocalDate.now(), 7)));
 
         assertIsolated(a, b, platformInvoiceRepository::findById, platformInvoiceBId);
         assertIsolated(a, b, staffInviteRepository::findById, inviteBId);

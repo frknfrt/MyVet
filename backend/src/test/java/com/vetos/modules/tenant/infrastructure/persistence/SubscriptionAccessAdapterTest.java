@@ -33,7 +33,7 @@ class SubscriptionAccessAdapterTest {
     }
 
     private void trialEndingOn(LocalDate endsAt) {
-        Subscription subscription = Subscription.startTrial(TENANT, 7);
+        Subscription subscription = Subscription.startTrial(TENANT, java.time.LocalDate.now(), 7);
         subscription.changePlan("TRIAL", BillingStatus.TRIAL, endsAt);
         when(repository.findByTenantId(TENANT)).thenReturn(Optional.of(subscription));
     }
@@ -74,7 +74,7 @@ class SubscriptionAccessAdapterTest {
 
     @Test
     void should_reportInternal_when_planIsInternal() {
-        Subscription subscription = Subscription.startTrial(TENANT, 7);
+        Subscription subscription = Subscription.startTrial(TENANT, java.time.LocalDate.now(), 7);
         subscription.changePlan("INTERNAL", BillingStatus.ACTIVE, null);
         when(repository.findByTenantId(TENANT)).thenReturn(Optional.of(subscription));
 

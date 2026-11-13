@@ -124,8 +124,8 @@ class TrialSignupIntegrationTest {
         assertThat(overview.name()).isEqualTo("Pati Klinik");
         assertThat(overview.planCode()).isEqualTo("TRIAL");
         assertThat(overview.billingStatus()).isEqualTo(BillingStatus.TRIAL);
-        assertThat(overview.renewsAt()).isBetween(
-            LocalDate.now(ZoneId.of("UTC")).plusDays(6), LocalDate.now(ZoneId.of("Europe/Istanbul")).plusDays(8));
+        // Hos geldiniz mesajindaki bitis tarihiyle ayni gun: Istanbul takvimine gore bugun + 7.
+        assertThat(overview.renewsAt()).isEqualTo(LocalDate.now(ZoneId.of("Europe/Istanbul")).plusDays(7));
         assertThat(overview.staffUserCount()).isEqualTo(1);
         // Gizli alanlar kayit tamamlaninca silinir.
         Map<String, Object> row = jdbcTemplate.queryForMap(

@@ -134,4 +134,14 @@ class StartTrialSignupUseCaseTest {
         verifyNoInteractions(smsPort);
         verify(repository, never()).save(any());
     }
+
+    @Test
+    void should_refuseWithoutSms_when_dailySignupCeilingReached() {
+        when(repository.countByCreatedAtAfter(NOW.minus(Duration.ofHours(24)))).thenReturn(300L);
+
+        assertThatThrownBy(() -> useCase.execute(command("0532 111 22 33", "ayse@ornek.com")))
+            .isInstanceOf(com.vetos.modules.platformadmin.domain.exception.TrialSmsServiceUnavailableException.class);
+        verifyNoInteractions(smsPort);
+        verify(repository, never()).save(any());
+    }
 }

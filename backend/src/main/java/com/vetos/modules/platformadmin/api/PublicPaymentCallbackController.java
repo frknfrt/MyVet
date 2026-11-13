@@ -87,7 +87,8 @@ public class PublicPaymentCallbackController {
     }
 
     private ResponseEntity<Void> handleAndRedirect(String token) {
-        LocalDate today = LocalDate.now();
+        // Fatura donemi ve yenileme tarihi klinigin takvim gunune gore (sunucu UTC olabilir).
+        LocalDate today = LocalDate.now(java.time.ZoneId.of("Europe/Istanbul"));
         CheckoutResult result;
         try {
             result = paymentGatewayPort.retrieveCheckoutResult(token);

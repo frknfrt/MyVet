@@ -11,5 +11,6 @@ public interface TrialSignupRequestRepository {
     Optional<TrialSignupRequest> findByIdForUpdate(UUID id);
     boolean existsByPhoneAndStatus(String phoneE164, TrialSignupRequestStatus status);
     long countByPhoneAndCreatedAtAfter(String phoneE164, Instant since);
+    long countByCreatedAtAfter(Instant since);
     List<TrialSignupRequest> findAllNewestFirst();
 }

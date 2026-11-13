@@ -11,6 +11,8 @@ public record TrialProperties(
     @DefaultValue("5") int otpMaxAttempts,
     @DefaultValue("60") int otpResendCooldownSeconds,
     @DefaultValue("3") int otpMaxSends,
-    @DefaultValue("3") int maxRequestsPerPhonePerDay
+    @DefaultValue("3") int maxRequestsPerPhonePerDay,
+    /** Tum telefonlar icin 24 saatte en fazla kayit istegi: SMS maliyetine karsi ust sinir. */
+    @DefaultValue("300") int maxRequestsPerDay
 ) {
 }

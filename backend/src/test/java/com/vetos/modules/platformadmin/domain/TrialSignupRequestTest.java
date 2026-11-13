@@ -43,7 +43,7 @@ class TrialSignupRequestTest {
     }
 
     @Test
-    void should_resetAttempts_when_newCodeIssued() {
+    void should_keepFailedAttempts_when_newCodeIssued() {
         TrialSignupRequest request = request();
         request.issueCode("hash(1)", NOW, 300);
         request.registerFailedAttempt();
@@ -51,7 +51,7 @@ class TrialSignupRequestTest {
 
         request.issueCode("hash(2)", NOW.plusSeconds(61), 300);
 
-        assertThat(request.getOtpAttempts()).isZero();
+        assertThat(request.getOtpAttempts()).isEqualTo(2);
         assertThat(request.getOtpSendCount()).isEqualTo(2);
     }
 

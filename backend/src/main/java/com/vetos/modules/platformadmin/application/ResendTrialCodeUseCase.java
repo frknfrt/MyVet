@@ -54,6 +54,10 @@ public class ResendTrialCodeUseCase {
             .filter(r -> !r.isCompleted())
             .orElseThrow(TrialSignupRequestNotFoundException::new);
         Instant now = clock.instant();
+        // Yanlis kod hakki bittiyse yeni kod gondermek sayaci asmanin yolu olmamali.
+        if (!request.hasAttemptsLeft(properties.otpMaxAttempts())) {
+            throw new TrialSignupTooManyRequestsException();
+        }
         if (!request.canResend(now, properties.otpResendCooldownSeconds(), properties.otpMaxSends())) {
             throw new TrialSignupTooManyRequestsException();
         }

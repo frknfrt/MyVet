@@ -62,7 +62,10 @@ class IletiMerkeziTrialSmsAdapter implements TrialSmsPort {
         if (!client.isConfigured() && !simulationAllowed) {
             throw new TrialSmsServiceUnavailableException();
         }
-        client.send(phoneE164, "Vetly dogrulama kodunuz: %s. Kod 5 dakika gecerlidir.".formatted(code), LABEL);
+        if (!client.send(phoneE164, "Vetly dogrulama kodunuz: %s. Kod 5 dakika gecerlidir.".formatted(code), LABEL)) {
+            // Saglayici reddetti (bakiye, gonderici onayi, ag hatasi): kayit geri alinir, kullanici bekletilmez.
+            throw new TrialSmsServiceUnavailableException();
+        }
     }
 
     @Override

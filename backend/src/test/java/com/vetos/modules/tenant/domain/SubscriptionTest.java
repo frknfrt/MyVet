@@ -47,7 +47,7 @@ class SubscriptionTest {
     void should_endAfterSevenDays_when_trialStartedWithSevenDays() {
         UUID tenantId = UUID.randomUUID();
 
-        Subscription subscription = Subscription.startTrial(tenantId, 7);
+        Subscription subscription = Subscription.startTrial(tenantId, java.time.LocalDate.now(), 7);
 
         assertThat(subscription.getTenantId()).isEqualTo(tenantId);
         assertThat(subscription.getPlanCode()).isEqualTo("TRIAL");
@@ -57,14 +57,14 @@ class SubscriptionTest {
 
     @Test
     void should_notBeExpired_when_todayIsRenewalDay() {
-        Subscription subscription = Subscription.startTrial(UUID.randomUUID(), 7);
+        Subscription subscription = Subscription.startTrial(UUID.randomUUID(), java.time.LocalDate.now(), 7);
 
         assertThat(subscription.isTrialExpired(subscription.getRenewsAt())).isFalse();
     }
 
     @Test
     void should_beExpired_when_todayIsAfterRenewalDay() {
-        Subscription subscription = Subscription.startTrial(UUID.randomUUID(), 7);
+        Subscription subscription = Subscription.startTrial(UUID.randomUUID(), java.time.LocalDate.now(), 7);
 
         assertThat(subscription.isTrialExpired(subscription.getRenewsAt().plusDays(1))).isTrue();
     }
@@ -78,7 +78,7 @@ class SubscriptionTest {
 
     @Test
     void should_becomeActivePaid_when_activatePaidCalled() {
-        Subscription subscription = Subscription.startTrial(UUID.randomUUID(), 7);
+        Subscription subscription = Subscription.startTrial(UUID.randomUUID(), java.time.LocalDate.now(), 7);
 
         subscription.activatePaid("PRO", LocalDate.now().plusMonths(12), BillingPeriod.ANNUAL);
 
@@ -107,5 +107,13 @@ class SubscriptionTest {
         subscription.reactivateCancellation();
 
         assertThat(subscription.getBillingStatus()).isEqualTo(BillingStatus.ACTIVE);
+    }
+
+    @Test
+    void should_startAndEndOnGivenDay_when_startTrialCalledWithStartDate() {
+        Subscription subscription = Subscription.startTrial(UUID.randomUUID(), LocalDate.of(2026, 11, 14), 7);
+
+        assertThat(subscription.getStartedAt()).isEqualTo(LocalDate.of(2026, 11, 14));
+        assertThat(subscription.getRenewsAt()).isEqualTo(LocalDate.of(2026, 11, 21));
     }
 }

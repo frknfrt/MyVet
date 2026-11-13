@@ -23,5 +23,7 @@ interface TrialSignupRequestJpaRepository extends JpaRepository<TrialSignupReque
 
     long countByPhoneAndCreatedAtAfter(String phone, Instant since);
 
+    long countByCreatedAtAfter(Instant since);
+
     List<TrialSignupRequest> findAllByOrderByCreatedAtDesc();
 }

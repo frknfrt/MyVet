@@ -50,10 +50,11 @@ final class IletiMerkeziSmsClient {
     }
 
     /** @param label log satirlarinda mesajin turu (orn. "Platform fatura SMS'i") */
-    void send(String recipientPhone, String messageText, String label) {
+    /** @return true: saglayici kabul etti ya da (kimlik bilgisi yokken) simule edildi; false: gonderilemedi. */
+    boolean send(String recipientPhone, String messageText, String label) {
         if (!isConfigured()) {
             log.info("{} (simule): to={}, mesaj=\"{}\"", label, LogMasking.phone(recipientPhone), messageText);
-            return;
+            return true;
         }
 
         String requestBody = toJson(requestBody(apiKey, hash, sender, messageText, toE164(recipientPhone)));
@@ -70,6 +71,7 @@ final class IletiMerkeziSmsClient {
             if (code == 200) {
                 outcomes.record(IntegrationOutcomes.SMS, true);
                 log.info("{} gonderildi: to={}", label, LogMasking.phone(recipientPhone));
+                return true;
             } else {
                 outcomes.record(IntegrationOutcomes.SMS, code > 0 && !IntegrationOutcomes.isOutageStatus(code));
                 log.warn("{} gonderilemedi: to={}, kod={}", label, LogMasking.phone(recipientPhone), code);
@@ -82,6 +84,7 @@ final class IletiMerkeziSmsClient {
             outcomes.record(IntegrationOutcomes.SMS, false);
             log.warn("{} gonderilemedi: to={}, hata={}", label, LogMasking.phone(recipientPhone), e.getMessage());
         }
+        return false;
     }
 
     private static int statusCode(Map<?, ?> response) {

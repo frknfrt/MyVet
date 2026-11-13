@@ -104,11 +104,13 @@ public class TrialSignupRequest {
         return request;
     }
 
-    /** Yeni kod: onceki kodun yanlis deneme sayaci sifirlanir. */
+    /**
+     * Yeni kod. Yanlis deneme sayaci SIFIRLANMAZ (spec 4.1): istek basina toplam deneme hakki
+     * sinirlidir, hak bitince kullanici formu bastan doldurur.
+     */
     public void issueCode(String otpHash, Instant now, int ttlSeconds) {
         this.otpHash = otpHash;
         this.otpExpiresAt = now.plusSeconds(ttlSeconds);
-        this.otpAttempts = 0;
         this.otpSendCount++;
         this.lastOtpSentAt = now;
     }

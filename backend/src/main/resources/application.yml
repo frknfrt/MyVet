@@ -253,6 +253,8 @@ vetly:
     otp-resend-cooldown-seconds: ${VETLY_TRIAL_OTP_RESEND_COOLDOWN_SECONDS:60}
     otp-max-sends: ${VETLY_TRIAL_OTP_MAX_SENDS:3}
     max-requests-per-phone-per-day: ${VETLY_TRIAL_MAX_REQUESTS_PER_PHONE_PER_DAY:3}
+    # Tum telefonlar toplami (SMS maliyet tavani). Asilirsa kayit 503 doner ve log'a WARN yazilir.
+    max-requests-per-day: ${VETLY_TRIAL_MAX_REQUESTS_PER_DAY:300}
   rate-limit:
     tenant-general-per-minute: 600
     tenant-ai-per-minute: 10

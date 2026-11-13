@@ -37,5 +37,10 @@ class TrialSignupRequestRepositoryAdapter implements TrialSignupRequestRepositor
     }
 
     @Override
+    public long countByCreatedAtAfter(Instant since) {
+        return jpaRepository.countByCreatedAtAfter(since);
+    }
+
+    @Override
     public List<TrialSignupRequest> findAllNewestFirst() { return jpaRepository.findAllByOrderByCreatedAtDesc(); }
 }

@@ -10,6 +10,7 @@ import com.vetos.modules.platformadmin.domain.exception.SignupEmailAlreadyRegist
 import com.vetos.modules.platformadmin.domain.exception.TrialPhoneAlreadyUsedConflictException;
 import com.vetos.modules.platformadmin.domain.exception.TrialPhoneInvalidException;
 import com.vetos.modules.platformadmin.domain.exception.TrialSignupTooManyRequestsException;
+import com.vetos.modules.platformadmin.domain.exception.TrialSmsServiceUnavailableException;
 import com.vetos.modules.tenant.domain.TenantAdminPort;
 import com.vetos.platform.subscription.TrialProperties;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,8 @@ import java.util.Locale;
  */
 @Service
 public class StartTrialSignupUseCase {
+
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(StartTrialSignupUseCase.class);
 
     private final TrialSignupRequestRepository repository;
     private final TenantAdminPort tenantAdminPort;
@@ -73,6 +76,10 @@ public class StartTrialSignupUseCase {
         long recentRequests = repository.countByPhoneAndCreatedAtAfter(phone, now.minus(Duration.ofHours(24)));
         if (recentRequests >= properties.maxRequestsPerPhonePerDay()) {
             throw new TrialSignupTooManyRequestsException();
+        }
+        if (repository.countByCreatedAtAfter(now.minus(Duration.ofHours(24))) >= properties.maxRequestsPerDay()) {
+            LOG.warn("Gunluk deneme kaydi tavanina ulasildi ({}), yeni dogrulama kodu gonderilmiyor", properties.maxRequestsPerDay());
+            throw new TrialSmsServiceUnavailableException();
         }
 
         String code = otpGenerator.next();

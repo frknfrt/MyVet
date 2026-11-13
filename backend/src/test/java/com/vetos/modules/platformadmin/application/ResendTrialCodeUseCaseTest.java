@@ -56,7 +56,7 @@ class ResendTrialCodeUseCaseTest {
     }
 
     @Test
-    void should_issueNewCodeAndResetAttempts_when_resendAllowed() {
+    void should_issueNewCodeAndKeepAttempts_when_resendAllowed() {
         TrialSignupRequest request = pendingRequest(requestId);
         request.registerFailedAttempt();
         when(repository.findByIdForUpdate(requestId)).thenReturn(Optional.of(request));
@@ -65,7 +65,7 @@ class ResendTrialCodeUseCaseTest {
 
         assertThat(cooldown).isEqualTo(60);
         assertThat(request.getOtpHash()).isEqualTo("hash(654321)");
-        assertThat(request.getOtpAttempts()).isZero();
+        assertThat(request.getOtpAttempts()).isEqualTo(1);
         assertThat(request.getOtpExpiresAt()).isEqualTo(NOW.plusSeconds(360));
         verify(repository).save(request);
         verify(smsPort).sendVerificationCode(PHONE, "654321");
@@ -88,5 +88,18 @@ class ResendTrialCodeUseCaseTest {
 
         assertThatThrownBy(() -> useCase(clockAt(NOW)).execute(requestId))
             .isInstanceOf(TrialSignupRequestNotFoundException.class);
+    }
+
+    @Test
+    void should_throwTooManyRequests_when_wrongCodeAttemptsExhausted() {
+        TrialSignupRequest request = pendingRequest(requestId);
+        for (int i = 0; i < 5; i++) {
+            request.registerFailedAttempt();
+        }
+        when(repository.findByIdForUpdate(requestId)).thenReturn(Optional.of(request));
+
+        assertThatThrownBy(() -> useCase(clockAt(NOW.plusSeconds(120))).execute(requestId))
+            .isInstanceOf(TrialSignupTooManyRequestsException.class);
+        verifyNoInteractions(smsPort);
     }
 }

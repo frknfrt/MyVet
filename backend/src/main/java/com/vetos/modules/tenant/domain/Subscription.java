@@ -43,12 +43,13 @@ public class Subscription {
     @Column(name = "billing_period", nullable = false)
     private BillingPeriod billingPeriod = BillingPeriod.MONTHLY;
 
-    public static Subscription startTrial(UUID tenantId, int trialDays) {
+    /** startDate: klinigin takvim gunu (Europe/Istanbul) -- sunucu saat dilimine birakilmaz. */
+    public static Subscription startTrial(UUID tenantId, LocalDate startDate, int trialDays) {
         Subscription subscription = new Subscription();
         subscription.tenantId = tenantId;
         subscription.planCode = ReservedPlanCodes.TRIAL;
-        subscription.startedAt = LocalDate.now();
-        subscription.renewsAt = LocalDate.now().plusDays(trialDays);
+        subscription.startedAt = startDate;
+        subscription.renewsAt = startDate.plusDays(trialDays);
         subscription.billingStatus = BillingStatus.TRIAL;
         return subscription;
     }
